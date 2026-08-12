@@ -4,6 +4,11 @@ import { Pool } from 'pg';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import os from 'os';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execPromise = promisify(exec);
 
 dotenv.config();
 
@@ -12,9 +17,104 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-me';
 app.use(cors());
 app.use(express.json());
 
+// ===== ДИАГНОСТИКА СЕТИ =====
+console.log('🔍 ДИАГНОСТИКА СЕТИ:');
+console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+// 1. Внутренние сетевые интерфейсы
+const networkInterfaces = os.networkInterfaces();
+console.log('🌐 Внутренние интерфейсы:');
+Object.keys(networkInterfaces).forEach(iface => {
+  networkInterfaces[iface].forEach(details => {
+    if (details.family === 'IPv4' && !details.internal) {
+      console.log(`   ${iface}: ${details.address}`);
+    }
+  });
+});
+
+// 2. Внешний IP (через API)
+const getExternalIP = async () => {
+  try {
+    const response = await fetch('https://api.ipify.org?format=json');
+    const data = await response.json();
+    console.log('🌍 Внешний IP бэкенда (через ipify):', data.ip);
+  } catch (error) {
+    console.error('❌ Не удалось получить внешний IP через ipify:', error.message);
+  }
+};
+
+// 3. Альтернативный способ получить внешний IP
+const getExternalIPAlt = async () => {
+  try {
+    const response = await fetch('https://ifconfig.me/ip');
+    const ip = await response.text();
+    console.log('🌍 Внешний IP бэкенда (через ifconfig.me):', ip.trim());
+  } catch (error) {
+    console.error('❌ Не удалось получить внешний IP через ifconfig.me:', error.message);
+  }
+};
+
+// 4. DNS-запрос для проверки доступности базы
+const checkDatabaseDNS = async () => {
+  try {
+    const dbUrl = new URL(process.env.DATABASE_URL);
+    const host = dbUrl.hostname;
+    console.log(`🔍 Проверка DNS для хоста: ${host}`);
+    
+    // Используем exec для nslookup
+    const { stdout } = await execPromise(`nslookup ${host}`);
+    console.log('📡 Результат nslookup:');
+    console.log(stdout.trim());
+  } catch (error) {
+    console.error('❌ DNS-запрос не удался:', error.message);
+  }
+};
+
+// 5. Проверка подключения к базе (проверка порта)
+const checkDatabasePort = async () => {
+  try {
+    const dbUrl = new URL(process.env.DATABASE_URL);
+    const host = dbUrl.hostname;
+    const port = dbUrl.port || 5432;
+    console.log(`🔍 Проверка порта ${port} на хосте ${host}`);
+    
+    // Используем nc (netcat) для проверки порта
+    const { stdout, stderr } = await execPromise(`timeout 5 nc -zv ${host} ${port} 2>&1 || echo "Connection failed"`);
+    console.log('📡 Результат проверки порта:');
+    console.log(stdout || stderr);
+  } catch (error) {
+    console.error('❌ Проверка порта не удалась:', error.message);
+  }
+};
+
+// Запускаем все диагностики
+(async () => {
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  await getExternalIP();
+  await getExternalIPAlt();
+  await checkDatabaseDNS();
+  await checkDatabasePort();
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('✅ Диагностика завершена');
+})();
+
+// ===== ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ =====
+console.log('🔌 Подключение к базе данных...');
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
+});
+
+// Проверка подключения к БД
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('❌ Ошибка подключения к базе данных:', err.message);
+    console.error('📋 Полная ошибка:', err);
+  } else {
+    console.log('✅ Подключение к PostgreSQL установлено');
+    release();
+  }
 });
 
 // ===== ТЕСТОВЫЙ ЭНДПОИНТ =====

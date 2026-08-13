@@ -10,6 +10,7 @@ export default function ParentDashboard() {
   const [children, setChildren] = useState([]);
   const [selectedChild, setSelectedChild] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
   const [childStats, setChildStats] = useState({
@@ -33,6 +34,7 @@ export default function ParentDashboard() {
 
   const loadData = async () => {
     try {
+      setLoading(true);
       const userData = await api.getMe();
       if (!userData || !userData.id) {
         navigate('/login');
@@ -46,17 +48,26 @@ export default function ParentDashboard() {
 
       setProfile(userData);
 
+      // ===== ЗАГРУЖАЕМ ДЕТЕЙ =====
       const childrenData = await api.getParentChildren();
+      console.log('📥 Загружено детей:', childrenData?.length || 0);
+      console.log('📥 Данные детей:', childrenData);
+      
       setChildren(childrenData || []);
       
       if (childrenData && childrenData.length > 0) {
         setSelectedChild(childrenData[0]);
         loadChildStats(childrenData[0].id);
+      } else {
+        setSelectedChild(null);
       }
     } catch (err) {
       console.error('Ошибка:', err);
+      setMessage('❌ Ошибка загрузки данных: ' + err.message);
+      setMessageType('error');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -80,6 +91,7 @@ export default function ParentDashboard() {
   };
 
   const getConsentStatus = (child) => {
+    if (!child) return { total: 0, given: 0, percentage: 0 };
     const consents = ['consent_personal_data', 'consent_photo_publication', 'consent_event_participation'];
     const total = consents.length;
     const given = consents.filter(c => child[c]).length;
@@ -106,14 +118,24 @@ export default function ParentDashboard() {
       setMessageType('success');
       setLinkForm({ child_email: '', child_password: '' });
       setShowLinkModal(false);
-      await loadData();
-      setTimeout(() => setMessage(''), 3000);
+      await loadData(); // Обновляем список детей
+      setTimeout(() => setMessage(''), 5000);
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLinking(false);
     }
+  };
+
+  // ===== ОБНОВЛЕНИЕ СПИСКА =====
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setMessage('');
+    await loadData();
+    setMessage('🔄 Список обновлён');
+    setMessageType('success');
+    setTimeout(() => setMessage(''), 3000);
   };
 
   if (loading) {
@@ -132,15 +154,27 @@ export default function ParentDashboard() {
           <span style={{ fontSize: '32px' }}>👨‍👩‍👦</span>
           <div>
             <h1>Родительский кабинет</h1>
-            <p>Управление профилями детей и контроль их участия в движении</p>
+            <p>
+              {children.length > 0 
+                ? `У вас привязано ${children.length} ребёнок(а)` 
+                : 'У вас пока нет привязанных детей'}
+            </p>
           </div>
-          <button
-            className="btn-primary"
-            style={{ marginLeft: 'auto' }}
-            onClick={() => setShowLinkModal(true)}
-          >
-            ➕ Привязать ребёнка
-          </button>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              className="btn-secondary"
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
+              {refreshing ? '⏳ Обновление...' : '🔄 Обновить'}
+            </button>
+            <button
+              className="btn-primary"
+              onClick={() => setShowLinkModal(true)}
+            >
+              ➕ Привязать ребёнка
+            </button>
+          </div>
         </div>
 
         {message && (
@@ -197,6 +231,12 @@ export default function ParentDashboard() {
                 Для привязки нужны email и пароль, которые ребёнок использует для входа в систему.
               </span>
             </p>
+            <button
+              className="btn-primary"
+              onClick={() => setShowLinkModal(true)}
+            >
+              ➕ Привязать ребёнка
+            </button>
           </div>
         ) : selectedChild && (
           <>

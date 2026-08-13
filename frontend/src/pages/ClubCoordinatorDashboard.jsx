@@ -32,9 +32,6 @@ export default function ClubCoordinatorDashboard() {
         return;
       }
 
-      // ============================================================
-      // ТОЛЬКО КООРДИНАТОР КЛУБА
-      // ============================================================
       if (userData.role !== 'club_coordinator') {
         navigate('/dashboard');
         return;
@@ -42,19 +39,62 @@ export default function ClubCoordinatorDashboard() {
 
       setProfile(userData);
 
-      // Находим клуб координатора
+      // Загружаем клубы
       const clubsData = await api.getClubs();
-      const coordinatorClub = clubsData.find(c => 
-        c.coordinator_id === userData.id || 
-        c.leader_id === userData.id
-      );
+      console.log('🏫 Все клубы:', clubsData);
+      console.log('👤 Пользователь:', userData);
 
-      if (coordinatorClub) {
-        setClub(coordinatorClub);
-        await loadStats(coordinatorClub.id);
-        await loadRecentActivities(coordinatorClub.id);
-        await loadTopParticipants(coordinatorClub.id);
+      // ===== ПОИСК КЛУБА КООРДИНАТОРА =====
+      let coordinatorClub = null;
+
+      // 1. Сначала пробуем найти по club_id в users
+      if (userData.club_id) {
+        coordinatorClub = clubsData.find(c => c.id === userData.club_id);
+        if (coordinatorClub) {
+          console.log('✅ Клуб найден по club_id:', coordinatorClub.name);
+        }
       }
+
+      // 2. Если не нашли — пробуем найти по coordinator_id или leader_id
+      if (!coordinatorClub) {
+        coordinatorClub = clubsData.find(c => 
+          c.coordinator_id === userData.id || 
+          c.leader_id === userData.id
+        );
+        if (coordinatorClub) {
+          console.log('✅ Клуб найден по coordinator_id/leader_id:', coordinatorClub.name);
+        }
+      }
+
+      // 3. Если всё ещё не нашли — пробуем найти через club_coordinators (бэкенд)
+      if (!coordinatorClub) {
+        try {
+          const coordResponse = await fetch(`https://dod-backend.relaxdev.ru/api/club-coordinators?profile_id=${userData.id}`);
+          const coordData = await coordResponse.json();
+          console.log('📊 Данные из club_coordinators:', coordData);
+          
+          if (coordData && coordData.length > 0) {
+            const clubId = coordData[0].club_id;
+            coordinatorClub = clubsData.find(c => c.id === clubId);
+            if (coordinatorClub) {
+              console.log('✅ Клуб найден через club_coordinators:', coordinatorClub.name);
+            }
+          }
+        } catch (e) {
+          console.log('⚠️ Ошибка получения club_coordinators:', e);
+        }
+      }
+
+      if (!coordinatorClub) {
+        console.log('❌ Клуб не найден для координатора');
+        setLoading(false);
+        return;
+      }
+
+      setClub(coordinatorClub);
+      await loadStats(coordinatorClub.id);
+      await loadRecentActivities(coordinatorClub.id);
+      await loadTopParticipants(coordinatorClub.id);
 
     } catch (err) {
       console.error('Ошибка:', err);
@@ -81,7 +121,7 @@ export default function ClubCoordinatorDashboard() {
       setStats({
         participants: clubParticipants.length,
         events: clubEvents.length,
-        reports: 0, // TODO: добавить отчёты
+        reports: 0,
         achievements: clubAchievements.length,
         active_participants: clubParticipants.filter(p => p.status === 'active').length
       });
@@ -142,6 +182,16 @@ export default function ClubCoordinatorDashboard() {
             <div className="icon">🏫</div>
             <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Клуб не найден</p>
             <p style={{ color: '#667085' }}>Вы не привязаны ни к одному КЮДу. Обратитесь к администратору.</p>
+            <p style={{ color: '#98A2B3', fontSize: '13px', marginTop: '8px' }}>
+              Ваш ID: {profile?.id}
+            </p>
+            <button
+              className="btn-primary"
+              onClick={() => navigate('/profile')}
+              style={{ marginTop: '16px' }}
+            >
+              👤 Перейти в профиль
+            </button>
           </div>
         </div>
       </div>
@@ -152,7 +202,6 @@ export default function ClubCoordinatorDashboard() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        {/* ВЕРХНЯЯ ЧАСТЬ */}
         <div className="page-header">
           <span style={{ fontSize: '32px' }}>🏫</span>
           <div>
@@ -175,7 +224,6 @@ export default function ClubCoordinatorDashboard() {
           </div>
         </div>
 
-        {/* СТАТИСТИКА */}
         <div className="grid-4" style={{ marginBottom: '24px' }}>
           <div className="stat-card">
             <div className="number">{stats.participants}</div>
@@ -198,9 +246,7 @@ export default function ClubCoordinatorDashboard() {
           </div>
         </div>
 
-        {/* ДВЕ КОЛОНКИ */}
         <div className="grid-2">
-          {/* ПОСЛЕДНИЕ МЕРОПРИЯТИЯ */}
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
               📅 Последние мероприятия
@@ -229,7 +275,6 @@ export default function ClubCoordinatorDashboard() {
             </button>
           </div>
 
-          {/* ТОП УЧАСТНИКОВ */}
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
               🏆 Топ участников
@@ -270,7 +315,6 @@ export default function ClubCoordinatorDashboard() {
           </div>
         </div>
 
-        {/* БЫСТРЫЕ ДЕЙСТВИЯ */}
         <div className="card" style={{ marginTop: '20px' }}>
           <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
             ⚡ Быстрые действия

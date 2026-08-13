@@ -16,6 +16,8 @@ export default function Login() {
     setError('');
 
     try {
+      console.log('📤 Отправка:', { email, password });
+
       const response = await fetch('https://dod-backend.relaxdev.ru/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -23,16 +25,20 @@ export default function Login() {
       });
 
       const data = await response.json();
+      console.log('📥 Ответ:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Ошибка входа');
       }
 
+      // Сохраняем токен
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      console.log('✅ Токен сохранён:', data.token);
 
       navigate('/dashboard');
     } catch (err) {
+      console.error('❌ Ошибка:', err);
       setError(err.message);
     } finally {
       setLoading(false);

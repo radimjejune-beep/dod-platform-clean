@@ -41,17 +41,7 @@ export default function ProtectedRoute({ children }) {
   };
 
   if (loading) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: '#F4F6F9'
-      }}>
-        <div className="spinner" />
-      </div>
-    );
+    return <div style={{ textAlign: 'center', padding: '50px' }}>Загрузка...</div>;
   }
 
   if (!isAuthenticated) {

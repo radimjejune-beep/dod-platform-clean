@@ -22,7 +22,6 @@ export default function ProtectedRoute({ children }) {
     }
 
     try {
-      // Проверяем токен через API
       const user = await api.getMe();
       if (user && user.id) {
         setIsAuthenticated(true);

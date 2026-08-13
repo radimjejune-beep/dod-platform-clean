@@ -1,3 +1,5 @@
+// backend/server.js
+
 import express from 'express';
 import cors from 'cors';
 import { Pool } from 'pg';
@@ -73,8 +75,8 @@ app.post('/api/register', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO users (
         email, password_hash, full_name, role, phone, school, class_name,
-        birth_date, is_minor
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        birth_date, is_minor, registration_status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'approved')
       RETURNING id, email, full_name, role, created_at`,
       [
         email,
@@ -301,204 +303,7 @@ app.get('/api/registrations', async (req, res) => {
 });
 
 // ============================================================
-// 9. ЗАПРОСЫ НА РЕГИСТРАЦИЮ
-// ============================================================
-app.get('/api/registration-requests', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school,
-              u.class_name, u.birth_date, u.is_minor, u.created_at,
-              u.registration_status,
-              c.name as club_name,
-              pd.full_name as parent_full_name,
-              pd.phone as parent_phone,
-              pd.email as parent_email
-       FROM users u
-       LEFT JOIN club_participants cp ON u.id = cp.profile_id
-       LEFT JOIN clubs c ON cp.club_id = c.id
-       LEFT JOIN parent_data pd ON u.id = pd.user_id
-       WHERE u.registration_status = 'pending'
-       ORDER BY u.created_at ASC`
-    );
-    res.json(result.rows);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 10. ОДОБРЕНИЕ РЕГИСТРАЦИИ
-// ============================================================
-app.patch('/api/registration-requests/:userId/approve', async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    const result = await pool.query(
-      `UPDATE users
-       SET registration_status = 'approved',
-           approved_at = NOW()
-       WHERE id = $1 AND registration_status = 'pending'
-       RETURNING id, full_name, email`,
-      [userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Запрос не найден или уже обработан' });
-    }
-
-    res.json({
-      message: 'Регистрация одобрена',
-      user: result.rows[0]
-    });
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 11. ОТКЛОНЕНИЕ РЕГИСТРАЦИИ
-// ============================================================
-app.patch('/api/registration-requests/:userId/reject', async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    const result = await pool.query(
-      `UPDATE users
-       SET registration_status = 'rejected'
-       WHERE id = $1 AND registration_status = 'pending'
-       RETURNING id, full_name, email`,
-      [userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Запрос не найден или уже обработан' });
-    }
-
-    res.json({
-      message: 'Регистрация отклонена',
-      user: result.rows[0]
-    });
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 12. СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ (АДМИНКА)
-// ============================================================
-app.post('/api/users', async (req, res) => {
-  try {
-    const {
-      email,
-      full_name,
-      role,
-      phone,
-      school,
-      class_name,
-      birth_date,
-      club_id,
-      child_id
-    } = req.body;
-
-    if (!email || !full_name || !role) {
-      return res.status(400).json({ error: 'Email, ФИО и роль обязательны' });
-    }
-
-    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
-    if (existing.rows.length > 0) {
-      return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
-    }
-
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-    let password = '';
-    for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    const password_hash = await bcrypt.hash(password, 10);
-
-    const result = await pool.query(
-      `INSERT INTO users (
-        email, password_hash, full_name, role, phone, school, class_name,
-        birth_date
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING id, email, full_name, role`,
-      [
-        email,
-        password_hash,
-        full_name,
-        role,
-        phone || '',
-        school || '',
-        class_name || '',
-        birth_date || null
-      ]
-    );
-
-    const user = result.rows[0];
-
-    if (role === 'participant' && club_id) {
-      await pool.query(
-        `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
-         VALUES ($1, $2, 'active', NOW())`,
-        [user.id, club_id]
-      );
-    }
-
-    if (role === 'parent' && child_id) {
-      await pool.query(
-        `INSERT INTO parent_child_relations (parent_id, child_id, status, created_at)
-         VALUES ($1, $2, 'active', NOW())`,
-        [user.id, child_id]
-      );
-    }
-
-    res.status(201).json({
-      message: 'Пользователь создан',
-      user,
-      generated_password: password
-    });
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 13. ИЗМЕНЕНИЕ РОЛИ ПОЛЬЗОВАТЕЛЯ
-// ============================================================
-app.patch('/api/users/:userId/role', async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { role } = req.body;
-
-    if (!role) {
-      return res.status(400).json({ error: 'Роль обязательна' });
-    }
-
-    const result = await pool.query(
-      `UPDATE users SET role = $1 WHERE id = $2
-       RETURNING id, email, full_name, role`,
-      [role, userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
-    }
-
-    res.json({
-      message: 'Роль обновлена',
-      user: result.rows[0]
-    });
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 14. ОБНОВЛЕНИЕ ПРОФИЛЯ
+// 9. ОБНОВЛЕНИЕ ПРОФИЛЯ
 // ============================================================
 app.patch('/api/profile', async (req, res) => {
   try {
@@ -547,109 +352,7 @@ app.patch('/api/profile', async (req, res) => {
 });
 
 // ============================================================
-// 15. ПОЛУЧЕНИЕ ПОЛЬЗОВАТЕЛЯ ПО ID
-// ============================================================
-app.get('/api/users/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await pool.query(
-      `SELECT id, email, full_name, role, phone, school, class_name,
-              birth_date, is_minor, registration_status, interests, bio, city, created_at
-       FROM users WHERE id = $1`,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
-    }
-
-    res.json(result.rows[0]);
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 16. ОБНОВЛЕНИЕ СТАТУСА ПОЛЬЗОВАТЕЛЯ
-// ============================================================
-app.patch('/api/users/:id/status', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    if (!status) {
-      return res.status(400).json({ error: 'Статус обязателен' });
-    }
-
-    const result = await pool.query(
-      `UPDATE users SET status = $1 WHERE id = $2
-       RETURNING id, email, full_name, role, status`,
-      [status, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
-    }
-
-    res.json(result.rows[0]);
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 17. ПОЛУЧЕНИЕ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ С ФИЛЬТРАЦИЕЙ
-// ============================================================
-app.get('/api/users', async (req, res) => {
-  try {
-    const { role, club_id, search } = req.query;
-
-    let query = `
-      SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school,
-             u.class_name, u.birth_date, u.is_minor, u.registration_status,
-             u.interests, u.bio, u.city, u.status, u.created_at,
-             c.id as club_id, c.name as club_name
-      FROM users u
-      LEFT JOIN club_participants cp ON u.id = cp.profile_id AND cp.status = 'active'
-      LEFT JOIN clubs c ON cp.club_id = c.id
-      WHERE 1=1
-    `;
-    const params = [];
-    let paramIndex = 1;
-
-    if (role) {
-      query += ` AND u.role = $${paramIndex}`;
-      params.push(role);
-      paramIndex++;
-    }
-
-    if (club_id) {
-      query += ` AND cp.club_id = $${paramIndex}`;
-      params.push(club_id);
-      paramIndex++;
-    }
-
-    if (search) {
-      query += ` AND (u.full_name ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex})`;
-      params.push(`%${search}%`);
-      paramIndex++;
-    }
-
-    query += ` ORDER BY u.full_name`;
-
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 18. ДОСТИЖЕНИЯ
+// 10. ДОСТИЖЕНИЯ
 // ============================================================
 
 app.get('/api/achievements', async (req, res) => {
@@ -661,22 +364,6 @@ app.get('/api/achievements', async (req, res) => {
        FROM achievements a
        LEFT JOIN users u ON a.participant_id = u.id
        ORDER BY a.created_at DESC`
-    );
-    res.json(result.rows);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get('/api/achievements/participant/:participantId', async (req, res) => {
-  try {
-    const { participantId } = req.params;
-
-    const result = await pool.query(
-      `SELECT * FROM achievements 
-       WHERE participant_id = $1 
-       ORDER BY achievement_date DESC NULLS LAST, created_at DESC`,
-      [participantId]
     );
     res.json(result.rows);
   } catch (error) {
@@ -745,7 +432,7 @@ app.delete('/api/achievements/:id', async (req, res) => {
 });
 
 // ============================================================
-// 19. МЕРОПРИЯТИЯ
+// 11. МЕРОПРИЯТИЯ
 // ============================================================
 
 app.get('/api/events', async (req, res) => {
@@ -760,32 +447,6 @@ app.get('/api/events', async (req, res) => {
        ORDER BY e.event_date ASC`
     );
     res.json(result.rows);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get('/api/events/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await pool.query(
-      `SELECT e.*, 
-              c.name as club_name,
-              u.full_name as organizer_name
-       FROM events e
-       LEFT JOIN clubs c ON e.club_id = c.id
-       LEFT JOIN users u ON e.organizer_profile_id = u.id
-       WHERE e.id = $1`,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Мероприятие не найдено' });
-    }
-
-    res.json(result.rows[0]);
-
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -850,52 +511,6 @@ app.post('/api/events', async (req, res) => {
   }
 });
 
-app.patch('/api/events/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const {
-      title,
-      description,
-      location,
-      event_date,
-      end_date,
-      start_time,
-      end_time,
-      type,
-      capacity,
-      club_id,
-      form_url
-    } = req.body;
-
-    const result = await pool.query(
-      `UPDATE events SET
-        title = COALESCE($1, title),
-        description = COALESCE($2, description),
-        location = COALESCE($3, location),
-        event_date = COALESCE($4, event_date),
-        end_date = COALESCE($5, end_date),
-        start_time = COALESCE($6, start_time),
-        end_time = COALESCE($7, end_time),
-        type = COALESCE($8, type),
-        capacity = COALESCE($9, capacity),
-        club_id = COALESCE($10, club_id),
-        form_url = COALESCE($11, form_url)
-      WHERE id = $12
-      RETURNING *`,
-      [title, description, location, event_date, end_date, start_time, end_time, type, capacity, club_id, form_url, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Мероприятие не найдено' });
-    }
-
-    res.json(result.rows[0]);
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 app.delete('/api/events/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -917,7 +532,7 @@ app.delete('/api/events/:id', async (req, res) => {
 });
 
 // ============================================================
-// ЗАПУСК
+// 12. ЗАПУСК СЕРВЕРА
 // ============================================================
 app.listen(PORT, () => {
   console.log(`✅ Сервер запущен на порту ${PORT}`);

@@ -505,18 +505,20 @@ export const parentLinkChild = async (data) => {
   return response.json();
 };
 
-const api = {
-  // ... все существующие методы ...
-  parentLinkChild,
-};
+
 
 
 // ============================================================
-// 20. ЭКСПОРТ API ОБЪЕКТА
+// ЭКСПОРТ API ОБЪЕКТА
 // ============================================================
 const api = {
+  // Аутентификация
   getMe,
+  
+  // Профиль
   updateProfile,
+  
+  // Пользователи
   getUsers,
   getProfiles,
   getParticipants,
@@ -524,42 +526,77 @@ const api = {
   updateUser,
   deleteUser,
   updateUserRole,
+  
+  // Клубы
   getClubs,
+  
+  // Достижения
   getAchievements,
   addAchievement,
   deleteAchievement,
+  
+  // События
   getEvents,
   createEvent,
   updateEvent,
   deleteEvent,
+  
+  // Регистрации
   getRegistrations,
   addRegistration,
+  
+  // Обращения
   getAppeals,
   addAppeal,
   replyToAppeal,
   getAppealReplies,
+  
+  // Запросы на тьюторов
   getTutorRequests,
   createTutorRequest,
   updateTutorRequest,
+  
+  // Регистрация (публичная)
   registerUser,
+  
+  // Импорт
   importParticipants,
+  
+  // Аватар
   uploadAvatar,
   getAvatar,
+  
+  // История участника
   getParticipantEvents,
   getParticipantStats,
+  
+  // Дети родителя
   getParentChildren,
   addParentChild,
   removeParentChild,
+  
+  // Timeline ребёнка
   getChildTimeline,
+  
+  // Объявления
   getAnnouncements,
   createAnnouncement,
   deleteAnnouncement,
+  
+  // Шаблоны отчётов
   getReportTemplates,
   createReportTemplate,
   deleteReportTemplate,
+  
+  // Президент клуба
   setClubPresident,
   getClubPresident,
-  getClubRating
+  
+  // Рейтинг клуба
+  getClubRating,
+  
+  // Привязка ребёнка (НОВЫЙ МЕТОД)
+  parentLinkChild,
 };
 
 export default api;

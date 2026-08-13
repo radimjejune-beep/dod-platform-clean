@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
-import AvatarUpload from '../components/AvatarUpload'; // 👈 ДОБАВИТЬ
+import AvatarUpload from '../components/AvatarUpload';
 
 export default function Profile() {
   const [profile, setProfile] = useState(null);
@@ -12,6 +12,7 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
+  const [activeTab, setActiveTab] = useState('main');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,7 +35,6 @@ export default function Profile() {
     }
   };
 
-  // 👈 ДОБАВИТЬ: обработчик обновления аватара
   const handleAvatarUpdated = (newAvatarUrl) => {
     setProfile({ ...profile, avatar_url: newAvatarUrl });
     setMessage('✅ Аватар обновлён!');
@@ -59,7 +59,12 @@ export default function Profile() {
         class_name: profile.class_name || '',
         interests: profile.interests || '',
         bio: profile.bio || '',
-        city: profile.city || ''
+        city: profile.city || '',
+        // Новые поля
+        birth_date: profile.birth_date || '',
+        social_links: profile.social_links || '',
+        skills: profile.skills || '',
+        education: profile.education || ''
       };
 
       const result = await api.updateProfile(updateData);
@@ -112,7 +117,7 @@ export default function Profile() {
         )}
 
         <div className="card">
-          {/* 👇 АВАТАР */}
+          {/* АВАТАР */}
           <div style={{ 
             display: 'flex', 
             justifyContent: 'center', 
@@ -127,96 +132,275 @@ export default function Profile() {
             />
           </div>
 
+          {/* ВКЛАДКИ */}
+          <div style={{
+            display: 'flex',
+            gap: '4px',
+            marginBottom: '24px',
+            borderBottom: '2px solid #E2E7EF',
+            paddingBottom: '4px',
+            flexWrap: 'wrap'
+          }}>
+            <button
+              onClick={() => setActiveTab('main')}
+              style={{
+                padding: '8px 20px',
+                border: 'none',
+                background: activeTab === 'main' ? '#0B1F3A' : 'transparent',
+                color: activeTab === 'main' ? 'white' : '#667085',
+                borderRadius: '8px 8px 0 0',
+                cursor: 'pointer',
+                fontWeight: activeTab === 'main' ? '600' : '500',
+                fontSize: '14px',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              📋 Основное
+            </button>
+            <button
+              onClick={() => setActiveTab('contacts')}
+              style={{
+                padding: '8px 20px',
+                border: 'none',
+                background: activeTab === 'contacts' ? '#0B1F3A' : 'transparent',
+                color: activeTab === 'contacts' ? 'white' : '#667085',
+                borderRadius: '8px 8px 0 0',
+                cursor: 'pointer',
+                fontWeight: activeTab === 'contacts' ? '600' : '500',
+                fontSize: '14px',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              📞 Контакты
+            </button>
+            <button
+              onClick={() => setActiveTab('interests')}
+              style={{
+                padding: '8px 20px',
+                border: 'none',
+                background: activeTab === 'interests' ? '#0B1F3A' : 'transparent',
+                color: activeTab === 'interests' ? 'white' : '#667085',
+                borderRadius: '8px 8px 0 0',
+                cursor: 'pointer',
+                fontWeight: activeTab === 'interests' ? '600' : '500',
+                fontSize: '14px',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              🎯 Интересы
+            </button>
+            <button
+              onClick={() => setActiveTab('extra')}
+              style={{
+                padding: '8px 20px',
+                border: 'none',
+                background: activeTab === 'extra' ? '#0B1F3A' : 'transparent',
+                color: activeTab === 'extra' ? 'white' : '#667085',
+                borderRadius: '8px 8px 0 0',
+                cursor: 'pointer',
+                fontWeight: activeTab === 'extra' ? '600' : '500',
+                fontSize: '14px',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              🌟 Дополнительно
+            </button>
+          </div>
+
           <form onSubmit={handleSave}>
-            <div className="grid-2">
-              <div className="form-group">
-                <label>ФИО *</label>
-                <input
-                  type="text"
-                  name="full_name"
-                  value={profile?.full_name || ''}
-                  onChange={handleChange}
-                  required
-                />
+            {/* ===== ВКЛАДКА: ОСНОВНОЕ ===== */}
+            {activeTab === 'main' && (
+              <div>
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label>ФИО *</label>
+                    <input
+                      type="text"
+                      name="full_name"
+                      value={profile?.full_name || ''}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input
+                      type="email"
+                      value={profile?.email || ''}
+                      disabled
+                      style={{ background: '#F4F6F9', cursor: 'not-allowed' }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Дата рождения</label>
+                    <input
+                      type="date"
+                      name="birth_date"
+                      value={profile?.birth_date || ''}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Город</label>
+                    <input
+                      type="text"
+                      name="city"
+                      value={profile?.city || ''}
+                      onChange={handleChange}
+                      placeholder="Москва"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Школа</label>
+                    <input
+                      type="text"
+                      name="school"
+                      value={profile?.school || ''}
+                      onChange={handleChange}
+                      placeholder="Школа №1"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Класс</label>
+                    <input
+                      type="text"
+                      name="class_name"
+                      value={profile?.class_name || ''}
+                      onChange={handleChange}
+                      placeholder="8А"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="form-group">
-                <label>Email</label>
-                <input
-                  type="email"
-                  value={profile?.email || ''}
-                  disabled
-                  style={{ background: '#F4F6F9', cursor: 'not-allowed' }}
-                />
-              </div>
-              <div className="form-group">
-                <label>Телефон</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={profile?.phone || ''}
-                  onChange={handleChange}
-                  placeholder="+7 999 123 45 67"
-                />
-              </div>
-              <div className="form-group">
-                <label>Город</label>
-                <input
-                  type="text"
-                  name="city"
-                  value={profile?.city || ''}
-                  onChange={handleChange}
-                  placeholder="Москва"
-                />
-              </div>
-              <div className="form-group">
-                <label>Школа</label>
-                <input
-                  type="text"
-                  name="school"
-                  value={profile?.school || ''}
-                  onChange={handleChange}
-                  placeholder="Школа №1"
-                />
-              </div>
-              <div className="form-group">
-                <label>Класс</label>
-                <input
-                  type="text"
-                  name="class_name"
-                  value={profile?.class_name || ''}
-                  onChange={handleChange}
-                  placeholder="8А"
-                />
-              </div>
-            </div>
+            )}
 
-            <div className="form-group">
-              <label>Интересы</label>
-              <input
-                type="text"
-                name="interests"
-                value={profile?.interests || ''}
-                onChange={handleChange}
-                placeholder="Дипломатия, история, иностранные языки"
-              />
-            </div>
+            {/* ===== ВКЛАДКА: КОНТАКТЫ ===== */}
+            {activeTab === 'contacts' && (
+              <div>
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label>Телефон</label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={profile?.phone || ''}
+                      onChange={handleChange}
+                      placeholder="+7 999 123 45 67"
+                    />
+                    <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                      Введите номер без скобок
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Telegram</label>
+                    <input
+                      type="text"
+                      name="telegram"
+                      value={profile?.telegram || ''}
+                      onChange={handleChange}
+                      placeholder="@username"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>VK</label>
+                    <input
+                      type="text"
+                      name="vk"
+                      value={profile?.vk || ''}
+                      onChange={handleChange}
+                      placeholder="https://vk.com/id..."
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Другие соцсети</label>
+                    <input
+                      type="text"
+                      name="social_links"
+                      value={profile?.social_links || ''}
+                      onChange={handleChange}
+                      placeholder="Ссылки через запятую"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
-            <div className="form-group">
-              <label>О себе</label>
-              <textarea
-                name="bio"
-                rows="3"
-                value={profile?.bio || ''}
-                onChange={handleChange}
-                placeholder="Расскажите о себе..."
-              />
-            </div>
+            {/* ===== ВКЛАДКА: ИНТЕРЕСЫ ===== */}
+            {activeTab === 'interests' && (
+              <div>
+                <div className="form-group">
+                  <label>Интересы</label>
+                  <input
+                    type="text"
+                    name="interests"
+                    value={profile?.interests || ''}
+                    onChange={handleChange}
+                    placeholder="Дипломатия, история, иностранные языки, спорт"
+                  />
+                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                    Перечислите интересы через запятую
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Навыки</label>
+                  <input
+                    type="text"
+                    name="skills"
+                    value={profile?.skills || ''}
+                    onChange={handleChange}
+                    placeholder="Публичные выступления, переговоры, английский язык"
+                  />
+                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                    Перечислите навыки через запятую
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ===== ВКЛАДКА: ДОПОЛНИТЕЛЬНО ===== */}
+            {activeTab === 'extra' && (
+              <div>
+                <div className="form-group">
+                  <label>О себе</label>
+                  <textarea
+                    name="bio"
+                    rows="4"
+                    value={profile?.bio || ''}
+                    onChange={handleChange}
+                    placeholder="Расскажите о себе, своих целях и увлечениях..."
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Дополнительное образование</label>
+                  <textarea
+                    name="education"
+                    rows="3"
+                    value={profile?.education || ''}
+                    onChange={handleChange}
+                    placeholder="Курсы, кружки, секции..."
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Достижения</label>
+                  <textarea
+                    name="achievements"
+                    rows="3"
+                    value={profile?.achievements || ''}
+                    onChange={handleChange}
+                    placeholder="Ваши основные достижения..."
+                  />
+                </div>
+              </div>
+            )}
 
             <button
               type="submit"
               disabled={saving}
               className="btn-primary"
-              style={{ width: '100%' }}
+              style={{ width: '100%', marginTop: '16px' }}
             >
               {saving ? '⏳ Сохранение...' : '💾 Сохранить изменения'}
             </button>

@@ -1,6 +1,8 @@
 // frontend/src/App.jsx
 
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';  // ← ДОБАВИТЬ ЭТУ СТРОЧКУ
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Публичные страницы
@@ -59,263 +61,292 @@ import Participants from './pages/Participants';
 // Стили
 import './styles/global.css';
 
+// ===== ВЫНОСИМ МАРШРУТЫ В ОТДЕЛЬНЫЙ КОМПОНЕНТ =====
+function AppRoutes() {
+  const navigate = useNavigate();  // ← ДОБАВИТЬ ЭТУ СТРОЧКУ
+
+  // ===== ПРОВЕРКА СЕССИИ (МИНИМАЛЬНОЕ ДОБАВЛЕНИЕ) =====
+  useEffect(() => {  // ← ВЕСЬ ЭТОТ БЛОК ДОБАВИТЬ
+    const token = localStorage.getItem('token');
+    const sessionId = sessionStorage.getItem('sessionId');
+    const currentPath = window.location.pathname;
+    
+    // Если есть токен, но нет сессии — выходим
+    if (token && !sessionId) {
+      console.log('🔒 Сессия истекла (закрыта вкладка)');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      
+      // Если мы не на странице входа/регистрации — перенаправляем
+      if (currentPath !== '/login' && currentPath !== '/register' && currentPath !== '/') {
+        navigate('/login');
+      }
+    }
+  }, [navigate]);
+
+  return (
+    <Routes>
+      {/* ===== ПУБЛИЧНЫЕ ===== */}
+      <Route path="/" element={<Home />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+
+      {/* ===== ЗАЩИЩЁННЫЕ ===== */}
+      <Route path="/dashboard" element={
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/profile" element={
+        <ProtectedRoute>
+          <Profile />
+        </ProtectedRoute>
+      } />
+
+      {/* ===== УЧАСТНИК ===== */}
+      <Route path="/participant-dashboard" element={
+        <ProtectedRoute>
+          <ParticipantDashboard />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/my-achievements" element={
+        <ProtectedRoute>
+          <MyAchievements />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/my-reviews" element={
+        <ProtectedRoute>
+          <MyReviews />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/president-tasks" element={
+        <ProtectedRoute>
+          <PresidentTasks />
+        </ProtectedRoute>
+      } />
+
+      {/* ===== РОДИТЕЛЬ ===== */}
+      <Route path="/parent-dashboard" element={
+        <ProtectedRoute>
+          <ParentDashboard />
+        </ProtectedRoute>
+      } />
+
+      {/* ===== КООРДИНАТОР КЛУБА ===== */}
+      <Route path="/club-coordinator-dashboard" element={
+        <ProtectedRoute>
+          <ClubCoordinatorDashboard />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/club-analytics" element={
+        <ProtectedRoute>
+          <ClubAnalytics />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/manage-achievements" element={
+        <ProtectedRoute>
+          <ManageAchievements />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/reports" element={
+        <ProtectedRoute>
+          <Reports />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/appeals" element={
+        <ProtectedRoute>
+          <Appeals />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/tutor-requests" element={
+        <ProtectedRoute>
+          <TutorRequests />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/tutor-invitations" element={
+        <ProtectedRoute>
+          <TutorInvitations />
+        </ProtectedRoute>
+      } />
+
+      {/* ===== ТЬЮТОР ===== */}
+      <Route path="/tutor-dashboard" element={
+        <ProtectedRoute>
+          <TutorDashboard />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/my-journal" element={
+        <ProtectedRoute>
+          <MyJournal />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/tutor-journal" element={
+        <ProtectedRoute>
+          <TutorJournal />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/tutor-journal/:eventId" element={
+        <ProtectedRoute>
+          <TutorJournal />
+        </ProtectedRoute>
+      } />
+
+      {/* ===== ОБЩИЕ ===== */}
+      <Route path="/clubs" element={
+        <ProtectedRoute>
+          <Clubs />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/club/:id" element={
+        <ProtectedRoute>
+          <ClubDetail />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/events" element={
+        <ProtectedRoute>
+          <Events />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/events/:eventId/participants" element={
+        <ProtectedRoute>
+          <EventParticipants />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/calendar" element={
+        <ProtectedRoute>
+          <Calendar />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/participants" element={
+        <ProtectedRoute>
+          <Participants />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/participant/:id" element={
+        <ProtectedRoute>
+          <ParticipantProfile />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/participant/:id/edit" element={
+        <ProtectedRoute>
+          <ParticipantEdit />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/achievements" element={
+        <ProtectedRoute>
+          <Achievements />
+        </ProtectedRoute>
+      } />
+
+      {/* ===== АДМИНИСТРАТИВНЫЕ ===== */}
+      <Route path="/analytics" element={
+        <ProtectedRoute>
+          <Analytics />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/dashboard-analytics" element={
+        <ProtectedRoute>
+          <DashboardAnalytics />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/settings" element={
+        <ProtectedRoute>
+          <Settings />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/admin/invite" element={
+        <ProtectedRoute>
+          <AdminInvite />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/admin/users" element={
+        <ProtectedRoute>
+          <AdminUsers />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/admin/news" element={
+        <ProtectedRoute>
+          <AdminNews />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/import-participants" element={
+        <ProtectedRoute>
+          <ImportParticipants />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/staff" element={
+        <ProtectedRoute>
+          <StaffManagement />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/staff-calendar" element={
+        <ProtectedRoute>
+          <StaffCalendar />
+        </ProtectedRoute>
+      } />
+
+      {/* ===== НОВОСТИ ===== */}
+      <Route path="/news/:id" element={
+        <ProtectedRoute>
+          <NewsDetail />
+        </ProtectedRoute>
+      } />
+
+      {/* ===== 404 ===== */}
+      <Route path="*" element={
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '100vh',
+          flexDirection: 'column',
+          gap: '16px',
+          background: '#F4F6F9'
+        }}>
+          <span style={{ fontSize: '64px' }}>🤔</span>
+          <h1 style={{ color: '#0B1F3A' }}>Страница не найдена</h1>
+          <p style={{ color: '#667085' }}>Проверьте правильность URL</p>
+          <a href="/" style={{ color: '#C9A227', textDecoration: 'none' }}>Вернуться на главную</a>
+        </div>
+      } />
+    </Routes>
+  );
+}
+
+// ===== ОСНОВНОЙ КОМПОНЕНТ =====
 function App() {
   return (
     <Router>
-      <Routes>
-        {/* ===== ПУБЛИЧНЫЕ ===== */}
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-
-        {/* ===== ЗАЩИЩЁННЫЕ ===== */}
-        <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/profile" element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        } />
-
-        {/* ===== УЧАСТНИК ===== */}
-        <Route path="/participant-dashboard" element={
-          <ProtectedRoute>
-            <ParticipantDashboard />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/my-achievements" element={
-          <ProtectedRoute>
-            <MyAchievements />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/my-reviews" element={
-          <ProtectedRoute>
-            <MyReviews />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/president-tasks" element={
-          <ProtectedRoute>
-            <PresidentTasks />
-          </ProtectedRoute>
-        } />
-
-        {/* ===== РОДИТЕЛЬ ===== */}
-        <Route path="/parent-dashboard" element={
-          <ProtectedRoute>
-            <ParentDashboard />
-          </ProtectedRoute>
-        } />
-
-        {/* ===== КООРДИНАТОР КЛУБА ===== */}
-        <Route path="/club-coordinator-dashboard" element={
-          <ProtectedRoute>
-            <ClubCoordinatorDashboard />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/club-analytics" element={
-          <ProtectedRoute>
-            <ClubAnalytics />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/manage-achievements" element={
-          <ProtectedRoute>
-            <ManageAchievements />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/reports" element={
-          <ProtectedRoute>
-            <Reports />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/appeals" element={
-          <ProtectedRoute>
-            <Appeals />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/tutor-requests" element={
-          <ProtectedRoute>
-            <TutorRequests />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/tutor-invitations" element={
-          <ProtectedRoute>
-            <TutorInvitations />
-          </ProtectedRoute>
-        } />
-
-        {/* ===== ТЬЮТОР ===== */}
-        <Route path="/tutor-dashboard" element={
-          <ProtectedRoute>
-            <TutorDashboard />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/my-journal" element={
-          <ProtectedRoute>
-            <MyJournal />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/tutor-journal" element={
-          <ProtectedRoute>
-            <TutorJournal />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/tutor-journal/:eventId" element={
-          <ProtectedRoute>
-            <TutorJournal />
-          </ProtectedRoute>
-        } />
-
-        {/* ===== ОБЩИЕ ===== */}
-        <Route path="/clubs" element={
-          <ProtectedRoute>
-            <Clubs />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/club/:id" element={
-          <ProtectedRoute>
-            <ClubDetail />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/events" element={
-          <ProtectedRoute>
-            <Events />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/events/:eventId/participants" element={
-          <ProtectedRoute>
-            <EventParticipants />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/calendar" element={
-          <ProtectedRoute>
-            <Calendar />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/participants" element={
-          <ProtectedRoute>
-            <Participants />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/participant/:id" element={
-          <ProtectedRoute>
-            <ParticipantProfile />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/participant/:id/edit" element={
-          <ProtectedRoute>
-            <ParticipantEdit />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/achievements" element={
-          <ProtectedRoute>
-            <Achievements />
-          </ProtectedRoute>
-        } />
-
-        {/* ===== АДМИНИСТРАТИВНЫЕ ===== */}
-        <Route path="/analytics" element={
-          <ProtectedRoute>
-            <Analytics />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/dashboard-analytics" element={
-          <ProtectedRoute>
-            <DashboardAnalytics />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/settings" element={
-          <ProtectedRoute>
-            <Settings />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/admin/invite" element={
-          <ProtectedRoute>
-            <AdminInvite />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/admin/users" element={
-          <ProtectedRoute>
-            <AdminUsers />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/admin/news" element={
-          <ProtectedRoute>
-            <AdminNews />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/import-participants" element={
-          <ProtectedRoute>
-            <ImportParticipants />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/staff" element={
-          <ProtectedRoute>
-            <StaffManagement />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/staff-calendar" element={
-          <ProtectedRoute>
-            <StaffCalendar />
-          </ProtectedRoute>
-        } />
-
-        {/* ===== НОВОСТИ ===== */}
-        <Route path="/news/:id" element={
-          <ProtectedRoute>
-            <NewsDetail />
-          </ProtectedRoute>
-        } />
-
-        {/* ===== 404 ===== */}
-        <Route path="*" element={
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            height: '100vh',
-            flexDirection: 'column',
-            gap: '16px',
-            background: '#F4F6F9'
-          }}>
-            <span style={{ fontSize: '64px' }}>🤔</span>
-            <h1 style={{ color: '#0B1F3A' }}>Страница не найдена</h1>
-            <p style={{ color: '#667085' }}>Проверьте правильность URL</p>
-            <a href="/" style={{ color: '#C9A227', textDecoration: 'none' }}>Вернуться на главную</a>
-          </div>
-        } />
-      </Routes>
+      <AppRoutes />
     </Router>
   );
 }

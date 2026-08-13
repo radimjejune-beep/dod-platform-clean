@@ -30,6 +30,9 @@ export default function ImportParticipants() {
         return;
       }
 
+      // ============================================================
+      // ТОЛЬКО АДМИН И КООРДИНАТОР ДВИЖЕНИЯ
+      // ============================================================
       if (userData.role !== 'admin' && userData.role !== 'movement_coordinator') {
         navigate('/dashboard');
         return;
@@ -119,7 +122,6 @@ export default function ImportParticipants() {
 
     for (const row of previewData) {
       try {
-        // Проверяем, существует ли пользователь
         const existingUsers = await api.getUsers();
         const existing = existingUsers.find(u => u.email === row.email);
 
@@ -136,8 +138,8 @@ export default function ImportParticipants() {
           if (clubsMap[clubName]) {
             clubId = clubsMap[clubName];
           } else {
-            const foundClub = clubs.find(c => 
-              c.name.toLowerCase().includes(clubName) || 
+            const foundClub = clubs.find(c =>
+              c.name.toLowerCase().includes(clubName) ||
               clubName.includes(c.name.toLowerCase())
             );
             if (foundClub) {
@@ -219,7 +221,7 @@ export default function ImportParticipants() {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(template);
     XLSX.utils.book_append_sheet(wb, ws, 'Участники');
-    
+
     ws['!cols'] = [
       { wch: 30 },
       { wch: 30 },
@@ -254,7 +256,7 @@ export default function ImportParticipants() {
 
         {/* СПИСОК ПАРОЛЕЙ */}
         {showPasswordList && importedUsers.length > 0 && (
-          <div className="card" style={{ 
+          <div className="card" style={{
             background: '#FBF4DC',
             border: '2px solid #C9A227',
             marginBottom: '16px'

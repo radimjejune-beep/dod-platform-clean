@@ -12,6 +12,7 @@ export default function AdminInvite() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
   const [clubs, setClubs] = useState([]);
+  const [invitations, setInvitations] = useState([]);
   const [form, setForm] = useState({
     full_name: '',
     email: '',
@@ -33,6 +34,9 @@ export default function AdminInvite() {
         return;
       }
 
+      // ============================================================
+      // ТОЛЬКО АДМИН И КООРДИНАТОР ДВИЖЕНИЯ
+      // ============================================================
       if (userData.role !== 'admin' && userData.role !== 'movement_coordinator') {
         navigate('/dashboard');
         return;
@@ -42,6 +46,9 @@ export default function AdminInvite() {
 
       const clubsData = await api.getClubs();
       setClubs(clubsData || []);
+
+      // TODO: добавить API для получения приглашений
+      setInvitations([]);
     } catch (err) {
       console.error('Ошибка:', err);
     } finally {
@@ -96,7 +103,7 @@ export default function AdminInvite() {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📧 Email: ${form.email}
   🔒 Пароль: ${password}
-  👤 Роль: ${form.role}
+  👤 Роль: ${getRoleLabel(form.role)}
   ${form.club_id ? `🏫 Клуб: ${clubs.find(c => c.id === form.club_id)?.name || '—'}` : ''}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

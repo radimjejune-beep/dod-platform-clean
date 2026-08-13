@@ -26,7 +26,8 @@ export default function AdminUsers() {
     phone: '',
     school: '',
     class_name: '',
-    club_id: ''
+    club_id: '',
+    generate_password: true
   });
   const navigate = useNavigate();
 
@@ -42,9 +43,7 @@ export default function AdminUsers() {
         return;
       }
 
-      // ============================================================
-      // ПРОВЕРКА ДОСТУПА — ТОЛЬКО АДМИН И КООРДИНАТОР ДВИЖЕНИЯ
-      // ============================================================
+      // Проверка прав — только админ и координатор движения
       if (userData.role !== 'admin' && userData.role !== 'movement_coordinator' && userData.role !== 'president' && userData.role !== 'vice_president') {
         navigate('/dashboard');
         return;
@@ -59,15 +58,11 @@ export default function AdminUsers() {
 
       setClubs(clubsData || []);
 
-      // ============================================================
-      // ЛОГИКА ПО РОЛЯМ
-      // ============================================================
+      // Логика по ролям
       if (userData.role === 'admin' || userData.role === 'movement_coordinator') {
-        // АДМИН и КООРДИНАТОР ДВИЖЕНИЯ — видят всех
         setAllUsers(usersData || []);
         setUsers(usersData || []);
       } else if (userData.role === 'president' || userData.role === 'vice_president') {
-        // ПРЕЗИДЕНТ и ВИЦЕ — видят всех (только просмотр)
         setAllUsers(usersData || []);
         setUsers(usersData || []);
       } else {
@@ -104,6 +99,9 @@ export default function AdminUsers() {
     setUsers(filtered);
   }, [searchQuery, selectedRole, selectedClub, allUsers]);
 
+  // ============================================================
+  // ГЕНЕРАЦИЯ ПАРОЛЯ
+  // ============================================================
   const generatePassword = () => {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
     let password = '';
@@ -113,6 +111,52 @@ export default function AdminUsers() {
     return password;
   };
 
+  // ============================================================
+  // ГЕНЕРАЦИЯ EMAIL ИЗ ФИО
+  // ============================================================
+  const generateEmailFromName = (fullName) => {
+    const parts = fullName.trim().split(' ');
+    let login = '';
+    if (parts.length >= 2) {
+      const firstName = parts[0].toLowerCase();
+      const lastName = parts[parts.length - 1].toLowerCase();
+      const cleanFirstName = firstName.replace(/[^a-zа-яё]/g, '');
+      const cleanLastName = lastName.replace(/[^a-zа-яё]/g, '');
+      const randomNum = Math.floor(Math.random() * 10000);
+      login = `${cleanFirstName}.${cleanLastName}${randomNum}`;
+    } else {
+      login = `user${Math.floor(Math.random() * 100000)}`;
+    }
+    
+    // Транслитерация русских букв
+    const translit = {
+      'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
+      'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+      'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+      'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+      'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+    };
+    let result = '';
+    for (const char of login) {
+      if (translit[char]) {
+        result += translit[char];
+      } else {
+        result += char;
+      }
+    }
+    return `${result}@dod.local`;
+  };
+
+  // ============================================================
+  // ВАЛИДАЦИЯ EMAIL
+  // ============================================================
+  const isValidEmail = (email) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  // ============================================================
+  // СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ
+  // ============================================================
   const handleCreateUser = async (e) => {
     e.preventDefault();
     setMessage('');
@@ -120,9 +164,24 @@ export default function AdminUsers() {
     setCreatedUsers([]);
 
     try {
-      // ============================================================
-      // ТОЛЬКО АДМИН И КООРДИНАТОР ДВИЖЕНИЯ МОГУТ СОЗДАВАТЬ
-      // ============================================================
+      // ===== ВАЛИДАЦИЯ =====
+      // 1. ФИО обязательно
+      if (!form.full_name || form.full_name.trim().length < 2) {
+        setMessage('❌ Пожалуйста, укажите ФИО (минимум 2 символа)');
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Роль обязательна
+      if (!form.role) {
+        setMessage('❌ Пожалуйста, выберите роль');
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
+
+      // Проверка прав
       if (profile?.role !== 'admin' && profile?.role !== 'movement_coordinator') {
         setMessage('❌ У вас нет прав для создания пользователей');
         setMessageType('error');
@@ -131,10 +190,31 @@ export default function AdminUsers() {
       }
 
       const password = generatePassword();
+      let email = form.email.trim();
+      let isAutoGenerated = false;
+
+      // Если email не указан или указан невалидный — генерируем
+      if (!email || !isValidEmail(email)) {
+        email = generateEmailFromName(form.full_name);
+        isAutoGenerated = true;
+      }
+
+      // Проверяем, не занят ли email
+      const existingUsers = await api.getUsers();
+      const existing = existingUsers.find(u => u.email === email);
+
+      if (existing) {
+        // Если email занят — генерируем новый с добавлением случайного числа
+        const randomSuffix = Math.floor(Math.random() * 10000);
+        const baseEmail = email.split('@')[0];
+        const domain = email.split('@')[1] || 'dod.local';
+        email = `${baseEmail}${randomSuffix}@${domain}`;
+        isAutoGenerated = true;
+      }
 
       const result = await api.createUser({
-        email: form.email,
-        full_name: form.full_name,
+        email: email,
+        full_name: form.full_name.trim(),
         role: form.role,
         phone: form.phone || '',
         school: form.school || '',
@@ -146,17 +226,21 @@ export default function AdminUsers() {
         throw new Error(result.error);
       }
 
+      // Запоминаем созданного пользователя
       setCreatedUsers([{
-        full_name: form.full_name,
-        email: form.email,
-        password: result.generated_password || password,
-        role: form.role
+        full_name: form.full_name.trim(),
+        email: email,
+        login: email,
+        password: password,
+        role: form.role,
+        is_auto_generated: isAutoGenerated
       }]);
 
       setMessage(`✅ Пользователь "${form.full_name}" создан!`);
       setMessageType('success');
       setShowPasswordList(true);
 
+      // Сбрасываем форму
       setForm({
         full_name: '',
         email: '',
@@ -164,9 +248,11 @@ export default function AdminUsers() {
         phone: '',
         school: '',
         class_name: '',
-        club_id: ''
+        club_id: '',
+        generate_password: true
       });
 
+      // Обновляем список пользователей
       const usersData = await api.getUsers();
       setAllUsers(usersData || []);
       setUsers(usersData || []);
@@ -180,10 +266,31 @@ export default function AdminUsers() {
     }
   };
 
+  // ============================================================
+  // КОПИРОВАНИЕ ДАННЫХ
+  // ============================================================
+  const copyPasswords = () => {
+    let text = '=== ДАННЫЕ ДЛЯ ВХОДА ===\n\n';
+    createdUsers.forEach(u => {
+      text += `ФИО: ${u.full_name}\n`;
+      text += `Логин: ${u.email}\n`;
+      text += `Пароль: ${u.password}\n`;
+      text += `Роль: ${getRoleLabel(u.role)}\n`;
+      if (u.is_auto_generated) {
+        text += `⚠️ Логин сгенерирован автоматически\n`;
+      }
+      text += '\n';
+    });
+    navigator.clipboard.writeText(text);
+    setMessage('✅ Данные скопированы!');
+    setMessageType('success');
+    setTimeout(() => setMessage(''), 3000);
+  };
+
+  // ============================================================
+  // ИЗМЕНЕНИЕ РОЛИ
+  // ============================================================
   const handleRoleChange = async (userId, newRole) => {
-    // ============================================================
-    // ТОЛЬКО АДМИН И КООРДИНАТОР ДВИЖЕНИЯ МОГУТ МЕНЯТЬ РОЛИ
-    // ============================================================
     if (profile?.role !== 'admin' && profile?.role !== 'movement_coordinator') {
       setMessage('❌ У вас нет прав для изменения ролей');
       setMessageType('error');
@@ -213,20 +320,9 @@ export default function AdminUsers() {
     }
   };
 
-  const copyPasswords = () => {
-    let text = '=== ДАННЫЕ ДЛЯ ВХОДА ===\n\n';
-    createdUsers.forEach(u => {
-      text += `ФИО: ${u.full_name}\n`;
-      text += `Логин: ${u.email}\n`;
-      text += `Пароль: ${u.password}\n`;
-      text += `Роль: ${getRoleLabel(u.role)}\n\n`;
-    });
-    navigator.clipboard.writeText(text);
-    setMessage('✅ Данные скопированы!');
-    setMessageType('success');
-    setTimeout(() => setMessage(''), 3000);
-  };
-
+  // ============================================================
+  // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+  // ============================================================
   const getRoleLabel = (role) => {
     const labels = {
       'participant': '👤 Участник',
@@ -241,13 +337,8 @@ export default function AdminUsers() {
     return labels[role] || role;
   };
 
-  // Кто может создавать пользователей
   const canCreate = profile?.role === 'admin' || profile?.role === 'movement_coordinator';
-
-  // Кто может менять роли
   const canChangeRoles = profile?.role === 'admin' || profile?.role === 'movement_coordinator';
-
-  // Кто может просматривать
   const canView = profile?.role === 'admin' || 
                   profile?.role === 'movement_coordinator' || 
                   profile?.role === 'president' || 
@@ -307,25 +398,54 @@ export default function AdminUsers() {
           </div>
         )}
 
-        {/* СПИСОК ПАРОЛЕЙ */}
+        {/* ============================================================
+            СПИСОК ПАРОЛЕЙ
+            ============================================================ */}
         {showPasswordList && createdUsers.length > 0 && (
-          <div className="card" style={{
+          <div className="card" style={{ 
+            padding: '24px', 
+            marginBottom: '24px',
             background: '#FBF4DC',
-            border: '2px solid #C9A227',
-            marginBottom: '16px'
+            border: '2px solid #C9A227'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0B1F3A' }}>
                 🔑 Данные для входа
               </h3>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn-primary" onClick={copyPasswords}>
+                <button
+                  className="btn-primary"
+                  onClick={copyPasswords}
+                  style={{
+                    padding: '6px 16px',
+                    background: '#0B1F3A',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: '600'
+                  }}
+                >
                   📋 Скопировать все
                 </button>
-                <button className="btn-secondary" onClick={() => {
-                  setShowPasswordList(false);
-                  setCreatedUsers([]);
-                }}>
+                <button
+                  className="btn-secondary"
+                  onClick={() => {
+                    setShowPasswordList(false);
+                    setCreatedUsers([]);
+                  }}
+                  style={{
+                    padding: '6px 16px',
+                    background: 'transparent',
+                    color: '#0B1F3A',
+                    border: '1.5px solid #D5DCE7',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: '500'
+                  }}
+                >
                   ✖ Закрыть
                 </button>
               </div>
@@ -345,7 +465,21 @@ export default function AdminUsers() {
                   {createdUsers.map((u, index) => (
                     <tr key={index} style={{ borderBottom: '1px solid #E2E7EF' }}>
                       <td style={{ padding: '8px 12px', fontWeight: '500' }}>{u.full_name}</td>
-                      <td style={{ padding: '8px 12px' }}>{u.email}</td>
+                      <td style={{ padding: '8px 12px' }}>
+                        {u.email}
+                        {u.is_auto_generated && (
+                          <span style={{
+                            marginLeft: '8px',
+                            fontSize: '10px',
+                            padding: '2px 6px',
+                            background: '#EAF2FA',
+                            color: '#174A7E',
+                            borderRadius: '4px'
+                          }}>
+                            Авто
+                          </span>
+                        )}
+                      </td>
                       <td>
                         <code style={{
                           background: '#F4F6F9',
@@ -364,45 +498,71 @@ export default function AdminUsers() {
                 </tbody>
               </table>
             </div>
+
+            <div style={{
+              marginTop: '12px',
+              padding: '12px',
+              background: '#EAF2FA',
+              borderRadius: '8px',
+              fontSize: '13px',
+              color: '#174A7E'
+            }}>
+              💡 Скопируйте данные и разошлите пользователям. Пароли можно изменить при первом входе.
+            </div>
           </div>
         )}
 
-        {/* ФОРМА СОЗДАНИЯ ПОЛЬЗОВАТЕЛЯ */}
+        {/* ============================================================
+            ФОРМА СОЗДАНИЯ ПОЛЬЗОВАТЕЛЯ
+            ============================================================ */}
         {showCreateUser && canCreate && (
-          <div className="card" style={{ marginBottom: '24px' }}>
+          <div className="card" style={{ padding: '24px', marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
               📝 Создать пользователя
             </h3>
+            
+            {/* ===== ОБЯЗАТЕЛЬНЫЕ ПОЛЯ ===== */}
+            <div style={{
+              padding: '8px 12px',
+              marginBottom: '16px',
+              background: '#EAF2FA',
+              borderRadius: '8px',
+              fontSize: '13px',
+              color: '#174A7E'
+            }}>
+              ⚠️ Поля <strong>ФИО</strong> и <strong>Роль</strong> обязательны для заполнения
+            </div>
+
             <form onSubmit={handleCreateUser}>
-              <div className="grid-2">
-                <div className="form-group">
-                  <label>ФИО *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+                {/* ===== ФИО — ОБЯЗАТЕЛЬНОЕ ===== */}
+                <div className="form-group" style={{ border: '2px solid #C9A227', borderRadius: '10px', padding: '12px' }}>
+                  <label style={{ fontWeight: '600', color: '#0B1F3A' }}>
+                    ФИО <span style={{ color: '#B3262E' }}>*</span>
+                  </label>
                   <input
                     type="text"
                     value={form.full_name}
                     onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                     required
                     placeholder="Иванов Иван Иванович"
+                    style={{ border: '1.5px solid #C9A227' }}
                   />
+                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                    Обязательное поле
+                  </div>
                 </div>
 
-                <div className="form-group">
-                  <label>Email *</label>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    required
-                    placeholder="ivan@example.com"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Роль *</label>
+                {/* ===== РОЛЬ — ОБЯЗАТЕЛЬНАЯ ===== */}
+                <div className="form-group" style={{ border: '2px solid #C9A227', borderRadius: '10px', padding: '12px' }}>
+                  <label style={{ fontWeight: '600', color: '#0B1F3A' }}>
+                    Роль <span style={{ color: '#B3262E' }}>*</span>
+                  </label>
                   <select
                     value={form.role}
                     onChange={(e) => setForm({ ...form, role: e.target.value })}
                     required
+                    style={{ border: '1.5px solid #C9A227' }}
                   >
                     <option value="participant">👤 Участник</option>
                     <option value="parent">👨‍👩‍👦 Родитель</option>
@@ -410,9 +570,32 @@ export default function AdminUsers() {
                     <option value="tutor">📚 Тьютор</option>
                     <option value="movement_coordinator">⭐ Координатор движения</option>
                     <option value="admin">🔧 Администратор</option>
+                    <option value="president">👑 Президент ДОД</option>
+                    <option value="vice_president">⭐ Вице-президент ДОД</option>
                   </select>
+                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                    Обязательное поле
+                  </div>
                 </div>
 
+                {/* ===== Email — НЕ ОБЯЗАТЕЛЬНЫЙ ===== */}
+                <div className="form-group">
+                  <label>
+                    Email
+                    <span style={{ fontSize: '12px', color: '#98A2B3', marginLeft: '8px' }}>(необязательно)</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    placeholder="ivan@example.com"
+                  />
+                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                    Если не указан, будет сгенерирован автоматически
+                  </div>
+                </div>
+
+                {/* ===== ОСТАЛЬНЫЕ ПОЛЯ — ОПЦИОНАЛЬНЫЕ ===== */}
                 <div className="form-group">
                   <label>Телефон</label>
                   <input
@@ -483,7 +666,9 @@ export default function AdminUsers() {
           </div>
         )}
 
-        {/* ФИЛЬТРЫ И ТАБЛИЦА */}
+        {/* ============================================================
+            ФИЛЬТРЫ И ТАБЛИЦА
+            ============================================================ */}
         <div style={{
           display: 'flex',
           gap: '16px',
@@ -512,6 +697,8 @@ export default function AdminUsers() {
               <option value="tutor">Тьютор</option>
               <option value="movement_coordinator">Координатор движения</option>
               <option value="admin">Администратор</option>
+              <option value="president">Президент</option>
+              <option value="vice_president">Вице-президент</option>
             </select>
           </div>
 
@@ -532,7 +719,9 @@ export default function AdminUsers() {
           </div>
         </div>
 
-        {/* ТАБЛИЦА ПОЛЬЗОВАТЕЛЕЙ */}
+        {/* ============================================================
+            ТАБЛИЦА ПОЛЬЗОВАТЕЛЕЙ
+            ============================================================ */}
         <div className="table-wrapper">
           <table>
             <thead>
@@ -576,6 +765,8 @@ export default function AdminUsers() {
                           <option value="tutor">Тьютор</option>
                           <option value="movement_coordinator">Координатор движения</option>
                           <option value="admin">Администратор</option>
+                          <option value="president">Президент</option>
+                          <option value="vice_president">Вице-президент</option>
                         </select>
                       ) : (
                         <span>{getRoleLabel(u.role)}</span>

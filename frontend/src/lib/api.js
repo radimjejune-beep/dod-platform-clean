@@ -305,6 +305,41 @@ export const updateTutorRequest = async (id, data) => {
   return response.json();
 };
 
+// ===== ПРИГЛАШЕНИЯ ДЛЯ ТЬЮТОРОВ =====
+export const getTutorInvitations = async () => {
+  const response = await fetch(`${API_URL}/tutor-invitations`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const createTutorInvitation = async (data) => {
+  const response = await fetch(`${API_URL}/tutor-invitations`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const respondToTutorInvitation = async (id, status) => {
+  const response = await fetch(`${API_URL}/tutor-invitations/${id}/respond`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ status })
+  });
+  return response.json();
+};
+
+export const cancelTutorInvitation = async (id) => {
+  const response = await fetch(`${API_URL}/tutor-invitations/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
 // ============================================================
 // 11. ЭКСПОРТ API ОБЪЕКТА
 // ============================================================

@@ -61,6 +61,7 @@ export default function Navigation({ profile }) {
         { path: '/reports', label: '📋 Отчёты', roles: ['club_coordinator'] },
         { path: '/appeals', label: '📨 Обращения', roles: ['club_coordinator'] },
         { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', roles: ['club_coordinator'] },
+        { path: '/tutor-invitations', label: '📨 Приглашения тьюторов', roles: ['club_coordinator'] },
         { path: '/staff-calendar', label: '📅 Календарь', roles: ['club_coordinator'] },
         { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['club_coordinator'] },
       ],
@@ -70,6 +71,7 @@ export default function Navigation({ profile }) {
         { path: '/tutor-dashboard', label: '📊 Кабинет тьютора', roles: ['tutor'] },
         { path: '/my-journal', label: '📓 Мой журнал', roles: ['tutor'] },
         { path: '/tutor-journal', label: '📋 Журнал тьютора', roles: ['tutor'] },
+        { path: '/tutor-invitations', label: '📨 Приглашения', roles: ['tutor'] },
         { path: '/clubs', label: '🏫 КЮДы', roles: ['tutor'] },
         { path: '/events', label: '📅 Мероприятия', roles: ['tutor'] },
         { path: '/participants', label: '👥 Участники', roles: ['tutor'] },
@@ -99,6 +101,7 @@ export default function Navigation({ profile }) {
         { path: '/appeals', label: '📨 Обращения координаторов', roles: ['movement_coordinator'] },
         { path: '/staff', label: '👥 Сотрудники', roles: ['movement_coordinator'] },
         { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', roles: ['movement_coordinator'] },
+        { path: '/tutor-invitations', label: '📨 Приглашения тьюторов', roles: ['movement_coordinator'] },
         { path: '/staff-calendar', label: '📅 Календарь сотрудников', roles: ['movement_coordinator'] },
         { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['movement_coordinator'] },
       ],
@@ -123,6 +126,7 @@ export default function Navigation({ profile }) {
         { path: '/appeals', label: '📨 Обращения координаторов', roles: ['admin'] },
         { path: '/staff', label: '👥 Сотрудники', roles: ['admin'] },
         { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', roles: ['admin'] },
+        { path: '/tutor-invitations', label: '📨 Приглашения тьюторов', roles: ['admin'] },
         { path: '/staff-calendar', label: '📅 Календарь сотрудников', roles: ['admin'] },
         { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['admin'] },
       ],
@@ -139,6 +143,8 @@ export default function Navigation({ profile }) {
         { path: '/my-reviews', label: '📊 Оценки участников', roles: ['president'] },
         { path: '/reports', label: '📋 Отчёты', roles: ['president'] },
         { path: '/appeals', label: '📨 Обращения', roles: ['president'] },
+        { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', roles: ['president'] },
+        { path: '/tutor-invitations', label: '📨 Приглашения тьюторов', roles: ['president'] },
         { path: '/admin/users', label: '👥 Пользователи', roles: ['president'] },
         { path: '/profile', label: '👤 Профиль', roles: ['president'] },
         { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['president'] },
@@ -156,6 +162,8 @@ export default function Navigation({ profile }) {
         { path: '/my-reviews', label: '📊 Оценки участников', roles: ['vice_president'] },
         { path: '/reports', label: '📋 Отчёты', roles: ['vice_president'] },
         { path: '/appeals', label: '📨 Обращения', roles: ['vice_president'] },
+        { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', roles: ['vice_president'] },
+        { path: '/tutor-invitations', label: '📨 Приглашения тьюторов', roles: ['vice_president'] },
         { path: '/admin/users', label: '👥 Пользователи', roles: ['vice_president'] },
         { path: '/profile', label: '👤 Профиль', roles: ['vice_president'] },
         { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['vice_president'] },
@@ -188,10 +196,10 @@ export default function Navigation({ profile }) {
       ['/my-journal', '/tutor-journal'].includes(item.path)
     ),
     settings: menuItems.filter(item => 
-      ['/settings', '/admin/invite', '/admin/users', '/import-participants', '/appeals', '/staff', '/tutor-requests', '/staff-calendar', '/reports', '/analytics'].includes(item.path)
+      ['/settings', '/admin/invite', '/admin/users', '/import-participants', '/appeals', '/staff', '/tutor-requests', '/tutor-invitations', '/staff-calendar', '/reports', '/analytics'].includes(item.path)
     ),
     other: menuItems.filter(item => 
-      !['/', '/profile', '/dashboard', '/participant-dashboard', '/parent-dashboard', '/club-coordinator-dashboard', '/tutor-dashboard', '/events', '/calendar', '/participants', '/clubs', '/club-analytics', '/my-reviews', '/achievements', '/manage-achievements', '/my-journal', '/tutor-journal', '/settings', '/admin/invite', '/admin/users', '/import-participants', '/appeals', '/staff', '/tutor-requests', '/staff-calendar', '/reports', '/analytics'].includes(item.path)
+      !['/', '/profile', '/dashboard', '/participant-dashboard', '/parent-dashboard', '/club-coordinator-dashboard', '/tutor-dashboard', '/events', '/calendar', '/participants', '/clubs', '/club-analytics', '/my-reviews', '/achievements', '/manage-achievements', '/my-journal', '/tutor-journal', '/settings', '/admin/invite', '/admin/users', '/import-participants', '/appeals', '/staff', '/tutor-requests', '/tutor-invitations', '/staff-calendar', '/reports', '/analytics'].includes(item.path)
     )
   };
 

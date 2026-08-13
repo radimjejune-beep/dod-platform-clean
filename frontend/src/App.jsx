@@ -35,6 +35,7 @@ import ClubDetail from './pages/ClubDetail';
 import ParticipantProfile from './pages/ParticipantProfile';
 import DashboardAnalytics from './pages/DashboardAnalytics';
 import TutorRequests from './pages/TutorRequests';
+import TutorInvitations from './pages/TutorInvitations';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import Footer from './components/Footer';
@@ -90,6 +91,9 @@ function App() {
             
             {/* Запросы на тьюторов */}
             <Route path="/tutor-requests" element={<ProtectedRoute><TutorRequests /></ProtectedRoute>} />
+            
+            {/* Приглашения тьюторов */}
+            <Route path="/tutor-invitations" element={<ProtectedRoute><TutorInvitations /></ProtectedRoute>} />
             
             {/* Администрирование */}
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />

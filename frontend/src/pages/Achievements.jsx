@@ -8,19 +8,19 @@ import Navigation from '../components/Navigation';
 export default function Achievements() {
   const [profile, setProfile] = useState(null);
   const [achievements, setAchievements] = useState([]);
-  const [allParticipants, setAllParticipants] = useState([]);
-  const [filteredParticipants, setFilteredParticipants] = useState([]);
+  const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedParticipant, setSelectedParticipant] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
+  const [selectedParticipant, setSelectedParticipant] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
   const [form, setForm] = useState({
     title: '',
     description: '',
-    date: ''
+    achievement_date: '',
+    participant_id: ''
   });
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
@@ -50,18 +50,17 @@ export default function Achievements() {
       }
       setProfile(userData);
 
-      // Загружаем участников
-      const participants = await api.getParticipants();
-      setAllParticipants(participants || []);
-
-      // Загружаем достижения
-      const achievementsData = await api.getAchievements();
+      const [participantsData, achievementsData] = await Promise.all([
+        api.getParticipants(),
+        api.getAchievements()
+      ]);
+      setParticipants(participantsData || []);
       setAchievements(achievementsData || []);
-
     } catch (err) {
       console.error('Ошибка:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSearchChange = (e) => {
@@ -69,16 +68,15 @@ export default function Achievements() {
     setSearchQuery(query);
 
     if (query.length === 0) {
-      setFilteredParticipants([]);
       setShowDropdown(false);
       setSelectedParticipant(null);
       return;
     }
 
-    const filtered = allParticipants.filter(p =>
+    const filtered = participants.filter(p =>
       p.full_name?.toLowerCase().includes(query.toLowerCase())
     );
-    setFilteredParticipants(filtered);
+    setParticipants(filtered);
     setShowDropdown(filtered.length > 0);
   };
 
@@ -88,7 +86,7 @@ export default function Achievements() {
     setShowDropdown(false);
   };
 
-  const handleAddAchievement = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
     setLoading(true);
@@ -105,7 +103,7 @@ export default function Achievements() {
         participant_id: selectedParticipant.id,
         title: form.title,
         description: form.description,
-        achievement_date: form.date || new Date().toISOString().split('T')[0]
+        achievement_date: form.achievement_date || new Date().toISOString().split('T')[0]
       });
 
       if (result.error) {
@@ -114,38 +112,28 @@ export default function Achievements() {
 
       setMessage('✅ Достижение добавлено!');
       setMessageType('success');
-      setForm({ title: '', description: '', date: '' });
+      setForm({ title: '', description: '', achievement_date: '', participant_id: '' });
       setSearchQuery('');
       setSelectedParticipant(null);
-      setFilteredParticipants([]);
       setShowForm(false);
-      
-      // Обновляем список
-      const achievementsData = await api.getAchievements();
-      setAchievements(achievementsData || []);
-      
+      loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleDelete = async (id) => {
     if (!confirm('Удалить достижение?')) return;
-
     try {
       const result = await api.deleteAchievement(id);
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      const achievementsData = await api.getAchievements();
-      setAchievements(achievementsData || []);
-      
+      if (result.error) throw new Error(result.error);
       setMessage('✅ Достижение удалено');
       setMessageType('success');
+      loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
@@ -153,8 +141,8 @@ export default function Achievements() {
     }
   };
 
-  const canAdd = profile?.role === 'admin' || 
-                 profile?.role === 'movement_coordinator' || 
+  const canAdd = profile?.role === 'admin' ||
+                 profile?.role === 'movement_coordinator' ||
                  profile?.role === 'club_coordinator' ||
                  profile?.role === 'tutor';
 
@@ -169,33 +157,24 @@ export default function Achievements() {
   }
 
   return (
-    <div style={{ background: '#F4F6F9', minHeight: '100vh', paddingBottom: '40px' }}>
+    <div className="page-background">
       <Navigation profile={profile} />
-      
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '30px 24px 0 24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+      <div className="container-page">
+        <div className="page-header">
+          <span style={{ fontSize: '32px' }}>🏆</span>
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0B1F3A' }}>🏆 Достижения и награды</h1>
-            <p style={{ color: '#667085' }}>
+            <h1>Достижения и награды</h1>
+            <p>
               {profile?.role === 'participant' && 'Ваши успехи и награды'}
               {profile?.role === 'parent' && 'Достижения вашего ребенка'}
               {profile?.role === 'club_coordinator' && 'Достижения участников вашего клуба'}
-              {profile?.role === 'tutor' && 'Достижения участников движения'}
               {(profile?.role === 'admin' || profile?.role === 'movement_coordinator') && 'Все достижения участников'}
             </p>
           </div>
           {canAdd && (
             <button
-              style={{
-                padding: '10px 24px',
-                background: '#0B1F3A',
-                color: 'white',
-                border: 'none',
-                borderRadius: '10px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
+              className="btn-primary"
+              style={{ marginLeft: 'auto' }}
               onClick={() => {
                 setShowForm(!showForm);
                 if (!showForm) {
@@ -209,64 +188,30 @@ export default function Achievements() {
         </div>
 
         {message && (
-          <div style={{
-            padding: '14px',
-            borderRadius: '10px',
-            marginBottom: '20px',
-            textAlign: 'center',
-            background: messageType === 'success' ? '#E8F5EF' : '#FCEBEC',
-            color: messageType === 'success' ? '#16845B' : '#B3262E'
-          }}>
+          <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
             {message}
           </div>
         )}
 
+        {/* ФОРМА ДОБАВЛЕНИЯ */}
         {showForm && canAdd && (
-          <div style={{
-            background: 'white',
-            borderRadius: '16px',
-            padding: '24px',
-            marginBottom: '30px',
-            boxShadow: '0 8px 30px rgba(11, 31, 58, 0.06)',
-            border: '1px solid #E2E7EF'
-          }}>
-            <h3 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: '600' }}>
+          <div className="card" style={{ marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
               📝 Добавить достижение
             </h3>
-            <form onSubmit={handleAddAchievement}>
-              <div style={{ marginBottom: '16px', position: 'relative' }}>
-                <label style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-                  Участник
-                </label>
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label>Участник</label>
                 <div style={{ position: 'relative' }}>
                   <input
                     ref={inputRef}
                     type="text"
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      fontSize: '14px',
-                      border: '1.5px solid #D5DCE7',
-                      borderRadius: '10px',
-                      outline: 'none',
-                      transition: 'all 0.2s ease',
-                      background: 'white'
-                    }}
-                    placeholder="Начните вводить фамилию участника..."
                     value={searchQuery}
                     onChange={handleSearchChange}
-                    onFocus={() => {
-                      if (searchQuery.length > 0) {
-                        const filtered = allParticipants.filter(p =>
-                          p.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
-                        );
-                        setFilteredParticipants(filtered);
-                        setShowDropdown(filtered.length > 0);
-                      }
-                    }}
+                    placeholder="Начните вводить фамилию участника..."
+                    required
                   />
-                  
-                  {showDropdown && filteredParticipants.length > 0 && (
+                  {showDropdown && participants.length > 0 && (
                     <div
                       ref={dropdownRef}
                       style={{
@@ -283,37 +228,24 @@ export default function Achievements() {
                         zIndex: 100
                       }}
                     >
-                      {filteredParticipants.map((p) => (
+                      {participants.map((p) => (
                         <div
                           key={p.id}
                           style={{
                             padding: '10px 14px',
                             cursor: 'pointer',
-                            borderBottom: '1px solid #F4F6F9',
-                            transition: 'background 0.15s ease',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
+                            borderBottom: '1px solid #F4F6F9'
                           }}
                           onMouseEnter={(e) => e.currentTarget.style.background = '#F4F6F9'}
                           onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
                           onClick={() => handleSelectParticipant(p)}
                         >
-                          <div>
-                            <div style={{ fontWeight: '500', fontSize: '14px', color: '#0B1F3A' }}>
-                              {p.full_name}
-                            </div>
-                            <div style={{ fontSize: '12px', color: '#667085' }}>
-                              {p.club_name || 'Без клуба'} • {p.class_name || 'Класс не указан'}
-                            </div>
+                          <div style={{ fontWeight: '500', fontSize: '14px', color: '#0B1F3A' }}>
+                            {p.full_name}
                           </div>
-                          <span style={{
-                            fontSize: '12px',
-                            color: '#174A7E',
-                            fontWeight: '500'
-                          }}>
-                            Выбрать →
-                          </span>
+                          <div style={{ fontSize: '12px', color: '#667085' }}>
+                            {p.school || 'Школа не указана'} • {p.class_name || 'Класс не указан'}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -332,23 +264,12 @@ export default function Achievements() {
                     gap: '8px'
                   }}>
                     ✅ Выбран: <strong>{selectedParticipant.full_name}</strong>
-                    <span style={{ color: '#667085', fontWeight: '400' }}>
-                      ({selectedParticipant.club_name || 'Без клуба'})
-                    </span>
                     <button
                       type="button"
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#B3262E',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        marginLeft: 'auto'
-                      }}
+                      style={{ background: 'none', border: 'none', color: '#B3262E', cursor: 'pointer', marginLeft: 'auto' }}
                       onClick={() => {
                         setSelectedParticipant(null);
                         setSearchQuery('');
-                        setFilteredParticipants([]);
                       }}
                     >
                       ✕
@@ -357,21 +278,10 @@ export default function Achievements() {
                 )}
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-                  Название достижения
-                </label>
+              <div className="form-group">
+                <label>Название достижения *</label>
                 <input
                   type="text"
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    fontSize: '14px',
-                    border: '1.5px solid #D5DCE7',
-                    borderRadius: '10px',
-                    outline: 'none',
-                    transition: 'all 0.2s ease'
-                  }}
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   required
@@ -379,83 +289,36 @@ export default function Achievements() {
                 />
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-                  Описание
-                </label>
+              <div className="form-group">
+                <label>Описание</label>
                 <textarea
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    fontSize: '14px',
-                    border: '1.5px solid #D5DCE7',
-                    borderRadius: '10px',
-                    resize: 'vertical',
-                    outline: 'none',
-                    transition: 'all 0.2s ease'
-                  }}
+                  rows="3"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  rows="3"
                   placeholder="Подробное описание достижения"
                 />
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-                  Дата
-                </label>
+              <div className="form-group">
+                <label>Дата</label>
                 <input
                   type="date"
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    fontSize: '14px',
-                    border: '1.5px solid #D5DCE7',
-                    borderRadius: '10px',
-                    outline: 'none',
-                    transition: 'all 0.2s ease'
-                  }}
-                  value={form.date}
-                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                  value={form.achievement_date}
+                  onChange={(e) => setForm({ ...form, achievement_date: e.target.value })}
                 />
               </div>
 
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  type="submit"
-                  style={{
-                    padding: '10px 28px',
-                    background: '#16845B',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '10px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  disabled={loading || !selectedParticipant}
-                >
+                <button type="submit" className="btn-success" disabled={loading || !selectedParticipant}>
                   {loading ? '⏳ Сохранение...' : '✅ Добавить'}
                 </button>
                 <button
                   type="button"
-                  style={{
-                    padding: '10px 28px',
-                    background: 'transparent',
-                    color: '#0B1F3A',
-                    border: '1.5px solid #D5DCE7',
-                    borderRadius: '10px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
+                  className="btn-secondary"
                   onClick={() => {
                     setShowForm(false);
                     setSearchQuery('');
                     setSelectedParticipant(null);
-                    setFilteredParticipants([]);
                   }}
                 >
                   ❌ Отмена
@@ -465,52 +328,32 @@ export default function Achievements() {
           </div>
         )}
 
+        {/* СПИСОК ДОСТИЖЕНИЙ */}
         {achievements.length === 0 ? (
-          <div style={{
-            background: 'white',
-            borderRadius: '16px',
-            padding: '40px',
-            textAlign: 'center',
-            boxShadow: '0 8px 30px rgba(11, 31, 58, 0.06)',
-            border: '1px solid #E2E7EF'
-          }}>
-            <p style={{ fontSize: '18px', color: '#667085' }}>🏆 Достижений пока нет</p>
+          <div className="empty-state">
+            <div className="icon">🏆</div>
+            <p style={{ fontSize: '18px', color: '#667085' }}>Достижений пока нет</p>
             {canAdd && <p style={{ color: '#98A2B3' }}>Добавьте первое достижение!</p>}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {achievements.map((a) => (
-              <div key={a.id} style={{
-                background: 'white',
-                borderRadius: '16px',
-                padding: '20px 24px',
-                boxShadow: '0 8px 30px rgba(11, 31, 58, 0.06)',
-                border: '1px solid #E2E7EF',
-                borderLeft: '4px solid #0B1F3A',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start'
-              }}>
+              <div
+                key={a.id}
+                className="card"
+                style={{
+                  borderLeft: '4px solid #C9A227',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start'
+                }}
+              >
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span style={{ fontSize: '24px' }}>🏅</span>
                     <h3 style={{ margin: 0, fontSize: '18px', color: '#0B1F3A' }}>{a.title}</h3>
-                    <span style={{
-                      fontSize: '10px',
-                      background: '#EAF2FA',
-                      color: '#174A7E',
-                      padding: '2px 12px',
-                      borderRadius: '20px',
-                      fontWeight: '600'
-                    }}>
-                      ДОСТИЖЕНИЕ
-                    </span>
                   </div>
-                  {a.description && (
-                    <p style={{ color: '#667085', marginTop: '4px', fontSize: '14px' }}>
-                      {a.description}
-                    </p>
-                  )}
+                  {a.description && <p style={{ color: '#667085', marginTop: '4px' }}>{a.description}</p>}
                   <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '13px', color: '#667085' }}>
                     <span>👤 {a.participant_name || 'Участник'}</span>
                     {a.achievement_date && (
@@ -520,18 +363,11 @@ export default function Achievements() {
                 </div>
                 {canDelete && (
                   <button
-                    style={{
-                      padding: '4px 12px',
-                      background: '#FCEBEC',
-                      color: '#B3262E',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}
+                    className="btn-danger"
+                    style={{ padding: '4px 12px', fontSize: '12px' }}
                     onClick={() => handleDelete(a.id)}
                   >
-                    🗑️
+                    🗑️ Удалить
                   </button>
                 )}
               </div>

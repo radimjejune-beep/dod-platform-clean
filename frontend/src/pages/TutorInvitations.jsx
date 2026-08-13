@@ -146,7 +146,7 @@ export default function TutorInvitations() {
     return badges[status] || badges['pending'];
   };
 
-  const canCreate = ['admin', 'movement_coordinator', 'president', 'vice_president', 'club_coordinator'].includes(profile?.role);
+  const canCreate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
   const isTutor = profile?.role === 'tutor';
   const canView = isTutor || canCreate;
 

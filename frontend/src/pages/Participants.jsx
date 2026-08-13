@@ -39,8 +39,10 @@ export default function Participants() {
         api.getClubs()
       ]);
 
+      console.log('📥 Загружено участников:', participantsData?.length || 0);
+      console.log('📥 Загружено клубов:', clubsData?.length || 0);
+
       setClubs(clubsData || []);
-      setAllParticipants(participantsData || []);
 
       const role = userData.role;
       let filtered = [];
@@ -70,6 +72,7 @@ export default function Participants() {
         filtered = [];
       }
 
+      setAllParticipants(filtered);
       setParticipants(filtered);
     } catch (err) {
       console.error('Ошибка:', err);
@@ -103,20 +106,32 @@ export default function Participants() {
   const getFilteredParticipants = () => {
     let filtered = allParticipants;
 
-    if (searchQuery) {
+    console.log('🔍 Фильтрация участников:', {
+      allParticipants: allParticipants.length,
+      searchQuery,
+      filters
+    });
+
+    // ПОИСК
+    if (searchQuery && searchQuery.trim() !== '') {
       filtered = filtered.filter(p =>
         p.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.school?.toLowerCase().includes(searchQuery.toLowerCase())
       );
+      console.log('🔍 После поиска:', filtered.length);
     }
 
+    // ФИЛЬТР ПО КЛУБУ
     if (filters.club_id) {
       filtered = filtered.filter(p => p.club_id === filters.club_id);
+      console.log('🏫 После фильтра по клубу:', filtered.length);
     }
 
+    // ФИЛЬТР ПО СТАТУСУ
     if (filters.status) {
       filtered = filtered.filter(p => p.status === filters.status);
+      console.log('📊 После фильтра по статусу:', filtered.length);
     }
 
     return filtered;
@@ -143,6 +158,7 @@ export default function Participants() {
           <div className="empty-state">
             <div className="icon">⛔</div>
             <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Доступ запрещён</p>
+            <p style={{ color: '#667085' }}>Только координаторы, тьюторы и администраторы</p>
           </div>
         </div>
       </div>
@@ -157,7 +173,11 @@ export default function Participants() {
           <span style={{ fontSize: '32px' }}>👥</span>
           <div>
             <h1>Участники</h1>
-            <p>Всего: {filtered.length}</p>
+            <p>
+              {isClubCoordinator 
+                ? `Участники вашего клуба (${filtered.length})` 
+                : `Все участники движения (${filtered.length})`}
+            </p>
           </div>
           <button
             className="btn-secondary"
@@ -168,10 +188,17 @@ export default function Participants() {
           </button>
         </div>
 
+        {/* ФИЛЬТРЫ */}
         <FilterBar
           filters={filterConfig}
-          onFilterChange={setFilters}
-          onSearchChange={setSearchQuery}
+          onFilterChange={(newFilters) => {
+            console.log('📊 Фильтры изменены:', newFilters);
+            setFilters(newFilters);
+          }}
+          onSearchChange={(query) => {
+            console.log('🔍 Поиск изменён:', query);
+            setSearchQuery(query);
+          }}
           searchPlaceholder="🔍 Поиск по ФИО, email, школе..."
         >
           <div style={{ fontSize: '14px', color: '#667085', padding: '6px 12px', background: '#F8FAFC', borderRadius: '8px' }}>
@@ -179,6 +206,7 @@ export default function Participants() {
           </div>
         </FilterBar>
 
+        {/* ТАБЛИЦА */}
         {viewMode === 'table' && (
           <div className="table-wrapper">
             <table>
@@ -197,7 +225,7 @@ export default function Participants() {
                   <tr>
                     <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#667085' }}>
                       <div style={{ fontSize: '32px', marginBottom: '8px' }}>👀</div>
-                      Участников не найдено
+                      {isClubCoordinator ? 'В вашем клубе пока нет участников' : 'Участников не найдено'}
                     </td>
                   </tr>
                 ) : (
@@ -206,9 +234,20 @@ export default function Participants() {
                       <td style={{ fontWeight: '500', color: '#0B1F3A' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           {p.avatar_url ? (
-                            <img src={p.avatar_url} alt="Аватар" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                            <img 
+                              src={p.avatar_url} 
+                              alt="Аватар" 
+                              style={{ 
+                                width: '32px', 
+                                height: '32px', 
+                                borderRadius: '50%', 
+                                objectFit: 'cover' 
+                              }} 
+                            />
                           ) : (
-                            <div className="avatar avatar-sm">{p.full_name?.charAt(0) || '?'}</div>
+                            <div className="avatar avatar-sm">
+                              {p.full_name?.charAt(0) || '?'}
+                            </div>
                           )}
                           {p.full_name}
                         </div>
@@ -244,6 +283,7 @@ export default function Participants() {
           </div>
         )}
 
+        {/* КАРТОЧКИ */}
         {viewMode === 'cards' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
             {filtered.map((p) => (
@@ -255,13 +295,24 @@ export default function Participants() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                   {p.avatar_url ? (
-                    <img src={p.avatar_url} alt="Аватар" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                    <img 
+                      src={p.avatar_url} 
+                      alt="Аватар" 
+                      style={{ 
+                        width: '40px', 
+                        height: '40px', 
+                        borderRadius: '50%', 
+                        objectFit: 'cover' 
+                      }} 
+                    />
                   ) : (
                     <div className="avatar">{p.full_name?.charAt(0) || '?'}</div>
                   )}
                   <div>
                     <div style={{ fontWeight: '600', color: '#0B1F3A' }}>{p.full_name}</div>
-                    <div style={{ fontSize: '13px', color: '#667085' }}>{p.class_name || 'Класс не указан'}</div>
+                    <div style={{ fontSize: '13px', color: '#667085' }}>
+                      {p.class_name || 'Класс не указан'}
+                    </div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>

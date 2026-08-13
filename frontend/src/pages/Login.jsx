@@ -1,9 +1,8 @@
-// src/pages/Login.jsx
+// frontend/src/pages/Login.jsx
 
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
-// ===== АДРЕС БЭКЕНДА =====
 const API_URL = 'https://dod-backend.relaxdev.ru/api';
 
 export default function Login() {
@@ -20,7 +19,7 @@ export default function Login() {
 
     try {
       console.log('🔐 Вход:', { email, password });
-      
+
       const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -35,7 +34,6 @@ export default function Login() {
 
       console.log('✅ Успешный вход:', data);
 
-      // Сохраняем токен и данные пользователя
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
@@ -49,14 +47,21 @@ export default function Login() {
   };
 
   return (
-    <div className="auth-bg">
-      <div className="card" style={{
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #F4F6F9 0%, #E8EDF3 100%)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px'
+    }}>
+      <div style={{
         maxWidth: '420px',
         width: '100%',
+        background: 'white',
+        borderRadius: '20px',
         padding: '32px',
-        animation: 'fadeIn 0.5s ease',
-        position: 'relative',
-        zIndex: 1
+        boxShadow: '0 20px 60px rgba(11, 31, 58, 0.15)'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div style={{
@@ -112,11 +117,12 @@ export default function Login() {
         )}
 
         <form onSubmit={handleLogin}>
-          <div className="form-group">
-            <label className="form-label">Email или логин</label>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
+              Email или логин
+            </label>
             <input
               type="text"
-              className="form-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -127,16 +133,18 @@ export default function Login() {
                 border: '1.5px solid #D5DCE7',
                 borderRadius: '10px',
                 fontSize: '14px',
-                outline: 'none'
+                outline: 'none',
+                transition: 'all 0.2s ease'
               }}
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Пароль</label>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
+              Пароль
+            </label>
             <input
               type="password"
-              className="form-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -147,26 +155,26 @@ export default function Login() {
                 border: '1.5px solid #D5DCE7',
                 borderRadius: '10px',
                 fontSize: '14px',
-                outline: 'none'
+                outline: 'none',
+                transition: 'all 0.2s ease'
               }}
             />
           </div>
 
           <button
             type="submit"
-            className="btn btn-primary"
             disabled={loading}
             style={{
               width: '100%',
               padding: '14px',
-              fontSize: '16px',
-              marginTop: '8px',
               background: loading ? '#6c757d' : '#0B1F3A',
               color: 'white',
               border: 'none',
               borderRadius: '10px',
+              fontSize: '16px',
+              fontWeight: '600',
               cursor: loading ? 'not-allowed' : 'pointer',
-              fontWeight: '600'
+              transition: 'all 0.2s ease'
             }}
           >
             {loading ? '⏳ Вход...' : '🔑 Войти'}

@@ -2043,6 +2043,116 @@ app.post('/api/create-test-user', async (req, res) => {
 });
 
 // ============================================================
+// ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ (ПО ЛОГИНУ И ПАРОЛЮ)
+// ============================================================
+app.post('/api/parent-link-child', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const parentId = decoded.userId;
+    const parentRole = decoded.role;
+
+    // Проверяем, что это родитель
+    if (parentRole !== 'parent') {
+      return res.status(403).json({ error: 'Только родители могут привязывать детей' });
+    }
+
+    const { child_email, child_password } = req.body;
+
+    if (!child_email || !child_password) {
+      return res.status(400).json({ error: 'Email и пароль ребёнка обязательны' });
+    }
+
+    // Ищем ребёнка по email
+    const childResult = await pool.query(
+      'SELECT id, full_name, role, password_hash FROM users WHERE email = $1',
+      [child_email]
+    );
+
+    if (childResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Ребёнок с таким email не найден' });
+    }
+
+    const child = childResult.rows[0];
+
+    // Проверяем, что это участник
+    if (child.role !== 'participant') {
+      return res.status(400).json({ error: 'Указанный пользователь не является участником' });
+    }
+
+    // Проверяем пароль
+    const validPassword = await bcrypt.compare(child_password, child.password_hash);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Неверный пароль' });
+    }
+
+    // Проверяем, не привязан ли уже этот ребёнок к другому родителю
+    const existingLink = await pool.query(
+      'SELECT id FROM child_parent WHERE child_id = $1 AND status = \'active\'',
+      [child.id]
+    );
+
+    if (existingLink.rows.length > 0) {
+      // Проверяем, не к этому ли родителю уже привязан
+      const sameParent = await pool.query(
+        'SELECT id FROM child_parent WHERE child_id = $1 AND parent_id = $2 AND status = \'active\'',
+        [child.id, parentId]
+      );
+      if (sameParent.rows.length > 0) {
+        return res.status(400).json({ error: 'Этот ребёнок уже привязан к вам' });
+      }
+      return res.status(400).json({ error: 'Этот ребёнок уже привязан к другому родителю' });
+    }
+
+    // Создаём привязку
+    const result = await pool.query(
+      `INSERT INTO child_parent (parent_id, child_id, status, created_at)
+       VALUES ($1, $2, 'active', NOW())
+       RETURNING *`,
+      [parentId, child.id]
+    );
+
+    // ===== УВЕДОМЛЕНИЕ РОДИТЕЛЮ =====
+    await createNotification(
+      parentId,
+      'system',
+      '👨‍👩‍👦 Ребёнок привязан',
+      `Вы успешно привязали ребёнка "${child.full_name}" к своему аккаунту`,
+      '/parent-dashboard',
+      'high'
+    );
+
+    // ===== УВЕДОМЛЕНИЕ РЕБЁНКУ =====
+    await createNotification(
+      child.id,
+      'system',
+      '👨‍👩‍👦 Привязка к родителю',
+      `Ваш профиль привязан к родителю. Теперь родитель может видеть ваши достижения и мероприятия.`,
+      '/profile',
+      'normal'
+    );
+
+    res.json({
+      message: 'Ребёнок успешно привязан!',
+      child: {
+        id: child.id,
+        full_name: child.full_name,
+        email: child.email
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Ошибка привязки ребёнка:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
 // ЗАПУСК СЕРВЕРА
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {

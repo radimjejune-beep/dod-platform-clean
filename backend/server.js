@@ -762,20 +762,76 @@ app.delete('/api/achievements/:id', async (req, res) => {
 });
 
 // ============================================================
-// 16. СОБЫТИЯ
+// 16. СОБЫТИЯ (С ФИЛЬТРАЦИЕЙ ПО РОЛЯМ)
 // ============================================================
 app.get('/api/events', async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT e.*, c.name as club_name,
-              u.full_name as created_by_name,
-              u2.full_name as moderated_by_name
-       FROM events e
-       LEFT JOIN clubs c ON e.club_id = c.id
-       LEFT JOIN users u ON e.created_by = u.id
-       LEFT JOIN users u2 ON e.moderated_by = u2.id
-       ORDER BY e.event_date DESC`
-    );
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    let query = `
+      SELECT e.*, 
+             c.name as club_name,
+             u.full_name as created_by_name,
+             u2.full_name as moderated_by_name
+      FROM events e
+      LEFT JOIN clubs c ON e.club_id = c.id
+      LEFT JOIN users u ON e.created_by = u.id
+      LEFT JOIN users u2 ON e.moderated_by = u2.id
+    `;
+    const params = [];
+    const whereConditions = [];
+
+    // ============================================================
+    // ЛОГИКА ПО РОЛЯМ
+    // ============================================================
+    if (userRole === 'club_coordinator') {
+      // Координатор КЮДа — видит:
+      // 1. Мероприятия своего клуба (все)
+      // 2. Глобальные мероприятия (одобренные)
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      let clubId = null;
+      if (clubResult.rows.length > 0) {
+        clubId = clubResult.rows[0].club_id;
+      }
+
+      if (clubId) {
+        whereConditions.push(`(e.club_id = $${params.length + 1} OR (e.is_global = true AND e.moderation_status = 'approved'))`);
+        params.push(clubId);
+      } else {
+        whereConditions.push(`(e.is_global = true AND e.moderation_status = 'approved')`);
+      }
+    } else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
+      // Административные роли — видят все мероприятия
+      // Добавляем условие, чтобы видеть все мероприятия
+      whereConditions.push('1 = 1');
+    } else if (userRole === 'tutor') {
+      // Тьютор — видит только одобренные мероприятия
+      whereConditions.push(`e.moderation_status = 'approved'`);
+    } else if (userRole === 'participant' || userRole === 'parent') {
+      // Участник и родитель — только одобренные глобальные мероприятия
+      whereConditions.push(`(e.is_global = true AND e.moderation_status = 'approved')`);
+    } else {
+      whereConditions.push('1 = 0');
+    }
+
+    if (whereConditions.length > 0) {
+      query += ' WHERE ' + whereConditions.join(' AND ');
+    }
+
+    query += ' ORDER BY e.event_date DESC';
+
+    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (error) {
     console.error('Ошибка получения событий:', error);

@@ -833,7 +833,7 @@ app.post('/api/appeals', async (req, res) => {
 });
 
 // ============================================================
-// 20. ОБРАЩЕНИЯ - ОТВЕТ
+// 20. ОБРАЩЕНИЯ - ОТВЕТ (С СОХРАНЕНИЕМ СТАТУСОВ)
 // ============================================================
 app.post('/api/appeals/:id/reply', async (req, res) => {
   try {
@@ -867,6 +867,7 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
     const oldStatus = appealCheck.rows[0].status;
     const newStatus = status || 'in_progress';
 
+    // Сохраняем ответ с указанием старых и новых статусов
     await pool.query(
       `INSERT INTO appeal_replies (appeal_id, author_id, message, status_before, status_after, created_at)
        VALUES ($1, $2, $3, $4, $5, NOW())`,
@@ -901,7 +902,7 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       appeal: result.rows[0]
     });
   } catch (error) {
-    console.error('Ошибка ответа на обращение:', error);
+    console.error('❌ Ошибка ответа на обращение:', error);
     res.status(500).json({ error: error.message });
   }
 });

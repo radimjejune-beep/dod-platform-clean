@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import logo from '../assets/Image.png';
+import ardLogo from '../assets/АРДЛОГО.png';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://dod-backend.relaxdev.ru/api';
 
@@ -82,7 +84,6 @@ export default function Login() {
 
   return (
     <div className="login-page">
-      {/* Фоновый слой */}
       <div className="login-bg">
         <div className="login-bg-overlay" />
         <div className="login-bg-particles">
@@ -91,13 +92,23 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Карточка входа */}
       <div className="login-card">
         <div className="login-card-inner">
-          {/* Герб / Лого */}
           <div className="login-emblem">
-            <div className="login-emblem-icon">🌍</div>
+            <img 
+              src={logo} 
+              alt="ДОД «Дипломаты будущего»" 
+              className="login-emblem-logo"
+            />
             <div className="login-emblem-line" />
+            <div className="login-emblem-partners">
+              <span className="login-emblem-partner-label">При поддержке</span>
+              <img 
+                src={ardLogo} 
+                alt="Ассоциация российских дипломатов" 
+                className="login-emblem-ard"
+              />
+            </div>
           </div>
 
           <div className="login-header">
@@ -174,7 +185,6 @@ export default function Login() {
           position: relative;
         }
 
-        /* ===== ФОН ===== */
         .login-bg {
           position: fixed;
           top: 0;
@@ -234,7 +244,6 @@ export default function Login() {
           100% { transform: translate(0, 0) rotate(360deg); opacity: 0.6; }
         }
 
-        /* ===== КАРТОЧКА ВХОДА ===== */
         .login-card {
           position: relative;
           z-index: 1;
@@ -257,7 +266,6 @@ export default function Login() {
           position: relative;
         }
 
-        /* ===== ГЕРБ ===== */
         .login-emblem {
           display: flex;
           align-items: center;
@@ -266,27 +274,47 @@ export default function Login() {
           margin-bottom: 20px;
         }
 
-        .login-emblem-icon {
-          width: 64px;
+        .login-emblem-logo {
           height: 64px;
-          background: var(--gold-gradient, linear-gradient(135deg, #C9A227, #E8D9A8));
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 32px;
-          box-shadow: 0 4px 20px rgba(201, 162, 39, 0.3);
+          width: auto;
+          object-fit: contain;
         }
 
         .login-emblem-line {
           width: 60px;
           height: 2px;
-          background: var(--gold-gradient, linear-gradient(135deg, #C9A227, #E8D9A8));
+          background: linear-gradient(135deg, #C9A227, #E8D9A8);
           margin-top: 12px;
           border-radius: 2px;
         }
 
-        /* ===== ЗАГОЛОВКИ ===== */
+        .login-emblem-partners {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          margin-top: 8px;
+        }
+
+        .login-emblem-partner-label {
+          font-size: 10px;
+          color: #98A2B3;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+        }
+
+        .login-emblem-ard {
+          height: 28px;
+          width: auto;
+          object-fit: contain;
+          opacity: 0.7;
+          transition: opacity 0.3s ease;
+        }
+
+        .login-emblem-ard:hover {
+          opacity: 1;
+        }
+
         .login-header {
           text-align: center;
           margin-bottom: 28px;
@@ -323,7 +351,7 @@ export default function Login() {
         .login-divider {
           width: 40px;
           height: 2px;
-          background: var(--gold-gradient, linear-gradient(135deg, #C9A227, #E8D9A8));
+          background: linear-gradient(135deg, #C9A227, #E8D9A8);
           margin: 12px auto;
           border-radius: 2px;
         }
@@ -334,7 +362,6 @@ export default function Login() {
           margin: 0;
         }
 
-        /* ===== ФОРМА ===== */
         .login-form-group {
           margin-bottom: 16px;
         }
@@ -369,11 +396,10 @@ export default function Login() {
           color: #98A2B3;
         }
 
-        /* ===== КНОПКА ===== */
         .login-btn {
           width: 100%;
           padding: 12px;
-          background: var(--gold-gradient, linear-gradient(135deg, #C9A227, #E8D9A8));
+          background: linear-gradient(135deg, #C9A227, #E8D9A8);
           border: none;
           border-radius: 10px;
           font-size: 16px;
@@ -407,7 +433,6 @@ export default function Login() {
           animation: spin 0.8s linear infinite;
         }
 
-        /* ===== ОШИБКА ===== */
         .login-error {
           padding: 12px 16px;
           background: #FCEBEC;
@@ -419,7 +444,6 @@ export default function Login() {
           border-left: 4px solid #B3262E;
         }
 
-        /* ===== ФУТЕР ===== */
         .login-footer {
           text-align: center;
           margin-top: 20px;
@@ -453,7 +477,6 @@ export default function Login() {
           margin-top: 8px !important;
         }
 
-        /* ===== АДАПТИВ ===== */
         @media (max-width: 480px) {
           .login-card {
             padding: 28px 20px;
@@ -461,10 +484,11 @@ export default function Login() {
           .login-header h2 {
             font-size: 20px;
           }
-          .login-emblem-icon {
-            width: 48px;
+          .login-emblem-logo {
             height: 48px;
-            font-size: 24px;
+          }
+          .login-emblem-ard {
+            height: 22px;
           }
         }
       `}</style>

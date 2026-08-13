@@ -1,6 +1,7 @@
 // frontend/src/components/Footer.jsx
 
 import { Link } from 'react-router-dom';
+import ardLogo from '../assets/АРДЛОГО.png';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -84,7 +85,14 @@ export default function Footer() {
         color: 'rgba(255,255,255,0.5)'
       }}>
         <span>© {currentYear} ДОД «Дипломаты будущего». Все права защищены.</span>
-        <span>При поддержке Ассоциации российских дипломатов</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img 
+            src={ardLogo} 
+            alt="Ассоциация российских дипломатов" 
+            style={{ height: '32px', width: 'auto', objectFit: 'contain', opacity: 0.7 }}
+          />
+          <span>При поддержке Ассоциации российских дипломатов</span>
+        </div>
       </div>
     </footer>
   );

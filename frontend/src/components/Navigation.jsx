@@ -3,6 +3,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Notifications from './Notifications';
+import logo from '../assets/Image.png';
 
 export default function Navigation({ profile }) {
   const location = useLocation();
@@ -13,9 +14,6 @@ export default function Navigation({ profile }) {
   const isActive = (path) => location.pathname === path;
   const role = profile?.role || 'participant';
 
-  // ============================================================
-  // ВЫХОД
-  // ============================================================
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -25,9 +23,6 @@ export default function Navigation({ profile }) {
     navigate('/login');
   };
 
-  // ============================================================
-  // АВАТАР
-  // ============================================================
   const getAvatar = () => {
     if (profile?.avatar_url) {
       return <img src={profile.avatar_url} alt="Аватар" className="nav-avatar" />;
@@ -40,9 +35,6 @@ export default function Navigation({ profile }) {
     );
   };
 
-  // ============================================================
-  // ГРУППИРОВКА ПУНКТОВ МЕНЮ
-  // ============================================================
   const getMenuGroups = () => {
     const allGroups = {
       main: [
@@ -114,9 +106,6 @@ export default function Navigation({ profile }) {
 
   const menuGroups = getMenuGroups();
 
-  // ============================================================
-  // НАЗВАНИЯ ГРУПП
-  // ============================================================
   const groupLabels = {
     main: '🏠 Главная',
     events: '📅 Мероприятия',
@@ -133,9 +122,6 @@ export default function Navigation({ profile }) {
     settings: '⚙️ Настройки',
   };
 
-  // ============================================================
-  // ЗАКРЫТИЕ ДРОПДАУНА
-  // ============================================================
   useEffect(() => {
     const handleClickOutside = () => setOpenDropdown(null);
     document.addEventListener('click', handleClickOutside);
@@ -145,15 +131,18 @@ export default function Navigation({ profile }) {
   return (
     <nav className="nav-new">
       <div className="nav-new-container">
-        {/* ЛЕВАЯ ЧАСТЬ: ЛОГОТИП */}
+        {/* ЛОГОТИП */}
         <Link to="/" className="nav-new-logo">
-          <span className="nav-new-logo-icon">🌍</span>
-          <span className="nav-new-logo-text">ДОД</span>
+          <img 
+            src={logo} 
+            alt="ДОД «Дипломаты будущего»" 
+            className="nav-new-logo-img"
+          />
+          <span className="nav-new-logo-text">Дипломаты будущего</span>
         </Link>
 
-        {/* ЦЕНТРАЛЬНАЯ ЧАСТЬ: МЕНЮ */}
+        {/* МЕНЮ */}
         <div className="nav-new-menu">
-          {/* ОСНОВНЫЕ ПУНКТЫ */}
           {menuGroups.main?.map((item) => (
             <Link
               key={item.path}
@@ -164,7 +153,6 @@ export default function Navigation({ profile }) {
             </Link>
           ))}
 
-          {/* ВЫПАДАЮЩИЕ ГРУППЫ */}
           {Object.entries(menuGroups).map(([key, items]) => {
             if (key === 'main') return null;
             
@@ -204,12 +192,10 @@ export default function Navigation({ profile }) {
           })}
         </div>
 
-        {/* ПРАВАЯ ЧАСТЬ: УВЕДОМЛЕНИЯ + ПРОФИЛЬ + ВЫХОД */}
+        {/* ПРАВАЯ ЧАСТЬ */}
         <div className="nav-new-right">
-          {/* УВЕДОМЛЕНИЯ */}
           <Notifications profile={profile} />
           
-          {/* ПРОФИЛЬ */}
           <Link to="/profile" className="nav-new-profile">
             {getAvatar()}
             <span className="nav-new-profile-name">
@@ -217,12 +203,10 @@ export default function Navigation({ profile }) {
             </span>
           </Link>
 
-          {/* ВЫХОД */}
           <button className="nav-new-logout" onClick={handleLogout} title="Выйти">
             <span>🚪</span>
           </button>
 
-          {/* БУРГЕР (МОБИЛЬНАЯ ВЕРСИЯ) */}
           <button 
             className="nav-new-burger" 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -256,9 +240,7 @@ export default function Navigation({ profile }) {
         </div>
       )}
 
-      {/* СТИЛИ */}
       <style>{`
-        /* ===== НОВАЯ НАВИГАЦИЯ ===== */
         .nav-new {
           background: #FFFFFF;
           border-bottom: 1px solid #E2E7EF;
@@ -266,7 +248,7 @@ export default function Navigation({ profile }) {
           position: sticky;
           top: 0;
           z-index: 999;
-          height: 56px;
+          height: 60px;
           display: flex;
           align-items: center;
           box-shadow: 0 1px 4px rgba(11, 31, 58, 0.04);
@@ -282,27 +264,28 @@ export default function Navigation({ profile }) {
           height: 100%;
         }
 
-        /* ===== ЛЕВАЯ ЧАСТЬ: ЛОГОТИП ===== */
         .nav-new-logo {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
           text-decoration: none;
           flex-shrink: 0;
         }
 
-        .nav-new-logo-icon {
-          font-size: 24px;
+        .nav-new-logo-img {
+          height: 36px;
+          width: auto;
+          object-fit: contain;
         }
 
         .nav-new-logo-text {
-          font-size: 18px;
+          font-family: 'Playfair Display', serif;
+          font-size: 16px;
           font-weight: 700;
           color: #0B1F3A;
-          letter-spacing: -0.5px;
+          letter-spacing: 0.5px;
         }
 
-        /* ===== ЦЕНТРАЛЬНАЯ ЧАСТЬ: МЕНЮ ===== */
         .nav-new-menu {
           display: flex;
           align-items: center;
@@ -312,7 +295,6 @@ export default function Navigation({ profile }) {
           padding: 0 16px;
         }
 
-        /* ОСНОВНЫЕ ССЫЛКИ */
         .nav-new-link {
           padding: 6px 14px;
           border-radius: 8px;
@@ -335,7 +317,6 @@ export default function Navigation({ profile }) {
           font-weight: 600;
         }
 
-        /* ВЫПАДАЮЩИЕ МЕНЮ */
         .nav-new-dropdown {
           position: relative;
         }
@@ -418,7 +399,6 @@ export default function Navigation({ profile }) {
           font-weight: 600;
         }
 
-        /* ===== ПРАВАЯ ЧАСТЬ ===== */
         .nav-new-right {
           display: flex;
           align-items: center;
@@ -426,7 +406,6 @@ export default function Navigation({ profile }) {
           flex-shrink: 0;
         }
 
-        /* ПРОФИЛЬ */
         .nav-new-profile {
           display: flex;
           align-items: center;
@@ -473,7 +452,6 @@ export default function Navigation({ profile }) {
           white-space: nowrap;
         }
 
-        /* ВЫХОД */
         .nav-new-logout {
           display: flex;
           align-items: center;
@@ -494,7 +472,6 @@ export default function Navigation({ profile }) {
           color: #B3262E;
         }
 
-        /* БУРГЕР */
         .nav-new-burger {
           display: none;
           padding: 4px 8px;
@@ -505,7 +482,6 @@ export default function Navigation({ profile }) {
           color: #0B1F3A;
         }
 
-        /* ===== МОБИЛЬНОЕ МЕНЮ ===== */
         .nav-new-mobile {
           display: none;
           flex-direction: column;
@@ -558,9 +534,6 @@ export default function Navigation({ profile }) {
           font-weight: 600;
         }
 
-        /* ===== АДАПТИВНОСТЬ ===== */
-
-        /* Планшеты и маленькие ноутбуки */
         @media (max-width: 1200px) {
           .nav-new-menu {
             gap: 2px;
@@ -579,7 +552,6 @@ export default function Navigation({ profile }) {
           }
         }
 
-        /* Мобильные устройства */
         @media (max-width: 1024px) {
           .nav-new-menu {
             display: none;
@@ -594,14 +566,14 @@ export default function Navigation({ profile }) {
 
         @media (max-width: 768px) {
           .nav-new {
-            height: 50px;
+            height: 54px;
             padding: 0 12px;
           }
-          .nav-new-logo-text {
-            font-size: 16px;
+          .nav-new-logo-img {
+            height: 28px;
           }
-          .nav-new-logo-icon {
-            font-size: 20px;
+          .nav-new-logo-text {
+            font-size: 13px;
           }
           .nav-new-profile-name {
             display: none;
@@ -613,11 +585,14 @@ export default function Navigation({ profile }) {
 
         @media (max-width: 480px) {
           .nav-new {
-            height: 44px;
+            height: 48px;
             padding: 0 8px;
           }
           .nav-new-logo-text {
             display: none;
+          }
+          .nav-new-logo-img {
+            height: 32px;
           }
           .nav-new-right {
             gap: 2px;

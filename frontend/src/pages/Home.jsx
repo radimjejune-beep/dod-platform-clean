@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
+import logo from '../assets/Image.png';
+import ardLogo from '../assets/АРДЛОГО.png';
 
 export default function Home() {
   const [profile, setProfile] = useState(null);
@@ -56,12 +58,15 @@ export default function Home() {
     <div className="home-page">
       <Navigation profile={profile} />
 
-      {/* ===== ГЕРОЙ ===== */}
       <section className="home-hero">
         <div className="home-hero-bg" />
         <div className="home-hero-content">
           <div className="home-hero-emblem">
-            <span>🌍</span>
+            <img 
+              src={logo} 
+              alt="ДОД «Дипломаты будущего»" 
+              className="home-hero-logo"
+            />
           </div>
           <h1>
             Детское общественное движение<br />
@@ -92,10 +97,17 @@ export default function Home() {
               Уже есть аккаунт? <Link to="/login">Войти</Link>
             </p>
           )}
+          <div className="home-hero-partners">
+            <span className="home-hero-partner-label">При поддержке</span>
+            <img 
+              src={ardLogo} 
+              alt="Ассоциация российских дипломатов" 
+              className="home-hero-ard"
+            />
+          </div>
         </div>
       </section>
 
-      {/* ===== СТАТИСТИКА ===== */}
       <section className="home-stats">
         <div className="home-stats-container">
           <div className="home-stat-item">
@@ -120,7 +132,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== МИССИЯ ===== */}
       <section className="home-mission">
         <div className="home-mission-container">
           <div className="home-mission-icon">🕊️</div>
@@ -154,13 +165,11 @@ export default function Home() {
       <Footer />
 
       <style>{`
-        /* ===== ОСНОВНЫЕ СТИЛИ ===== */
         .home-page {
           min-height: 100vh;
           background: #F0EDE8;
         }
 
-        /* ===== ГЕРОЙ ===== */
         .home-hero {
           position: relative;
           min-height: 500px;
@@ -201,14 +210,16 @@ export default function Home() {
           width: 80px;
           height: 80px;
           margin: 0 auto 24px;
-          background: rgba(201, 162, 39, 0.15);
-          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 40px;
-          border: 2px solid rgba(201, 162, 39, 0.3);
-          box-shadow: 0 0 60px rgba(201, 162, 39, 0.1);
+        }
+
+        .home-hero-logo {
+          height: 56px;
+          width: auto;
+          object-fit: contain;
+          filter: drop-shadow(0 2px 20px rgba(201, 162, 39, 0.15));
         }
 
         .home-hero h1 {
@@ -295,7 +306,35 @@ export default function Home() {
           color: #E8D9A8;
         }
 
-        /* ===== СТАТИСТИКА ===== */
+        .home-hero-partners {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          margin-top: 24px;
+          padding-top: 20px;
+          border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .home-hero-partner-label {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.4);
+          letter-spacing: 1px;
+          text-transform: uppercase;
+        }
+
+        .home-hero-ard {
+          height: 32px;
+          width: auto;
+          object-fit: contain;
+          opacity: 0.6;
+          transition: opacity 0.3s ease;
+        }
+
+        .home-hero-ard:hover {
+          opacity: 1;
+        }
+
         .home-stats {
           margin-top: -30px;
           position: relative;
@@ -339,7 +378,6 @@ export default function Home() {
           background: #E2E7EF;
         }
 
-        /* ===== МИССИЯ ===== */
         .home-mission {
           padding: 60px 24px;
           background: linear-gradient(145deg, #0B1F3A 0%, #07152B 100%);
@@ -422,7 +460,6 @@ export default function Home() {
           font-weight: 400;
         }
 
-        /* ===== АДАПТИВНОСТЬ ===== */
         @media (max-width: 768px) {
           .home-hero {
             min-height: 400px;
@@ -441,6 +478,14 @@ export default function Home() {
           .home-hero-btn-secondary {
             padding: 12px 28px;
             font-size: 15px;
+          }
+
+          .home-hero-logo {
+            height: 40px;
+          }
+
+          .home-hero-ard {
+            height: 24px;
           }
 
           .home-stats-container {

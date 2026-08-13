@@ -1,12 +1,7 @@
-/* ============================================================
-   ДОД «ДИПЛОМАТЫ БУДУЩЕГО» — ОФИЦИАЛЬНЫЙ СТИЛЬ
-   Элегантный, дипломатичный, вдохновляющий
-   ============================================================ */
+/* frontend/src/styles/global.css */
 
-/* ===== ПОДКЛЮЧЕНИЕ ШРИФТОВ ===== */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700;800&display=swap');
 
-/* ===== ОСНОВНЫЕ ПЕРЕМЕННЫЕ ===== */
 :root {
   --primary: #0B1F3A;
   --primary-dark: #07152B;
@@ -14,14 +9,12 @@
   --gold: #C9A227;
   --gold-light: #E8D9A8;
   --gold-gradient: linear-gradient(135deg, #C9A227, #E8D9A8);
-  --gold-gradient-dark: linear-gradient(135deg, #B8921F, #C9A227);
   --background: #F0EDE8;
   --card-bg: #FFFFFF;
   --text-primary: #0B1F3A;
   --text-secondary: #475467;
   --text-muted: #8A9AAA;
   --border: #D5DCE7;
-  --border-gold: #C9A227;
   --shadow: 0 4px 24px rgba(11, 31, 58, 0.08);
   --shadow-hover: 0 8px 40px rgba(11, 31, 58, 0.15);
   --radius: 16px;
@@ -29,7 +22,6 @@
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ===== БАЗОВЫЕ СТИЛИ ===== */
 * {
   margin: 0;
   padding: 0;
@@ -46,7 +38,6 @@ body {
     radial-gradient(ellipse at 90% 80%, rgba(23, 74, 126, 0.03) 0%, transparent 70%);
 }
 
-/* ===== СКРОЛЛБАР ===== */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -61,7 +52,6 @@ body {
   background: var(--gold-light);
 }
 
-/* ===== КОНТЕЙНЕР ===== */
 .page-background {
   background: var(--background);
   min-height: 100vh;
@@ -90,7 +80,6 @@ body {
   z-index: 1;
 }
 
-/* ===== ЗАГОЛОВКИ ===== */
 .page-header {
   display: flex;
   align-items: center;
@@ -149,10 +138,6 @@ body {
   letter-spacing: 0.5px;
 }
 
-.page-header h1 span {
-  color: var(--gold-light);
-}
-
 .page-header p {
   color: rgba(255, 255, 255, 0.75);
   margin: 2px 0 0 0;
@@ -160,13 +145,6 @@ body {
   font-weight: 300;
 }
 
-.page-header .btn-primary,
-.page-header .btn-secondary {
-  position: relative;
-  z-index: 1;
-}
-
-/* ===== КАРТОЧКИ ===== */
 .card {
   background: var(--card-bg);
   border-radius: var(--radius);
@@ -200,7 +178,6 @@ body {
   height: 4px;
 }
 
-/* ===== КНОПКИ ===== */
 .btn-primary {
   padding: 10px 24px;
   background: var(--gold-gradient);
@@ -280,7 +257,6 @@ body {
   box-shadow: 0 6px 20px rgba(179, 38, 46, 0.3);
 }
 
-/* ===== ФОРМЫ ===== */
 .form-group {
   margin-bottom: 16px;
 }
@@ -322,7 +298,6 @@ body {
   min-height: 80px;
 }
 
-/* ===== СЕТКИ ===== */
 .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -350,7 +325,6 @@ body {
   }
 }
 
-/* ===== СТАТИСТИКА (ДИПЛОМАТИЧНЫЕ КАРТОЧКИ) ===== */
 .stat-card {
   background: var(--card-bg);
   padding: 24px 20px;
@@ -405,7 +379,6 @@ body {
   margin-bottom: 8px;
 }
 
-/* ===== СПИСОК (ЭЛЕГАНТНЫЙ) ===== */
 .list-item {
   padding: 14px 18px;
   border-left: 3px solid var(--gold);
@@ -438,7 +411,6 @@ body {
   margin-top: 4px;
 }
 
-/* ===== ТАБЛИЦЫ (ОФИЦИАЛЬНЫЕ) ===== */
 .table-wrapper {
   overflow-x: auto;
   background: var(--card-bg);
@@ -481,7 +453,6 @@ table tbody tr:last-child td {
   border-bottom: none;
 }
 
-/* ===== ТЕГИ ===== */
 .tag {
   display: inline-block;
   padding: 3px 12px;
@@ -511,7 +482,6 @@ table tbody tr:last-child td {
   color: #B3262E;
 }
 
-/* ===== СТАТУСЫ ===== */
 .status-active {
   color: #16845B;
   font-weight: 500;
@@ -539,7 +509,6 @@ table tbody tr:last-child td {
   font-size: 12px;
 }
 
-/* ===== СООБЩЕНИЯ ===== */
 .message-success {
   padding: 14px 20px;
   background: #E8F5EF;
@@ -560,7 +529,6 @@ table tbody tr:last-child td {
   font-weight: 500;
 }
 
-/* ===== ПУСТОЕ СОСТОЯНИЕ ===== */
 .empty-state {
   text-align: center;
   padding: 60px 20px;
@@ -580,7 +548,6 @@ table tbody tr:last-child td {
   font-size: 16px;
 }
 
-/* ===== АВАТАР ===== */
 .avatar {
   width: 40px;
   height: 40px;
@@ -602,7 +569,6 @@ table tbody tr:last-child td {
   font-size: 12px;
 }
 
-/* ===== СПИННЕР ===== */
 .spinner {
   width: 40px;
   height: 40px;
@@ -616,7 +582,6 @@ table tbody tr:last-child td {
   to { transform: rotate(360deg); }
 }
 
-/* ===== АДАПТИВНОСТЬ ===== */
 @media (max-width: 768px) {
   .page-header {
     padding: 16px 20px;

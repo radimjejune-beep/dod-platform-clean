@@ -12,23 +12,38 @@ const headers = () => ({
   ...(getToken() && { Authorization: `Bearer ${getToken()}` })
 });
 
-// ===== 1. ПОЛУЧЕНИЕ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ (ИСПОЛЬЗУЕТ /api/me2) =====
+// ===== 1. ПОЛУЧЕНИЕ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ (ТЕПЕРЬ /api/me С ТОКЕНОМ) =====
 export const getMe = async () => {
   const token = getToken();
   console.log('🔑 Токен для запроса:', token ? `${token.slice(0, 20)}...` : 'null');
   
-  // ===== ИСПОЛЬЗУЕМ НОВЫЙ ЭНДПОИНТ /api/me2 (БЕЗ ТОКЕНА) =====
-  const response = await fetch(`${API_URL}/me2`, {
+  // ===== ИСПОЛЬЗУЕМ /api/me С ТОКЕНОМ =====
+  const response = await fetch(`${API_URL}/me`, {
     method: 'GET',
     headers: {
-      'Content-Type': 'application/json'
-      // НЕ отправляем токен!
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`  // <--- ОТПРАВЛЯЕМ ТОКЕН
     }
   });
   
-  console.log('📥 Статус /me2:', response.status);
+  console.log('📥 Статус /me:', response.status);
+  
+  if (!response.ok) {
+    console.log('❌ Ошибка /me, пробуем /api/me2 как запасной...');
+    // Если /me не работает — пробуем /api/me2
+    const fallbackResponse = await fetch(`${API_URL}/me2`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    const fallbackData = await fallbackResponse.json();
+    console.log('📥 Ответ /me2 (запасной):', fallbackData);
+    return fallbackData;
+  }
+  
   const data = await response.json();
-  console.log('📥 Ответ /me2:', data);
+  console.log('📥 Ответ /me (основной):', data);
   return data;
 };
 

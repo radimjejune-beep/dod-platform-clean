@@ -1,4 +1,4 @@
-// backend/server.js — РАБОЧАЯ ВЕРСИЯ (ВСЁ РАБОТАЕТ)
+// backend/server.js — ИСПРАВЛЕННАЯ ВЕРСИЯ
 
 import express from 'express';
 import cors from 'cors';
@@ -82,6 +82,42 @@ function generatePassword() {
     password += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return password;
+}
+
+// ============================================================
+// ФУНКЦИИ УВЕДОМЛЕНИЙ
+// ============================================================
+
+async function createNotification(userId, type, title, message, link = null, priority = 'normal') {
+  try {
+    if (!userId) return null;
+    
+    const result = await pool.query(
+      `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       RETURNING *`,
+      [userId, type, title, message, link, priority]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Ошибка создания уведомления:', error);
+    return null;
+  }
+}
+
+async function createNotificationForRole(role, type, title, message, link = null, priority = 'normal') {
+  try {
+    const result = await pool.query(
+      `INSERT INTO notifications (role, type, title, message, link, priority, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       RETURNING *`,
+      [role, type, title, message, link, priority]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Ошибка создания уведомления для роли:', error);
+    return null;
+  }
 }
 
 // ============================================================
@@ -627,7 +663,7 @@ app.get('/api/club-coordinators', async (req, res) => {
 });
 
 // ============================================================
-// 15. ДОСТИЖЕНИЯ
+// 15. ДОСТИЖЕНИЯ (С УВЕДОМЛЕНИЯМИ)
 // ============================================================
 app.get('/api/achievements', async (req, res) => {
   try {
@@ -658,8 +694,61 @@ app.post('/api/achievements', async (req, res) => {
       [participant_id, title, description || '', achievement_date || new Date().toISOString().split('T')[0]]
     );
 
+    // ===== УВЕДОМЛЕНИЕ: Новое достижение =====
+    const userResult = await pool.query(
+      'SELECT full_name, club_id FROM users WHERE id = $1',
+      [participant_id]
+    );
+    
+    if (userResult.rows.length > 0) {
+      const participantName = userResult.rows[0].full_name;
+      const clubId = userResult.rows[0].club_id;
+      
+      await createNotification(
+        participant_id,
+        'achievement',
+        '🏆 Новое достижение',
+        `Вы получили достижение: "${title}"${description ? ' — ' + description : ''}`,
+        '/my-achievements',
+        'high'
+      );
+
+      if (clubId) {
+        const coordResult = await pool.query(
+          'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
+          [clubId]
+        );
+        if (coordResult.rows.length > 0) {
+          await createNotification(
+            coordResult.rows[0].profile_id,
+            'achievement',
+            '🏆 Достижение в клубе',
+            `Участник "${participantName}" получил достижение: "${title}"`,
+            `/participant/${participant_id}`,
+            'normal'
+          );
+        }
+      }
+
+      const parentResult = await pool.query(
+        'SELECT parent_id FROM child_parent WHERE child_id = $1 AND status = \'active\'',
+        [participant_id]
+      );
+      for (const parent of parentResult.rows) {
+        await createNotification(
+          parent.parent_id,
+          'achievement',
+          '🏆 Достижение вашего ребёнка',
+          `Ваш ребёнок "${participantName}" получил достижение: "${title}"`,
+          `/participant/${participant_id}`,
+          'high'
+        );
+      }
+    }
+
     res.json(result.rows[0]);
   } catch (error) {
+    console.error('Ошибка создания достижения:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -675,7 +764,7 @@ app.delete('/api/achievements/:id', async (req, res) => {
 });
 
 // ============================================================
-// 16. СОБЫТИЯ — РАБОЧАЯ ВЕРСИЯ
+// 16. СОБЫТИЯ (С УВЕДОМЛЕНИЯМИ)
 // ============================================================
 app.get('/api/events', async (req, res) => {
   try {
@@ -737,6 +826,64 @@ app.post('/api/events', async (req, res) => {
         is_global || false, moderationStatus, userId
       ]
     );
+
+    const newEvent = result.rows[0];
+
+    // ===== УВЕДОМЛЕНИЕ: Новое мероприятие =====
+    try {
+      if (newEvent.moderation_status === 'approved') {
+        if (newEvent.is_global) {
+          await createNotificationForRole(
+            'participant',
+            'event',
+            '📅 Новое глобальное мероприятие',
+            `Приглашаем на мероприятие: "${newEvent.title}"`,
+            '/calendar',
+            'high'
+          );
+          await createNotificationForRole(
+            'parent',
+            'event',
+            '📅 Новое мероприятие',
+            `Приглашаем вашего ребёнка на мероприятие: "${newEvent.title}"`,
+            '/calendar',
+            'normal'
+          );
+        } else if (newEvent.club_id) {
+          const clubMembers = await pool.query(
+            'SELECT profile_id FROM club_participants WHERE club_id = $1 AND status = \'active\'',
+            [newEvent.club_id]
+          );
+          for (const member of clubMembers.rows) {
+            await createNotification(
+              member.profile_id,
+              'event',
+              '📅 Новое мероприятие в клубе',
+              `Мероприятие "${newEvent.title}" в вашем клубе`,
+              '/calendar',
+              'normal'
+            );
+          }
+          
+          const coordResult = await pool.query(
+            'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
+            [newEvent.club_id]
+          );
+          if (coordResult.rows.length > 0) {
+            await createNotification(
+              coordResult.rows[0].profile_id,
+              'event',
+              '📅 Мероприятие создано',
+              `Мероприятие "${newEvent.title}" успешно создано в вашем клубе`,
+              '/events',
+              'normal'
+            );
+          }
+        }
+      }
+    } catch (notifyError) {
+      console.error('Ошибка отправки уведомления о мероприятии:', notifyError);
+    }
 
     res.json(result.rows[0]);
   } catch (error) {
@@ -828,7 +975,7 @@ app.post('/api/registrations', async (req, res) => {
 });
 
 // ============================================================
-// 18. ОБРАЩЕНИЯ
+// 18. ОБРАЩЕНИЯ (С УВЕДОМЛЕНИЯМИ)
 // ============================================================
 app.get('/api/appeals', async (req, res) => {
   try {
@@ -913,6 +1060,40 @@ app.post('/api/appeals', async (req, res) => {
       [clubId, userId, subject, message, priority || 'medium']
     );
 
+    // ===== УВЕДОМЛЕНИЕ: Новое обращение =====
+    await createNotificationForRole(
+      'admin',
+      'appeal',
+      '📨 Новое обращение',
+      `Координатор КЮДа создал обращение: "${subject}"`,
+      '/appeals',
+      'high'
+    );
+    await createNotificationForRole(
+      'movement_coordinator',
+      'appeal',
+      '📨 Новое обращение',
+      `Координатор КЮДа создал обращение: "${subject}"`,
+      '/appeals',
+      'high'
+    );
+    await createNotificationForRole(
+      'president',
+      'appeal',
+      '📨 Новое обращение',
+      `Координатор КЮДа создал обращение: "${subject}"`,
+      '/appeals',
+      'high'
+    );
+    await createNotificationForRole(
+      'vice_president',
+      'appeal',
+      '📨 Новое обращение',
+      `Координатор КЮДа создал обращение: "${subject}"`,
+      '/appeals',
+      'high'
+    );
+
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Ошибка создания обращения:', error);
@@ -944,6 +1125,18 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       return res.status(400).json({ error: 'Текст ответа обязателен' });
     }
 
+    const appealCheck = await pool.query(
+      'SELECT coordinator_id, subject FROM appeals WHERE id = $1',
+      [id]
+    );
+    if (appealCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Обращение не найдено' });
+    }
+
+    const coordinatorId = appealCheck.rows[0].coordinator_id;
+    const subject = appealCheck.rows[0].subject;
+    const newStatus = status || 'in_progress';
+
     await pool.query(
       `INSERT INTO appeal_replies (appeal_id, author_id, message, created_at)
        VALUES ($1, $2, $3, NOW())`,
@@ -956,7 +1149,22 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
            resolved_by = $2,
            resolved_at = CASE WHEN $1 IN ('resolved', 'rejected') THEN NOW() ELSE NULL END
        WHERE id = $3`,
-      [status || 'in_progress', userId, id]
+      [newStatus, userId, id]
+    );
+
+    const statusText = {
+      'in_progress': 'взят в работу',
+      'resolved': 'решён',
+      'rejected': 'отклонён'
+    }[newStatus] || 'изменён';
+
+    await createNotification(
+      coordinatorId,
+      'appeal',
+      '📨 Ответ на обращение',
+      `Статус вашего обращения "${subject}" ${statusText}. Ответ: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`,
+      '/appeals',
+      'high'
     );
 
     const result = await pool.query(
@@ -1004,9 +1212,6 @@ app.get('/api/appeals/:id/replies', async (req, res) => {
   }
 });
 
-// ============================================================
-// УДАЛЕНИЕ ОБРАЩЕНИЯ (ТОЛЬКО ДЛЯ АДМИНА)
-// ============================================================
 app.delete('/api/appeals/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1020,21 +1225,16 @@ app.delete('/api/appeals/:id', async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     const userRole = decoded.role;
 
-    // Только админ может удалять
     if (userRole !== 'admin') {
       return res.status(403).json({ error: 'У вас нет прав для удаления обращений' });
     }
 
-    // Проверяем, существует ли обращение
     const check = await pool.query('SELECT id FROM appeals WHERE id = $1', [id]);
     if (check.rows.length === 0) {
       return res.status(404).json({ error: 'Обращение не найдено' });
     }
 
-    // Удаляем ответы на обращение (если есть)
     await pool.query('DELETE FROM appeal_replies WHERE appeal_id = $1', [id]);
-
-    // Удаляем само обращение
     await pool.query('DELETE FROM appeals WHERE id = $1', [id]);
 
     res.json({ message: 'Обращение удалено' });
@@ -1045,7 +1245,7 @@ app.delete('/api/appeals/:id', async (req, res) => {
 });
 
 // ============================================================
-// 19. ЗАПРОСЫ НА ТЬЮТОРОВ
+// 19. ЗАПРОСЫ НА ТЬЮТОРОВ (С УВЕДОМЛЕНИЯМИ)
 // ============================================================
 app.get('/api/tutor-requests', async (req, res) => {
   try {
@@ -1130,6 +1330,24 @@ app.post('/api/tutor-requests', async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', NOW())
       RETURNING *`,
       [clubId, userId, tutor_name, tutor_email || '', tutor_phone || '', event_date, event_name, event_description || '', role || 'Тьютор', responsibilities || [], notes || '']
+    );
+
+    // ===== УВЕДОМЛЕНИЕ: Новый запрос на тьютора =====
+    await createNotificationForRole(
+      'admin',
+      'request',
+      '🤝 Новый запрос на тьютора',
+      `Координатор КЮДа запросил тьютора для мероприятия "${event_name}"`,
+      '/tutor-requests',
+      'high'
+    );
+    await createNotificationForRole(
+      'movement_coordinator',
+      'request',
+      '🤝 Новый запрос на тьютора',
+      `Координатор КЮДа запросил тьютора для мероприятия "${event_name}"`,
+      '/tutor-requests',
+      'high'
     );
 
     res.json(result.rows[0]);
@@ -1247,7 +1465,7 @@ app.get('/api/avatar/:userId', async (req, res) => {
 });
 
 // ============================================================
-// 21. ИСТОРИЯ УЧАСТНИКА
+// 21-27. ОСТАЛЬНЫЕ ЭНДПОИНТЫ
 // ============================================================
 app.get('/api/participant-events/:userId', async (req, res) => {
   try {
@@ -1326,9 +1544,6 @@ app.get('/api/participant-stats/:userId', async (req, res) => {
   }
 });
 
-// ============================================================
-// 22. ДЕТИ РОДИТЕЛЯ
-// ============================================================
 app.get('/api/parent-children', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -1439,9 +1654,6 @@ app.delete('/api/parent-children/:childId', async (req, res) => {
   }
 });
 
-// ============================================================
-// 23. TIMELINE РЕБЁНКА
-// ============================================================
 app.get('/api/child-timeline/:childId', async (req, res) => {
   try {
     const { childId } = req.params;
@@ -1490,7 +1702,7 @@ app.get('/api/child-timeline/:childId', async (req, res) => {
 });
 
 // ============================================================
-// 24. ОБЪЯВЛЕНИЯ
+// 24-27. ОБЪЯВЛЕНИЯ, ШАБЛОНЫ, ПРЕЗИДЕНТ, РЕЙТИНГ
 // ============================================================
 app.post('/api/announcements', async (req, res) => {
   try {
@@ -1569,9 +1781,6 @@ app.delete('/api/announcements/:id', async (req, res) => {
   }
 });
 
-// ============================================================
-// 25. ШАБЛОНЫ ОТЧЁТОВ
-// ============================================================
 app.get('/api/report-templates', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -1666,9 +1875,6 @@ app.delete('/api/report-templates/:id', async (req, res) => {
   }
 });
 
-// ============================================================
-// 26. ПРЕЗИДЕНТ КЛУБА
-// ============================================================
 app.patch('/api/clubs/:clubId/president', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -1764,9 +1970,6 @@ app.get('/api/clubs/:clubId/president', async (req, res) => {
   }
 });
 
-// ============================================================
-// 27. РЕЙТИНГ УЧАСТНИКОВ КЛУБА
-// ============================================================
 app.get('/api/club-rating/:clubId', async (req, res) => {
   try {
     const { clubId } = req.params;
@@ -1807,7 +2010,7 @@ app.get('/api/club-rating/:clubId', async (req, res) => {
 });
 
 // ============================================================
-// 28. СОЗДАНИЕ ТЕСТОВОГО ПОЛЬЗОВАТЕЛЯ
+// ТЕСТОВЫЙ ПОЛЬЗОВАТЕЛЬ
 // ============================================================
 app.post('/api/create-test-user', async (req, res) => {
   try {
@@ -1836,11 +2039,10 @@ app.post('/api/create-test-user', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-// ============================================================
-// 29. УВЕДОМЛЕНИЯ
-// ============================================================
 
-// ПОЛУЧЕНИЕ УВЕДОМЛЕНИЙ
+// ============================================================
+// УВЕДОМЛЕНИЯ API
+// ============================================================
 app.get('/api/notifications', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -1853,8 +2055,6 @@ app.get('/api/notifications', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
-    // Получаем уведомления для пользователя
-    // Сначала системные (для всех), потом персональные
     const result = await pool.query(
       `SELECT n.*
        FROM notifications n
@@ -1873,7 +2073,6 @@ app.get('/api/notifications', async (req, res) => {
   }
 });
 
-// ОТМЕТИТЬ КАК ПРОЧИТАННОЕ
 app.patch('/api/notifications/:id/read', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1886,7 +2085,6 @@ app.patch('/api/notifications/:id/read', async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     const userId = decoded.userId;
 
-    // Проверяем, что уведомление принадлежит пользователю
     const check = await pool.query(
       'SELECT user_id FROM notifications WHERE id = $1',
       [id]
@@ -1911,7 +2109,6 @@ app.patch('/api/notifications/:id/read', async (req, res) => {
   }
 });
 
-// ОТМЕТИТЬ ВСЕ КАК ПРОЧИТАННЫЕ
 app.patch('/api/notifications/read-all', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -1935,7 +2132,6 @@ app.patch('/api/notifications/read-all', async (req, res) => {
   }
 });
 
-// СОЗДАНИЕ УВЕДОМЛЕНИЯ (ДЛЯ АДМИНОВ)
 app.post('/api/notifications', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -1947,7 +2143,6 @@ app.post('/api/notifications', async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     const userRole = decoded.role;
 
-    // Только админ или координатор движения может создавать уведомления
     if (!['admin', 'movement_coordinator'].includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав' });
     }
@@ -1971,450 +2166,6 @@ app.post('/api/notifications', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-// ============================================================
-// 29. СИСТЕМА УВЕДОМЛЕНИЙ
-// ============================================================
-
-// ============================================================
-// ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ СОЗДАНИЯ УВЕДОМЛЕНИЙ
-// ============================================================
-async function createNotification(userId, type, title, message, link = null, priority = 'normal') {
-  try {
-    if (!userId) return null;
-    
-    const result = await pool.query(
-      `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())
-       RETURNING *`,
-      [userId, type, title, message, link, priority]
-    );
-    return result.rows[0];
-  } catch (error) {
-    console.error('Ошибка создания уведомления:', error);
-    return null;
-  }
-}
-
-// ============================================================
-// ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ УВЕДОМЛЕНИЙ ВСЕМ ПО РОЛИ
-// ============================================================
-async function createNotificationForRole(role, type, title, message, link = null, priority = 'normal') {
-  try {
-    const result = await pool.query(
-      `INSERT INTO notifications (role, type, title, message, link, priority, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())
-       RETURNING *`,
-      [role, type, title, message, link, priority]
-    );
-    return result.rows[0];
-  } catch (error) {
-    console.error('Ошибка создания уведомления для роли:', error);
-    return null;
-  }
-}
-
-// ============================================================
-// ИЗМЕНЯЕМ ЭНДПОИНТ СОЗДАНИЯ ОБРАЩЕНИЯ — ДОБАВЛЯЕМ УВЕДОМЛЕНИЕ
-// ============================================================
-// НАЙДИ ЭТОТ КОД В server.js И ЗАМЕНИ:
-app.post('/api/appeals', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    const { subject, message, priority } = req.body;
-
-    if (!subject || !message) {
-      return res.status(400).json({ error: 'subject и message обязательны' });
-    }
-
-    if (userRole !== 'club_coordinator') {
-      return res.status(403).json({ error: 'Только координаторы КЮДа могут создавать обращения' });
-    }
-
-    let clubId = null;
-    const clubResult = await pool.query(
-      'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
-      [userId]
-    );
-    if (clubResult.rows.length > 0) {
-      clubId = clubResult.rows[0].club_id;
-    }
-
-    if (!clubId) {
-      return res.status(400).json({ error: 'Вы не привязаны к КЮДу' });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO appeals (club_id, coordinator_id, subject, message, priority, status, created_at)
-       VALUES ($1, $2, $3, $4, $5, 'pending', NOW())
-       RETURNING *`,
-      [clubId, userId, subject, message, priority || 'medium']
-    );
-
-    // ===== УВЕДОМЛЕНИЕ: Новое обращение =====
-    // Для админов и координаторов движения
-    await createNotificationForRole(
-      'admin',
-      'appeal',
-      '📨 Новое обращение',
-      `Координатор КЮДа "${clubResult.rows[0]?.club_name || 'Клуба'}" создал обращение: "${subject}"`,
-      '/appeals',
-      'high'
-    );
-    await createNotificationForRole(
-      'movement_coordinator',
-      'appeal',
-      '📨 Новое обращение',
-      `Координатор КЮДа "${clubResult.rows[0]?.club_name || 'Клуба'}" создал обращение: "${subject}"`,
-      '/appeals',
-      'high'
-    );
-    await createNotificationForRole(
-      'president',
-      'appeal',
-      '📨 Новое обращение',
-      `Координатор КЮДа "${clubResult.rows[0]?.club_name || 'Клуба'}" создал обращение: "${subject}"`,
-      '/appeals',
-      'high'
-    );
-    await createNotificationForRole(
-      'vice_president',
-      'appeal',
-      '📨 Новое обращение',
-      `Координатор КЮДа "${clubResult.rows[0]?.club_name || 'Клуба'}" создал обращение: "${subject}"`,
-      '/appeals',
-      'high'
-    );
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Ошибка создания обращения:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// ИЗМЕНЯЕМ ЭНДПОИНТ ОТВЕТА НА ОБРАЩЕНИЕ — ДОБАВЛЯЕМ УВЕДОМЛЕНИЕ
-// ============================================================
-// НАЙДИ ЭТОТ КОД В server.js И ЗАМЕНИ:
-app.post('/api/appeals/:id/reply', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { message, status } = req.body;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для ответа на обращения' });
-    }
-
-    if (!message) {
-      return res.status(400).json({ error: 'Текст ответа обязателен' });
-    }
-
-    const appealCheck = await pool.query(
-      'SELECT coordinator_id, subject, status FROM appeals WHERE id = $1',
-      [id]
-    );
-    if (appealCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Обращение не найдено' });
-    }
-
-    const coordinatorId = appealCheck.rows[0].coordinator_id;
-    const subject = appealCheck.rows[0].subject;
-    const oldStatus = appealCheck.rows[0].status;
-    const newStatus = status || 'in_progress';
-
-    await pool.query(
-      `INSERT INTO appeal_replies (appeal_id, author_id, message, created_at)
-       VALUES ($1, $2, $3, NOW())`,
-      [id, userId, message]
-    );
-
-    await pool.query(
-      `UPDATE appeals 
-       SET status = $1,
-           resolved_by = $2,
-           resolved_at = CASE WHEN $1 IN ('resolved', 'rejected') THEN NOW() ELSE NULL END
-       WHERE id = $3`,
-      [newStatus, userId, id]
-    );
-
-    // ===== УВЕДОМЛЕНИЕ: Ответ на обращение =====
-    const statusText = {
-      'in_progress': 'взят в работу',
-      'resolved': 'решён',
-      'rejected': 'отклонён'
-    }[newStatus] || 'изменён';
-
-    await createNotification(
-      coordinatorId,
-      'appeal',
-      '📨 Ответ на обращение',
-      `Статус вашего обращения "${subject}" ${statusText}. Ответ: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`,
-      '/appeals',
-      'high'
-    );
-
-    const result = await pool.query(
-      `SELECT a.*, 
-              u.full_name as coordinator_name,
-              c.name as club_name,
-              r.full_name as resolved_by_name
-       FROM appeals a
-       LEFT JOIN users u ON a.coordinator_id = u.id
-       LEFT JOIN clubs c ON a.club_id = c.id
-       LEFT JOIN users r ON a.resolved_by = r.id
-       WHERE a.id = $1`,
-      [id]
-    );
-
-    res.json({
-      message: 'Ответ отправлен',
-      appeal: result.rows[0]
-    });
-  } catch (error) {
-    console.error('Ошибка ответа на обращение:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// ДОБАВЛЯЕМ УВЕДОМЛЕНИЯ ПРИ СОЗДАНИИ ДОСТИЖЕНИЯ
-// ============================================================
-// НАЙДИ ЭТОТ КОД В server.js (app.post('/api/achievements')) И ЗАМЕНИ:
-app.post('/api/achievements', async (req, res) => {
-  try {
-    const { participant_id, title, description, achievement_date } = req.body;
-
-    if (!participant_id || !title) {
-      return res.status(400).json({ error: 'participant_id и title обязательны' });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO achievements (participant_id, title, description, achievement_date)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
-      [participant_id, title, description || '', achievement_date || new Date().toISOString().split('T')[0]]
-    );
-
-    // ===== УВЕДОМЛЕНИЕ: Новое достижение =====
-    // Получаем имя участника
-    const userResult = await pool.query(
-      'SELECT full_name, club_id FROM users WHERE id = $1',
-      [participant_id]
-    );
-    
-    if (userResult.rows.length > 0) {
-      const participantName = userResult.rows[0].full_name;
-      const clubId = userResult.rows[0].club_id;
-      
-      // Уведомление самому участнику
-      await createNotification(
-        participant_id,
-        'achievement',
-        '🏆 Новое достижение',
-        `Вы получили достижение: "${title}"${description ? ' — ' + description : ''}`,
-        '/my-achievements',
-        'high'
-      );
-
-      // Уведомление координатору клуба
-      if (clubId) {
-        const coordResult = await pool.query(
-          'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
-          [clubId]
-        );
-        if (coordResult.rows.length > 0) {
-          await createNotification(
-            coordResult.rows[0].profile_id,
-            'achievement',
-            '🏆 Достижение в клубе',
-            `Участник "${participantName}" получил достижение: "${title}"`,
-            `/participant/${participant_id}`,
-            'normal'
-          );
-        }
-      }
-
-      // Уведомление родителям (если есть)
-      const parentResult = await pool.query(
-        'SELECT parent_id FROM child_parent WHERE child_id = $1 AND status = \'active\'',
-        [participant_id]
-      );
-      for (const parent of parentResult.rows) {
-        await createNotification(
-          parent.parent_id,
-          'achievement',
-          '🏆 Достижение вашего ребёнка',
-          `Ваш ребёнок "${participantName}" получил достижение: "${title}"`,
-          `/participant/${participant_id}`,
-          'high'
-        );
-      }
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Ошибка создания достижения:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// ДОБАВЛЯЕМ УВЕДОМЛЕНИЯ ПРИ СОЗДАНИИ МЕРОПРИЯТИЯ
-// ============================================================
-// НАЙДИ ЭТОТ КОД В server.js (app.post('/api/events')) И ЗАМЕНИ:
-// Добавь этот блок ПОСЛЕ создания мероприятия:
-
-    // ===== УВЕДОМЛЕНИЕ: Новое мероприятие =====
-    if (moderationStatus === 'approved' || userRole === 'admin' || userRole === 'movement_coordinator') {
-      // Для глобальных мероприятий — уведомляем всех
-      if (is_global) {
-        // Уведомление для всех участников
-        await createNotificationForRole(
-          'participant',
-          'event',
-          '📅 Новое глобальное мероприятие',
-          `Приглашаем на мероприятие: "${title}"${description ? ' — ' + description.substring(0, 100) : ''}`,
-          '/calendar',
-          'high'
-        );
-        await createNotificationForRole(
-          'parent',
-          'event',
-          '📅 Новое мероприятие',
-          `Приглашаем вашего ребёнка на мероприятие: "${title}"`,
-          '/calendar',
-          'normal'
-        );
-      } else if (finalClubId) {
-        // Для клубных мероприятий — уведомляем участников клуба
-        const clubMembers = await pool.query(
-          'SELECT profile_id FROM club_participants WHERE club_id = $1 AND status = \'active\'',
-          [finalClubId]
-        );
-        for (const member of clubMembers.rows) {
-          await createNotification(
-            member.profile_id,
-            'event',
-            '📅 Новое мероприятие в клубе',
-            `Мероприятие "${title}" в вашем клубе${description ? ' — ' + description.substring(0, 100) : ''}`,
-            '/calendar',
-            'normal'
-          );
-        }
-        
-        // Уведомление координатору клуба
-        const coordResult = await pool.query(
-          'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
-          [finalClubId]
-        );
-        if (coordResult.rows.length > 0) {
-          await createNotification(
-            coordResult.rows[0].profile_id,
-            'event',
-            '📅 Мероприятие создано',
-            `Мероприятие "${title}" успешно создано в вашем клубе`,
-            '/events',
-            'normal'
-          );
-        }
-      }
-    }
-
-// ============================================================
-// ДОБАВЛЯЕМ УВЕДОМЛЕНИЯ ПРИ НАЗНАЧЕНИИ ТЬЮТОРА
-// ============================================================
-// НАЙДИ В server.js ЭНДПОИНТ НАЗНАЧЕНИЯ ТЬЮТОРА (если есть) ИЛИ ДОБАВЬ В КОНЦЕ:
-
-// ============================================================
-// 30. УВЕДОМЛЕНИЯ ПРИ НАЗНАЧЕНИИ ТЬЮТОРА (ДОПОЛНИТЕЛЬНО)
-// ============================================================
-// Если у тебя есть эндпоинт назначения тьютора — добавь туда эти уведомления.
-// Пример:
-
-/*
-// В эндпоинте назначения тьютора:
-const tutorId = req.body.tutor_id;
-const eventId = req.body.event_id;
-
-// Получаем информацию о мероприятии
-const eventInfo = await pool.query(
-  'SELECT title FROM events WHERE id = $1',
-  [eventId]
-);
-
-// Уведомление тьютору
-await createNotification(
-  tutorId,
-  'assignment',
-  '📋 Назначение тьютором',
-  `Вы назначены тьютором на мероприятие "${eventInfo.rows[0]?.title || 'мероприятие'}"`,
-  `/tutor-journal/${eventId}`,
-  'high'
-);
-*/
-
-// ============================================================
-// 31. УВЕДОМЛЕНИЯ ПРИ СОЗДАНИИ ЗАПРОСА НА ТЬЮТОРА
-// ============================================================
-// НАЙДИ ЭНДПОИНТ app.post('/api/tutor-requests') И ДОБАВЬ ЭТО В КОНЦЕ:
-
-    // ===== УВЕДОМЛЕНИЕ: Новый запрос на тьютора =====
-    await createNotificationForRole(
-      'admin',
-      'request',
-      '🤝 Новый запрос на тьютора',
-      `Координатор КЮДа запросил тьютора для мероприятия "${event_name}" (${tutor_name})`,
-      '/tutor-requests',
-      'high'
-    );
-    await createNotificationForRole(
-      'movement_coordinator',
-      'request',
-      '🤝 Новый запрос на тьютора',
-      `Координатор КЮДа запросил тьютора для мероприятия "${event_name}" (${tutor_name})`,
-      '/tutor-requests',
-      'high'
-    );
-
-// ============================================================
-// 32. УВЕДОМЛЕНИЯ ПРИ ПРИГЛАШЕНИИ ТЬЮТОРА
-// ============================================================
-// В ЭНДПОИНТЕ ПРИГЛАШЕНИЯ ТЬЮТОРА (если есть) ДОБАВЬ:
-
-/*
-// Уведомление тьютору о приглашении
-await createNotification(
-  tutorId,
-  'invitation',
-  '📨 Приглашение на мероприятие',
-  `Вас приглашают тьютором на мероприятие "${eventTitle}"`,
-  '/tutor-invitations',
-  'high'
-);
-*/
-
-console.log('✅ Система уведомлений настроена');
 
 // ============================================================
 // ЗАПУСК СЕРВЕРА

@@ -1,103 +1,109 @@
-// frontend/src/pages/Profile.jsx
+// frontend/src/pages/ParticipantDashboard.jsx
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
-import AvatarUpload from '../components/AvatarUpload';
 
-export default function Profile() {
+export default function ParticipantDashboard() {
   const [profile, setProfile] = useState(null);
+  const [stats, setStats] = useState({
+    total_events: 0,
+    attended_events: 0,
+    achievements_count: 0,
+    level: 1,
+    next_level: 2,
+    progress: 0
+  });
+  const [recentAchievements, setRecentAchievements] = useState([]);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState('success');
-  const [activeTab, setActiveTab] = useState('main');
+  const [activeTab, setActiveTab] = useState('overview');
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadProfile();
+    loadData();
   }, []);
 
-  const loadProfile = async () => {
+  const loadData = async () => {
     try {
-      const data = await api.getMe();
-      if (data && data.id) {
-        setProfile(data);
-      } else {
+      const userData = await api.getMe();
+      if (!userData || !userData.id) {
         navigate('/login');
+        return;
       }
+
+      if (userData.role !== 'participant') {
+        navigate('/dashboard');
+        return;
+      }
+
+      setProfile(userData);
+
+      // Загружаем статистику
+      const statsData = await api.getParticipantStats(userData.id);
+      
+      if (statsData) {
+        setStats({
+          total_events: statsData.total_events || 0,
+          attended_events: statsData.attended_events || 0,
+          achievements_count: statsData.achievements_count || 0,
+          level: statsData.level || 1,
+          next_level: (statsData.level || 1) + 1,
+          progress: statsData.progress || 0
+        });
+        setRecentAchievements(statsData.recent_achievements || []);
+      }
+
+      // Загружаем предстоящие мероприятия
+      const eventsData = await api.getEvents();
+      const now = new Date();
+      const upcoming = (eventsData || [])
+        .filter(e => new Date(e.event_date) >= now)
+        .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+        .slice(0, 5);
+      setUpcomingEvents(upcoming);
+
     } catch (err) {
-      console.error('Ошибка загрузки профиля:', err);
-      navigate('/login');
+      console.error('Ошибка:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAvatarUpdated = (newAvatarUrl) => {
-    setProfile({ ...profile, avatar_url: newAvatarUrl });
-    setMessage('✅ Аватар обновлён!');
-    setMessageType('success');
-    setTimeout(() => setMessage(''), 3000);
+  const getLevelName = (level) => {
+    const names = {
+      1: 'Начинающий дипломат',
+      2: 'Юный дипломат',
+      3: 'Дипломат',
+      4: 'Опытный дипломат',
+      5: 'Главный дипломат',
+      6: 'Посол',
+      7: 'Легенда'
+    };
+    return names[level] || 'Дипломат';
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setMessage('');
-    setMessageType('success');
+  const getLevelEmoji = (level) => {
+    const emojis = {
+      1: '🌱',
+      2: '🌟',
+      3: '⭐',
+      4: '👔',
+      5: '🏛️',
+      6: '👑',
+      7: '💎'
+    };
+    return emojis[level] || '⭐';
+  };
 
-    try {
-      let phone = profile.phone || '';
-      phone = phone.replace(/[^0-9+]/g, '');
-
-      // Обработка даты
-      let birthDate = profile.birth_date || '';
-      if (birthDate === '' || birthDate === 'Invalid Date') {
-        birthDate = null;
-      }
-
-      const updateData = {
-        full_name: profile.full_name.trim(),
-        phone: phone,
-        school: profile.school || '',
-        class_name: profile.class_name || '',
-        interests: profile.interests || '',
-        bio: profile.bio || '',
-        city: profile.city || '',
-        birth_date: birthDate,
-        social_links: profile.social_links || '',
-        skills: profile.skills || '',
-        education: profile.education || '',
-        achievements: profile.achievements || '',
-        telegram: profile.telegram || '',
-        vk: profile.vk || ''
-      };
-
-      console.log('📤 Отправка данных:', updateData);
-
-      const result = await api.updateProfile(updateData);
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      setMessage('✅ Профиль успешно обновлён!');
-      setProfile(result);
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
-      console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка: ' + err.message);
-      setMessageType('error');
-    } finally {
-      setSaving(false);
+  const getInitials = (name) => {
+    if (!name) return '?';
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return parts[0][0] + parts[1][0];
     }
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProfile({ ...profile, [name]: value });
+    return name[0];
   };
 
   if (loading) {
@@ -112,288 +118,371 @@ export default function Profile() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>👤</span>
-          <div>
-            <h1>Мой профиль</h1>
-            <p>Управление личными данными</p>
+        
+        {/* ===== ШАПКА ПРОФИЛЯ ===== */}
+        <div className="card" style={{ 
+          marginBottom: '24px',
+          background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
+          color: 'white',
+          border: 'none'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '24px', 
+            flexWrap: 'wrap',
+            position: 'relative',
+            zIndex: 1
+          }}>
+            {/* АВАТАР */}
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: profile?.avatar_url ? `url(${profile.avatar_url}) center/cover` : 'rgba(255,255,255,0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '32px',
+              color: 'white',
+              fontWeight: 'bold',
+              flexShrink: 0,
+              border: '3px solid rgba(255,255,255,0.3)'
+            }}>
+              {!profile?.avatar_url && getInitials(profile?.full_name)}
+            </div>
+
+            <div style={{ flex: 1 }}>
+              <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>
+                {profile?.full_name}
+              </h1>
+              <p style={{ opacity: 0.7, margin: '4px 0 0 0' }}>
+                {profile?.school || 'Школа не указана'} • {profile?.class_name || 'Класс не указан'}
+              </p>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px', flexWrap: 'wrap' }}>
+                <span style={{ background: 'rgba(255,255,255,0.15)', padding: '4px 12px', borderRadius: '20px', fontSize: '13px' }}>
+                  {getLevelEmoji(stats.level)} {getLevelName(stats.level)}
+                </span>
+                <span style={{ background: 'rgba(255,255,255,0.15)', padding: '4px 12px', borderRadius: '20px', fontSize: '13px' }}>
+                  🏆 {stats.achievements_count} достижений
+                </span>
+                <span style={{ background: 'rgba(255,255,255,0.15)', padding: '4px 12px', borderRadius: '20px', fontSize: '13px' }}>
+                  📅 {stats.total_events} мероприятий
+                </span>
+              </div>
+            </div>
+
+            <Link to="/profile" className="btn-secondary" style={{ alignSelf: 'flex-start' }}>
+              ✏️ Редактировать
+            </Link>
+          </div>
+
+          {/* ПРОГРЕСС-БАР УРОВНЯ */}
+          <div style={{ marginTop: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', opacity: 0.8 }}>
+              <span>Уровень {stats.level} → {stats.next_level}</span>
+              <span>{Math.round(stats.progress)}%</span>
+            </div>
+            <div style={{
+              width: '100%',
+              height: '6px',
+              background: 'rgba(255,255,255,0.15)',
+              borderRadius: '3px',
+              marginTop: '4px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                width: `${stats.progress}%`,
+                height: '100%',
+                background: 'linear-gradient(90deg, #C9A227, #E8D9A8)',
+                borderRadius: '3px',
+                transition: 'width 0.5s ease'
+              }} />
+            </div>
+            <div style={{ fontSize: '11px', opacity: 0.5, marginTop: '4px' }}>
+              До следующего уровня: {5 - (stats.total_events % 5)} мероприятий
+            </div>
           </div>
         </div>
 
-        {message && (
-          <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
-            {message}
+        {/* ===== ВКЛАДКИ ===== */}
+        <div style={{
+          display: 'flex',
+          gap: '4px',
+          marginBottom: '24px',
+          borderBottom: '2px solid #E2E7EF',
+          paddingBottom: '4px',
+          flexWrap: 'wrap'
+        }}>
+          <button
+            onClick={() => setActiveTab('overview')}
+            style={{
+              padding: '8px 20px',
+              border: 'none',
+              background: activeTab === 'overview' ? '#0B1F3A' : 'transparent',
+              color: activeTab === 'overview' ? 'white' : '#667085',
+              borderRadius: '8px 8px 0 0',
+              cursor: 'pointer',
+              fontWeight: activeTab === 'overview' ? '600' : '500',
+              fontSize: '14px',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            📊 Обзор
+          </button>
+          <button
+            onClick={() => setActiveTab('achievements')}
+            style={{
+              padding: '8px 20px',
+              border: 'none',
+              background: activeTab === 'achievements' ? '#0B1F3A' : 'transparent',
+              color: activeTab === 'achievements' ? 'white' : '#667085',
+              borderRadius: '8px 8px 0 0',
+              cursor: 'pointer',
+              fontWeight: activeTab === 'achievements' ? '600' : '500',
+              fontSize: '14px',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            🏆 Достижения ({stats.achievements_count})
+          </button>
+          <button
+            onClick={() => setActiveTab('events')}
+            style={{
+              padding: '8px 20px',
+              border: 'none',
+              background: activeTab === 'events' ? '#0B1F3A' : 'transparent',
+              color: activeTab === 'events' ? 'white' : '#667085',
+              borderRadius: '8px 8px 0 0',
+              cursor: 'pointer',
+              fontWeight: activeTab === 'events' ? '600' : '500',
+              fontSize: '14px',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            📅 Мероприятия ({stats.total_events})
+          </button>
+          <button
+            onClick={() => setActiveTab('interests')}
+            style={{
+              padding: '8px 20px',
+              border: 'none',
+              background: activeTab === 'interests' ? '#0B1F3A' : 'transparent',
+              color: activeTab === 'interests' ? 'white' : '#667085',
+              borderRadius: '8px 8px 0 0',
+              cursor: 'pointer',
+              fontWeight: activeTab === 'interests' ? '600' : '500',
+              fontSize: '14px',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            🎯 Интересы
+          </button>
+        </div>
+
+        {/* ============================================================
+            ВКЛАДКА: ОБЗОР
+            ============================================================ */}
+        {activeTab === 'overview' && (
+          <div>
+            {/* СТАТИСТИКА */}
+            <div className="grid-4" style={{ marginBottom: '24px' }}>
+              <div className="stat-card" style={{ borderTop: '3px solid #174A7E' }}>
+                <div className="number">{stats.total_events}</div>
+                <div className="label">📅 Всего мероприятий</div>
+              </div>
+              <div className="stat-card" style={{ borderTop: '3px solid #16845B' }}>
+                <div className="number">{stats.attended_events}</div>
+                <div className="label">✅ Посещено</div>
+              </div>
+              <div className="stat-card" style={{ borderTop: '3px solid #C9A227' }}>
+                <div className="number">{stats.achievements_count}</div>
+                <div className="label">🏆 Достижений</div>
+              </div>
+              <div className="stat-card" style={{ borderTop: '3px solid #6B46C1' }}>
+                <div className="number">{stats.level}</div>
+                <div className="label">📊 Уровень</div>
+              </div>
+            </div>
+
+            {/* ПОСЛЕДНИЕ ДОСТИЖЕНИЯ */}
+            {recentAchievements.length > 0 && (
+              <div className="card" style={{ marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+                  🏆 Последние достижения
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {recentAchievements.map((a) => (
+                    <div key={a.id} className="list-item" style={{ borderLeftColor: '#C9A227' }}>
+                      <div className="title">{a.title}</div>
+                      <div className="subtitle">
+                        📅 {new Date(a.achievement_date || a.created_at).toLocaleDateString('ru-RU')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ПРЕДСТОЯЩИЕ МЕРОПРИЯТИЯ */}
+            {upcomingEvents.length > 0 && (
+              <div className="card">
+                <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+                  📅 Ближайшие мероприятия
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {upcomingEvents.map((e) => (
+                    <div key={e.id} className="list-item" style={{ borderLeftColor: '#174A7E' }}>
+                      <div className="title">{e.title}</div>
+                      <div className="subtitle">
+                        📅 {new Date(e.event_date).toLocaleDateString('ru-RU')}
+                        {e.location && ` • 📍 ${e.location}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  className="btn-secondary"
+                  style={{ width: '100%', marginTop: '12px', padding: '8px' }}
+                  onClick={() => navigate('/events')}
+                >
+                  Все мероприятия →
+                </button>
+              </div>
+            )}
           </div>
         )}
 
-        <div className="card">
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            marginBottom: '24px',
-            paddingBottom: '20px',
-            borderBottom: '1px solid #E2E7EF'
-          }}>
-            <AvatarUpload
-              currentAvatar={profile?.avatar_url}
-              onAvatarUpdated={handleAvatarUpdated}
-              userId={profile?.id}
-            />
+        {/* ============================================================
+            ВКЛАДКА: ДОСТИЖЕНИЯ
+            ============================================================ */}
+        {activeTab === 'achievements' && (
+          <div className="card">
+            {stats.achievements_count === 0 ? (
+              <div className="empty-state">
+                <div className="icon">🌟</div>
+                <p style={{ color: '#667085' }}>У вас пока нет достижений</p>
+                <p style={{ fontSize: '13px', color: '#98A2B3' }}>
+                  Участвуйте в мероприятиях и получайте награды!
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
+                {recentAchievements.map((a) => (
+                  <div key={a.id} className="card" style={{ 
+                    padding: '16px', 
+                    borderLeft: '4px solid #C9A227',
+                    marginBottom: '0'
+                  }}>
+                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>🏆</div>
+                    <div style={{ fontWeight: '600', color: '#0B1F3A' }}>{a.title}</div>
+                    {a.description && (
+                      <div style={{ fontSize: '13px', color: '#667085', marginTop: '4px' }}>{a.description}</div>
+                    )}
+                    <div style={{ fontSize: '12px', color: '#98A2B3', marginTop: '8px' }}>
+                      📅 {new Date(a.achievement_date || a.created_at).toLocaleDateString('ru-RU')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+        )}
 
-          <div style={{
-            display: 'flex',
-            gap: '4px',
-            marginBottom: '24px',
-            borderBottom: '2px solid #E2E7EF',
-            paddingBottom: '4px',
-            flexWrap: 'wrap'
-          }}>
-            <button
-              onClick={() => setActiveTab('main')}
-              style={{
-                padding: '8px 20px',
-                border: 'none',
-                background: activeTab === 'main' ? '#0B1F3A' : 'transparent',
-                color: activeTab === 'main' ? 'white' : '#667085',
-                borderRadius: '8px 8px 0 0',
-                cursor: 'pointer',
-                fontWeight: activeTab === 'main' ? '600' : '500',
-                fontSize: '14px'
-              }}
-            >
-              📋 Основное
-            </button>
-            <button
-              onClick={() => setActiveTab('contacts')}
-              style={{
-                padding: '8px 20px',
-                border: 'none',
-                background: activeTab === 'contacts' ? '#0B1F3A' : 'transparent',
-                color: activeTab === 'contacts' ? 'white' : '#667085',
-                borderRadius: '8px 8px 0 0',
-                cursor: 'pointer',
-                fontWeight: activeTab === 'contacts' ? '600' : '500',
-                fontSize: '14px'
-              }}
-            >
-              📞 Контакты
-            </button>
-            <button
-              onClick={() => setActiveTab('interests')}
-              style={{
-                padding: '8px 20px',
-                border: 'none',
-                background: activeTab === 'interests' ? '#0B1F3A' : 'transparent',
-                color: activeTab === 'interests' ? 'white' : '#667085',
-                borderRadius: '8px 8px 0 0',
-                cursor: 'pointer',
-                fontWeight: activeTab === 'interests' ? '600' : '500',
-                fontSize: '14px'
-              }}
-            >
-              🎯 Интересы
-            </button>
-            <button
-              onClick={() => setActiveTab('extra')}
-              style={{
-                padding: '8px 20px',
-                border: 'none',
-                background: activeTab === 'extra' ? '#0B1F3A' : 'transparent',
-                color: activeTab === 'extra' ? 'white' : '#667085',
-                borderRadius: '8px 8px 0 0',
-                cursor: 'pointer',
-                fontWeight: activeTab === 'extra' ? '600' : '500',
-                fontSize: '14px'
-              }}
-            >
-              🌟 Дополнительно
-            </button>
+        {/* ============================================================
+            ВКЛАДКА: МЕРОПРИЯТИЯ
+            ============================================================ */}
+        {activeTab === 'events' && (
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
+                Мои мероприятия
+              </h3>
+              <button
+                className="btn-secondary"
+                style={{ padding: '6px 16px', fontSize: '12px' }}
+                onClick={() => navigate('/events')}
+              >
+                Все мероприятия →
+              </button>
+            </div>
+            {stats.total_events === 0 ? (
+              <div className="empty-state">
+                <div className="icon">📭</div>
+                <p>Вы ещё не участвовали в мероприятиях</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {upcomingEvents.length > 0 && (
+                  <>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#0B1F3A', paddingBottom: '8px', borderBottom: '1px solid #E2E7EF' }}>
+                      📅 Предстоящие
+                    </div>
+                    {upcomingEvents.map((e) => (
+                      <div key={e.id} className="list-item" style={{ borderLeftColor: '#174A7E' }}>
+                        <div className="title">{e.title}</div>
+                        <div className="subtitle">
+                          📅 {new Date(e.event_date).toLocaleDateString('ru-RU')}
+                          {e.location && ` • 📍 ${e.location}`}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
           </div>
+        )}
 
-          <form onSubmit={handleSave}>
-            {activeTab === 'main' && (
-              <div>
-                <div className="grid-2">
-                  <div className="form-group">
-                    <label>ФИО *</label>
-                    <input
-                      type="text"
-                      name="full_name"
-                      value={profile?.full_name || ''}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Email</label>
-                    <input
-                      type="email"
-                      value={profile?.email || ''}
-                      disabled
-                      style={{ background: '#F4F6F9', cursor: 'not-allowed' }}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Дата рождения</label>
-                    <input
-                      type="date"
-                      name="birth_date"
-                      value={profile?.birth_date || ''}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Город</label>
-                    <input
-                      type="text"
-                      name="city"
-                      value={profile?.city || ''}
-                      onChange={handleChange}
-                      placeholder="Москва"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Школа</label>
-                    <input
-                      type="text"
-                      name="school"
-                      value={profile?.school || ''}
-                      onChange={handleChange}
-                      placeholder="Школа №1"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Класс</label>
-                    <input
-                      type="text"
-                      name="class_name"
-                      value={profile?.class_name || ''}
-                      onChange={handleChange}
-                      placeholder="8А"
-                    />
-                  </div>
-                </div>
+        {/* ============================================================
+            ВКЛАДКА: ИНТЕРЕСЫ
+            ============================================================ */}
+        {activeTab === 'interests' && (
+          <div className="card">
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+              🎯 Мои интересы
+            </h3>
+            {profile?.interests ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {profile.interests.split(',').map((interest, index) => (
+                  <span key={index} className="tag tag-blue" style={{ fontSize: '14px', padding: '6px 16px' }}>
+                    {interest.trim()}
+                  </span>
+                ))}
               </div>
+            ) : (
+              <p style={{ color: '#667085' }}>
+                Интересы не указаны. <Link to="/profile" style={{ color: '#C9A227' }}>Добавить интересы</Link>
+              </p>
             )}
 
-            {activeTab === 'contacts' && (
-              <div>
-                <div className="grid-2">
-                  <div className="form-group">
-                    <label>Телефон</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={profile?.phone || ''}
-                      onChange={handleChange}
-                      placeholder="+7 999 123 45 67"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Telegram</label>
-                    <input
-                      type="text"
-                      name="telegram"
-                      value={profile?.telegram || ''}
-                      onChange={handleChange}
-                      placeholder="@username"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>VK</label>
-                    <input
-                      type="text"
-                      name="vk"
-                      value={profile?.vk || ''}
-                      onChange={handleChange}
-                      placeholder="https://vk.com/id..."
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Другие соцсети</label>
-                    <input
-                      type="text"
-                      name="social_links"
-                      value={profile?.social_links || ''}
-                      onChange={handleChange}
-                      placeholder="Ссылки через запятую"
-                    />
-                  </div>
-                </div>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginTop: '24px', marginBottom: '16px' }}>
+              💪 Мои навыки
+            </h3>
+            {profile?.skills ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {profile.skills.split(',').map((skill, index) => (
+                  <span key={index} className="tag tag-gold" style={{ fontSize: '14px', padding: '6px 16px' }}>
+                    {skill.trim()}
+                  </span>
+                ))}
               </div>
+            ) : (
+              <p style={{ color: '#667085' }}>
+                Навыки не указаны. <Link to="/profile" style={{ color: '#C9A227' }}>Добавить навыки</Link>
+              </p>
             )}
 
-            {activeTab === 'interests' && (
-              <div>
-                <div className="form-group">
-                  <label>Интересы</label>
-                  <input
-                    type="text"
-                    name="interests"
-                    value={profile?.interests || ''}
-                    onChange={handleChange}
-                    placeholder="Дипломатия, история, иностранные языки, спорт"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Навыки</label>
-                  <input
-                    type="text"
-                    name="skills"
-                    value={profile?.skills || ''}
-                    onChange={handleChange}
-                    placeholder="Публичные выступления, переговоры, английский язык"
-                  />
-                </div>
-              </div>
+            {profile?.bio && (
+              <>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginTop: '24px', marginBottom: '16px' }}>
+                  📝 О себе
+                </h3>
+                <p style={{ color: '#667085', lineHeight: '1.6' }}>{profile.bio}</p>
+              </>
             )}
-
-            {activeTab === 'extra' && (
-              <div>
-                <div className="form-group">
-                  <label>О себе</label>
-                  <textarea
-                    name="bio"
-                    rows="4"
-                    value={profile?.bio || ''}
-                    onChange={handleChange}
-                    placeholder="Расскажите о себе, своих целях и увлечениях..."
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Дополнительное образование</label>
-                  <textarea
-                    name="education"
-                    rows="3"
-                    value={profile?.education || ''}
-                    onChange={handleChange}
-                    placeholder="Курсы, кружки, секции..."
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Личные достижения</label>
-                  <textarea
-                    name="achievements"
-                    rows="3"
-                    value={profile?.achievements || ''}
-                    onChange={handleChange}
-                    placeholder="Ваши основные достижения..."
-                  />
-                </div>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="btn-primary"
-              style={{ width: '100%', marginTop: '16px' }}
-            >
-              {saving ? '⏳ Сохранение...' : '💾 Сохранить изменения'}
-            </button>
-          </form>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

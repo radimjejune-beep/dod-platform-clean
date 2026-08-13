@@ -329,10 +329,16 @@ app.patch('/api/profile', async (req, res) => {
 
     const { 
       full_name, phone, school, class_name, interests, bio, city, position,
-      birth_date, social_links, skills, education, achievements_text, telegram, vk
+      birth_date, social_links, skills, education, achievements, telegram, vk
     } = req.body;
 
     console.log('📥 Обновление профиля для:', decoded.email);
+
+    // ===== ОБРАБОТКА ДАТЫ =====
+    let birthDateValue = null;
+    if (birth_date && birth_date !== '' && birth_date !== 'Invalid Date') {
+      birthDateValue = birth_date;
+    }
 
     const result = await pool.query(
       `UPDATE users 
@@ -344,18 +350,18 @@ app.patch('/api/profile', async (req, res) => {
            bio = COALESCE($6, bio),
            city = COALESCE($7, city),
            position = COALESCE($8, position),
-           birth_date = COALESCE($9, birth_date),
+           birth_date = $9,
            social_links = COALESCE($10, social_links),
            skills = COALESCE($11, skills),
            education = COALESCE($12, education),
-           achievements_text = COALESCE($13, achievements_text),
+           achievements = COALESCE($13, achievements),
            telegram = COALESCE($14, telegram),
            vk = COALESCE($15, vk)
        WHERE id = $16
-       RETURNING id, email, full_name, role, phone, school, class_name, interests, bio, city, position, birth_date, social_links, skills, education, achievements_text, telegram, vk`,
+       RETURNING id, email, full_name, role, phone, school, class_name, interests, bio, city, position, birth_date, social_links, skills, education, achievements, telegram, vk`,
       [
         full_name, phone, school, class_name, interests, bio, city, position,
-        birth_date, social_links, skills, education, achievements_text, telegram, vk,
+        birthDateValue, social_links, skills, education, achievements, telegram, vk,
         decoded.userId
       ]
     );

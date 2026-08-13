@@ -42,52 +42,59 @@ export default function Profile() {
     setTimeout(() => setMessage(''), 3000);
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setMessage('');
-    setMessageType('success');
+const handleSave = async (e) => {
+  e.preventDefault();
+  setSaving(true);
+  setMessage('');
+  setMessageType('success');
 
-    try {
-      let phone = profile.phone || '';
-      phone = phone.replace(/[^0-9+]/g, '');
+  try {
+    let phone = profile.phone || '';
+    phone = phone.replace(/[^0-9+]/g, '');
 
-      const updateData = {
-        full_name: profile.full_name.trim(),
-        phone: phone,
-        school: profile.school || '',
-        class_name: profile.class_name || '',
-        interests: profile.interests || '',
-        bio: profile.bio || '',
-        city: profile.city || '',
-        birth_date: profile.birth_date || '',
-        social_links: profile.social_links || '',
-        skills: profile.skills || '',
-        education: profile.education || '',
-        achievements: profile.achievements || '',
-        telegram: profile.telegram || '',
-        vk: profile.vk || ''
-      };
-
-      console.log('📤 Отправка данных:', updateData);
-
-      const result = await api.updateProfile(updateData);
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      setMessage('✅ Профиль успешно обновлён!');
-      setProfile(result);
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
-      console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка: ' + err.message);
-      setMessageType('error');
-    } finally {
-      setSaving(false);
+    // ===== ОБРАБОТКА ДАТЫ =====
+    let birthDate = profile.birth_date || '';
+    // Если дата пустая или невалидная — отправляем null
+    if (birthDate === '' || birthDate === 'Invalid Date') {
+      birthDate = null;
     }
-  };
+
+    const updateData = {
+      full_name: profile.full_name.trim(),
+      phone: phone,
+      school: profile.school || '',
+      class_name: profile.class_name || '',
+      interests: profile.interests || '',
+      bio: profile.bio || '',
+      city: profile.city || '',
+      birth_date: birthDate,  // ← теперь null вместо пустой строки
+      social_links: profile.social_links || '',
+      skills: profile.skills || '',
+      education: profile.education || '',
+      achievements: profile.achievements || '',
+      telegram: profile.telegram || '',
+      vk: profile.vk || ''
+    };
+
+    console.log('📤 Отправка данных:', updateData);
+
+    const result = await api.updateProfile(updateData);
+
+    if (result.error) {
+      throw new Error(result.error);
+    }
+
+    setMessage('✅ Профиль успешно обновлён!');
+    setProfile(result);
+    setTimeout(() => setMessage(''), 3000);
+  } catch (err) {
+    console.error('❌ Ошибка:', err);
+    setMessage('❌ Ошибка: ' + err.message);
+    setMessageType('error');
+  } finally {
+    setSaving(false);
+  }
+};
 
   const handleChange = (e) => {
     const { name, value } = e.target;

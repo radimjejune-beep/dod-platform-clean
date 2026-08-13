@@ -12,22 +12,23 @@ const headers = () => ({
   ...(getToken() && { Authorization: `Bearer ${getToken()}` })
 });
 
-// ===== 1. ПОЛУЧЕНИЕ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ =====
+// ===== 1. ПОЛУЧЕНИЕ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ (ИСПОЛЬЗУЕТ /api/me2) =====
 export const getMe = async () => {
   const token = getToken();
   console.log('🔑 Токен для запроса:', token ? `${token.slice(0, 20)}...` : 'null');
   
-  const response = await fetch(`${API_URL}/me`, {
+  // ===== ИСПОЛЬЗУЕМ НОВЫЙ ЭНДПОИНТ /api/me2 (БЕЗ ТОКЕНА) =====
+  const response = await fetch(`${API_URL}/me2`, {
     method: 'GET',
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      'Content-Type': 'application/json'
+      // НЕ отправляем токен!
     }
   });
   
-  console.log('📥 Статус /me:', response.status);
+  console.log('📥 Статус /me2:', response.status);
   const data = await response.json();
-  console.log('📥 Ответ /me:', data);
+  console.log('📥 Ответ /me2:', data);
   return data;
 };
 

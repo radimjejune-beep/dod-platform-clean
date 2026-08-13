@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import FilterBar from '../components/FilterBar';
 
 export default function Achievements() {
   const [profile, setProfile] = useState(null);
@@ -19,12 +20,18 @@ export default function Achievements() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedClubId, setSelectedClubId] = useState('');
+  
+  // ===== ФИЛЬТРЫ =====
+  const [filters, setFilters] = useState({});
+  const [filterSearch, setFilterSearch] = useState('');
+  
   const [form, setForm] = useState({
     title: '',
     description: '',
     achievement_date: '',
     participant_id: ''
   });
+  const [editingAchievement, setEditingAchievement] = useState(null);
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
   const navigate = useNavigate();
@@ -51,6 +58,14 @@ export default function Achievements() {
         navigate('/login');
         return;
       }
+
+      const role = userData.role;
+      const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'];
+      if (!allowedRoles.includes(role)) {
+        navigate('/dashboard');
+        return;
+      }
+
       setProfile(userData);
 
       const [participantsData, clubsData, achievementsData] = await Promise.all([
@@ -60,60 +75,34 @@ export default function Achievements() {
       ]);
 
       setClubs(clubsData || []);
-      setAllAchievements(achievementsData || []);
+      setAllParticipants(participantsData || []);
 
-      const role = userData.role;
-      let filteredAchievements = [];
+      // Фильтрация по ролям
       let filteredParticipants = [];
+      let filteredAchievements = [];
 
-      // ============================================================
-      // ЛОГИКА ПО РОЛЯМ
-      // ============================================================
-
-      if (role === 'participant') {
-        // УЧАСТНИК — видит только свои достижения
-        filteredAchievements = achievementsData.filter(a => a.participant_id === userData.id);
-        filteredParticipants = participantsData.filter(p => p.id === userData.id);
-      } 
-      else if (role === 'parent') {
-        // РОДИТЕЛЬ — видит достижения своего ребёнка
-        // TODO: нужна связь родитель-ребёнок в БД
-        filteredAchievements = achievementsData;
-        filteredParticipants = participantsData;
-      } 
-      else if (role === 'club_coordinator') {
-        // КООРДИНАТОР КЮДА — видит только участников своего клуба
+      if (role === 'club_coordinator') {
         const coordinatorClub = clubsData.find(c => 
           c.coordinator_id === userData.id || 
           c.leader_id === userData.id
         );
         if (coordinatorClub) {
-          const clubParticipantIds = participantsData
-            .filter(p => p.club_id === coordinatorClub.id)
-            .map(p => p.id);
-          filteredAchievements = achievementsData.filter(a => clubParticipantIds.includes(a.participant_id));
           filteredParticipants = participantsData.filter(p => p.club_id === coordinatorClub.id);
+          const participantIds = filteredParticipants.map(p => p.id);
+          filteredAchievements = achievementsData.filter(a => participantIds.includes(a.participant_id));
         } else {
-          filteredAchievements = [];
           filteredParticipants = [];
+          filteredAchievements = [];
         }
-      } 
-      else if (role === 'tutor' || 
-               role === 'movement_coordinator' || 
-               role === 'admin' || 
-               role === 'president' || 
-               role === 'vice_president') {
-        // ТЬЮТОР, КООРДИНАТОР, АДМИН, ПРЕЗИДЕНТ, ВИЦЕ — видят всех
-        filteredAchievements = achievementsData;
+      } else if (['admin', 'movement_coordinator', 'tutor'].includes(role)) {
         filteredParticipants = participantsData;
-      } 
-      else {
-        filteredAchievements = [];
-        filteredParticipants = [];
+        filteredAchievements = achievementsData;
       }
 
-      setAchievements(filteredAchievements);
+      setAllParticipants(filteredParticipants);
       setParticipants(filteredParticipants);
+      setAllAchievements(filteredAchievements);
+      setAchievements(filteredAchievements);
 
     } catch (err) {
       console.error('Ошибка:', err);
@@ -122,24 +111,65 @@ export default function Achievements() {
     }
   };
 
-  // Фильтр по клубу (только для тех, кто видит всех)
-  const canFilterByClub = profile?.role === 'admin' || 
-                          profile?.role === 'movement_coordinator' || 
-                          profile?.role === 'tutor' ||
-                          profile?.role === 'president' ||
-                          profile?.role === 'vice_president';
-
-  useEffect(() => {
-    if (selectedClubId && canFilterByClub) {
-      const clubParticipantIds = participants
-        .filter(p => p.club_id === selectedClubId)
-        .map(p => p.id);
-      setAchievements(allAchievements.filter(a => clubParticipantIds.includes(a.participant_id)));
-    } else {
-      setAchievements(allAchievements);
+  // ===== ФИЛЬТРАЦИЯ =====
+  const filterConfig = [
+    {
+      key: 'club_id',
+      type: 'select',
+      label: 'Клуб',
+      placeholder: 'Все КЮДы',
+      options: clubs.map(c => ({ value: c.id, label: c.name }))
+    },
+    {
+      key: 'is_club_award',
+      type: 'checkbox',
+      label: '🏫 Клубные награды'
+    },
+    {
+      key: 'is_tutor_award',
+      type: 'checkbox',
+      label: '📚 Награды тьютора'
     }
-  }, [selectedClubId, allAchievements, participants, canFilterByClub]);
+  ];
 
+  const getFilteredAchievements = () => {
+    let filtered = allAchievements;
+
+    if (filterSearch) {
+      filtered = filtered.filter(a =>
+        a.title?.toLowerCase().includes(filterSearch.toLowerCase()) ||
+        a.description?.toLowerCase().includes(filterSearch.toLowerCase()) ||
+        a.participant_name?.toLowerCase().includes(filterSearch.toLowerCase())
+      );
+    }
+
+    if (filters.club_id) {
+      const clubParticipantIds = allParticipants
+        .filter(p => p.club_id === filters.club_id)
+        .map(p => p.id);
+      filtered = filtered.filter(a => clubParticipantIds.includes(a.participant_id));
+    }
+
+    if (filters.is_club_award) {
+      filtered = filtered.filter(a => a.is_club_award === true);
+    }
+
+    if (filters.is_tutor_award) {
+      filtered = filtered.filter(a => a.is_tutor_award === true);
+    }
+
+    return filtered;
+  };
+
+  const filteredAchievements = getFilteredAchievements();
+
+  // ===== ПРОВЕРКА ПРАВ =====
+  const canManage = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'].includes(profile?.role);
+  const canEdit = ['admin', 'movement_coordinator'].includes(profile?.role);
+  const canDelete = ['admin'].includes(profile?.role);
+  const isAdmin = profile?.role === 'admin';
+
+  // ===== ПОИСК УЧАСТНИКА =====
   const handleSearchChange = (e) => {
     const query = e.target.value;
     setSearchQuery(query);
@@ -150,7 +180,7 @@ export default function Achievements() {
       return;
     }
 
-    const filtered = participants.filter(p =>
+    const filtered = allParticipants.filter(p =>
       p.full_name?.toLowerCase().includes(query.toLowerCase())
     );
     setParticipants(filtered);
@@ -163,6 +193,7 @@ export default function Achievements() {
     setShowDropdown(false);
   };
 
+  // ===== СОЗДАНИЕ/РЕДАКТИРОВАНИЕ =====
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
@@ -176,23 +207,39 @@ export default function Achievements() {
         return;
       }
 
-      const result = await api.addAchievement({
+      const data = {
         participant_id: selectedParticipant.id,
         title: form.title,
-        description: form.description,
+        description: form.description || '',
         achievement_date: form.achievement_date || new Date().toISOString().split('T')[0]
-      });
+      };
+
+      let result;
+      if (editingAchievement) {
+        // Обновление (только для админа)
+        if (!canEdit) {
+          throw new Error('У вас нет прав для редактирования');
+        }
+        const response = await fetch(`https://dod-backend.relaxdev.ru/api/achievements/${editingAchievement.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify(data)
+        });
+        result = await response.json();
+      } else {
+        result = await api.addAchievement(data);
+      }
 
       if (result.error) {
         throw new Error(result.error);
       }
 
-      setMessage('✅ Достижение добавлено!');
+      setMessage(editingAchievement ? '✅ Достижение обновлено!' : '✅ Достижение добавлено!');
       setMessageType('success');
-      setForm({ title: '', description: '', achievement_date: '', participant_id: '' });
-      setSearchQuery('');
-      setSelectedParticipant(null);
-      setShowForm(false);
+      resetForm();
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
@@ -203,7 +250,47 @@ export default function Achievements() {
     }
   };
 
+  const resetForm = () => {
+    setForm({
+      title: '',
+      description: '',
+      achievement_date: '',
+      participant_id: ''
+    });
+    setSelectedParticipant(null);
+    setSearchQuery('');
+    setEditingAchievement(null);
+    setShowForm(false);
+  };
+
+  const handleEdit = (achievement) => {
+    if (!canEdit) {
+      setMessage('❌ У вас нет прав для редактирования');
+      setMessageType('error');
+      return;
+    }
+    setEditingAchievement(achievement);
+    setForm({
+      title: achievement.title || '',
+      description: achievement.description || '',
+      achievement_date: achievement.achievement_date || '',
+      participant_id: achievement.participant_id || ''
+    });
+    const participant = allParticipants.find(p => p.id === achievement.participant_id);
+    if (participant) {
+      setSelectedParticipant(participant);
+      setSearchQuery(participant.full_name);
+    }
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleDelete = async (id) => {
+    if (!canDelete) {
+      setMessage('❌ У вас нет прав для удаления');
+      setMessageType('error');
+      return;
+    }
     if (!confirm('Удалить достижение?')) return;
     try {
       const result = await api.deleteAchievement(id);
@@ -216,45 +303,6 @@ export default function Achievements() {
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
     }
-  };
-
-  // Кто может добавлять достижения
-  const canAdd = profile?.role === 'admin' ||
-                 profile?.role === 'movement_coordinator' ||
-                 profile?.role === 'club_coordinator' ||
-                 profile?.role === 'tutor';
-
-  // Кто может удалять достижения
-  const canDelete = profile?.role === 'admin' || profile?.role === 'movement_coordinator';
-
-  const getRoleSpecificTitle = () => {
-    const role = profile?.role;
-    const titles = {
-      'participant': '🏆 Мои достижения',
-      'parent': '🏆 Достижения моего ребёнка',
-      'club_coordinator': '🏆 Достижения участников клуба',
-      'tutor': '🏆 Достижения участников',
-      'movement_coordinator': '🏆 Достижения участников движения',
-      'admin': '🏆 Достижения участников движения',
-      'president': '🏆 Достижения участников движения',
-      'vice_president': '🏆 Достижения участников движения'
-    };
-    return titles[role] || '🏆 Достижения';
-  };
-
-  const getRoleSpecificSubtitle = () => {
-    const role = profile?.role;
-    const subtitles = {
-      'participant': 'Ваши успехи и награды',
-      'parent': 'Успехи вашего ребенка',
-      'club_coordinator': 'Участники вашего КЮДа',
-      'tutor': 'Все участники движения',
-      'movement_coordinator': 'Все участники движения',
-      'admin': 'Все участники движения',
-      'president': 'Все участники движения',
-      'vice_president': 'Все участники движения'
-    };
-    return subtitles[role] || 'Достижения';
   };
 
   if (loading) {
@@ -272,15 +320,14 @@ export default function Achievements() {
         <div className="page-header">
           <span style={{ fontSize: '32px' }}>🏆</span>
           <div>
-            <h1>{getRoleSpecificTitle()}</h1>
-            <p>{getRoleSpecificSubtitle()}</p>
-            {achievements.length > 0 && (
-              <span style={{ fontSize: '13px', color: '#98A2B3' }}>
-                Всего достижений: {achievements.length}
-              </span>
-            )}
+            <h1>Управление достижениями</h1>
+            <p>
+              {profile?.role === 'club_coordinator' 
+                ? `Участники вашего клуба (${filteredAchievements.length})` 
+                : `Все достижения участников (${filteredAchievements.length})`}
+            </p>
           </div>
-          {canAdd && (
+          {canManage && (
             <button
               className="btn-primary"
               style={{ marginLeft: 'auto' }}
@@ -302,66 +349,21 @@ export default function Achievements() {
           </div>
         )}
 
-        {/* ФИЛЬТР ПО КЮДАМ (только для тех, кто видит всех) */}
-        {canFilterByClub && clubs.length > 0 && (
-          <div style={{
-            display: 'flex',
-            gap: '16px',
-            marginBottom: '20px',
-            flexWrap: 'wrap',
-            alignItems: 'center'
-          }}>
-            <div style={{ minWidth: '200px' }}>
-              <select
-                value={selectedClubId}
-                onChange={(e) => setSelectedClubId(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '1.5px solid #D5DCE7',
-                  borderRadius: '10px',
-                  fontSize: '14px',
-                  outline: 'none',
-                  background: 'white'
-                }}
-              >
-                <option value="">Все КЮДы</option>
-                {clubs.map((club) => (
-                  <option key={club.id} value={club.id}>{club.name}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ fontSize: '14px', color: '#667085' }}>
-              {selectedClubId ? (
-                <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
-              ) : (
-                <span>📋 Все достижения</span>
-              )}
-            </div>
-            {selectedClubId && (
-              <button
-                style={{
-                  padding: '4px 12px',
-                  background: '#FCEBEC',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  color: '#B3262E'
-                }}
-                onClick={() => setSelectedClubId('')}
-              >
-                ✕ Сбросить
-              </button>
-            )}
+        <FilterBar
+          filters={filterConfig}
+          onFilterChange={setFilters}
+          onSearchChange={setFilterSearch}
+          searchPlaceholder="🔍 Поиск по названию, описанию, участнику..."
+        >
+          <div style={{ fontSize: '14px', color: '#667085', padding: '6px 12px', background: '#F8FAFC', borderRadius: '8px' }}>
+            Найдено: <strong>{filteredAchievements.length}</strong>
           </div>
-        )}
+        </FilterBar>
 
-        {/* ФОРМА ДОБАВЛЕНИЯ */}
-        {showForm && canAdd && (
+        {showForm && canManage && (
           <div className="card" style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-              📝 Добавить достижение
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+              {editingAchievement ? '✏️ Редактировать достижение' : '📝 Добавить достижение'}
             </h3>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
@@ -374,6 +376,7 @@ export default function Achievements() {
                     onChange={handleSearchChange}
                     placeholder="Начните вводить фамилию участника..."
                     required
+                    disabled={!!editingAchievement && !isAdmin}
                   />
                   {showDropdown && participants.length > 0 && (
                     <div
@@ -460,7 +463,7 @@ export default function Achievements() {
                   rows="3"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="Подробное описание достижения"
+                  placeholder="Подробное описание достижения..."
                 />
               </div>
 
@@ -475,17 +478,9 @@ export default function Achievements() {
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="submit" className="btn-success" disabled={loading || !selectedParticipant}>
-                  {loading ? '⏳ Сохранение...' : '✅ Добавить'}
+                  {loading ? '⏳ Сохранение...' : editingAchievement ? '💾 Обновить' : '✅ Добавить'}
                 </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => {
-                    setShowForm(false);
-                    setSearchQuery('');
-                    setSelectedParticipant(null);
-                  }}
-                >
+                <button type="button" className="btn-secondary" onClick={resetForm}>
                   ❌ Отмена
                 </button>
               </div>
@@ -493,73 +488,87 @@ export default function Achievements() {
           </div>
         )}
 
-        {/* СПИСОК ДОСТИЖЕНИЙ */}
-        {achievements.length === 0 ? (
-          <div className="empty-state">
-            <div className="icon">🏆</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>
-              {profile?.role === 'participant' && 'У вас пока нет достижений'}
-              {profile?.role === 'parent' && 'У вашего ребёнка пока нет достижений'}
-              {profile?.role === 'club_coordinator' && 'У участников вашего клуба пока нет достижений'}
-              {(profile?.role === 'tutor' || 
-                profile?.role === 'movement_coordinator' || 
-                profile?.role === 'admin' || 
-                profile?.role === 'president' || 
-                profile?.role === 'vice_president') && 'Достижений пока нет'}
-            </p>
-            {canAdd && <p style={{ color: '#98A2B3' }}>Добавьте первое достижение!</p>}
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+              Все достижения
+            </h3>
+            <span style={{ fontSize: '13px', color: '#667085' }}>
+              {filteredAchievements.length} достижений
+            </span>
           </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {achievements.map((a) => (
-              <div
-                key={a.id}
-                className="card"
-                style={{
-                  borderLeft: `4px solid ${a.is_club_award ? '#C9A227' : a.is_tutor_award ? '#174A7E' : '#0B1F3A'}`,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '24px' }}>
-                      {a.is_club_award ? '🏫' : a.is_tutor_award ? '📚' : '🏅'}
-                    </span>
-                    <h3 style={{ margin: 0, fontSize: '18px', color: '#0B1F3A' }}>{a.title}</h3>
-                    {a.is_club_award && (
-                      <span className="tag tag-gold" style={{ fontSize: '10px' }}>
-                        Клубная награда
-                      </span>
-                    )}
-                    {a.is_tutor_award && (
-                      <span className="tag tag-blue" style={{ fontSize: '10px' }}>
-                        Награда тьютора
-                      </span>
-                    )}
-                  </div>
-                  {a.description && <p style={{ color: '#667085', marginTop: '4px' }}>{a.description}</p>}
-                  <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '13px', color: '#667085' }}>
-                    <span>👤 {a.participant_name || 'Участник'}</span>
-                    {a.achievement_date && (
-                      <span>📅 {new Date(a.achievement_date).toLocaleDateString('ru-RU')}</span>
-                    )}
-                  </div>
-                </div>
-                {canDelete && (
-                  <button
-                    className="btn-danger"
-                    style={{ padding: '4px 12px', fontSize: '12px' }}
-                    onClick={() => handleDelete(a.id)}
+
+          {filteredAchievements.length === 0 ? (
+            <div className="empty-state">
+              <div className="icon">🏆</div>
+              <p>Достижений пока нет</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {filteredAchievements.map((a) => {
+                const userCanEdit = canEdit;
+                const userCanDelete = canDelete;
+                
+                return (
+                  <div
+                    key={a.id}
+                    className="list-item"
+                    style={{
+                      borderLeftColor: a.is_club_award ? '#C9A227' : 
+                                     a.is_tutor_award ? '#174A7E' : '#0B1F3A'
+                    }}
                   >
-                    🗑️ Удалить
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+                    <div className="title">
+                      <span style={{ marginRight: '8px' }}>
+                        {a.is_club_award ? '🏫' : a.is_tutor_award ? '📚' : '🏅'}
+                      </span>
+                      {a.title}
+                      {a.is_club_award && (
+                        <span className="tag tag-gold" style={{ marginLeft: '8px', fontSize: '10px' }}>
+                          Клубная
+                        </span>
+                      )}
+                      {a.is_tutor_award && (
+                        <span className="tag tag-blue" style={{ marginLeft: '8px', fontSize: '10px' }}>
+                          Тьюторская
+                        </span>
+                      )}
+                    </div>
+                    <div className="subtitle">
+                      👤 {a.participant_name || 'Участник'}
+                      {a.achievement_date && ` • 📅 ${new Date(a.achievement_date).toLocaleDateString('ru-RU')}`}
+                    </div>
+                    {a.description && <div className="meta">{a.description}</div>}
+                    
+                    {/* ===== КНОПКИ ДЕЙСТВИЙ ===== */}
+                    {(userCanEdit || userCanDelete) && (
+                      <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+                        {userCanEdit && (
+                          <button
+                            className="btn-secondary"
+                            style={{ padding: '4px 12px', fontSize: '12px' }}
+                            onClick={() => handleEdit(a)}
+                          >
+                            ✏️ Редактировать
+                          </button>
+                        )}
+                        {userCanDelete && (
+                          <button
+                            className="btn-danger"
+                            style={{ padding: '4px 12px', fontSize: '12px' }}
+                            onClick={() => handleDelete(a.id)}
+                          >
+                            🗑️ Удалить
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

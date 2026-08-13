@@ -130,13 +130,19 @@ export default function Events() {
 
   const filteredEvents = getFilteredEvents();
 
-  // ===== ОСТАЛЬНЫЕ ФУНКЦИИ =====
+  // ===== ПРОВЕРКА ПРАВ =====
   const canEdit = (event) => {
     const role = profile?.role;
     const userId = profile?.id;
-    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
+    // Админ и координатор движения могут редактировать всё
+    if (['admin', 'movement_coordinator'].includes(role)) {
       return true;
     }
+    // Президент и вице-президент могут редактировать всё
+    if (['president', 'vice_president'].includes(role)) {
+      return true;
+    }
+    // Координатор КЮДа может редактировать только свои мероприятия
     if (role === 'club_coordinator') {
       const userClub = clubs.find(c => c.coordinator_id === userId || c.leader_id === userId);
       if (userClub && event.club_id === userClub.id) {
@@ -148,7 +154,12 @@ export default function Events() {
 
   const canDelete = (event) => {
     const role = profile?.role;
-    if (['admin', 'movement_coordinator'].includes(role)) {
+    // Только админ может удалять
+    if (role === 'admin') {
+      return true;
+    }
+    // Координатор движения может удалять
+    if (role === 'movement_coordinator') {
       return true;
     }
     return false;
@@ -157,6 +168,7 @@ export default function Events() {
   const canCreate = ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(profile?.role);
   const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
 
+  // ===== СОЗДАНИЕ/РЕДАКТИРОВАНИЕ =====
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
@@ -390,27 +402,94 @@ export default function Events() {
             <div className="empty-state"><div className="icon">📭</div><p>Мероприятий не найдено</p></div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {filteredEvents.map((event) => (
-                <div key={event.id} className="list-item" style={{ borderLeftColor: event.moderation_status === 'pending' ? '#C9A227' : event.is_global ? '#6B46C1' : '#174A7E' }}>
-                  <div className="title">
-                    {event.title}
-                    {event.is_global && <span className="tag" style={{ marginLeft: '8px', background: '#EDE7F6', color: '#6B46C1', fontSize: '10px' }}>🌍 Глобальное</span>}
-                    {event.moderation_status === 'pending' && <span className="tag" style={{ marginLeft: '8px', background: '#FBF4DC', color: '#8A6A00', fontSize: '10px' }}>⏳ На модерации</span>}
-                    {event.moderation_status === 'rejected' && <span className="tag" style={{ marginLeft: '8px', background: '#FCEBEC', color: '#B3262E', fontSize: '10px' }}>❌ Отклонено</span>}
+              {filteredEvents.map((event) => {
+                const userCanEdit = canEdit(event);
+                const userCanDelete = canDelete(event);
+                
+                return (
+                  <div
+                    key={event.id}
+                    className="list-item"
+                    style={{
+                      borderLeftColor: event.moderation_status === 'pending' ? '#C9A227' :
+                                    event.is_global ? '#6B46C1' :
+                                    event.type === 'internal' ? '#174A7E' :
+                                    event.type === 'outgoing' ? '#C9A227' : '#B3262E'
+                    }}
+                  >
+                    <div className="title">
+                      {event.title}
+                      {event.is_global && (
+                        <span className="tag" style={{ marginLeft: '8px', background: '#EDE7F6', color: '#6B46C1', fontSize: '10px' }}>
+                          🌍 Глобальное
+                        </span>
+                      )}
+                      {event.moderation_status === 'pending' && (
+                        <span className="tag" style={{ marginLeft: '8px', background: '#FBF4DC', color: '#8A6A00', fontSize: '10px' }}>
+                          ⏳ На модерации
+                        </span>
+                      )}
+                      {event.moderation_status === 'rejected' && (
+                        <span className="tag" style={{ marginLeft: '8px', background: '#FCEBEC', color: '#B3262E', fontSize: '10px' }}>
+                          ❌ Отклонено
+                        </span>
+                      )}
+                    </div>
+                    <div className="subtitle">
+                      📅 {event.event_date ? new Date(event.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
+                      {event.location && ` 📍 ${event.location}`}
+                      {event.club_name && ` 🏫 ${event.club_name}`}
+                    </div>
+                    {event.description && <div className="meta">{event.description}</div>}
+                    
+                    {/* ===== КНОПКИ ДЕЙСТВИЙ ===== */}
+                    <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {userCanEdit && (
+                        <button
+                          className="btn-secondary"
+                          style={{ padding: '4px 12px', fontSize: '12px' }}
+                          onClick={() => handleEdit(event)}
+                        >
+                          ✏️ Редактировать
+                        </button>
+                      )}
+                      {userCanDelete && (
+                        <button
+                          className="btn-danger"
+                          style={{ padding: '4px 12px', fontSize: '12px' }}
+                          onClick={() => handleDelete(event.id)}
+                        >
+                          🗑️ Удалить
+                        </button>
+                      )}
+                      {canModerate && event.moderation_status === 'pending' && (
+                        <>
+                          <button
+                            className="btn-success"
+                            style={{ padding: '4px 12px', fontSize: '12px' }}
+                            onClick={() => {
+                              setSelectedEvent(event);
+                              setShowModerationModal(true);
+                            }}
+                          >
+                            ✅ Одобрить
+                          </button>
+                          <button
+                            className="btn-danger"
+                            style={{ padding: '4px 12px', fontSize: '12px' }}
+                            onClick={() => {
+                              setSelectedEvent(event);
+                              setShowModerationModal(true);
+                            }}
+                          >
+                            ❌ Отклонить
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="subtitle">📅 {event.event_date ? new Date(event.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'} {event.location && `📍 ${event.location}`} {event.club_name && `🏫 ${event.club_name}`}</div>
-                  <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {canEdit(event) && <button className="btn-secondary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => handleEdit(event)}>✏️ Редактировать</button>}
-                    {canDelete(event) && <button className="btn-danger" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => handleDelete(event.id)}>🗑️ Удалить</button>}
-                    {canModerate && event.moderation_status === 'pending' && (
-                      <>
-                        <button className="btn-success" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => { setSelectedEvent(event); setShowModerationModal(true); }}>✅ Одобрить</button>
-                        <button className="btn-danger" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => { setSelectedEvent(event); setShowModerationModal(true); }}>❌ Отклонить</button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -18,12 +18,34 @@ export default function Participants() {
   // ===== ФИЛЬТРЫ =====
   const [filters, setFilters] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedClasses, setSelectedClasses] = useState([]);
   
   const navigate = useNavigate();
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Получаем уникальные классы
+  const getUniqueClasses = () => {
+    const classes = allParticipants
+      .map(p => p.class_name)
+      .filter(Boolean);
+    return [...new Set(classes)].sort();
+  };
+
+  const classes = getUniqueClasses();
+
+  // Статистика по классам
+  const getClassStats = () => {
+    const stats = {};
+    classes.forEach(cls => {
+      stats[cls] = allParticipants.filter(p => p.class_name === cls).length;
+    });
+    return stats;
+  };
+
+  const classStats = getClassStats();
 
   const loadData = async () => {
     try {
@@ -106,12 +128,6 @@ export default function Participants() {
   const getFilteredParticipants = () => {
     let filtered = allParticipants;
 
-    console.log('🔍 Фильтрация участников:', {
-      allParticipants: allParticipants.length,
-      searchQuery,
-      filters
-    });
-
     // ПОИСК
     if (searchQuery && searchQuery.trim() !== '') {
       filtered = filtered.filter(p =>
@@ -119,19 +135,21 @@ export default function Participants() {
         p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.school?.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      console.log('🔍 После поиска:', filtered.length);
     }
 
     // ФИЛЬТР ПО КЛУБУ
     if (filters.club_id) {
       filtered = filtered.filter(p => p.club_id === filters.club_id);
-      console.log('🏫 После фильтра по клубу:', filtered.length);
     }
 
     // ФИЛЬТР ПО СТАТУСУ
     if (filters.status) {
       filtered = filtered.filter(p => p.status === filters.status);
-      console.log('📊 После фильтра по статусу:', filtered.length);
+    }
+
+    // ФИЛЬТР ПО КЛАССАМ
+    if (selectedClasses.length > 0) {
+      filtered = filtered.filter(p => selectedClasses.includes(p.class_name));
     }
 
     return filtered;
@@ -141,6 +159,8 @@ export default function Participants() {
 
   const role = profile?.role;
   const canView = ['club_coordinator', 'tutor', 'movement_coordinator', 'admin', 'president', 'vice_president'].includes(role);
+  const canEdit = ['admin', 'movement_coordinator'].includes(role);
+  const canDelete = ['admin'].includes(role);
 
   if (loading) {
     return (
@@ -178,28 +198,91 @@ export default function Participants() {
                 ? `Участники вашего клуба (${filtered.length})` 
                 : `Все участники движения (${filtered.length})`}
             </p>
+            {/* СТАТИСТИКА ПО КЛАССАМ */}
+            {!isClubCoordinator && classes.length > 0 && (
+              <div style={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: '8px', 
+                marginTop: '8px',
+                padding: '8px 12px',
+                background: '#F8FAFC',
+                borderRadius: '8px',
+                border: '1px solid #E2E7EF'
+              }}>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: '#0B1F3A' }}>
+                  📊 Статистика по классам:
+                </span>
+                {Object.entries(classStats).map(([cls, count]) => (
+                  <span key={cls} style={{
+                    fontSize: '13px',
+                    padding: '2px 10px',
+                    background: selectedClasses.includes(cls) ? '#FBF4DC' : '#F4F6F9',
+                    borderRadius: '12px',
+                    color: selectedClasses.includes(cls) ? '#8A6A00' : '#667085',
+                    cursor: 'pointer',
+                    border: selectedClasses.includes(cls) ? '1px solid #C9A227' : '1px solid transparent',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onClick={() => {
+                    if (selectedClasses.includes(cls)) {
+                      setSelectedClasses(selectedClasses.filter(c => c !== cls));
+                    } else {
+                      setSelectedClasses([...selectedClasses, cls]);
+                    }
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!selectedClasses.includes(cls)) {
+                      e.currentTarget.style.background = '#EAF2FA';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!selectedClasses.includes(cls)) {
+                      e.currentTarget.style.background = '#F4F6F9';
+                    }
+                  }}
+                  >
+                    {cls}: <strong>{count}</strong>
+                  </span>
+                ))}
+                {selectedClasses.length > 0 && (
+                  <button
+                    onClick={() => setSelectedClasses([])}
+                    style={{
+                      fontSize: '12px',
+                      padding: '2px 10px',
+                      background: '#FCEBEC',
+                      border: 'none',
+                      borderRadius: '12px',
+                      color: '#B3262E',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✕ Очистить
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-          <button
-            className="btn-secondary"
-            style={{ marginLeft: 'auto' }}
-            onClick={() => setViewMode(viewMode === 'table' ? 'cards' : 'table')}
-          >
-            {viewMode === 'table' ? '📇 Карточки' : '📋 Таблица'}
-          </button>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+            <button
+              className="btn-secondary"
+              onClick={() => setViewMode(viewMode === 'table' ? 'cards' : 'table')}
+            >
+              {viewMode === 'table' ? '📇 Карточки' : '📋 Таблица'}
+            </button>
+          </div>
         </div>
 
-        {/* ФИЛЬТРЫ */}
         <FilterBar
           filters={filterConfig}
-          onFilterChange={(newFilters) => {
-            console.log('📊 Фильтры изменены:', newFilters);
-            setFilters(newFilters);
-          }}
-          onSearchChange={(query) => {
-            console.log('🔍 Поиск изменён:', query);
-            setSearchQuery(query);
-          }}
+          onFilterChange={setFilters}
+          onSearchChange={setSearchQuery}
           searchPlaceholder="🔍 Поиск по ФИО, email, школе..."
+          classFilter={true}
+          classes={classes}
+          selectedClasses={selectedClasses}
+          onClassFilterChange={setSelectedClasses}
         >
           <div style={{ fontSize: '14px', color: '#667085', padding: '6px 12px', background: '#F8FAFC', borderRadius: '8px' }}>
             Найдено: <strong>{filtered.length}</strong>
@@ -261,19 +344,63 @@ export default function Participants() {
                         </span>
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <button
-                          style={{
-                            padding: '4px 12px',
-                            background: '#F4F6F9',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '13px'
-                          }}
-                          onClick={() => navigate(`/participant/${p.id}`)}
-                        >
-                          👁️
-                        </button>
+                        <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                          <button
+                            style={{
+                              padding: '4px 8px',
+                              background: '#F4F6F9',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '13px'
+                            }}
+                            onClick={() => navigate(`/participant/${p.id}`)}
+                          >
+                            👁️
+                          </button>
+                          {canEdit && (
+                            <button
+                              style={{
+                                padding: '4px 8px',
+                                background: '#EAF2FA',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                color: '#174A7E'
+                              }}
+                              onClick={() => navigate(`/participant/${p.id}/edit`)}
+                            >
+                              ✏️
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              style={{
+                                padding: '4px 8px',
+                                background: '#FCEBEC',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                color: '#B3262E'
+                              }}
+                              onClick={async () => {
+                                if (confirm(`Удалить участника "${p.full_name}"?`)) {
+                                  try {
+                                    await api.deleteUser(p.id);
+                                    setMessage('✅ Участник удалён');
+                                    loadData();
+                                  } catch (err) {
+                                    setMessage('❌ Ошибка: ' + err.message);
+                                  }
+                                }
+                              }}
+                            >
+                              🗑️
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -290,7 +417,7 @@ export default function Participants() {
               <div
                 key={p.id}
                 className="card"
-                style={{ cursor: 'pointer', padding: '16px' }}
+                style={{ cursor: 'pointer', padding: '16px', position: 'relative' }}
                 onClick={() => navigate(`/participant/${p.id}`)}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
@@ -322,7 +449,60 @@ export default function Participants() {
                   {p.school && (
                     <span className="tag tag-blue">🏫 {p.school}</span>
                   )}
+                  {p.club_name && (
+                    <span className="tag tag-gold">🏫 {p.club_name}</span>
+                  )}
                 </div>
+                {(canEdit || canDelete) && (
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: '8px', 
+                    right: '8px', 
+                    display: 'flex', 
+                    gap: '4px' 
+                  }} onClick={(e) => e.stopPropagation()}>
+                    {canEdit && (
+                      <button
+                        style={{
+                          padding: '4px 8px',
+                          background: '#EAF2FA',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                        onClick={() => navigate(`/participant/${p.id}/edit`)}
+                      >
+                        ✏️
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        style={{
+                          padding: '4px 8px',
+                          background: '#FCEBEC',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          color: '#B3262E'
+                        }}
+                        onClick={async () => {
+                          if (confirm(`Удалить участника "${p.full_name}"?`)) {
+                            try {
+                              await api.deleteUser(p.id);
+                              loadData();
+                            } catch (err) {
+                              alert('Ошибка: ' + err.message);
+                            }
+                          }
+                        }}
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

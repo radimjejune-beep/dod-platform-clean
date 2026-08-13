@@ -40,7 +40,7 @@ export default function Profile() {
     setMessageType('success');
 
     try {
-      const result = await api.updateProfile({
+      const updateData = {
         full_name: profile.full_name,
         phone: profile.phone || '',
         school: profile.school || '',
@@ -48,15 +48,23 @@ export default function Profile() {
         interests: profile.interests || '',
         bio: profile.bio || '',
         city: profile.city || ''
-      });
+      };
+
+      console.log('📤 Отправка данных:', updateData);
+
+      const result = await api.updateProfile(updateData);
+
+      console.log('📥 Ответ:', result);
 
       if (result.error) {
         throw new Error(result.error);
       }
 
       setMessage('✅ Профиль успешно обновлён!');
+      setProfile(result);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
+      console.error('❌ Ошибка:', err);
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
@@ -67,20 +75,6 @@ export default function Profile() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setProfile({ ...profile, [name]: value });
-  };
-
-  const getRoleLabel = (role) => {
-    const roles = {
-      admin: '🔧 Администратор',
-      participant: '👤 Участник',
-      parent: '👨‍👩‍👦 Родитель',
-      club_coordinator: '🏫 Координатор КЮДа',
-      movement_coordinator: '⭐ Координатор движения',
-      tutor: '📚 Тьютор',
-      president: '👑 Президент ДОД',
-      vice_president: '⭐ Вице-президент ДОД'
-    };
-    return roles[role] || role;
   };
 
   if (loading) {
@@ -101,9 +95,6 @@ export default function Profile() {
             <h1>Мой профиль</h1>
             <p>Управление личными данными</p>
           </div>
-          <span className="status-active" style={{ marginLeft: 'auto' }}>
-            {getRoleLabel(profile?.role)}
-          </span>
         </div>
 
         {message && (

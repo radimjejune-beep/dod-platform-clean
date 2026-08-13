@@ -833,7 +833,7 @@ app.post('/api/appeals', async (req, res) => {
 });
 
 // ============================================================
-// 20. ОБРАЩЕНИЯ - ОТВЕТ (УПРОЩЁННАЯ ВЕРСИЯ)
+// 20. ОТВЕТ НА ОБРАЩЕНИЕ (ПРОСТАЯ ВЕРСИЯ)
 // ============================================================
 app.post('/api/appeals/:id/reply', async (req, res) => {
   try {
@@ -850,6 +850,7 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
+    // Проверка прав
     const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
     if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав для ответа на обращения' });
@@ -859,33 +860,33 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       return res.status(400).json({ error: 'Текст ответа обязателен' });
     }
 
-    // Проверяем существование обращения
-    const appealCheck = await pool.query('SELECT status FROM appeals WHERE id = $1', [id]);
+    // Проверяем, существует ли обращение
+    const appealCheck = await pool.query('SELECT * FROM appeals WHERE id = $1', [id]);
     if (appealCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Обращение не найдено' });
     }
 
     const newStatus = status || 'in_progress';
 
-    // Сохраняем ответ
+    // ===== СОХРАНЯЕМ ОТВЕТ =====
     await pool.query(
       `INSERT INTO appeal_replies (appeal_id, author_id, message, created_at)
        VALUES ($1, $2, $3, NOW())`,
       [id, userId, message]
     );
 
-    // Обновляем статус обращения
+    // ===== ОБНОВЛЯЕМ СТАТУС ОБРАЩЕНИЯ =====
     await pool.query(
       `UPDATE appeals 
        SET status = $1,
            resolved_by = $2,
-           resolved_at = CASE WHEN $1 IN ('resolved', 'rejected') THEN NOW() ELSE NULL END,
+           resolved_at = NOW(),
            updated_at = NOW()
        WHERE id = $3`,
       [newStatus, userId, id]
     );
 
-    // Получаем обновлённое обращение
+    // ===== ПОЛУЧАЕМ ОБНОВЛЁННОЕ ОБРАЩЕНИЕ =====
     const result = await pool.query(
       `SELECT a.*, 
               u.full_name as coordinator_name,
@@ -899,7 +900,10 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       [id]
     );
 
+    console.log(`✅ Ответ на обращение ${id} от пользователя ${decoded.email}`);
+
     res.json({
+      success: true,
       message: 'Ответ отправлен',
       appeal: result.rows[0]
     });
@@ -910,7 +914,7 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
 });
 
 // ============================================================
-// 21. ОБРАЩЕНИЯ - ПОЛУЧЕНИЕ ОТВЕТОВ
+// 21. ПОЛУЧЕНИЕ ОТВЕТОВ НА ОБРАЩЕНИЕ
 // ============================================================
 app.get('/api/appeals/:id/replies', async (req, res) => {
   try {
@@ -929,7 +933,7 @@ app.get('/api/appeals/:id/replies', async (req, res) => {
 
     res.json(result.rows);
   } catch (error) {
-    console.error('Ошибка получения ответов:', error);
+    console.error('❌ Ошибка получения ответов:', error);
     res.status(500).json({ error: error.message });
   }
 });

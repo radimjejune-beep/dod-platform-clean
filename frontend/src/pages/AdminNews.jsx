@@ -43,6 +43,8 @@ export default function AdminNews() {
       setProfile(userData);
 
       const token = localStorage.getItem('token');
+      console.log('📰 Загрузка новостей...');
+      
       const response = await fetch('https://dod-backend.relaxdev.ru/api/news', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -50,13 +52,14 @@ export default function AdminNews() {
       });
       
       if (!response.ok) {
-        throw new Error('Ошибка загрузки новостей');
+        throw new Error(`Ошибка ${response.status}`);
       }
       
       const data = await response.json();
+      console.log('📰 Загружено новостей:', data?.length || 0);
       setNews(data || []);
     } catch (err) {
-      console.error('Ошибка:', err);
+      console.error('❌ Ошибка:', err);
       setMessage('❌ Ошибка загрузки: ' + err.message);
       setMessageType('error');
     } finally {
@@ -93,11 +96,12 @@ export default function AdminNews() {
     e.preventDefault();
     setSaving(true);
     setMessage('');
+    setMessageType('success');
 
     try {
       const token = localStorage.getItem('token');
       
-      // Сначала загружаем изображение, если есть
+      // Загружаем изображение, если есть
       let imageUrl = form.image_url;
       if (form.image_file) {
         const reader = new FileReader();
@@ -106,6 +110,7 @@ export default function AdminNews() {
           reader.readAsDataURL(form.image_file);
         });
         
+        console.log('📤 Загрузка изображения...');
         const uploadResponse = await fetch('https://dod-backend.relaxdev.ru/api/upload-news-image', {
           method: 'POST',
           headers: {
@@ -116,6 +121,8 @@ export default function AdminNews() {
         });
         
         const uploadData = await uploadResponse.json();
+        console.log('📥 Ответ загрузки изображения:', uploadData);
+        
         if (uploadData.error) {
           throw new Error(uploadData.error);
         }
@@ -123,10 +130,12 @@ export default function AdminNews() {
       }
 
       const data = {
-        title: form.title,
-        content: form.content,
+        title: form.title.trim(),
+        content: form.content.trim(),
         image_url: imageUrl || ''
       };
+
+      console.log('📤 Отправка новости:', data);
 
       let response;
       if (editingId) {
@@ -149,10 +158,15 @@ export default function AdminNews() {
         });
       }
 
-      const result = await response.json();
-      if (result.error) {
-        throw new Error(result.error);
+      console.log('📥 Статус ответа:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Ошибка ${response.status}`);
       }
+
+      const result = await response.json();
+      console.log('📥 Результат:', result);
 
       setMessage(editingId ? '✅ Новость обновлена!' : '✅ Новость создана!');
       setMessageType('success');
@@ -160,6 +174,7 @@ export default function AdminNews() {
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
+      console.error('❌ Ошибка:', err);
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
@@ -255,7 +270,6 @@ export default function AdminNews() {
           </div>
         )}
 
-        {/* ФОРМА СОЗДАНИЯ/РЕДАКТИРОВАНИЯ */}
         {showForm && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
@@ -369,7 +383,6 @@ export default function AdminNews() {
           </div>
         )}
 
-        {/* СПИСОК НОВОСТЕЙ */}
         <div className="card">
           <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
             Все новости

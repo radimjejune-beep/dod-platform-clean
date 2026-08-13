@@ -7,6 +7,10 @@ import api from '../lib/api';
 // ===== СПИСОК РОЛЕЙ ДЛЯ КАЖДОГО МАРШРУТА =====
 const routeRoles = {
   '/dashboard': ['admin', 'movement_coordinator', 'president', 'vice_president'],
+  '/participant-dashboard': ['participant'],
+  '/parent-dashboard': ['parent'],
+  '/club-coordinator-dashboard': ['club_coordinator'],
+  '/tutor-dashboard': ['tutor'],
   '/profile': ['all'],
   '/participants': ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'],
   '/clubs': ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'],
@@ -30,11 +34,24 @@ const routeRoles = {
   '/calendar': ['all'],
 };
 
+// ===== КАКАЯ СТРАНИЦА ДЛЯ КАЖДОЙ РОЛИ ПО УМОЛЧАНИЮ =====
+const defaultRouteByRole = {
+  'participant': '/participant-dashboard',
+  'parent': '/parent-dashboard',
+  'club_coordinator': '/club-coordinator-dashboard',
+  'tutor': '/tutor-dashboard',
+  'admin': '/dashboard',
+  'movement_coordinator': '/dashboard',
+  'president': '/dashboard',
+  'vice_president': '/dashboard'
+};
+
 export default function ProtectedRoute({ children }) {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState(null);
   const [hasAccess, setHasAccess] = useState(true);
+  const [redirectPath, setRedirectPath] = useState(null);
 
   useEffect(() => {
     checkAuth();
@@ -51,7 +68,6 @@ export default function ProtectedRoute({ children }) {
     }
 
     try {
-      // Пробуем /api/me (с токеном)
       let user = null;
       try {
         const response = await fetch('https://dod-backend.relaxdev.ru/api/me', {
@@ -68,7 +84,6 @@ export default function ProtectedRoute({ children }) {
         console.log('⚠️ /api/me не работает, пробуем /api/me2');
       }
 
-      // Если /api/me не сработал — пробуем /api/me2
       if (!user || !user.id) {
         const response = await fetch('https://dod-backend.relaxdev.ru/api/me2', {
           method: 'GET',
@@ -86,12 +101,11 @@ export default function ProtectedRoute({ children }) {
         setIsAuthenticated(true);
         setUserRole(user.role);
         
-        // ===== ПРОВЕРЯЕМ ДОСТУП К СТРАНИЦЕ =====
         const currentPath = window.location.pathname;
         console.log('📍 Текущий путь:', currentPath);
         console.log('👤 Роль пользователя:', user.role);
         
-        // Проверяем, есть ли роль в списке разрешённых
+        // ===== ПРОВЕРКА ДОСТУПА =====
         const allowedRoles = routeRoles[currentPath] || ['all'];
         console.log('✅ Разрешённые роли:', allowedRoles);
         
@@ -101,6 +115,11 @@ export default function ProtectedRoute({ children }) {
         } else {
           console.log('❌ Доступ запрещён');
           setHasAccess(false);
+          
+          // ===== ПЕРЕНАПРАВЛЕНИЕ НА СТРАНИЦУ ПО РОЛИ =====
+          const defaultRoute = defaultRouteByRole[user.role] || '/dashboard';
+          console.log('🔄 Перенаправление на:', defaultRoute);
+          setRedirectPath(defaultRoute);
         }
       } else {
         console.log('❌ Пользователь не найден');
@@ -138,9 +157,9 @@ export default function ProtectedRoute({ children }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!hasAccess) {
-    console.log('🚫 Нет доступа к этой странице');
-    return <Navigate to="/dashboard" replace />;
+  if (!hasAccess && redirectPath) {
+    console.log('🚫 Нет доступа, перенаправление на:', redirectPath);
+    return <Navigate to={redirectPath} replace />;
   }
 
   console.log('✅ Авторизован и имеет доступ');

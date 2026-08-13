@@ -33,16 +33,24 @@ export default function CalendarPage() {
 
       const eventsData = await api.getEvents();
       console.log('📅 Загружено мероприятий:', eventsData?.length || 0);
-      console.log('📅 Данные:', eventsData);
       
-      // Фильтруем только одобренные мероприятия
-      const approvedEvents = (eventsData || []).filter(e => 
-        e.moderation_status === 'approved' || e.moderation_status === null
-      );
-      setEvents(approvedEvents);
+      // ===== ВАЖНО: Проверяем, что eventsData - это массив =====
+      if (Array.isArray(eventsData)) {
+        // Фильтруем только одобренные мероприятия
+        const approvedEvents = eventsData.filter(e => 
+          e.moderation_status === 'approved' || e.moderation_status === null
+        );
+        setEvents(approvedEvents);
+        console.log('✅ Одобренных мероприятий:', approvedEvents.length);
+      } else {
+        console.error('❌ eventsData не является массивом:', eventsData);
+        setEvents([]);
+        setError('❌ Ошибка загрузки данных: сервер вернул неверный формат');
+      }
     } catch (err) {
       console.error('Ошибка загрузки календаря:', err);
       setError('❌ Ошибка загрузки данных: ' + err.message);
+      setEvents([]);
     } finally {
       setLoading(false);
     }
@@ -54,6 +62,11 @@ export default function CalendarPage() {
 
   const tileContent = ({ date, view }) => {
     if (view === 'month') {
+      // ===== ВАЖНО: Проверяем, что events - это массив =====
+      if (!Array.isArray(events) || events.length === 0) {
+        return null;
+      }
+      
       const dayEvents = events.filter(event => {
         if (!event || !event.event_date) return false;
         try {
@@ -104,6 +117,10 @@ export default function CalendarPage() {
 
   const tileClassName = ({ date, view }) => {
     if (view === 'month') {
+      if (!Array.isArray(events) || events.length === 0) {
+        return null;
+      }
+      
       const dayEvents = events.filter(event => {
         if (!event || !event.event_date) return false;
         try {
@@ -128,6 +145,10 @@ export default function CalendarPage() {
   };
 
   const getEventsForDate = (date) => {
+    if (!Array.isArray(events) || events.length === 0) {
+      return [];
+    }
+    
     return events.filter(event => {
       if (!event || !event.event_date) return false;
       try {
@@ -170,6 +191,8 @@ export default function CalendarPage() {
       </div>
     );
   }
+
+  const eventsForSelectedDate = getEventsForDate(selectedDate);
 
   return (
     <div className="page-background">
@@ -275,18 +298,18 @@ export default function CalendarPage() {
               📋 {selectedDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
             </h3>
             <span style={{ fontSize: '13px', color: '#667085' }}>
-              {getEventsForDate(selectedDate).length} мероприятий
+              {eventsForSelectedDate.length} мероприятий
             </span>
           </div>
 
-          {getEventsForDate(selectedDate).length === 0 ? (
+          {eventsForSelectedDate.length === 0 ? (
             <div className="empty-state">
               <div className="icon">📭</div>
               <p>На этот день мероприятий нет</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {getEventsForDate(selectedDate).map((event) => (
+              {eventsForSelectedDate.map((event) => (
                 <div
                   key={event.id}
                   className="list-item"

@@ -161,12 +161,26 @@ export const deleteAchievement = async (id) => {
 // ============================================================
 // 6. СОБЫТИЯ
 // ============================================================
+// frontend/src/lib/api.js
+
 export const getEvents = async () => {
-  const response = await fetch(`${API_URL}/events`, {
-    method: 'GET',
-    headers: headers()
-  });
-  return response.json();
+  try {
+    const response = await fetch(`${API_URL}/events`, {
+      method: 'GET',
+      headers: headers()
+    });
+    
+    if (!response.ok) {
+      console.error('❌ Ошибка получения событий:', response.status);
+      return []; // Возвращаем пустой массив при ошибке
+    }
+    
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('❌ Ошибка getEvents:', error);
+    return [];
+  }
 };
 
 export const createEvent = async (data) => {

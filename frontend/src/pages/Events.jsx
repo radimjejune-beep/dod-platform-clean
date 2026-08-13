@@ -354,15 +354,23 @@ export default function Events() {
         )}
 
         <FilterBar
-          filters={filterConfig}
-          onFilterChange={setFilters}
-          onSearchChange={setSearchQuery}
-          searchPlaceholder="🔍 Поиск по названию, описанию, месту..."
-        >
-          <div style={{ fontSize: '14px', color: '#667085', padding: '6px 12px', background: '#F8FAFC', borderRadius: '8px' }}>
-            Найдено: <strong>{filteredEvents.length}</strong>
-          </div>
-        </FilterBar>
+  filters={filterConfig}
+  onFilterChange={setFilters}
+  onSearchChange={setSearchQuery}
+  searchPlaceholder="🔍 Поиск по названию, описанию, месту..."
+>
+  <div style={{ 
+    fontSize: '14px', 
+    color: '#667085', 
+    padding: '6px 16px', 
+    background: '#F8FAFC', 
+    borderRadius: '20px',
+    border: '1px solid #E2E7EF',
+    whiteSpace: 'nowrap'
+  }}>
+    Найдено: <strong style={{ color: '#0B1F3A' }}>{filteredEvents.length}</strong>
+  </div>
+</FilterBar>
 
         {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>

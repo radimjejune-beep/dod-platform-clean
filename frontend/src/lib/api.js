@@ -12,6 +12,22 @@ const headers = () => ({
   ...(getToken() && { Authorization: `Bearer ${getToken()}` })
 });
 
+const getToken = () => {
+  const token = localStorage.getItem('token');
+  const sessionId = sessionStorage.getItem('sessionId');
+  
+  // Если есть токен, но нет сессии — выходим
+  if (token && !sessionId) {
+    console.log('🔒 Сессия истекла');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+    return null;
+  }
+  
+  return token ? token.trim() : null;
+};
+
 // ============================================================
 // 1. АУТЕНТИФИКАЦИЯ
 // ============================================================

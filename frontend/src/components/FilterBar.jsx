@@ -1,6 +1,6 @@
 // frontend/src/components/FilterBar.jsx
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export default function FilterBar({ 
   filters = [], 
@@ -11,26 +11,11 @@ export default function FilterBar({
   showSearch = true,
   showReset = true,
   children,
-  classFilter = false,
-  classes = [],
-  onClassFilterChange,
-  selectedClasses = []
+  className = ''
 }) {
   const [search, setSearch] = useState('');
   const [activeFilters, setActiveFilters] = useState({});
-  const [showClassStats, setShowClassStats] = useState(false);
-  const [classStats, setClassStats] = useState([]);
-
-  // Подсчёт статистики по классам
-  useEffect(() => {
-    if (classFilter && classes.length > 0) {
-      const stats = classes.map(cls => ({
-        name: cls,
-        count: 0
-      }));
-      setClassStats(stats);
-    }
-  }, [classes, classFilter]);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const handleSearch = (value) => {
     setSearch(value);
@@ -52,29 +37,26 @@ export default function FilterBar({
     if (onSearchChange) onSearchChange('');
     if (onFilterChange) onFilterChange({});
     if (onReset) onReset();
-    if (onClassFilterChange) onClassFilterChange([]);
   };
 
-  const handleClassToggle = (className) => {
-    const newSelected = selectedClasses.includes(className)
-      ? selectedClasses.filter(c => c !== className)
-      : [...selectedClasses, className];
-    if (onClassFilterChange) onClassFilterChange(newSelected);
-  };
+  const hasActiveFilters = Object.keys(activeFilters).length > 0 || search.length > 0;
 
-  const hasActiveFilters = Object.keys(activeFilters).length > 0 || search.length > 0 || selectedClasses.length > 0;
+  // Показываем только первые 2 фильтра, остальные скрыты под "Ещё"
+  const visibleFilters = filters.slice(0, 2);
+  const hiddenFilters = filters.slice(2);
 
   return (
-    <div style={{
+    <div className={`filter-bar ${className}`} style={{
       display: 'flex',
       flexDirection: 'column',
       gap: '12px',
       marginBottom: '20px',
-      padding: '16px',
+      padding: '16px 20px',
       background: 'white',
-      borderRadius: '12px',
+      borderRadius: '16px',
       border: '1px solid #E2E7EF',
-      boxShadow: '0 2px 8px rgba(11, 31, 58, 0.04)'
+      boxShadow: '0 2px 8px rgba(11, 31, 58, 0.04)',
+      transition: 'all 0.3s ease'
     }}>
       <div style={{
         display: 'flex',
@@ -83,8 +65,17 @@ export default function FilterBar({
         alignItems: 'center',
         width: '100%'
       }}>
+        {/* ПОИСК */}
         {showSearch && (
-          <div style={{ flex: 1, minWidth: '200px' }}>
+          <div style={{ flex: '1 1 200px', minWidth: '180px', position: 'relative' }}>
+            <span style={{
+              position: 'absolute',
+              left: '14px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              fontSize: '16px',
+              color: '#98A2B3'
+            }}>🔍</span>
             <input
               type="text"
               value={search}
@@ -92,78 +83,121 @@ export default function FilterBar({
               placeholder={searchPlaceholder}
               style={{
                 width: '100%',
-                padding: '10px 14px',
-                border: '1.5px solid #D5DCE7',
-                borderRadius: '10px',
+                padding: '10px 14px 10px 40px',
+                border: '1.5px solid #E2E7EF',
+                borderRadius: '12px',
                 fontSize: '14px',
                 outline: 'none',
-                transition: 'all 0.2s ease',
-                background: '#FAFBFC'
+                transition: 'all 0.3s ease',
+                background: '#F8FAFC',
+                color: '#0B1F3A'
               }}
               onFocus={(e) => {
                 e.target.style.borderColor = '#0B1F3A';
                 e.target.style.background = 'white';
+                e.target.style.boxShadow = '0 0 0 3px rgba(11, 31, 58, 0.06)';
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = '#D5DCE7';
-                e.target.style.background = '#FAFBFC';
+                e.target.style.borderColor = '#E2E7EF';
+                e.target.style.background = '#F8FAFC';
+                e.target.style.boxShadow = 'none';
               }}
             />
+            {search && (
+              <button
+                onClick={() => handleSearch('')}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#98A2B3',
+                  fontSize: '16px',
+                  padding: '4px'
+                }}
+              >
+                ✕
+              </button>
+            )}
           </div>
         )}
 
-        {filters.map((filter) => (
+        {/* ВИДИМЫЕ ФИЛЬТРЫ */}
+        {visibleFilters.map((filter) => (
           <div key={filter.key} style={{ minWidth: filter.minWidth || '150px' }}>
             {filter.type === 'select' ? (
-              <select
-                value={activeFilters[filter.key] || ''}
-                onChange={(e) => handleFilterChange(filter.key, e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '1.5px solid #D5DCE7',
-                  borderRadius: '10px',
-                  fontSize: '14px',
-                  outline: 'none',
-                  background: '#FAFBFC',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#0B1F3A';
-                  e.target.style.background = 'white';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#D5DCE7';
-                  e.target.style.background = '#FAFBFC';
-                }}
-              >
-                <option value="">{filter.placeholder || 'Все'}</option>
-                {filter.options.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={activeFilters[filter.key] || ''}
+                  onChange={(e) => handleFilterChange(filter.key, e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 36px 10px 14px',
+                    border: '1.5px solid #E2E7EF',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    outline: 'none',
+                    background: activeFilters[filter.key] ? '#FBF4DC' : '#F8FAFC',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    color: activeFilters[filter.key] ? '#8A6A00' : '#667085',
+                    appearance: 'none',
+                    WebkitAppearance: 'none'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#0B1F3A';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(11, 31, 58, 0.06)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#E2E7EF';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                >
+                  <option value="">{filter.placeholder || 'Все'}</option>
+                  {filter.options.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <span style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  fontSize: '12px',
+                  color: '#98A2B3',
+                  pointerEvents: 'none'
+                }}>▼</span>
+              </div>
             ) : filter.type === 'checkbox' ? (
               <label style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 cursor: 'pointer',
-                padding: '8px 12px',
-                background: '#FAFBFC',
-                borderRadius: '8px',
-                border: '1.5px solid #D5DCE7',
+                padding: '8px 14px',
+                background: activeFilters[filter.key] ? '#FBF4DC' : '#F8FAFC',
+                borderRadius: '12px',
+                border: activeFilters[filter.key] ? '1.5px solid #C9A227' : '1.5px solid #E2E7EF',
                 fontSize: '14px',
-                color: '#0B1F3A',
+                color: activeFilters[filter.key] ? '#8A6A00' : '#667085',
+                transition: 'all 0.3s ease',
                 whiteSpace: 'nowrap'
               }}>
                 <input
                   type="checkbox"
                   checked={activeFilters[filter.key] || false}
                   onChange={(e) => handleFilterChange(filter.key, e.target.checked)}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  style={{
+                    width: '18px',
+                    height: '18px',
+                    cursor: 'pointer',
+                    accentColor: '#C9A227'
+                  }}
                 />
                 {filter.label}
               </label>
@@ -171,112 +205,30 @@ export default function FilterBar({
           </div>
         ))}
 
-        {/* ФИЛЬТР ПО КЛАССАМ */}
-        {classFilter && classes.length > 0 && (
-          <div style={{ position: 'relative', minWidth: '150px' }}>
-            <button
-              onClick={() => setShowClassStats(!showClassStats)}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                border: '1.5px solid #D5DCE7',
-                borderRadius: '10px',
-                fontSize: '14px',
-                outline: 'none',
-                background: selectedClasses.length > 0 ? '#FBF4DC' : '#FAFBFC',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                transition: 'all 0.2s ease',
-                color: selectedClasses.length > 0 ? '#8A6A00' : '#667085'
-              }}
-            >
-              <span>📚 Классы {selectedClasses.length > 0 && `(${selectedClasses.length})`}</span>
-              <span>▼</span>
-            </button>
-            {showClassStats && (
-              <div style={{
-                position: 'absolute',
-                top: 'calc(100% + 4px)',
-                left: 0,
-                right: 0,
-                background: 'white',
-                border: '1px solid #E2E7EF',
-                borderRadius: '10px',
-                boxShadow: '0 8px 30px rgba(11, 31, 58, 0.12)',
-                maxHeight: '250px',
-                overflowY: 'auto',
-                zIndex: 100,
-                padding: '8px'
-              }}>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
-                  gap: '6px'
-                }}>
-                  {classes.map((cls) => (
-                    <label
-                      key={cls}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '6px 10px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        background: selectedClasses.includes(cls) ? '#FBF4DC' : 'transparent',
-                        transition: 'all 0.2s ease',
-                        fontSize: '13px',
-                        color: selectedClasses.includes(cls) ? '#8A6A00' : '#667085'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!selectedClasses.includes(cls)) {
-                          e.currentTarget.style.background = '#F4F6F9';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!selectedClasses.includes(cls)) {
-                          e.currentTarget.style.background = 'transparent';
-                        }
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedClasses.includes(cls)}
-                        onChange={() => handleClassToggle(cls)}
-                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                      />
-                      <span>{cls}</span>
-                    </label>
-                  ))}
-                </div>
-                {selectedClasses.length > 0 && (
-                  <button
-                    onClick={() => {
-                      if (onClassFilterChange) onClassFilterChange([]);
-                      setShowClassStats(false);
-                    }}
-                    style={{
-                      marginTop: '8px',
-                      padding: '6px 12px',
-                      background: '#FCEBEC',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      color: '#B3262E',
-                      width: '100%'
-                    }}
-                  >
-                    ✕ Очистить все
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+        {/* КНОПКА "ЕЩЁ" */}
+        {hiddenFilters.length > 0 && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            style={{
+              padding: '8px 16px',
+              background: isExpanded ? '#FBF4DC' : '#F8FAFC',
+              border: '1.5px solid #E2E7EF',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              color: isExpanded ? '#8A6A00' : '#667085',
+              transition: 'all 0.3s ease',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            {isExpanded ? '▲ Скрыть' : `▼ Ещё ${hiddenFilters.length}`}
+          </button>
         )}
 
+        {/* КНОПКА СБРОСА */}
         {showReset && hasActiveFilters && (
           <button
             onClick={handleReset}
@@ -284,12 +236,15 @@ export default function FilterBar({
               padding: '8px 16px',
               background: '#FCEBEC',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: '12px',
               cursor: 'pointer',
               fontSize: '13px',
               color: '#B3262E',
-              transition: 'all 0.2s ease',
-              whiteSpace: 'nowrap'
+              transition: 'all 0.3s ease',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
             }}
             onMouseEnter={(e) => {
               e.target.style.background = '#FED7D7';
@@ -298,14 +253,97 @@ export default function FilterBar({
               e.target.style.background = '#FCEBEC';
             }}
           >
-            ✕ Сбросить фильтры
+            ✕ Сбросить
           </button>
         )}
 
+        {/* СЧЁТЧИК */}
         {children}
       </div>
 
-      {/* АКТИВНЫЕ ФИЛЬТРЫ */}
+      {/* РАСШИРЕННЫЕ ФИЛЬТРЫ */}
+      {isExpanded && hiddenFilters.length > 0 && (
+        <div style={{
+          display: 'flex',
+          gap: '12px',
+          flexWrap: 'wrap',
+          paddingTop: '12px',
+          borderTop: '1px solid #F4F6F9'
+        }}>
+          {hiddenFilters.map((filter) => (
+            <div key={filter.key} style={{ minWidth: filter.minWidth || '150px' }}>
+              {filter.type === 'select' ? (
+                <div style={{ position: 'relative' }}>
+                  <select
+                    value={activeFilters[filter.key] || ''}
+                    onChange={(e) => handleFilterChange(filter.key, e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 36px 10px 14px',
+                      border: '1.5px solid #E2E7EF',
+                      borderRadius: '12px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      background: activeFilters[filter.key] ? '#FBF4DC' : '#F8FAFC',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      color: activeFilters[filter.key] ? '#8A6A00' : '#667085',
+                      appearance: 'none',
+                      WebkitAppearance: 'none'
+                    }}
+                  >
+                    <option value="">{filter.placeholder || 'Все'}</option>
+                    {filter.options.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    fontSize: '12px',
+                    color: '#98A2B3',
+                    pointerEvents: 'none'
+                  }}>▼</span>
+                </div>
+              ) : filter.type === 'checkbox' ? (
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  padding: '8px 14px',
+                  background: activeFilters[filter.key] ? '#FBF4DC' : '#F8FAFC',
+                  borderRadius: '12px',
+                  border: activeFilters[filter.key] ? '1.5px solid #C9A227' : '1.5px solid #E2E7EF',
+                  fontSize: '14px',
+                  color: activeFilters[filter.key] ? '#8A6A00' : '#667085',
+                  transition: 'all 0.3s ease',
+                  whiteSpace: 'nowrap'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={activeFilters[filter.key] || false}
+                    onChange={(e) => handleFilterChange(filter.key, e.target.checked)}
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      cursor: 'pointer',
+                      accentColor: '#C9A227'
+                    }}
+                  />
+                  {filter.label}
+                </label>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* АКТИВНЫЕ ФИЛЬТРЫ (ТЕГИ) */}
       {hasActiveFilters && (
         <div style={{
           display: 'flex',
@@ -315,33 +353,25 @@ export default function FilterBar({
           borderTop: '1px solid #F4F6F9'
         }}>
           {search && (
-            <span className="tag" style={{
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
               background: '#EAF2FA',
               color: '#174A7E',
               fontSize: '12px',
-              padding: '4px 12px'
+              padding: '4px 12px',
+              borderRadius: '20px',
+              border: '1px solid #D5E4F0'
             }}>
               🔍 {search}
-            </span>
-          )}
-          {selectedClasses.map((cls) => (
-            <span key={cls} className="tag" style={{
-              background: '#FBF4DC',
-              color: '#8A6A00',
-              fontSize: '12px',
-              padding: '4px 12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}>
-              📚 {cls}
               <button
-                onClick={() => handleClassToggle(cls)}
+                onClick={() => handleSearch('')}
                 style={{
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  color: '#8A6A00',
+                  color: '#174A7E',
                   fontSize: '12px',
                   padding: '0 2px'
                 }}
@@ -349,19 +379,37 @@ export default function FilterBar({
                 ✕
               </button>
             </span>
-          ))}
+          )}
           {Object.entries(activeFilters).map(([key, value]) => {
             if (!value) return null;
             const filter = filters.find(f => f.key === key);
             const label = filter?.options?.find(o => o.value === value)?.label || value;
             return (
-              <span key={key} className="tag" style={{
+              <span key={key} style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
                 background: '#FBF4DC',
                 color: '#8A6A00',
                 fontSize: '12px',
-                padding: '4px 12px'
+                padding: '4px 12px',
+                borderRadius: '20px',
+                border: '1px solid #E8D9A8'
               }}>
                 {filter?.label || key}: {label}
+                <button
+                  onClick={() => handleFilterChange(key, '')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#8A6A00',
+                    fontSize: '12px',
+                    padding: '0 2px'
+                  }}
+                >
+                  ✕
+                </button>
               </span>
             );
           })}

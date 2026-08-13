@@ -179,13 +179,14 @@ export default function Navigation({ profile }) {
   // ВЫХОД
   // ============================================================
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    sessionStorage.removeItem('sessionId');
-    sessionStorage.removeItem('userId');
-    sessionStorage.removeItem('userRole');
-    navigate('/login');
-  };
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  sessionStorage.removeItem('sessionId');
+  sessionStorage.removeItem('userId');
+  sessionStorage.removeItem('userRole');
+  sessionStorage.removeItem('loginTime');
+  navigate('/login');
+};
 
   // ============================================================
   // ЗАКРЫТИЕ ДРОПДАУНА ПРИ КЛИКЕ ВНЕ

@@ -1,6 +1,6 @@
 // frontend/src/pages/Login.jsx
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://dod-backend.relaxdev.ru/api';
@@ -11,6 +11,41 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  // ===== ПРОВЕРКА СЕССИИ ПРИ ЗАГРУЗКЕ =====
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const sessionId = sessionStorage.getItem('sessionId');
+    
+    // Если есть токен, но нет сессии — выходим
+    if (token && !sessionId) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      console.log('🔒 Сессия истекла, требуется повторный вход');
+    }
+    
+    // Если есть и токен и сессия — перенаправляем
+    if (token && sessionId) {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (user && user.role) {
+        redirectByRole(user.role);
+      }
+    }
+  }, []);
+
+  const redirectByRole = (role) => {
+    const routes = {
+      'participant': '/participant-dashboard',
+      'parent': '/parent-dashboard',
+      'club_coordinator': '/club-coordinator-dashboard',
+      'tutor': '/tutor-dashboard',
+      'admin': '/dashboard',
+      'movement_coordinator': '/dashboard',
+      'president': '/dashboard',
+      'vice_president': '/dashboard'
+    };
+    navigate(routes[role] || '/dashboard');
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -33,30 +68,23 @@ export default function Login() {
       const data = await response.json();
       console.log('✅ Успешный вход:', data);
 
-      // Сохраняем токен
+      // ===== СОХРАНЯЕМ ТОКЕН В LOCAL STORAGE =====
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
-      // ===== СОЗДАЁМ СЕССИЮ =====
-      sessionStorage.setItem('sessionId', Date.now().toString());
+      // ===== СОЗДАЁМ СЕССИЮ В SESSION STORAGE =====
+      const sessionId = Date.now().toString() + '_' + Math.random().toString(36).slice(2, 6);
+      sessionStorage.setItem('sessionId', sessionId);
       sessionStorage.setItem('userId', data.user.id);
       sessionStorage.setItem('userRole', data.user.role);
+      sessionStorage.setItem('loginTime', new Date().toISOString());
 
-      // ===== ПЕРЕНАПРАВЛЕНИЕ В ЗАВИСИМОСТИ ОТ РОЛИ =====
+      console.log('✅ Сессия создана:', sessionId);
+
+      // ===== ПЕРЕНАПРАВЛЕНИЕ =====
       const userRole = data.user.role;
-      console.log('👤 Роль пользователя:', userRole);
+      redirectByRole(userRole);
 
-      if (userRole === 'participant') {
-        navigate('/participant-dashboard');
-      } else if (userRole === 'parent') {
-        navigate('/parent-dashboard');
-      } else if (userRole === 'club_coordinator') {
-        navigate('/club-coordinator-dashboard');
-      } else if (userRole === 'tutor') {
-        navigate('/tutor-dashboard');
-      } else {
-        navigate('/dashboard');
-      }
     } catch (err) {
       console.error('❌ Ошибка входа:', err);
       setError(err.message || 'Неверный email или пароль');
@@ -111,6 +139,13 @@ export default function Login() {
             color: '#667085'
           }}>
             Вход в систему
+          </div>
+          <div style={{
+            marginTop: '4px',
+            fontSize: '11px',
+            color: '#98A2B3'
+          }}>
+            🔒 Сессия действует только пока открыта вкладка
           </div>
         </div>
 
@@ -192,6 +227,15 @@ export default function Login() {
           background: 'linear-gradient(90deg, transparent, #C9A227, transparent)',
           borderRadius: '2px'
         }} />
+
+        <div style={{
+          marginTop: '12px',
+          textAlign: 'center',
+          fontSize: '12px',
+          color: '#98A2B3'
+        }}>
+          🔒 Для безопасности сессия завершается при закрытии вкладки
+        </div>
       </div>
     </div>
   );

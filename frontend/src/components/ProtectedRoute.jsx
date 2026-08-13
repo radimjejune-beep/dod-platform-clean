@@ -55,24 +55,118 @@ export default function ProtectedRoute({ children }) {
   const [hasAccess, setHasAccess] = useState(true);
   const [redirectPath, setRedirectPath] = useState(null);
 
-  useEffect(() => {
-    checkAuth();
+  // ===== ПРОВЕРКА СЕССИИ =====
+  const checkSession = () => {
+    const token = localStorage.getItem('token');
+    const sessionId = sessionStorage.getItem('sessionId');
+    const userId = sessionStorage.getItem('userId');
     
+    // Нет токена — не авторизован
+    if (!token) {
+      console.log('❌ Нет токена');
+      return false;
+    }
+    
+    // Есть токен, но нет сессии — сессия истекла
+    if (!sessionId) {
+      console.log('❌ Сессия истекла (закрыта вкладка)');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      return false;
+    }
+    
+    // Проверяем, что userId совпадает
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (user.id && userId && user.id !== userId) {
+      console.log('❌ Несовпадение userId');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('sessionId');
+      return false;
+    }
+    
+    console.log('✅ Сессия активна');
+    return true;
+  };
+
+  useEffect(() => {
+    const validateAuth = async () => {
+      // Проверяем сессию
+      if (!checkSession()) {
+        setIsAuthenticated(false);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        if (user && user.id) {
+          setIsAuthenticated(true);
+          setUserRole(user.role);
+          
+          const currentPath = window.location.pathname;
+          const allowedRoles = routeRoles[currentPath] || ['all'];
+          
+          if (allowedRoles.includes('all') || allowedRoles.includes(user.role)) {
+            setHasAccess(true);
+          } else {
+            setHasAccess(false);
+            const defaultRoute = defaultRouteByRole[user.role] || '/dashboard';
+            setRedirectPath(defaultRoute);
+          }
+        } else {
+          // Пробуем получить данные с сервера
+          try {
+            const userData = await api.getMe();
+            if (userData && userData.id) {
+              localStorage.setItem('user', JSON.stringify(userData));
+              setIsAuthenticated(true);
+              setUserRole(userData.role);
+              
+              const currentPath = window.location.pathname;
+              const allowedRoles = routeRoles[currentPath] || ['all'];
+              
+              if (allowedRoles.includes('all') || allowedRoles.includes(userData.role)) {
+                setHasAccess(true);
+              } else {
+                setHasAccess(false);
+                const defaultRoute = defaultRouteByRole[userData.role] || '/dashboard';
+                setRedirectPath(defaultRoute);
+              }
+            } else {
+              logout();
+            }
+          } catch (err) {
+            console.error('❌ Ошибка получения данных:', err);
+            logout();
+          }
+        }
+      } catch (err) {
+        console.error('❌ Ошибка проверки авторизации:', err);
+        logout();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    validateAuth();
+
     // ===== СЛУШАЕМ ЗАКРЫТИЕ ВКЛАДКИ =====
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        // Вкладка свернута или закрыта — ничего не делаем
+        // Вкладка скрыта — ничего не делаем
       } else {
-        // Вкладка снова активна — проверяем, есть ли сессия
-        const sessionId = sessionStorage.getItem('sessionId');
+        // Вкладка снова активна — проверяем сессию
         const token = localStorage.getItem('token');
+        const sessionId = sessionStorage.getItem('sessionId');
         
-        if (token && sessionId) {
-          // Проверяем, что сессия ещё активна
-          checkAuth();
-        } else {
-          // Сессии нет — выходим
+        if (token && !sessionId) {
+          // Сессия потеряна — выходим
+          console.log('🔒 Сессия потеряна при возврате');
           logout();
+          window.location.href = '/login';
         }
       }
     };
@@ -92,92 +186,14 @@ export default function ProtectedRoute({ children }) {
     };
   }, []);
 
-  const checkAuth = async () => {
-    const token = localStorage.getItem('token');
-    console.log('🔍 Проверка токена:', token ? '✅ есть' : '❌ нет');
-    
-    if (!token) {
-      setIsAuthenticated(false);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      let user = null;
-      try {
-        const response = await fetch('https://dod-backend.relaxdev.ru/api/me', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (response.ok) {
-          user = await response.json();
-        }
-      } catch (e) {
-        console.log('⚠️ /api/me не работает, пробуем /api/me2');
-      }
-
-      if (!user || !user.id) {
-        const response = await fetch('https://dod-backend.relaxdev.ru/api/me2', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-        user = await response.json();
-      }
-
-      console.log('👤 Пользователь:', user);
-      
-      if (user && user.id) {
-        // ===== СОЗДАЁМ СЕССИЮ =====
-        const sessionId = Date.now().toString();
-        sessionStorage.setItem('sessionId', sessionId);
-        sessionStorage.setItem('userId', user.id);
-        sessionStorage.setItem('userRole', user.role);
-        
-        localStorage.setItem('user', JSON.stringify(user));
-        setIsAuthenticated(true);
-        setUserRole(user.role);
-        
-        const currentPath = window.location.pathname;
-        console.log('📍 Текущий путь:', currentPath);
-        console.log('👤 Роль пользователя:', user.role);
-        
-        const allowedRoles = routeRoles[currentPath] || ['all'];
-        console.log('✅ Разрешённые роли:', allowedRoles);
-        
-        if (allowedRoles.includes('all') || allowedRoles.includes(user.role)) {
-          console.log('✅ Доступ разрешён');
-          setHasAccess(true);
-        } else {
-          console.log('❌ Доступ запрещён');
-          setHasAccess(false);
-          const defaultRoute = defaultRouteByRole[user.role] || '/dashboard';
-          setRedirectPath(defaultRoute);
-        }
-      } else {
-        console.log('❌ Пользователь не найден');
-        logout();
-      }
-    } catch (err) {
-      console.error('❌ Ошибка проверки авторизации:', err);
-      logout();
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     sessionStorage.removeItem('sessionId');
     sessionStorage.removeItem('userId');
     sessionStorage.removeItem('userRole');
+    sessionStorage.removeItem('loginTime');
     setIsAuthenticated(false);
-    setLoading(false);
   };
 
   if (loading) {
@@ -190,7 +206,7 @@ export default function ProtectedRoute({ children }) {
         fontSize: '18px',
         color: '#667085'
       }}>
-        ⏳ Загрузка...
+        ⏳ Проверка сессии...
       </div>
     );
   }

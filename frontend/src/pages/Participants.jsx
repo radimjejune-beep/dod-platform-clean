@@ -46,13 +46,16 @@ export default function Participants() {
       const role = userData.role;
       let filtered = [];
 
+      // ============================================================
+      // ЧЁТКАЯ ЛОГИКА ПО РОЛЯМ
+      // ============================================================
+
       if (role === 'club_coordinator') {
+        // ===== КООРДИНАТОР КЮДА — ТОЛЬКО СВОЙ КЛУБ =====
         setIsClubCoordinator(true);
         
-        // 1. Пробуем получить club_id из профиля
         let clubId = userData.club_id;
         
-        // 2. Если нет — ищем в club_coordinators
         if (!clubId) {
           try {
             const coordResponse = await fetch(`https://dod-backend.relaxdev.ru/api/club-coordinators?profile_id=${userData.id}`);
@@ -65,15 +68,36 @@ export default function Participants() {
           }
         }
         
-        // 3. Фильтруем ТОЛЬКО участников своего клуба
         if (clubId) {
           filtered = participantsData.filter(p => p.club_id === clubId);
+          console.log(`👥 Координатор КЮДа: показано ${filtered.length} участников своего клуба`);
         } else {
           filtered = [];
+          console.log('❌ Координатор КЮДа: клуб не найден');
         }
-      } else if (['admin', 'movement_coordinator', 'tutor', 'president', 'vice_president'].includes(role)) {
+        
+      } else if (role === 'admin') {
+        // ===== АДМИН — ВСЕ УЧАСТНИКИ =====
         filtered = participantsData;
+        console.log(`👥 Админ: показано ${filtered.length} участников`);
+        
+      } else if (role === 'movement_coordinator') {
+        // ===== КООРДИНАТОР ДВИЖЕНИЯ — ВСЕ УЧАСТНИКИ =====
+        filtered = participantsData;
+        console.log(`👥 Координатор движения: показано ${filtered.length} участников`);
+        
+      } else if (role === 'tutor') {
+        // ===== ТЬЮТОР — ВСЕ УЧАСТНИКИ =====
+        filtered = participantsData;
+        console.log(`👥 Тьютор: показано ${filtered.length} участников`);
+        
+      } else if (role === 'president' || role === 'vice_president') {
+        // ===== ПРЕЗИДЕНТ И ВИЦЕ — ВСЕ УЧАСТНИКИ =====
+        filtered = participantsData;
+        console.log(`👥 Президент/Вице: показано ${filtered.length} участников`);
+        
       } else {
+        // ===== ОСТАЛЬНЫЕ — ПУСТО =====
         filtered = [];
       }
 

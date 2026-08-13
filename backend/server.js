@@ -36,11 +36,73 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-pool.connect((err) => {
+// ============================================================
+// МИГРАЦИИ ДЛЯ EVENTS (АВТОМАТИЧЕСКИЕ)
+// ============================================================
+const runMigrations = async () => {
+  try {
+    // Проверяем и добавляем поле moderation_status
+    const checkStatus = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'events' AND column_name = 'moderation_status'
+    `);
+    if (checkStatus.rows.length === 0) {
+      await pool.query(`ALTER TABLE events ADD COLUMN moderation_status VARCHAR(20) DEFAULT 'approved'`);
+      console.log('✅ Добавлено поле moderation_status в events');
+    }
+
+    // Проверяем и добавляем поле moderated_by
+    const checkModeratedBy = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'events' AND column_name = 'moderated_by'
+    `);
+    if (checkModeratedBy.rows.length === 0) {
+      await pool.query(`ALTER TABLE events ADD COLUMN moderated_by UUID REFERENCES users(id)`);
+      console.log('✅ Добавлено поле moderated_by в events');
+    }
+
+    // Проверяем и добавляем поле moderated_at
+    const checkModeratedAt = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'events' AND column_name = 'moderated_at'
+    `);
+    if (checkModeratedAt.rows.length === 0) {
+      await pool.query(`ALTER TABLE events ADD COLUMN moderated_at TIMESTAMP`);
+      console.log('✅ Добавлено поле moderated_at в events');
+    }
+
+    // Проверяем и добавляем поле moderation_comment
+    const checkComment = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'events' AND column_name = 'moderation_comment'
+    `);
+    if (checkComment.rows.length === 0) {
+      await pool.query(`ALTER TABLE events ADD COLUMN moderation_comment TEXT`);
+      console.log('✅ Добавлено поле moderation_comment в events');
+    }
+
+    // Обновляем существующие мероприятия
+    await pool.query(`UPDATE events SET moderation_status = 'approved' WHERE moderation_status IS NULL`);
+    console.log('✅ Обновлены статусы мероприятий');
+
+  } catch (error) {
+    console.error('❌ Ошибка при миграции:', error.message);
+  }
+};
+
+// ============================================================
+// ПОДКЛЮЧЕНИЕ К БД + ЗАПУСК МИГРАЦИЙ
+// ============================================================
+pool.connect(async (err) => {
   if (err) {
     console.error('❌ Ошибка подключения к базе данных:', err.message);
   } else {
     console.log('✅ Подключение к PostgreSQL установлено');
+    await runMigrations();
   }
 });
 
@@ -716,6 +778,7 @@ app.get('/api/events', async (req, res) => {
     );
     res.json(result.rows);
   } catch (error) {
+    console.error('Ошибка получения событий:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -813,6 +876,7 @@ app.patch('/api/events/:id', async (req, res) => {
 
     res.json(result.rows[0]);
   } catch (error) {
+    console.error('Ошибка обновления события:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -823,6 +887,7 @@ app.delete('/api/events/:id', async (req, res) => {
     await pool.query('DELETE FROM events WHERE id = $1', [id]);
     res.json({ message: 'Событие удалено' });
   } catch (error) {
+    console.error('Ошибка удаления события:', error);
     res.status(500).json({ error: error.message });
   }
 });

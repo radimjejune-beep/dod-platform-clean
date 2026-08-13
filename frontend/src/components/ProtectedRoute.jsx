@@ -25,6 +25,7 @@ const routeRoles = {
   '/settings': ['admin', 'movement_coordinator'],
   '/admin/invite': ['admin', 'movement_coordinator'],
   '/admin/users': ['admin', 'movement_coordinator', 'president', 'vice_president'],
+  '/admin/news': ['admin', 'movement_coordinator'],
   '/import-participants': ['admin', 'movement_coordinator', 'president', 'vice_president'],
   '/appeals': ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'],
   '/staff': ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'],
@@ -175,6 +176,9 @@ export default function ProtectedRoute({ children }) {
     const handleBeforeUnload = () => {
       // При закрытии вкладки удаляем сессию
       sessionStorage.removeItem('sessionId');
+      sessionStorage.removeItem('userId');
+      sessionStorage.removeItem('userRole');
+      sessionStorage.removeItem('loginTime');
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);

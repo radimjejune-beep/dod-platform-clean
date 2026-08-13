@@ -14,26 +14,15 @@ export default function Navigation({ profile }) {
   const isActive = (path) => location.pathname === path;
   const role = profile?.role || 'participant';
 
-  // ============================================================
-  // ВЫХОД — УДАЛЯЕТ ТОКЕН И СЕССИЮ
-  // ============================================================
   const handleLogout = () => {
-    // Удаляем токен
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    
-    // Удаляем сессию
     sessionStorage.removeItem('sessionId');
     sessionStorage.removeItem('userId');
     sessionStorage.removeItem('userRole');
-    sessionStorage.removeItem('loginTime');
-    
     navigate('/login');
   };
 
-  // ============================================================
-  // АВАТАР
-  // ============================================================
   const getAvatar = () => {
     if (profile?.avatar_url) {
       return <img src={profile.avatar_url} alt="Аватар" className="nav-avatar" />;
@@ -46,17 +35,14 @@ export default function Navigation({ profile }) {
     );
   };
 
-  // ============================================================
-  // ГРУППИРОВКА ПУНКТОВ МЕНЮ
-  // ============================================================
   const getMenuGroups = () => {
     const allGroups = {
       main: [
         { path: '/dashboard', label: '📊 Дашборд', roles: ['admin', 'movement_coordinator', 'president', 'vice_president'] },
         { path: '/participant-dashboard', label: '📊 Мой кабинет', roles: ['participant'] },
-        { path: '/parent-dashboard', label: '📊 Кабинет родителя', roles: ['parent'] },
-        { path: '/club-coordinator-dashboard', label: '📊 Управление клубом', roles: ['club_coordinator'] },
-        { path: '/tutor-dashboard', label: '📊 Кабинет тьютора', roles: ['tutor'] },
+        { path: '/parent-dashboard', label: '📊 Мой кабинет', roles: ['parent'] },
+        { path: '/club-coordinator-dashboard', label: '📊 Мой кабинет', roles: ['club_coordinator'] },
+        { path: '/tutor-dashboard', label: '📊 Мой кабинет', roles: ['tutor'] },
       ],
       events: [
         { path: '/events', label: '📅 Мероприятия', roles: ['all'] },
@@ -146,17 +132,11 @@ export default function Navigation({ profile }) {
   return (
     <nav className="nav-new">
       <div className="nav-new-container">
-        {/* ЛОГОТИП */}
         <Link to="/" className="nav-new-logo">
-          <img 
-            src={logo} 
-            alt="ДОД «Дипломаты будущего»" 
-            className="nav-new-logo-img"
-          />
+          <img src={logo} alt="ДОД «Дипломаты будущего»" className="nav-new-logo-img" />
           <span className="nav-new-logo-text">Дипломаты будущего</span>
         </Link>
 
-        {/* МЕНЮ */}
         <div className="nav-new-menu">
           {menuGroups.main?.map((item) => (
             <Link
@@ -207,7 +187,6 @@ export default function Navigation({ profile }) {
           })}
         </div>
 
-        {/* ПРАВАЯ ЧАСТЬ */}
         <div className="nav-new-right">
           <Notifications profile={profile} />
           
@@ -218,7 +197,6 @@ export default function Navigation({ profile }) {
             </span>
           </Link>
 
-          {/* ===== КНОПКА ВЫХОДА ===== */}
           <button className="nav-new-logout" onClick={handleLogout} title="Выйти">
             <span>🚪</span>
           </button>
@@ -232,7 +210,6 @@ export default function Navigation({ profile }) {
         </div>
       </div>
 
-      {/* МОБИЛЬНОЕ МЕНЮ */}
       {isMobileMenuOpen && (
         <div className="nav-new-mobile">
           {Object.entries(menuGroups).map(([key, items]) => {

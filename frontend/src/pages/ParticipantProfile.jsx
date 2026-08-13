@@ -41,41 +41,47 @@ export default function ParticipantProfile() {
       }
       setParticipant(found);
 
-      // ===== ЗАГРУЖАЕМ ДОСТИЖЕНИЯ =====
+      // ===== ЗАГРУЖАЕМ ДОСТИЖЕНИЯ ЧЕРЕЗ ПРЯМОЙ FETCH =====
       const token = localStorage.getItem('token');
       
       try {
-        const achievementsResponse = await fetch('https://dod-backend.relaxdev.ru/api/achievements', {
+        const response = await fetch('https://dod-backend.relaxdev.ru/api/achievements', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
         
-        if (achievementsResponse.ok) {
-          const allAchievements = await achievementsResponse.json();
+        if (response.ok) {
+          const allAchievements = await response.json();
+          console.log('📥 Все достижения:', allAchievements);
+          
           const userAchievements = Array.isArray(allAchievements) 
             ? allAchievements.filter(a => a.participant_id === id)
             : [];
           setAchievements(userAchievements);
+          console.log('📥 Достижения участника:', userAchievements.length);
         }
       } catch (err) {
         console.error('Ошибка получения достижений:', err);
       }
 
-      // ===== ЗАГРУЖАЕМ МЕРОПРИЯТИЯ =====
+      // ===== ЗАГРУЖАЕМ МЕРОПРИЯТИЯ ЧЕРЕЗ ПРЯМОЙ FETCH =====
       try {
-        const eventsResponse = await fetch('https://dod-backend.relaxdev.ru/api/events', {
+        const response = await fetch('https://dod-backend.relaxdev.ru/api/events', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
         
-        if (eventsResponse.ok) {
-          const allEvents = await eventsResponse.json();
+        if (response.ok) {
+          const allEvents = await response.json();
+          console.log('📥 Все мероприятия:', allEvents);
+          
           const userEvents = Array.isArray(allEvents)
             ? allEvents.filter(e => e.participant_id === id)
             : [];
           setEvents(userEvents);
+          console.log('📥 Мероприятия участника:', userEvents.length);
         }
       } catch (err) {
         console.error('Ошибка получения мероприятий:', err);
@@ -423,7 +429,6 @@ export default function ParticipantProfile() {
               </div>
             )}
 
-            {/* ===== ОБРАЗОВАНИЕ ===== */}
             {participant.education && (
               <>
                 <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginTop: '24px', marginBottom: '16px' }}>
@@ -506,7 +511,6 @@ export default function ParticipantProfile() {
               <p style={{ color: '#98A2B3' }}>Участник пока ничего не рассказал о себе</p>
             )}
 
-            {/* ===== ЛИЧНЫЕ ДОСТИЖЕНИЯ ===== */}
             {participant.achievements && (
               <>
                 <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginTop: '24px', marginBottom: '12px' }}>
@@ -514,18 +518,6 @@ export default function ParticipantProfile() {
                 </h3>
                 <p style={{ color: '#667085', lineHeight: '1.8', whiteSpace: 'pre-wrap' }}>
                   {participant.achievements}
-                </p>
-              </>
-            )}
-
-            {/* ===== ОБРАЗОВАНИЕ (дубль, если не показано) ===== */}
-            {participant.education && !participant.interests && (
-              <>
-                <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginTop: '24px', marginBottom: '12px' }}>
-                  📚 Образование
-                </h3>
-                <p style={{ color: '#667085', lineHeight: '1.8', whiteSpace: 'pre-wrap' }}>
-                  {participant.education}
                 </p>
               </>
             )}

@@ -31,10 +31,19 @@ export default function Login() {
         throw new Error(data.error || 'Ошибка входа');
       }
 
-      // Сохраняем токен
+      // ПРОВЕРЯЕМ ТОКЕН ПЕРЕД СОХРАНЕНИЕМ
+      console.log('🔑 Токен до сохранения:', data.token);
+      console.log('🔑 Длина токена:', data.token?.length);
+      console.log('🔑 Тип токена:', typeof data.token);
+
+      // Сохраняем ТОЧНО КАК ЕСТЬ
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      console.log('✅ Токен сохранён:', data.token);
+      
+      // ПРОВЕРЯЕМ ПОСЛЕ СОХРАНЕНИЯ
+      const savedToken = localStorage.getItem('token');
+      console.log('🔑 Токен после сохранения:', savedToken);
+      console.log('🔑 Длина после сохранения:', savedToken?.length);
 
       navigate('/dashboard');
     } catch (err) {

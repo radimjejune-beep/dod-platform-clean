@@ -60,21 +60,21 @@ const handleSave = async (e) => {
     }
 
     const updateData = {
-      full_name: profile.full_name.trim(),
-      phone: phone,
-      school: profile.school || '',
-      class_name: profile.class_name || '',
-      interests: profile.interests || '',
-      bio: profile.bio || '',
-      city: profile.city || '',
-      birth_date: birthDate,  // ← теперь null вместо пустой строки
-      social_links: profile.social_links || '',
-      skills: profile.skills || '',
-      education: profile.education || '',
-      achievements: profile.achievements || '',
-      telegram: profile.telegram || '',
-      vk: profile.vk || ''
-    };
+  full_name: profile.full_name.trim(),
+  phone: phone,
+  school: profile.school || '',
+  class_name: profile.class_name || '',
+  interests: profile.interests || '',
+  bio: profile.bio || '',
+  city: profile.city || '',
+  birth_date: birthDate,
+  social_links: profile.social_links || '',
+  skills: profile.skills || '',          // ← Навыки
+  education: profile.education || '',     // ← Дополнительное образование
+  achievements: profile.achievements || '', // ← Достижения
+  telegram: profile.telegram || '',
+  vk: profile.vk || ''
+};
 
     console.log('📤 Отправка данных:', updateData);
 

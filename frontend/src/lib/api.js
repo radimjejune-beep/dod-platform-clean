@@ -1,4 +1,4 @@
-// src/lib/api.js
+// frontend/src/lib/api.js
 
 // ===== АДРЕС БЭКЕНДА =====
 const API_URL = import.meta.env.VITE_API_URL || 'https://dod-backend.relaxdev.ru/api';
@@ -60,37 +60,10 @@ export const logout = () => {
 };
 
 // ============================================================
-// 2. ПОЛЬЗОВАТЕЛИ И ПРОФИЛИ
+// 2. ПРОФИЛЬ
 // ============================================================
 
-// 2.1. ПОЛУЧЕНИЕ ВСЕХ ПРОФИЛЕЙ
-export const getProfiles = async () => {
-  const response = await fetch(`${API_URL}/profiles`, {
-    method: 'GET',
-    headers: headers()
-  });
-  return response.json();
-};
-
-// 2.2. ПОЛУЧЕНИЕ УЧАСТНИКОВ
-export const getParticipants = async () => {
-  const response = await fetch(`${API_URL}/participants`, {
-    method: 'GET',
-    headers: headers()
-  });
-  return response.json();
-};
-
-// 2.3. ПОЛУЧЕНИЕ ОДНОГО УЧАСТНИКА ПО ID
-export const getParticipantById = async (id) => {
-  const response = await fetch(`${API_URL}/participants/${id}`, {
-    method: 'GET',
-    headers: headers()
-  });
-  return response.json();
-};
-
-// 2.4. ОБНОВЛЕНИЕ ПРОФИЛЯ
+// 2.1. ОБНОВЛЕНИЕ ПРОФИЛЯ
 export const updateProfile = async (data) => {
   const response = await fetch(`${API_URL}/profile`, {
     method: 'PATCH',
@@ -100,39 +73,29 @@ export const updateProfile = async (data) => {
   return response.json();
 };
 
-// 2.5. ПОЛУЧЕНИЕ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ (ДЛЯ АДМИНКИ)
-export const getUsers = async () => {
-  const response = await fetch(`${API_URL}/users`, {
+// ============================================================
+// 3. ПОЛЬЗОВАТЕЛИ
+// ============================================================
+
+// 3.1. ПОЛУЧЕНИЕ ВСЕХ ПРОФИЛЕЙ
+export const getProfiles = async () => {
+  const response = await fetch(`${API_URL}/profiles`, {
     method: 'GET',
     headers: headers()
   });
   return response.json();
 };
 
-// 2.6. ИЗМЕНЕНИЕ РОЛИ ПОЛЬЗОВАТЕЛЯ (АДМИНКА)
-export const updateUserRole = async (userId, role) => {
-  const response = await fetch(`${API_URL}/users/${userId}/role`, {
-    method: 'PATCH',
-    headers: headers(),
-    body: JSON.stringify({ role })
+// 3.2. ПОЛУЧЕНИЕ УЧАСТНИКОВ
+export const getParticipants = async () => {
+  const response = await fetch(`${API_URL}/participants`, {
+    method: 'GET',
+    headers: headers()
   });
   return response.json();
 };
 
-// 2.7. СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ (АДМИНКА)
-export const createUser = async (userData) => {
-  const response = await fetch(`${API_URL}/users`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify(userData)
-  });
-  return response.json();
-};
-
-// ============================================================
-// 3. КЛУБЫ
-// ============================================================
-
+// 3.3. ПОЛУЧЕНИЕ КЛУБОВ
 export const getClubs = async () => {
   const response = await fetch(`${API_URL}/clubs`, {
     method: 'GET',
@@ -141,19 +104,11 @@ export const getClubs = async () => {
   return response.json();
 };
 
-export const getClubById = async (id) => {
-  const response = await fetch(`${API_URL}/clubs/${id}`, {
+// 3.4. ПОЛУЧЕНИЕ РЕГИСТРАЦИЙ
+export const getRegistrations = async () => {
+  const response = await fetch(`${API_URL}/registrations`, {
     method: 'GET',
     headers: headers()
-  });
-  return response.json();
-};
-
-export const createClub = async (data) => {
-  const response = await fetch(`${API_URL}/clubs`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify(data)
   });
   return response.json();
 };
@@ -162,6 +117,7 @@ export const createClub = async (data) => {
 // 4. ДОСТИЖЕНИЯ
 // ============================================================
 
+// 4.1. ПОЛУЧЕНИЕ ВСЕХ ДОСТИЖЕНИЙ
 export const getAchievements = async () => {
   const response = await fetch(`${API_URL}/achievements`, {
     method: 'GET',
@@ -170,14 +126,7 @@ export const getAchievements = async () => {
   return response.json();
 };
 
-export const getAchievementsByParticipant = async (participantId) => {
-  const response = await fetch(`${API_URL}/achievements/participant/${participantId}`, {
-    method: 'GET',
-    headers: headers()
-  });
-  return response.json();
-};
-
+// 4.2. ДОБАВЛЕНИЕ ДОСТИЖЕНИЯ
 export const addAchievement = async (data) => {
   const response = await fetch(`${API_URL}/achievements`, {
     method: 'POST',
@@ -187,6 +136,7 @@ export const addAchievement = async (data) => {
   return response.json();
 };
 
+// 4.3. УДАЛЕНИЕ ДОСТИЖЕНИЯ
 export const deleteAchievement = async (id) => {
   const response = await fetch(`${API_URL}/achievements/${id}`, {
     method: 'DELETE',
@@ -196,38 +146,10 @@ export const deleteAchievement = async (id) => {
 };
 
 // ============================================================
-// 5. МЕРОПРИЯТИЯ (КАЛЕНДАРЬ)
+// 5. ОБРАЩЕНИЯ
 // ============================================================
 
-export const getEvents = async () => {
-  const response = await fetch(`${API_URL}/events`, {
-    method: 'GET',
-    headers: headers()
-  });
-  return response.json();
-};
-
-export const getEventById = async (id) => {
-  const response = await fetch(`${API_URL}/events/${id}`, {
-    method: 'GET',
-    headers: headers()
-  });
-  return response.json();
-};
-
-export const createEvent = async (data) => {
-  const response = await fetch(`${API_URL}/events`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify(data)
-  });
-  return response.json();
-};
-
-// ============================================================
-// 6. ОБРАЩЕНИЯ
-// ============================================================
-
+// 5.1. ПОЛУЧЕНИЕ ОБРАЩЕНИЙ
 export const getAppeals = async () => {
   const response = await fetch(`${API_URL}/appeals`, {
     method: 'GET',
@@ -236,6 +158,7 @@ export const getAppeals = async () => {
   return response.json();
 };
 
+// 5.2. ДОБАВЛЕНИЕ ОБРАЩЕНИЯ
 export const addAppeal = async (data) => {
   const response = await fetch(`${API_URL}/appeals`, {
     method: 'POST',
@@ -245,6 +168,7 @@ export const addAppeal = async (data) => {
   return response.json();
 };
 
+// 5.3. ОТВЕТ НА ОБРАЩЕНИЕ
 export const replyAppeal = async (appealId, data) => {
   const response = await fetch(`${API_URL}/appeals/${appealId}/reply`, {
     method: 'POST',
@@ -254,6 +178,7 @@ export const replyAppeal = async (appealId, data) => {
   return response.json();
 };
 
+// 5.4. ЗАКРЫТИЕ ОБРАЩЕНИЯ
 export const closeAppeal = async (appealId) => {
   const response = await fetch(`${API_URL}/appeals/${appealId}/close`, {
     method: 'PATCH',
@@ -263,58 +188,23 @@ export const closeAppeal = async (appealId) => {
 };
 
 // ============================================================
-// 7. РЕГИСТРАЦИИ НА МЕРОПРИЯТИЯ
+// 6. МЕРОПРИЯТИЯ (КАЛЕНДАРЬ)
 // ============================================================
 
-export const getRegistrations = async () => {
-  const response = await fetch(`${API_URL}/registrations`, {
+// 6.1. ПОЛУЧЕНИЕ МЕРОПРИЯТИЙ
+export const getEvents = async () => {
+  const response = await fetch(`${API_URL}/events`, {
     method: 'GET',
     headers: headers()
   });
   return response.json();
 };
 
-export const createRegistration = async (data) => {
-  const response = await fetch(`${API_URL}/registrations`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify(data)
-  });
-  return response.json();
-};
-
 // ============================================================
-// 8. СОГЛАСИЯ
+// 7. КРУЖКИ (ДЛЯ УЧАСТНИКОВ)
 // ============================================================
 
-export const getConsents = async () => {
-  const response = await fetch(`${API_URL}/consents`, {
-    method: 'GET',
-    headers: headers()
-  });
-  return response.json();
-};
-
-export const revokeConsent = async (consentId) => {
-  const response = await fetch(`${API_URL}/consents/${consentId}/revoke`, {
-    method: 'PATCH',
-    headers: headers()
-  });
-  return response.json();
-};
-
-export const revokeAllConsents = async () => {
-  const response = await fetch(`${API_URL}/consents/revoke-all`, {
-    method: 'PATCH',
-    headers: headers()
-  });
-  return response.json();
-};
-
-// ============================================================
-// 9. ДОПОЛНИТЕЛЬНЫЕ КРУЖКИ (ДЛЯ УЧАСТНИКОВ)
-// ============================================================
-
+// 7.1. ПОЛУЧЕНИЕ КРУЖКОВ
 export const getExtraActivities = async () => {
   const response = await fetch(`${API_URL}/extra-activities`, {
     method: 'GET',
@@ -323,6 +213,7 @@ export const getExtraActivities = async () => {
   return response.json();
 };
 
+// 7.2. ДОБАВЛЕНИЕ КРУЖКА
 export const addExtraActivity = async (data) => {
   const response = await fetch(`${API_URL}/extra-activities`, {
     method: 'POST',
@@ -332,6 +223,7 @@ export const addExtraActivity = async (data) => {
   return response.json();
 };
 
+// 7.3. ОБНОВЛЕНИЕ КРУЖКА
 export const updateExtraActivity = async (id, data) => {
   const response = await fetch(`${API_URL}/extra-activities/${id}`, {
     method: 'PATCH',
@@ -341,6 +233,7 @@ export const updateExtraActivity = async (id, data) => {
   return response.json();
 };
 
+// 7.4. УДАЛЕНИЕ КРУЖКА
 export const deleteExtraActivity = async (id) => {
   const response = await fetch(`${API_URL}/extra-activities/${id}`, {
     method: 'DELETE',
@@ -350,9 +243,43 @@ export const deleteExtraActivity = async (id) => {
 };
 
 // ============================================================
-// 10. ЗАПРОСЫ НА РЕГИСТРАЦИЮ (ДЛЯ АДМИНКИ)
+// 8. УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ (АДМИНКА)
 // ============================================================
 
+// 8.1. ПОЛУЧЕНИЕ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ
+export const getUsers = async () => {
+  const response = await fetch(`${API_URL}/users`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// 8.2. СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ (АДМИНКА)
+export const createUser = async (userData) => {
+  const response = await fetch(`${API_URL}/users`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(userData)
+  });
+  return response.json();
+};
+
+// 8.3. ИЗМЕНЕНИЕ РОЛИ ПОЛЬЗОВАТЕЛЯ
+export const updateUserRole = async (userId, role) => {
+  const response = await fetch(`${API_URL}/users/${userId}/role`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ role })
+  });
+  return response.json();
+};
+
+// ============================================================
+// 9. ЗАПРОСЫ НА РЕГИСТРАЦИЮ (АДМИНКА)
+// ============================================================
+
+// 9.1. ПОЛУЧЕНИЕ ЗАПРОСОВ
 export const getRegistrationRequests = async () => {
   const response = await fetch(`${API_URL}/registration-requests`, {
     method: 'GET',
@@ -361,6 +288,7 @@ export const getRegistrationRequests = async () => {
   return response.json();
 };
 
+// 9.2. ОДОБРЕНИЕ ЗАПРОСА
 export const approveRegistration = async (userId) => {
   const response = await fetch(`${API_URL}/registration-requests/${userId}/approve`, {
     method: 'PATCH',
@@ -369,6 +297,7 @@ export const approveRegistration = async (userId) => {
   return response.json();
 };
 
+// 9.3. ОТКЛОНЕНИЕ ЗАПРОСА
 export const rejectRegistration = async (userId) => {
   const response = await fetch(`${API_URL}/registration-requests/${userId}/reject`, {
     method: 'PATCH',
@@ -378,7 +307,7 @@ export const rejectRegistration = async (userId) => {
 };
 
 // ============================================================
-// ЭКСПОРТ ВСЕГО ОДНИМ ОБЪЕКТОМ
+// 10. ЭКСПОРТ ВСЕГО ОДНИМ ОБЪЕКТОМ
 // ============================================================
 
 const api = {
@@ -388,30 +317,19 @@ const api = {
   getMe,
   logout,
   
+  // Профиль
+  updateProfile,
+  
   // Пользователи
   getProfiles,
   getParticipants,
-  getParticipantById,
-  updateProfile,
-  getUsers,
-  updateUserRole,
-  createUser,
-  
-  // Клубы
   getClubs,
-  getClubById,
-  createClub,
+  getRegistrations,
   
   // Достижения
   getAchievements,
-  getAchievementsByParticipant,
   addAchievement,
   deleteAchievement,
-  
-  // Мероприятия
-  getEvents,
-  getEventById,
-  createEvent,
   
   // Обращения
   getAppeals,
@@ -419,20 +337,19 @@ const api = {
   replyAppeal,
   closeAppeal,
   
-  // Регистрации
-  getRegistrations,
-  createRegistration,
-  
-  // Согласия
-  getConsents,
-  revokeConsent,
-  revokeAllConsents,
+  // Мероприятия
+  getEvents,
   
   // Кружки
   getExtraActivities,
   addExtraActivity,
   updateExtraActivity,
   deleteExtraActivity,
+  
+  // Управление пользователями
+  getUsers,
+  createUser,
+  updateUserRole,
   
   // Запросы на регистрацию
   getRegistrationRequests,

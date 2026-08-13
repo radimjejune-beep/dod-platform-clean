@@ -11,21 +11,20 @@ import Clubs from './pages/Clubs';
 import Events from './pages/Events';
 import Achievements from './pages/Achievements';
 import MyAchievements from './pages/MyAchievements';
-import ManageAchievements from './pages/ManageAchievements';
 import MyReviews from './pages/MyReviews';
 import Reports from './pages/Reports';
-import Analytics from './pages/DashboardAnalytics';
-import ClubAnalytics from './pages/ClubAnalytics';
-import Settings from './pages/Settings';
-import AdminInvite from './pages/AdminInvite';
-import AdminUsers from './pages/AdminUsers';
-import ImportParticipants from './pages/ImportParticipants';
 import Appeals from './pages/Appeals';
+import AdminUsers from './pages/AdminUsers';
+import AdminInvite from './pages/AdminInvite';
+import ImportParticipants from './pages/ImportParticipants';
+import ManageAchievements from './pages/ManageAchievements';
 import StaffManagement from './pages/StaffManagement';
 import StaffCalendar from './pages/StaffCalendar';
 import PresidentTasks from './pages/PresidentTasks';
-import TutorJournal from './pages/TutorJournal';
 import CalendarPage from './pages/Calendar';
+import Analytics from './pages/Analytics';
+import ClubAnalytics from './pages/ClubAnalytics';
+import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
 import Footer from './components/Footer';
 
@@ -98,14 +97,6 @@ function App() {
               } 
             />
             <Route 
-              path="/manage-achievements" 
-              element={
-                <ProtectedRoute>
-                  <ManageAchievements />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
               path="/my-reviews" 
               element={
                 <ProtectedRoute>
@@ -122,34 +113,10 @@ function App() {
               } 
             />
             <Route 
-              path="/analytics" 
+              path="/appeals" 
               element={
                 <ProtectedRoute>
-                  <Analytics />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/club-analytics" 
-              element={
-                <ProtectedRoute>
-                  <ClubAnalytics />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/settings" 
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin/invite" 
-              element={
-                <ProtectedRoute>
-                  <AdminInvite />
+                  <Appeals />
                 </ProtectedRoute>
               } 
             />
@@ -162,6 +129,14 @@ function App() {
               } 
             />
             <Route 
+              path="/admin/invite" 
+              element={
+                <ProtectedRoute>
+                  <AdminInvite />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/import-participants" 
               element={
                 <ProtectedRoute>
@@ -170,10 +145,10 @@ function App() {
               } 
             />
             <Route 
-              path="/appeals" 
+              path="/manage-achievements" 
               element={
                 <ProtectedRoute>
-                  <Appeals />
+                  <ManageAchievements />
                 </ProtectedRoute>
               } 
             />
@@ -202,18 +177,34 @@ function App() {
               } 
             />
             <Route 
-              path="/my-journal" 
-              element={
-                <ProtectedRoute>
-                  <TutorJournal />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
               path="/calendar" 
               element={
                 <ProtectedRoute>
                   <CalendarPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/analytics" 
+              element={
+                <ProtectedRoute>
+                  <Analytics />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/club-analytics" 
+              element={
+                <ProtectedRoute>
+                  <ClubAnalytics />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings" 
+              element={
+                <ProtectedRoute>
+                  <Settings />
                 </ProtectedRoute>
               } 
             />

@@ -31,20 +31,15 @@ export default function CalendarPage() {
 
       const eventsData = await api.getEvents();
       setEvents(eventsData || []);
-
     } catch (err) {
       console.error('Ошибка:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleDateClick = (date) => {
     setSelectedDate(date);
-    const dayEvents = getEventsForDate(date);
-    if (dayEvents.length > 0) {
-      setSelectedEvent(dayEvents[0]);
-      setShowModal(true);
-    }
   };
 
   const tileContent = ({ date, view }) => {
@@ -60,7 +55,8 @@ export default function CalendarPage() {
             display: 'flex',
             justifyContent: 'center',
             gap: '2px',
-            marginTop: '2px'
+            marginTop: '2px',
+            flexWrap: 'wrap'
           }}>
             {dayEvents.slice(0, 3).map((e, i) => (
               <div key={i} style={{
@@ -115,44 +111,26 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="fade-in" style={{ background: '#F4F6F9', minHeight: '100vh' }}>
+    <div className="page-background">
       <Navigation profile={profile} />
-      
-      <div className="container" style={{ paddingTop: '30px', maxWidth: '1000px', margin: '0 auto', padding: '30px 24px 40px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+      <div className="container-page">
+        <div className="page-header">
+          <span style={{ fontSize: '32px' }}>📅</span>
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0B1F3A' }}>
-              📅 Календарь мероприятий
-            </h1>
-            <p style={{ color: '#667085', fontSize: '14px' }}>
-              Наглядный календарь событий ДОД «Дипломаты будущего»
-            </p>
+            <h1>Календарь мероприятий</h1>
+            <p>Наглядный календарь событий ДОД «Дипломаты будущего»</p>
           </div>
-          <button 
-            className="btn btn-secondary" 
+          <button
+            className="btn-secondary"
+            style={{ marginLeft: 'auto' }}
             onClick={() => navigate('/events')}
-            style={{
-              padding: '10px 24px',
-              background: 'transparent',
-              color: '#0B1F3A',
-              border: '1.5px solid #D5DCE7',
-              borderRadius: '10px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500'
-            }}
           >
             📋 Список
           </button>
         </div>
 
-        <div style={{
-          background: 'white',
-          borderRadius: '16px',
-          padding: '24px',
-          border: '1px solid #E2E7EF',
-          boxShadow: '0 8px 30px rgba(11, 31, 58, 0.06)'
-        }}>
+        {/* КАЛЕНДАРЬ */}
+        <div className="card" style={{ marginBottom: '24px' }}>
           <style>
             {`
               .react-calendar {
@@ -229,7 +207,8 @@ export default function CalendarPage() {
           />
         </div>
 
-        <div style={{ marginTop: '24px' }}>
+        {/* МЕРОПРИЯТИЯ НА ВЫБРАННЫЙ ДЕНЬ */}
+        <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
               📋 {selectedDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -240,62 +219,30 @@ export default function CalendarPage() {
           </div>
 
           {getEventsForDate(selectedDate).length === 0 ? (
-            <div style={{
-              background: '#F8FAFC',
-              borderRadius: '10px',
-              padding: '30px',
-              textAlign: 'center',
-              border: '1px dashed #E2E7EF'
-            }}>
-              <p style={{ color: '#667085', fontSize: '14px' }}>На этот день мероприятий нет</p>
+            <div className="empty-state">
+              <div className="icon">📭</div>
+              <p>На этот день мероприятий нет</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {getEventsForDate(selectedDate).map((event) => (
                 <div
                   key={event.id}
+                  className="list-item"
                   style={{
-                    padding: '16px 20px',
-                    background: '#F8FAFC',
-                    borderRadius: '10px',
-                    borderLeft: `4px solid ${
-                      event.type === 'internal' ? '#174A7E' : 
-                      event.type === 'outgoing' ? '#C9A227' : '#B3262E'
-                    }`,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
+                    borderLeftColor: event.type === 'internal' ? '#174A7E' : 
+                                   event.type === 'outgoing' ? '#C9A227' : '#B3262E'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#F0F2F5'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = '#F8FAFC'}
                   onClick={() => {
                     setSelectedEvent(event);
                     setShowModal(true);
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
-                    <div>
-                      <div style={{ fontWeight: '600', fontSize: '16px', color: '#0B1F3A' }}>
-                        {event.title}
-                      </div>
-                      <div style={{ fontSize: '13px', color: '#667085', marginTop: '2px' }}>
-                        {event.location || 'Место не указано'}
-                        {event.start_time && ` • ⏰ ${event.start_time}`}
-                        {event.club_name && ` • 🏫 ${event.club_name}`}
-                      </div>
-                    </div>
-                    <span style={{
-                      fontSize: '10px',
-                      fontWeight: '600',
-                      padding: '2px 12px',
-                      borderRadius: '20px',
-                      background: event.type === 'internal' ? '#EAF2FA' : 
-                                 event.type === 'outgoing' ? '#FBF4DC' : '#FCEBEC',
-                      color: event.type === 'internal' ? '#174A7E' : 
-                             event.type === 'outgoing' ? '#C9A227' : '#B3262E'
-                    }}>
-                      {event.type === 'internal' ? 'Внутреннее' : 
-                       event.type === 'outgoing' ? 'Выездное' : 'Форум'}
-                    </span>
+                  <div className="title">{event.title}</div>
+                  <div className="subtitle">
+                    📍 {event.location || 'Место не указано'}
+                    {event.start_time && ` • ⏰ ${event.start_time}`}
+                    {event.club_name && ` • 🏫 ${event.club_name}`}
                   </div>
                 </div>
               ))}
@@ -324,31 +271,13 @@ export default function CalendarPage() {
           onClick={() => setShowModal(false)}
         >
           <div
-            style={{
-              background: 'white',
-              borderRadius: '16px',
-              padding: '32px',
-              maxWidth: '500px',
-              width: '100%',
-              maxHeight: '80vh',
-              overflow: 'auto',
-              position: 'relative'
-            }}
+            className="card"
+            style={{ maxWidth: '500px', width: '100%', padding: '32px', maxHeight: '80vh', overflow: 'auto', position: 'relative' }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setShowModal(false)}
-              style={{
-                position: 'absolute',
-                top: '12px',
-                right: '16px',
-                background: 'none',
-                border: 'none',
-                fontSize: '24px',
-                color: '#98A2B3',
-                cursor: 'pointer',
-                transition: 'color 0.2s ease'
-              }}
+              style={{ position: 'absolute', top: '12px', right: '16px', background: 'none', border: 'none', fontSize: '24px', color: '#98A2B3', cursor: 'pointer' }}
               onMouseEnter={(e) => e.target.style.color = '#0B1F3A'}
               onMouseLeave={(e) => e.target.style.color = '#98A2B3'}
             >
@@ -391,13 +320,8 @@ export default function CalendarPage() {
               </p>
             )}
 
-            <div style={{
+            <div className="tag" style={{
               marginTop: '8px',
-              display: 'inline-block',
-              padding: '2px 14px',
-              borderRadius: '20px',
-              fontSize: '12px',
-              fontWeight: '600',
               background: selectedEvent.type === 'internal' ? '#EAF2FA' : 
                          selectedEvent.type === 'outgoing' ? '#FBF4DC' : '#FCEBEC',
               color: selectedEvent.type === 'internal' ? '#174A7E' : 
@@ -425,8 +349,8 @@ export default function CalendarPage() {
             </div>
 
             <button
-              className="btn btn-secondary"
-              style={{ width: '100%', marginTop: '16px', padding: '12px', background: '#F4F6F9', color: '#0B1F3A', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}
+              className="btn-secondary"
+              style={{ width: '100%', marginTop: '16px' }}
               onClick={() => setShowModal(false)}
             >
               Закрыть

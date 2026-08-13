@@ -26,11 +26,41 @@ export default function MyAchievements() {
 
       const achievementsData = await api.getAchievements();
       setAchievements(achievementsData || []);
-
     } catch (err) {
       console.error('Ошибка:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  };
+
+  const getStats = () => {
+    const total = achievements.length;
+    const totalPoints = achievements.reduce((sum, item) => {
+      return sum + (item.points || 0);
+    }, 0);
+    
+    const categories = {};
+    achievements.forEach(item => {
+      const cat = item.category || 'Другое';
+      categories[cat] = (categories[cat] || 0) + 1;
+    });
+
+    return { total, totalPoints, categories };
+  };
+
+  const stats = getStats();
+
+  const getCategoryIcon = (category) => {
+    const icons = {
+      'Участие': '🎯',
+      'Организация': '🤝',
+      'Особое': '⭐',
+      'Спорт': '⚽',
+      'Творчество': '🎨',
+      'Наука': '🔬',
+      'Волонтерство': '❤️'
+    };
+    return icons[category] || '🏅';
   };
 
   if (loading) {
@@ -42,22 +72,108 @@ export default function MyAchievements() {
   }
 
   return (
-    <div style={{ background: '#F4F6F9', minHeight: '100vh' }}>
+    <div className="page-background">
       <Navigation profile={profile} />
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '30px 24px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0B1F3A' }}>🏆 Мои достижения</h1>
+      <div className="container-page">
+        <div className="page-header">
+          <span style={{ fontSize: '32px' }}>🏆</span>
+          <div>
+            <h1>Мои достижения</h1>
+            <p>Все ваши награды и достижения в ДОД «Дипломаты будущего»</p>
+          </div>
+        </div>
+
+        {/* СТАТИСТИКА */}
+        <div className="grid-4" style={{ marginBottom: '20px' }}>
+          <div className="stat-card">
+            <div className="number">{stats.total}</div>
+            <div className="label">Всего достижений</div>
+          </div>
+          <div className="stat-card">
+            <div className="number">{stats.totalPoints}</div>
+            <div className="label">Всего баллов</div>
+          </div>
+          {Object.keys(stats.categories).length > 0 && (
+            <div className="stat-card" style={{ gridColumn: 'span 2' }}>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#0B1F3A', marginBottom: '8px' }}>
+                По категориям:
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+                {Object.entries(stats.categories).map(([category, count]) => (
+                  <span key={category} className="tag tag-blue">
+                    {getCategoryIcon(category)} {category}: {count}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* СПИСОК ДОСТИЖЕНИЙ */}
         {achievements.length === 0 ? (
-          <div style={{ background: 'white', borderRadius: '16px', padding: '40px', textAlign: 'center', border: '1px solid #E2E7EF', marginTop: '20px' }}>
-            <p style={{ color: '#667085' }}>У вас пока нет достижений</p>
+          <div className="empty-state">
+            <div className="icon">🌟</div>
+            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>У вас пока нет достижений</p>
+            <p style={{ color: '#667085' }}>Участвуйте в мероприятиях и получайте награды! 🏆</p>
           </div>
         ) : (
-          achievements.map(a => (
-            <div key={a.id} style={{ background: 'white', borderRadius: '16px', padding: '16px 20px', marginTop: '12px', border: '1px solid #E2E7EF' }}>
-              <h4 style={{ margin: 0 }}>{a.title}</h4>
-              <p style={{ color: '#667085' }}>{a.description}</p>
-              <span style={{ fontSize: '13px', color: '#98A2B3' }}>{a.achievement_date ? new Date(a.achievement_date).toLocaleDateString('ru-RU') : '—'}</span>
-            </div>
-          ))
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {achievements.map((item) => (
+              <div
+                key={item.id}
+                className="card"
+                style={{
+                  borderLeft: `4px solid ${item.color || '#C9A227'}`,
+                  transition: 'transform 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateX(4px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateX(0)'}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                  <div style={{
+                    fontSize: '40px',
+                    width: '56px',
+                    height: '56px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: '#F4F6F9',
+                    borderRadius: '12px',
+                    flexShrink: 0
+                  }}>
+                    {item.icon || '🏅'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                      <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+                        {item.title || 'Достижение'}
+                      </h3>
+                      <span className="tag tag-gold">
+                        +{item.points || 0} баллов
+                      </span>
+                    </div>
+                    {item.description && (
+                      <p style={{ margin: '4px 0 8px 0', fontSize: '14px', color: '#667085' }}>
+                        {item.description}
+                      </p>
+                    )}
+                    <div style={{ display: 'flex', gap: '12px', fontSize: '13px', color: '#98A2B3', flexWrap: 'wrap' }}>
+                      <span>📅 {new Date(item.achievement_date || item.created_at).toLocaleDateString('ru-RU', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}</span>
+                      {item.category && (
+                        <span className="tag tag-blue">
+                          {getCategoryIcon(item.category)} {item.category}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

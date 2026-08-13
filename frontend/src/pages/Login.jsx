@@ -31,19 +31,23 @@ export default function Login() {
         throw new Error(data.error || 'Ошибка входа');
       }
 
-      // ПРОВЕРЯЕМ ТОКЕН ПЕРЕД СОХРАНЕНИЕМ
-      console.log('🔑 Токен до сохранения:', data.token);
-      console.log('🔑 Длина токена:', data.token?.length);
-      console.log('🔑 Тип токена:', typeof data.token);
+      // ===== ИСПРАВЛЕНИЕ ПРОБЛЕМЫ С ТОКЕНОМ =====
+      let cleanToken = data.token;
 
-      // Сохраняем ТОЧНО КАК ЕСТЬ
-      localStorage.setItem('token', data.token);
+      // Если есть запятая - заменяем на точку
+      if (cleanToken && cleanToken.includes(',')) {
+        console.log('⚠️ Нашли запятую! Исправляем...');
+        cleanToken = cleanToken.replace(/,/g, '.');
+        console.log('✅ Исправленный токен:', cleanToken);
+      }
+
+      // Сохраняем ИСПРАВЛЕННЫЙ токен
+      localStorage.setItem('token', cleanToken);
       localStorage.setItem('user', JSON.stringify(data.user));
-      
-      // ПРОВЕРЯЕМ ПОСЛЕ СОХРАНЕНИЯ
+
       const savedToken = localStorage.getItem('token');
-      console.log('🔑 Токен после сохранения:', savedToken);
-      console.log('🔑 Длина после сохранения:', savedToken?.length);
+      console.log('🔑 Токен сохранён:', savedToken);
+      // ===== КОНЕЦ ИСПРАВЛЕНИЯ =====
 
       navigate('/dashboard');
     } catch (err) {

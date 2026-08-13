@@ -737,7 +737,7 @@ app.delete('/api/events/:id', async (req, res) => {
 });
 
 // ============================================================
-// 18. ОБРАЩЕНИЯ - ПОЛУЧЕНИЕ ВСЕХ
+// 18. ОБРАЩЕНИЯ
 // ============================================================
 app.get('/api/appeals', async (req, res) => {
   try {
@@ -780,9 +780,6 @@ app.get('/api/appeals', async (req, res) => {
   }
 });
 
-// ============================================================
-// 19. ОБРАЩЕНИЯ - СОЗДАНИЕ
-// ============================================================
 app.post('/api/appeals', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -832,9 +829,6 @@ app.post('/api/appeals', async (req, res) => {
   }
 });
 
-// ============================================================
-// 20. ОТВЕТ НА ОБРАЩЕНИЕ (ПРОСТАЯ ВЕРСИЯ)
-// ============================================================
 app.post('/api/appeals/:id/reply', async (req, res) => {
   try {
     const { id } = req.params;
@@ -850,7 +844,6 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
-    // Проверка прав
     const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
     if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав для ответа на обращения' });
@@ -860,33 +853,30 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       return res.status(400).json({ error: 'Текст ответа обязателен' });
     }
 
-    // Проверяем, существует ли обращение
-    const appealCheck = await pool.query('SELECT * FROM appeals WHERE id = $1', [id]);
+    const appealCheck = await pool.query('SELECT status FROM appeals WHERE id = $1', [id]);
     if (appealCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Обращение не найдено' });
     }
 
+    const oldStatus = appealCheck.rows[0].status;
     const newStatus = status || 'in_progress';
 
-    // ===== СОХРАНЯЕМ ОТВЕТ =====
     await pool.query(
       `INSERT INTO appeal_replies (appeal_id, author_id, message, created_at)
        VALUES ($1, $2, $3, NOW())`,
       [id, userId, message]
     );
 
-    // ===== ОБНОВЛЯЕМ СТАТУС ОБРАЩЕНИЯ =====
     await pool.query(
       `UPDATE appeals 
        SET status = $1,
            resolved_by = $2,
-           resolved_at = NOW(),
+           resolved_at = CASE WHEN $1 IN ('resolved', 'rejected') THEN NOW() ELSE NULL END,
            updated_at = NOW()
        WHERE id = $3`,
       [newStatus, userId, id]
     );
 
-    // ===== ПОЛУЧАЕМ ОБНОВЛЁННОЕ ОБРАЩЕНИЕ =====
     const result = await pool.query(
       `SELECT a.*, 
               u.full_name as coordinator_name,
@@ -900,22 +890,16 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       [id]
     );
 
-    console.log(`✅ Ответ на обращение ${id} от пользователя ${decoded.email}`);
-
     res.json({
-      success: true,
       message: 'Ответ отправлен',
       appeal: result.rows[0]
     });
   } catch (error) {
-    console.error('❌ Ошибка ответа на обращение:', error);
+    console.error('Ошибка ответа на обращение:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// ============================================================
-// 21. ПОЛУЧЕНИЕ ОТВЕТОВ НА ОБРАЩЕНИЕ
-// ============================================================
 app.get('/api/appeals/:id/replies', async (req, res) => {
   try {
     const { id } = req.params;
@@ -933,13 +917,160 @@ app.get('/api/appeals/:id/replies', async (req, res) => {
 
     res.json(result.rows);
   } catch (error) {
-    console.error('❌ Ошибка получения ответов:', error);
+    console.error('Ошибка получения ответов:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // ============================================================
-// 22. РЕГИСТРАЦИИ
+// 19. ЗАПРОСЫ НА ТЬЮТОРОВ
+// ============================================================
+
+// 19.1 ПОЛУЧЕНИЕ ВСЕХ ЗАПРОСОВ
+app.get('/api/tutor-requests', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    let query = `
+      SELECT tr.*, 
+             u.full_name as requested_by_name,
+             c.name as club_name,
+             r.full_name as reviewed_by_name
+      FROM tutor_requests tr
+      LEFT JOIN users u ON tr.requested_by = u.id
+      LEFT JOIN clubs c ON tr.club_id = c.id
+      LEFT JOIN users r ON tr.reviewed_by = r.id
+    `;
+    const params = [];
+
+    if (userRole === 'club_coordinator') {
+      query += ' WHERE tr.requested_by = $1';
+      params.push(userId);
+    } else if (!['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
+      query += ' WHERE 1 = 0';
+    }
+
+    query += ' ORDER BY tr.created_at DESC';
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Ошибка получения запросов:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 19.2 СОЗДАНИЕ ЗАПРОСА
+app.post('/api/tutor-requests', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    const { tutor_name, tutor_email, tutor_phone, event_date, event_name, event_description, role, responsibilities, notes } = req.body;
+
+    if (!tutor_name || !event_date || !event_name) {
+      return res.status(400).json({ error: 'ФИО тьютора, дата и название мероприятия обязательны' });
+    }
+
+    if (userRole !== 'club_coordinator') {
+      return res.status(403).json({ error: 'Только координаторы КЮДа могут создавать запросы' });
+    }
+
+    let clubId = null;
+    const clubResult = await pool.query(
+      'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+      [userId]
+    );
+    if (clubResult.rows.length > 0) {
+      clubId = clubResult.rows[0].club_id;
+    }
+
+    if (!clubId) {
+      return res.status(400).json({ error: 'Вы не привязаны к КЮДу' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO tutor_requests (
+        club_id, requested_by, tutor_name, tutor_email, tutor_phone,
+        event_date, event_name, event_description, role, responsibilities, notes, status, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', NOW())
+      RETURNING *`,
+      [clubId, userId, tutor_name, tutor_email || '', tutor_phone || '', event_date, event_name, event_description || '', role || 'Тьютор', responsibilities || [], notes || '']
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Ошибка создания запроса:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 19.3 ОБНОВЛЕНИЕ ЗАПРОСА (ОДОБРЕНИЕ/ОТКЛОНЕНИЕ)
+app.patch('/api/tutor-requests/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, comment } = req.body;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для рассмотрения запросов' });
+    }
+
+    if (!status || !['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Статус должен быть "approved" или "rejected"' });
+    }
+
+    const check = await pool.query('SELECT * FROM tutor_requests WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Запрос не найден' });
+    }
+
+    const result = await pool.query(
+      `UPDATE tutor_requests 
+       SET status = $1,
+           reviewed_by = $2,
+           reviewed_at = NOW(),
+           comment = $3,
+           updated_at = NOW()
+       WHERE id = $4
+       RETURNING *`,
+      [status, userId, comment || '', id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Ошибка обновления запроса:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 20. РЕГИСТРАЦИИ
 // ============================================================
 app.get('/api/registrations', async (req, res) => {
   try {
@@ -978,7 +1109,7 @@ app.post('/api/registrations', async (req, res) => {
 });
 
 // ============================================================
-// 23. ТЕСТОВЫЙ ПОЛЬЗОВАТЕЛЬ
+// 21. ТЕСТОВЫЙ ПОЛЬЗОВАТЕЛЬ
 // ============================================================
 app.post('/api/create-test-user', async (req, res) => {
   try {
@@ -1009,7 +1140,7 @@ app.post('/api/create-test-user', async (req, res) => {
 });
 
 // ============================================================
-// 24. ЗАПУСК
+// 22. ЗАПУСК
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Сервер запущен на порту ${PORT}`);

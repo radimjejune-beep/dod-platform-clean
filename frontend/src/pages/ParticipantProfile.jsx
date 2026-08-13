@@ -13,6 +13,7 @@ export default function ParticipantProfile() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('info');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -21,6 +22,7 @@ export default function ParticipantProfile() {
 
   const loadData = async () => {
     try {
+      setError('');
       const userData = await api.getMe();
       if (!userData || !userData.id) {
         navigate('/login');
@@ -28,25 +30,60 @@ export default function ParticipantProfile() {
       }
       setProfile(userData);
 
+      // Загружаем данные участника
       const usersData = await api.getUsers();
       const found = usersData.find(u => u.id === id);
       
       if (!found) {
         setLoading(false);
+        setError('Участник не найден');
         return;
       }
       setParticipant(found);
 
-      const [achievementsData, eventsData] = await Promise.all([
-        api.getAchievements(),
-        api.getEvents()
-      ]);
+      // ===== ЗАГРУЖАЕМ ДОСТИЖЕНИЯ =====
+      const token = localStorage.getItem('token');
+      
+      try {
+        const achievementsResponse = await fetch('https://dod-backend.relaxdev.ru/api/achievements', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (achievementsResponse.ok) {
+          const allAchievements = await achievementsResponse.json();
+          const userAchievements = Array.isArray(allAchievements) 
+            ? allAchievements.filter(a => a.participant_id === id)
+            : [];
+          setAchievements(userAchievements);
+        }
+      } catch (err) {
+        console.error('Ошибка получения достижений:', err);
+      }
 
-      setAchievements(achievementsData.filter(a => a.participant_id === id));
-      setEvents(eventsData.filter(e => e.participant_id === id));
+      // ===== ЗАГРУЖАЕМ МЕРОПРИЯТИЯ =====
+      try {
+        const eventsResponse = await fetch('https://dod-backend.relaxdev.ru/api/events', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (eventsResponse.ok) {
+          const allEvents = await eventsResponse.json();
+          const userEvents = Array.isArray(allEvents)
+            ? allEvents.filter(e => e.participant_id === id)
+            : [];
+          setEvents(userEvents);
+        }
+      } catch (err) {
+        console.error('Ошибка получения мероприятий:', err);
+      }
 
     } catch (err) {
       console.error('Ошибка:', err);
+      setError(err.message || 'Ошибка загрузки данных');
     } finally {
       setLoading(false);
     }
@@ -101,6 +138,23 @@ export default function ParticipantProfile() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="page-background">
+        <Navigation profile={profile} />
+        <div className="container-page">
+          <div className="empty-state">
+            <div className="icon">❌</div>
+            <p style={{ fontSize: '18px', color: '#B3262E' }}>{error}</p>
+            <button className="btn-primary" onClick={() => { setError(''); loadData(); }}>
+              🔄 Попробовать снова
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!canView) {
     return (
       <div className="page-background">
@@ -148,7 +202,6 @@ export default function ParticipantProfile() {
         {/* ШАПКА ПРОФИЛЯ */}
         <div className="card" style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
-            {/* АВАТАР */}
             <div style={{
               width: '100px',
               height: '100px',
@@ -370,12 +423,15 @@ export default function ParticipantProfile() {
               </div>
             )}
 
+            {/* ===== ОБРАЗОВАНИЕ ===== */}
             {participant.education && (
               <>
                 <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginTop: '24px', marginBottom: '16px' }}>
                   📚 Образование
                 </h3>
-                <p style={{ color: '#667085', lineHeight: '1.6' }}>{participant.education}</p>
+                <p style={{ color: '#667085', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                  {participant.education}
+                </p>
               </>
             )}
           </div>
@@ -384,6 +440,9 @@ export default function ParticipantProfile() {
         {/* ===== ВКЛАДКА: ДОСТИЖЕНИЯ ===== */}
         {activeTab === 'achievements' && (
           <div className="card">
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+              🏆 Достижения
+            </h3>
             {achievements.length === 0 ? (
               <p style={{ color: '#667085' }}>Достижений пока нет</p>
             ) : (
@@ -405,6 +464,9 @@ export default function ParticipantProfile() {
         {/* ===== ВКЛАДКА: МЕРОПРИЯТИЯ ===== */}
         {activeTab === 'events' && (
           <div className="card">
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+              📅 Мероприятия
+            </h3>
             {events.length === 0 ? (
               <p style={{ color: '#667085' }}>Мероприятий пока нет</p>
             ) : (
@@ -444,6 +506,7 @@ export default function ParticipantProfile() {
               <p style={{ color: '#98A2B3' }}>Участник пока ничего не рассказал о себе</p>
             )}
 
+            {/* ===== ЛИЧНЫЕ ДОСТИЖЕНИЯ ===== */}
             {participant.achievements && (
               <>
                 <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginTop: '24px', marginBottom: '12px' }}>
@@ -451,6 +514,18 @@ export default function ParticipantProfile() {
                 </h3>
                 <p style={{ color: '#667085', lineHeight: '1.8', whiteSpace: 'pre-wrap' }}>
                   {participant.achievements}
+                </p>
+              </>
+            )}
+
+            {/* ===== ОБРАЗОВАНИЕ (дубль, если не показано) ===== */}
+            {participant.education && !participant.interests && (
+              <>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginTop: '24px', marginBottom: '12px' }}>
+                  📚 Образование
+                </h3>
+                <p style={{ color: '#667085', lineHeight: '1.8', whiteSpace: 'pre-wrap' }}>
+                  {participant.education}
                 </p>
               </>
             )}

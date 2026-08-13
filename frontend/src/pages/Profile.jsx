@@ -13,6 +13,7 @@ export default function Profile() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
   const [activeTab, setActiveTab] = useState('main');
+  const [showConsentModal, setShowConsentModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -72,7 +73,6 @@ export default function Profile() {
         achievements: profile.achievements || '',
         telegram: profile.telegram || '',
         vk: profile.vk || '',
-        // НОВЫЕ ПОЛЯ
         parent_full_name: profile.parent_full_name || '',
         parent_phone: profile.parent_phone || '',
         parent_email: profile.parent_email || '',
@@ -82,8 +82,6 @@ export default function Profile() {
         consent_agreement_date: profile.consent_agreement_date || null,
         charter_acceptance_date: profile.charter_acceptance_date || null
       };
-
-      console.log('📤 Отправка данных:', updateData);
 
       const result = await api.updateProfile(updateData);
 
@@ -111,6 +109,19 @@ export default function Profile() {
     });
   };
 
+  const getConsentStatus = () => {
+    const consents = [
+      { key: 'consent_personal_data', label: 'Персональные данные' },
+      { key: 'consent_photo_publication', label: 'Публикация фото' },
+      { key: 'consent_event_participation', label: 'Участие в мероприятиях' }
+    ];
+    const total = consents.length;
+    const given = consents.filter(c => profile?.[c.key]).length;
+    return { total, given, percentage: Math.round((given / total) * 100) };
+  };
+
+  const consentStatus = getConsentStatus();
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
@@ -120,12 +131,12 @@ export default function Profile() {
   }
 
   const tabs = [
-    { id: 'main', label: '📋 Основное' },
-    { id: 'contacts', label: '📞 Контакты' },
-    { id: 'interests', label: '🎯 Интересы' },
-    { id: 'parents', label: '👨‍👩‍👦 Родители' },
-    { id: 'consents', label: '📝 Согласия' },
-    { id: 'extra', label: '🌟 Дополнительно' },
+    { id: 'main', label: '📋 Основное', icon: '📋' },
+    { id: 'contacts', label: '📞 Контакты', icon: '📞' },
+    { id: 'interests', label: '🎯 Интересы', icon: '🎯' },
+    { id: 'parents', label: '👨‍👩‍👦 Родители', icon: '👨‍👩‍👦' },
+    { id: 'consents', label: '📝 Согласия', icon: '📝' },
+    { id: 'extra', label: '🌟 Дополнительно', icon: '🌟' },
   ];
 
   return (
@@ -147,6 +158,7 @@ export default function Profile() {
         )}
 
         <div className="card">
+          {/* АВАТАР */}
           <div style={{ 
             display: 'flex', 
             justifyContent: 'center', 
@@ -161,6 +173,7 @@ export default function Profile() {
             />
           </div>
 
+          {/* ВКЛАДКИ */}
           <div style={{
             display: 'flex',
             gap: '4px',
@@ -222,6 +235,9 @@ export default function Profile() {
                       value={profile?.birth_date || ''}
                       onChange={handleChange}
                     />
+                    <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                      📅 Дата рождения используется для определения возраста и доступа к мероприятиям
+                    </div>
                   </div>
                   <div className="form-group">
                     <label>Город</label>
@@ -271,7 +287,7 @@ export default function Profile() {
                       placeholder="+7 999 123 45 67"
                     />
                     <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                      Введите номер без скобок
+                      📞 Номер для экстренной связи
                     </div>
                   </div>
                   <div className="form-group">
@@ -283,6 +299,9 @@ export default function Profile() {
                       onChange={handleChange}
                       placeholder="@username"
                     />
+                    <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                      💬 Основной мессенджер для оперативной связи
+                    </div>
                   </div>
                   <div className="form-group">
                     <label>VK</label>
@@ -321,7 +340,7 @@ export default function Profile() {
                     placeholder="Дипломатия, история, иностранные языки, спорт"
                   />
                   <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                    Перечислите интересы через запятую
+                    🎯 Расскажите, что вам интересно — это поможет нам подбирать мероприятия
                   </div>
                 </div>
 
@@ -335,7 +354,7 @@ export default function Profile() {
                     placeholder="Публичные выступления, переговоры, английский язык"
                   />
                   <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                    Перечислите навыки через запятую
+                    💪 Навыки, которыми вы владеете или хотите развить
                   </div>
                 </div>
 
@@ -348,6 +367,9 @@ export default function Profile() {
                     onChange={handleChange}
                     placeholder="Расскажите о себе..."
                   />
+                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                    📝 Эта информация будет видна другим участникам и организаторам
+                  </div>
                 </div>
               </div>
             )}
@@ -355,6 +377,19 @@ export default function Profile() {
             {/* ===== ВКЛАДКА: РОДИТЕЛИ ===== */}
             {activeTab === 'parents' && (
               <div>
+                <div className="info-box" style={{
+                  padding: '12px 16px',
+                  background: '#EAF2FA',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  color: '#174A7E',
+                  marginBottom: '16px'
+                }}>
+                  ℹ️ <strong>Для чего это нужно?</strong><br />
+                  Данные родителя или законного представителя используются для связи в экстренных случаях,
+                  а также для получения согласия на участие в мероприятиях (для участников младше 18 лет).
+                </div>
+
                 <div className="grid-2">
                   <div className="form-group">
                     <label>ФИО родителя/законного представителя</label>
@@ -403,81 +438,161 @@ export default function Profile() {
             {/* ===== ВКЛАДКА: СОГЛАСИЯ ===== */}
             {activeTab === 'consents' && (
               <div>
-                <div className="form-group">
-                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                <div style={{
+                  padding: '12px 16px',
+                  background: '#EAF2FA',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  color: '#174A7E',
+                  marginBottom: '16px'
+                }}>
+                  ℹ️ <strong>Статус согласий:</strong>{' '}
+                  {consentStatus.given} из {consentStatus.total} дано ({consentStatus.percentage}%)
+                  <div style={{
+                    width: '100%',
+                    height: '6px',
+                    background: '#E2E7EF',
+                    borderRadius: '3px',
+                    marginTop: '6px',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      width: `${consentStatus.percentage}%`,
+                      height: '100%',
+                      background: consentStatus.percentage === 100 ? '#16845B' : '#C9A227',
+                      borderRadius: '3px',
+                      transition: 'width 0.5s ease'
+                    }} />
+                  </div>
+                </div>
+
+                {/* СОГЛАСИЕ 1 */}
+                <div className="form-group" style={{
+                  padding: '16px',
+                  border: profile?.consent_personal_data ? '2px solid #16845B' : '1px solid #E2E7EF',
+                  borderRadius: '10px',
+                  background: profile?.consent_personal_data ? '#F6FEF9' : 'transparent',
+                  transition: 'all 0.3s ease'
+                }}>
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
                     <input
                       type="checkbox"
                       name="consent_personal_data"
                       checked={profile?.consent_personal_data || false}
                       onChange={handleChange}
-                      style={{ marginTop: '3px', width: '18px', height: '18px' }}
+                      style={{ marginTop: '3px', width: '18px', height: '18px', flexShrink: 0 }}
                     />
-                    <span>
-                      <strong>Согласие на обработку персональных данных</strong>
-                      <br />
-                      <span style={{ fontSize: '12px', color: '#667085' }}>
-                        В соответствии с Федеральным законом № 152-ФЗ
-                      </span>
-                    </span>
+                    <div>
+                      <strong style={{ color: '#0B1F3A' }}>Согласие на обработку персональных данных</strong>
+                      <div style={{ fontSize: '12px', color: '#667085', marginTop: '4px', lineHeight: '1.5' }}>
+                        <p style={{ margin: '0 0 6px 0' }}>
+                          Я, {'«Дипломаты будущего»'}, даю своё добровольное согласие на обработку моих персональных данных
+                          в соответствии с Федеральным законом от 27.07.2006 № 152-ФЗ «О персональных данных».
+                        </p>
+                        <p style={{ margin: '0', fontSize: '11px', color: '#98A2B3' }}>
+                          ⚖️ <strong>Перечень данных:</strong> ФИО, дата рождения, контактные данные, школа, класс.
+                          <br />
+                          🎯 <strong>Цель:</strong> Организация и проведение мероприятий, ведение реестра участников.
+                          <br />
+                          📋 <strong>Срок:</strong> До достижения целей обработки или отзыва согласия.
+                        </p>
+                      </div>
+                    </div>
                   </label>
                 </div>
 
-                <div className="form-group">
-                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                {/* СОГЛАСИЕ 2 */}
+                <div className="form-group" style={{
+                  padding: '16px',
+                  border: profile?.consent_photo_publication ? '2px solid #16845B' : '1px solid #E2E7EF',
+                  borderRadius: '10px',
+                  background: profile?.consent_photo_publication ? '#F6FEF9' : 'transparent',
+                  transition: 'all 0.3s ease'
+                }}>
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
                     <input
                       type="checkbox"
                       name="consent_photo_publication"
                       checked={profile?.consent_photo_publication || false}
                       onChange={handleChange}
-                      style={{ marginTop: '3px', width: '18px', height: '18px' }}
+                      style={{ marginTop: '3px', width: '18px', height: '18px', flexShrink: 0 }}
                     />
-                    <span>
-                      <strong>Согласие на публикацию фото и видео</strong>
-                      <br />
-                      <span style={{ fontSize: '12px', color: '#667085' }}>
-                        В официальных источниках ДОД «Дипломаты будущего»
-                      </span>
-                    </span>
+                    <div>
+                      <strong style={{ color: '#0B1F3A' }}>Согласие на публикацию фото и видео</strong>
+                      <div style={{ fontSize: '12px', color: '#667085', marginTop: '4px', lineHeight: '1.5' }}>
+                        <p style={{ margin: '0 0 6px 0' }}>
+                          Я даю согласие на использование моих изображений (фото и видео) в официальных источниках
+                          ДОД «Дипломаты будущего»: сайт, социальные сети, печатные материалы.
+                        </p>
+                        <p style={{ margin: '0', fontSize: '11px', color: '#98A2B3' }}>
+                          📸 <strong>Где публикуются:</strong> Официальный сайт, Telegram, ВКонтакте, фотоальбомы.
+                          <br />
+                          📅 <strong>Срок:</strong> Бессрочно до отзыва согласия.
+                        </p>
+                      </div>
+                    </div>
                   </label>
                 </div>
 
-                <div className="form-group">
-                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                {/* СОГЛАСИЕ 3 */}
+                <div className="form-group" style={{
+                  padding: '16px',
+                  border: profile?.consent_event_participation ? '2px solid #16845B' : '1px solid #E2E7EF',
+                  borderRadius: '10px',
+                  background: profile?.consent_event_participation ? '#F6FEF9' : 'transparent',
+                  transition: 'all 0.3s ease'
+                }}>
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
                     <input
                       type="checkbox"
                       name="consent_event_participation"
                       checked={profile?.consent_event_participation || false}
                       onChange={handleChange}
-                      style={{ marginTop: '3px', width: '18px', height: '18px' }}
+                      style={{ marginTop: '3px', width: '18px', height: '18px', flexShrink: 0 }}
                     />
-                    <span>
-                      <strong>Согласие на участие в мероприятиях</strong>
-                      <br />
-                      <span style={{ fontSize: '12px', color: '#667085' }}>
-                        Я ознакомлен(а) с правилами участия в мероприятиях ДОД
-                      </span>
-                    </span>
+                    <div>
+                      <strong style={{ color: '#0B1F3A' }}>Согласие на участие в мероприятиях</strong>
+                      <div style={{ fontSize: '12px', color: '#667085', marginTop: '4px', lineHeight: '1.5' }}>
+                        <p style={{ margin: '0 0 6px 0' }}>
+                          Я подтверждаю, что ознакомлен(а) с правилами участия в мероприятиях ДОД «Дипломаты будущего»
+                          и обязуюсь их соблюдать.
+                        </p>
+                        <p style={{ margin: '0', fontSize: '11px', color: '#98A2B3' }}>
+                          📋 <strong>Основные правила:</strong> Соблюдение дисциплины, уважение к другим участникам,
+                          выполнение решений организаторов.
+                          <br />
+                          ⚠️ <strong>Ответственность:</strong> За нарушение правил участник может быть отстранён от мероприятий.
+                        </p>
+                      </div>
+                    </div>
                   </label>
                 </div>
 
-                <div className="form-group">
-                  <label>Дата подписания согласий</label>
-                  <input
-                    type="date"
-                    name="consent_agreement_date"
-                    value={profile?.consent_agreement_date || ''}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Дата принятия Устава ДОД</label>
-                  <input
-                    type="date"
-                    name="charter_acceptance_date"
-                    value={profile?.charter_acceptance_date || ''}
-                    onChange={handleChange}
-                  />
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label>Дата подписания согласий</label>
+                    <input
+                      type="date"
+                      name="consent_agreement_date"
+                      value={profile?.consent_agreement_date || ''}
+                      onChange={handleChange}
+                    />
+                    <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                      📅 Дата, когда были подписаны согласия
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Дата принятия Устава ДОД</label>
+                    <input
+                      type="date"
+                      name="charter_acceptance_date"
+                      value={profile?.charter_acceptance_date || ''}
+                      onChange={handleChange}
+                    />
+                    <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                      📜 Дата присоединения к Уставу движения
+                    </div>
+                  </div>
                 </div>
 
                 <div style={{
@@ -488,7 +603,11 @@ export default function Profile() {
                   color: '#16845B',
                   marginTop: '8px'
                 }}>
-                  ✅ Все согласия обязательны для участия в деятельности ДОД
+                  ✅ <strong>Все согласия обязательны для участия в деятельности ДОД</strong>
+                  <br />
+                  <span style={{ fontSize: '12px', color: '#0F6B49' }}>
+                    Без подписанных согласий участие в мероприятиях невозможно.
+                  </span>
                 </div>
               </div>
             )}
@@ -505,6 +624,9 @@ export default function Profile() {
                     onChange={handleChange}
                     placeholder="Курсы, кружки, секции..."
                   />
+                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                    📚 Расскажите о своём дополнительном образовании
+                  </div>
                 </div>
                 <div className="form-group">
                   <label>Личные достижения</label>
@@ -515,6 +637,9 @@ export default function Profile() {
                     onChange={handleChange}
                     placeholder="Ваши основные достижения..."
                   />
+                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                    🏆 Достижения, которыми вы гордитесь
+                  </div>
                 </div>
               </div>
             )}

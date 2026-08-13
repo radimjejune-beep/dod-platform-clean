@@ -2093,6 +2093,233 @@ app.post('/api/parent-link-child', async (req, res) => {
 });
 
 // ============================================================
+// МЕРОПРИЯТИЯ КЛУБА
+// ============================================================
+
+// ПОЛУЧЕНИЕ МЕРОПРИЯТИЙ КЛУБА
+app.get('/api/club-events/:clubId', async (req, res) => {
+  try {
+    const { clubId } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    // Проверяем, что пользователь имеет доступ к клубу
+    let query = `
+      SELECT e.*, 
+             u.full_name as proposed_by_name,
+             COUNT(DISTINCT ep.user_id) as current_participants
+      FROM events e
+      LEFT JOIN users u ON e.proposed_by = u.id
+      LEFT JOIN event_participants ep ON e.id = ep.event_id AND ep.status = 'registered'
+      WHERE e.club_id = $1 AND e.is_club_event = true
+    `;
+    const params = [clubId];
+
+    // Фильтрация по ролям
+    if (userRole === 'participant') {
+      query += ` AND (e.status = 'approved' OR e.proposed_by = $2)`;
+      params.push(userId);
+    } else if (userRole === 'tutor') {
+      // Тьютор видит только те мероприятия, куда приглашён
+      query += ` AND (e.status = 'approved' OR e.id IN (
+        SELECT event_id FROM event_tutors WHERE tutor_id = $2
+      ))`;
+      params.push(userId);
+    }
+    // Координатор, админ, президент видят всё
+
+    query += ` GROUP BY e.id, u.full_name ORDER BY e.event_date ASC`;
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Ошибка получения мероприятий клуба:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// СОЗДАНИЕ МЕРОПРИЯТИЯ КЛУБА
+app.post('/api/club-events', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    const {
+      title, description, location, event_date, end_date,
+      start_time, end_time, max_participants, registration_deadline,
+      club_id, is_club_event
+    } = req.body;
+
+    if (!title || !event_date || !club_id) {
+      return res.status(400).json({ error: 'Название, дата и клуб обязательны' });
+    }
+
+    // Определяем статус
+    let status = 'pending';
+    if (['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(userRole)) {
+      status = 'approved';
+    }
+
+    const result = await pool.query(
+      `INSERT INTO events (
+        title, description, location, event_date, end_date,
+        start_time, end_time, max_participants, registration_deadline,
+        club_id, is_club_event, proposed_by, status, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      RETURNING *`,
+      [
+        title, description || '', location || '', event_date, end_date || event_date,
+        start_time || null, end_time || null, max_participants || 20, registration_deadline || null,
+        club_id, is_club_event || false, userId, status, userId
+      ]
+    );
+
+    // Уведомление координатору, если предложил участник
+    if (userRole === 'participant' && status === 'pending') {
+      const club = await pool.query('SELECT coordinator_id FROM clubs WHERE id = $1', [club_id]);
+      if (club.rows.length > 0 && club.rows[0].coordinator_id) {
+        await createNotification(
+          club.rows[0].coordinator_id,
+          'event',
+          '📅 Новое предложение мероприятия',
+          `Участник предложил мероприятие "${title}" в вашем клубе`,
+          `/club/${club_id}`,
+          'high'
+        );
+      }
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Ошибка создания мероприятия клуба:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// МОДЕРАЦИЯ МЕРОПРИЯТИЯ КЛУБА
+app.patch('/api/club-events/:id/moderate', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, comment } = req.body;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+    const userId = decoded.userId;
+
+    // Проверка прав
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для модерации' });
+    }
+
+    const result = await pool.query(
+      `UPDATE events 
+       SET status = $1, moderator_comment = $2, moderated_by = $3, moderated_at = NOW()
+       WHERE id = $4
+       RETURNING *`,
+      [status, comment || null, userId, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    // Уведомление автору
+    const event = result.rows[0];
+    if (event.proposed_by) {
+      await createNotification(
+        event.proposed_by,
+        'event',
+        status === 'approved' ? '✅ Мероприятие одобрено' : '❌ Мероприятие отклонено',
+        `Ваше мероприятие "${event.title}" ${status === 'approved' ? 'одобрено' : 'отклонено'}`,
+        `/club/${event.club_id}`,
+        status === 'approved' ? 'high' : 'normal'
+      );
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Ошибка модерации мероприятия клуба:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ЗАПИСЬ НА МЕРОПРИЯТИЕ
+app.post('/api/club-events/:id/register', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+
+    // Проверяем, что мероприятие существует и одобрено
+    const eventCheck = await pool.query(
+      'SELECT id, max_participants FROM events WHERE id = $1 AND status = \'approved\'',
+      [id]
+    );
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Мероприятие не найдено или не одобрено' });
+    }
+
+    // Проверяем, не записан ли уже
+    const existing = await pool.query(
+      'SELECT id FROM event_participants WHERE event_id = $1 AND user_id = $2',
+      [id, userId]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Вы уже записаны на это мероприятие' });
+    }
+
+    // Проверяем лимит участников
+    const count = await pool.query(
+      'SELECT COUNT(*) FROM event_participants WHERE event_id = $1 AND status = \'registered\'',
+      [id]
+    );
+    const maxParticipants = eventCheck.rows[0].max_participants || 20;
+    if (parseInt(count.rows[0].count) >= maxParticipants) {
+      return res.status(400).json({ error: 'Лимит участников достигнут' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO event_participants (event_id, user_id, status, registered_at)
+       VALUES ($1, $2, 'registered', NOW())
+       RETURNING *`,
+      [id, userId]
+    );
+
+    res.json({ message: 'Вы записаны на мероприятие!', participant: result.rows[0] });
+  } catch (error) {
+    console.error('Ошибка записи на мероприятие:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
 // ЗАПУСК СЕРВЕРА
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {

@@ -425,8 +425,6 @@ app.post('/api/users', async (req, res) => {
         );
         console.log(`✅ Пользователь ${user.full_name} (${user.id}) привязан к клубу ${club_id}`);
       }
-    } else {
-      console.log(`⚠️ Пользователь ${user.full_name} создан без клуба`);
     }
 
     res.status(201).json({
@@ -739,7 +737,7 @@ app.delete('/api/events/:id', async (req, res) => {
 });
 
 // ============================================================
-// 18. ПОЛУЧЕНИЕ ОБРАЩЕНИЙ
+// 18. ОБРАЩЕНИЯ - ПОЛУЧЕНИЕ ВСЕХ
 // ============================================================
 app.get('/api/appeals', async (req, res) => {
   try {
@@ -749,24 +747,15 @@ app.get('/api/appeals', async (req, res) => {
     }
 
     const token = authHeader.split(' ')[1];
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET);
-    } catch (e) {
-      return res.status(401).json({ error: 'Неверный токен' });
-    }
-
-    const userId = decoded.userId;
+    const decoded = jwt.verify(token, JWT_SECRET);
     const userRole = decoded.role;
-
-    console.log(`🔍 Запрос обращений от ${decoded.email} (роль: ${userRole})`);
+    const userId = decoded.userId;
 
     let query = `
       SELECT a.*, 
              u.full_name as coordinator_name,
              c.name as club_name,
-             r.full_name as resolved_by_name,
-             (SELECT COUNT(*) FROM appeal_replies WHERE appeal_id = a.id) as reply_count
+             r.full_name as resolved_by_name
       FROM appeals a
       LEFT JOIN users u ON a.coordinator_id = u.id
       LEFT JOIN clubs c ON a.club_id = c.id
@@ -777,27 +766,22 @@ app.get('/api/appeals', async (req, res) => {
     if (userRole === 'club_coordinator') {
       query += ' WHERE a.coordinator_id = $1';
       params.push(userId);
-      console.log('👤 Координатор КЮДа: только свои');
-    } else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      console.log('👑 Административная роль: все обращения');
-    } else {
-      console.log('🚫 Нет доступа');
+    } else if (!['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
       query += ' WHERE 1 = 0';
     }
 
     query += ' ORDER BY a.created_at DESC';
 
     const result = await pool.query(query, params);
-    console.log(`📨 Найдено обращений: ${result.rows.length}`);
     res.json(result.rows);
   } catch (error) {
-    console.error('❌ Ошибка получения обращений:', error);
+    console.error('Ошибка получения обращений:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // ============================================================
-// 19. СОЗДАНИЕ ОБРАЩЕНИЯ
+// 19. ОБРАЩЕНИЯ - СОЗДАНИЕ
 // ============================================================
 app.post('/api/appeals', async (req, res) => {
   try {
@@ -807,16 +791,11 @@ app.post('/api/appeals', async (req, res) => {
     }
 
     const token = authHeader.split(' ')[1];
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET);
-    } catch (e) {
-      return res.status(401).json({ error: 'Неверный токен' });
-    }
-
-    const { subject, message, priority } = req.body;
+    const decoded = jwt.verify(token, JWT_SECRET);
     const userId = decoded.userId;
     const userRole = decoded.role;
+
+    const { subject, message, priority } = req.body;
 
     if (!subject || !message) {
       return res.status(400).json({ error: 'subject и message обязательны' });
@@ -827,26 +806,16 @@ app.post('/api/appeals', async (req, res) => {
     }
 
     let clubId = null;
-    
     const clubResult = await pool.query(
       'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
       [userId]
     );
-    
     if (clubResult.rows.length > 0) {
       clubId = clubResult.rows[0].club_id;
-    } else {
-      const userResult = await pool.query(
-        'SELECT club_id FROM users WHERE id = $1',
-        [userId]
-      );
-      if (userResult.rows.length > 0 && userResult.rows[0].club_id) {
-        clubId = userResult.rows[0].club_id;
-      }
     }
 
     if (!clubId) {
-      return res.status(400).json({ error: 'Вы не привязаны к КЮДу. Обратитесь к администратору.' });
+      return res.status(400).json({ error: 'Вы не привязаны к КЮДу' });
     }
 
     const result = await pool.query(
@@ -856,35 +825,28 @@ app.post('/api/appeals', async (req, res) => {
       [clubId, userId, subject, message, priority || 'medium']
     );
 
-    console.log(`✅ Обращение создано от ${decoded.email}`);
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('❌ Ошибка создания обращения:', error);
+    console.error('Ошибка создания обращения:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // ============================================================
-// 20. ОТВЕТ НА ОБРАЩЕНИЕ
+// 20. ОБРАЩЕНИЯ - ОТВЕТ
 // ============================================================
 app.post('/api/appeals/:id/reply', async (req, res) => {
   try {
     const { id } = req.params;
     const { message, status } = req.body;
-    
+
     const authHeader = req.headers.authorization;
     if (!authHeader) {
       return res.status(401).json({ error: 'Нет токена' });
     }
 
     const token = authHeader.split(' ')[1];
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET);
-    } catch (e) {
-      return res.status(401).json({ error: 'Неверный токен' });
-    }
-
+    const decoded = jwt.verify(token, JWT_SECRET);
     const userId = decoded.userId;
     const userRole = decoded.role;
 
@@ -897,28 +859,17 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       return res.status(400).json({ error: 'Текст ответа обязателен' });
     }
 
-    const appealResult = await pool.query(
-      'SELECT * FROM appeals WHERE id = $1',
-      [id]
-    );
-
-    if (appealResult.rows.length === 0) {
+    const appealCheck = await pool.query('SELECT status FROM appeals WHERE id = $1', [id]);
+    if (appealCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Обращение не найдено' });
     }
 
-    const appeal = appealResult.rows[0];
-    const oldStatus = appeal.status;
+    const oldStatus = appealCheck.rows[0].status;
+    const newStatus = status || 'in_progress';
 
-    let newStatus = status || 'in_progress';
-    const validStatuses = ['pending', 'in_progress', 'resolved', 'rejected'];
-    if (!validStatuses.includes(newStatus)) {
-      newStatus = 'in_progress';
-    }
-
-    const replyResult = await pool.query(
+    await pool.query(
       `INSERT INTO appeal_replies (appeal_id, author_id, message, status_before, status_after, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
-       RETURNING *`,
+       VALUES ($1, $2, $3, $4, $5, NOW())`,
       [id, userId, message, oldStatus, newStatus]
     );
 
@@ -932,12 +883,11 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       [newStatus, userId, id]
     );
 
-    const updatedAppeal = await pool.query(
+    const result = await pool.query(
       `SELECT a.*, 
               u.full_name as coordinator_name,
               c.name as club_name,
-              r.full_name as resolved_by_name,
-              (SELECT COUNT(*) FROM appeal_replies WHERE appeal_id = a.id) as reply_count
+              r.full_name as resolved_by_name
        FROM appeals a
        LEFT JOIN users u ON a.coordinator_id = u.id
        LEFT JOIN clubs c ON a.club_id = c.id
@@ -946,19 +896,18 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       [id]
     );
 
-    console.log(`✅ Ответ на обращение ${id} от ${decoded.email}, новый статус: ${newStatus}`);
-
     res.json({
-      reply: replyResult.rows[0],
-      appeal: updatedAppeal.rows[0]
+      message: 'Ответ отправлен',
+      appeal: result.rows[0]
     });
   } catch (error) {
-    console.error('❌ Ошибка ответа на обращение:', error);
+    console.error('Ошибка ответа на обращение:', error);
     res.status(500).json({ error: error.message });
   }
 });
+
 // ============================================================
-// 21. ПОЛУЧЕНИЕ ОТВЕТОВ НА ОБРАЩЕНИЕ
+// 21. ОБРАЩЕНИЯ - ПОЛУЧЕНИЕ ОТВЕТОВ
 // ============================================================
 app.get('/api/appeals/:id/replies', async (req, res) => {
   try {
@@ -977,7 +926,7 @@ app.get('/api/appeals/:id/replies', async (req, res) => {
 
     res.json(result.rows);
   } catch (error) {
-    console.error('❌ Ошибка получения ответов:', error);
+    console.error('Ошибка получения ответов:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1022,7 +971,7 @@ app.post('/api/registrations', async (req, res) => {
 });
 
 // ============================================================
-// 23. СОЗДАНИЕ ТЕСТОВОГО ПОЛЬЗОВАТЕЛЯ
+// 23. ТЕСТОВЫЙ ПОЛЬЗОВАТЕЛЬ
 // ============================================================
 app.post('/api/create-test-user', async (req, res) => {
   try {

@@ -11,24 +11,29 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-const JWT_SECRET = 'super-secret-key-for-dod-platform-2024';
+const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dod-platform-2024';
 
 console.log('🚀 ЗАПУСК БЭКЕНДА');
-console.log('🔐 JWT_SECRET:', JWT_SECRET.substring(0, 20) + '...');
 
-// ===== CORS =====
+// ============================================================
+// CORS — ПРАВИЛЬНАЯ НАСТРОЙКА
+// ============================================================
 app.use(cors({
   origin: '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 app.options('*', cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ===== БАЗА ДАННЫХ =====
+// ============================================================
+// БАЗА ДАННЫХ
+// ============================================================
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 pool.connect((err) => {
@@ -42,7 +47,7 @@ pool.connect((err) => {
 // ============================================================
 // 1. ТЕСТ
 // ============================================================
-app.get('/test', (req, res) => {
+app.get('/api/test', (req, res) => {
   res.json({ status: 'ok', message: 'Сервер работает' });
 });
 
@@ -150,7 +155,8 @@ app.post('/api/login', async (req, res) => {
         id: user.id,
         email: user.email,
         full_name: user.full_name,
-        role: user.role
+        role: user.role,
+        avatar_url: user.avatar_url || null
       }
     });
 
@@ -177,7 +183,7 @@ app.get('/api/me', async (req, res) => {
       const result = await pool.query(
         `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
                 u.birth_date, u.is_minor, u.registration_status, u.interests, u.bio, u.city, 
-                u.position, u.status, u.club_id, u.created_at,
+                u.position, u.status, u.club_id, u.created_at, u.avatar_url, u.is_president,
                 c.name as club_name
          FROM users u
          LEFT JOIN clubs c ON u.club_id = c.id
@@ -211,7 +217,7 @@ app.get('/api/me2', async (req, res) => {
     const result = await pool.query(
       `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
               u.birth_date, u.is_minor, u.registration_status, u.interests, u.bio, u.city, 
-              u.position, u.status, u.club_id, u.created_at,
+              u.position, u.status, u.club_id, u.created_at, u.avatar_url, u.is_president,
               c.name as club_name
        FROM users u
        LEFT JOIN clubs c ON u.club_id = c.id
@@ -284,7 +290,7 @@ app.get('/api/users', async (req, res) => {
     const result = await pool.query(
       `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
               u.birth_date, u.is_minor, u.registration_status, u.interests, u.bio, u.city, 
-              u.position, u.status, u.club_id, u.created_at,
+              u.position, u.status, u.club_id, u.created_at, u.avatar_url,
               c.name as club_name
        FROM users u
        LEFT JOIN clubs c ON u.club_id = c.id
@@ -303,7 +309,7 @@ app.get('/api/participants', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school,
-              u.class_name, u.birth_date, u.created_at, u.status,
+              u.class_name, u.birth_date, u.created_at, u.status, u.avatar_url,
               u.club_id, c.name as club_name
        FROM users u
        LEFT JOIN clubs c ON u.club_id = c.id
@@ -336,42 +342,7 @@ app.get('/api/clubs', async (req, res) => {
 });
 
 // ============================================================
-// 10. ОБНОВЛЕНИЕ КЛУБА
-// ============================================================
-app.patch('/api/clubs/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, description, city, school, leader_name, contact_email, contact_phone } = req.body;
-
-    const check = await pool.query('SELECT id FROM clubs WHERE id = $1', [id]);
-    if (check.rows.length === 0) {
-      return res.status(404).json({ error: 'Клуб не найден' });
-    }
-
-    const result = await pool.query(
-      `UPDATE clubs 
-       SET name = COALESCE($1, name),
-           description = COALESCE($2, description),
-           city = COALESCE($3, city),
-           school = COALESCE($4, school),
-           leader_name = COALESCE($5, leader_name),
-           contact_email = COALESCE($6, contact_email),
-           contact_phone = COALESCE($7, contact_phone),
-           updated_at = NOW()
-       WHERE id = $8
-       RETURNING *`,
-      [name, description, city, school, leader_name, contact_email, contact_phone, id]
-    );
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Ошибка обновления клуба:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 11. СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ (ДЛЯ АДМИНОВ)
+// 10. СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ
 // ============================================================
 app.post('/api/users', async (req, res) => {
   try {
@@ -415,7 +386,6 @@ app.post('/api/users', async (req, res) => {
            ON CONFLICT (profile_id, club_id) DO NOTHING`,
           [user.id, club_id]
         );
-        console.log(`✅ Координатор ${user.full_name} (${user.id}) привязан к клубу ${club_id}`);
       } else {
         await pool.query(
           `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
@@ -423,7 +393,6 @@ app.post('/api/users', async (req, res) => {
            ON CONFLICT (profile_id, club_id) DO NOTHING`,
           [user.id, club_id]
         );
-        console.log(`✅ Пользователь ${user.full_name} (${user.id}) привязан к клубу ${club_id}`);
       }
     }
 
@@ -441,7 +410,7 @@ app.post('/api/users', async (req, res) => {
 });
 
 // ============================================================
-// 12. РЕДАКТИРОВАНИЕ ПОЛЬЗОВАТЕЛЯ
+// 11. ОБНОВЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
 // ============================================================
 app.patch('/api/users/:id', async (req, res) => {
   try {
@@ -483,7 +452,6 @@ app.patch('/api/users/:id', async (req, res) => {
            ON CONFLICT (profile_id, club_id) DO NOTHING`,
           [id, club_id]
         );
-        console.log(`✅ Координатор ${user.full_name} обновлён: клуб ${club_id}`);
       } else {
         await pool.query('DELETE FROM club_participants WHERE profile_id = $1', [id]);
         await pool.query(
@@ -493,15 +461,10 @@ app.patch('/api/users/:id', async (req, res) => {
           [id, club_id]
         );
       }
-    } else {
-      await pool.query('UPDATE users SET club_id = NULL WHERE id = $1', [id]);
-      await pool.query('DELETE FROM club_coordinators WHERE profile_id = $1', [id]);
-      await pool.query('DELETE FROM club_participants WHERE profile_id = $1', [id]);
     }
 
     if (oldRole === 'club_coordinator' && role !== 'club_coordinator') {
       await pool.query('DELETE FROM club_coordinators WHERE profile_id = $1', [id]);
-      console.log(`🗑️ Пользователь ${user.full_name} больше не координатор`);
     }
 
     if (oldRole !== 'club_coordinator' && role === 'club_coordinator' && club_id) {
@@ -511,12 +474,11 @@ app.patch('/api/users/:id', async (req, res) => {
          ON CONFLICT (profile_id, club_id) DO NOTHING`,
         [id, club_id]
       );
-      console.log(`✅ Пользователь ${user.full_name} стал координатором клуба ${club_id}`);
     }
 
     const userResult = await pool.query(
       `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
-              u.status, u.position, u.club_id, c.name as club_name
+              u.status, u.position, u.club_id, u.avatar_url, c.name as club_name
        FROM users u
        LEFT JOIN clubs c ON u.club_id = c.id
        WHERE u.id = $1`,
@@ -531,7 +493,7 @@ app.patch('/api/users/:id', async (req, res) => {
 });
 
 // ============================================================
-// 13. УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
+// 12. УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
 // ============================================================
 app.delete('/api/users/:id', async (req, res) => {
   try {
@@ -552,7 +514,7 @@ app.delete('/api/users/:id', async (req, res) => {
 });
 
 // ============================================================
-// 14. ОБНОВЛЕНИЕ РОЛИ
+// 13. ОБНОВЛЕНИЕ РОЛИ
 // ============================================================
 app.patch('/api/users/:id/role', async (req, res) => {
   try {
@@ -579,7 +541,7 @@ app.patch('/api/users/:id/role', async (req, res) => {
 });
 
 // ============================================================
-// 15. ПОЛУЧЕНИЕ КООРДИНАТОРОВ
+// 14. ПОЛУЧЕНИЕ КООРДИНАТОРОВ
 // ============================================================
 app.get('/api/club-coordinators', async (req, res) => {
   try {
@@ -608,7 +570,7 @@ app.get('/api/club-coordinators', async (req, res) => {
 });
 
 // ============================================================
-// 16. ДОСТИЖЕНИЯ
+// 15. ДОСТИЖЕНИЯ
 // ============================================================
 app.get('/api/achievements', async (req, res) => {
   try {
@@ -656,14 +618,18 @@ app.delete('/api/achievements/:id', async (req, res) => {
 });
 
 // ============================================================
-// 17. СОБЫТИЯ
+// 16. СОБЫТИЯ (ЕДИНСТВЕННАЯ ВЕРСИЯ)
 // ============================================================
 app.get('/api/events', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT e.*, c.name as club_name
+      `SELECT e.*, c.name as club_name,
+              u.full_name as created_by_name,
+              u2.full_name as moderated_by_name
        FROM events e
        LEFT JOIN clubs c ON e.club_id = c.id
+       LEFT JOIN users u ON e.created_by = u.id
+       LEFT JOIN users u2 ON e.moderated_by = u2.id
        ORDER BY e.event_date DESC`
     );
     res.json(result.rows);
@@ -672,77 +638,6 @@ app.get('/api/events', async (req, res) => {
   }
 });
 
-// ===== ПОЛУЧЕНИЕ СОБЫТИЙ (С ФИЛЬТРАЦИЕЙ) =====
-app.get('/api/events', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    let query = `
-      SELECT e.*, 
-             c.name as club_name,
-             u.full_name as created_by_name,
-             u2.full_name as moderated_by_name
-      FROM events e
-      LEFT JOIN clubs c ON e.club_id = c.id
-      LEFT JOIN users u ON e.created_by = u.id
-      LEFT JOIN users u2 ON e.moderated_by = u2.id
-    `;
-    const params = [];
-    const whereConditions = [];
-
-    // ============================================================
-    // ЛОГИКА ПО РОЛЯМ
-    // ============================================================
-    if (userRole === 'club_coordinator') {
-      // Координатор КЮДа — видит:
-      // 1. Мероприятия своего клуба (все)
-      // 2. Глобальные мероприятия (одобренные)
-      const clubResult = await pool.query(
-        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
-        [userId]
-      );
-      let clubId = null;
-      if (clubResult.rows.length > 0) {
-        clubId = clubResult.rows[0].club_id;
-      }
-
-      if (clubId) {
-        whereConditions.push(`(e.club_id = $${params.length + 1} OR (e.is_global = true AND e.moderation_status = 'approved'))`);
-        params.push(clubId);
-      } else {
-        whereConditions.push(`(e.is_global = true AND e.moderation_status = 'approved')`);
-      }
-    } else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      // Административные роли — видят все мероприятия
-      // Не добавляем условий
-    } else {
-      // Остальные роли — только одобренные глобальные и мероприятия своего клуба
-      whereConditions.push(`(e.is_global = true AND e.moderation_status = 'approved')`);
-    }
-
-    if (whereConditions.length > 0) {
-      query += ' WHERE ' + whereConditions.join(' AND ');
-    }
-
-    query += ' ORDER BY e.event_date DESC';
-
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Ошибка получения событий:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== СОЗДАНИЕ СОБЫТИЯ =====
 app.post('/api/events', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -761,70 +656,14 @@ app.post('/api/events', async (req, res) => {
       return res.status(400).json({ error: 'title и event_date обязательны' });
     }
 
-    // ===== ОДОБРЕНИЕ/ОТКЛОНЕНИЕ МЕРОПРИЯТИЯ =====
-app.patch('/api/events/:id/moderate', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status, comment } = req.body;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для модерации' });
-    }
-
-    if (!status || !['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ error: 'Статус должен быть "approved" или "rejected"' });
-    }
-
-    const check = await pool.query('SELECT * FROM events WHERE id = $1', [id]);
-    if (check.rows.length === 0) {
-      return res.status(404).json({ error: 'Мероприятие не найдено' });
-    }
-
-    const result = await pool.query(
-      `UPDATE events 
-       SET moderation_status = $1,
-           moderated_by = $2,
-           moderated_at = NOW(),
-           moderation_comment = $3,
-           updated_at = NOW()
-       WHERE id = $4
-       RETURNING *`,
-      [status, userId, comment || '', id]
-    );
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Ошибка модерации:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
     let moderationStatus = 'approved';
     let moderatedBy = null;
     let moderatedAt = null;
     let finalClubId = club_id || null;
 
-    // ============================================================
-    // ЛОГИКА МОДЕРАЦИИ
-    // ============================================================
     if (userRole === 'club_coordinator') {
-      // Координатор КЮДа:
-      // - Если мероприятие глобальное — требуется одобрение
-      // - Если внутреннее — создаётся сразу
       if (is_global) {
         moderationStatus = 'pending';
-        // Находим клуб координатора
         const clubResult = await pool.query(
           'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
           [userId]
@@ -834,7 +673,6 @@ app.patch('/api/events/:id/moderate', async (req, res) => {
         }
       }
     } else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      // Административные роли — сразу одобрено
       moderationStatus = 'approved';
       moderatedBy = userId;
       moderatedAt = new Date();
@@ -902,6 +740,93 @@ app.delete('/api/events/:id', async (req, res) => {
     const { id } = req.params;
     await pool.query('DELETE FROM events WHERE id = $1', [id]);
     res.json({ message: 'Событие удалено' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.patch('/api/events/:id/moderate', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, comment } = req.body;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для модерации' });
+    }
+
+    if (!status || !['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Статус должен быть "approved" или "rejected"' });
+    }
+
+    const check = await pool.query('SELECT * FROM events WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    const result = await pool.query(
+      `UPDATE events 
+       SET moderation_status = $1,
+           moderated_by = $2,
+           moderated_at = NOW(),
+           moderation_comment = $3,
+           updated_at = NOW()
+       WHERE id = $4
+       RETURNING *`,
+      [status, userId, comment || '', id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Ошибка модерации:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 17. РЕГИСТРАЦИИ
+// ============================================================
+app.get('/api/registrations', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT r.*, u.full_name as user_name, e.title as event_title
+       FROM registrations r
+       LEFT JOIN users u ON r.user_id = u.id
+       LEFT JOIN events e ON r.event_id = e.id
+       ORDER BY r.registered_at DESC`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/registrations', async (req, res) => {
+  try {
+    const { user_id, event_id } = req.body;
+
+    if (!user_id || !event_id) {
+      return res.status(400).json({ error: 'user_id и event_id обязательны' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO registrations (user_id, event_id, status, registered_at)
+       VALUES ($1, $2, 'pending', NOW())
+       RETURNING *`,
+      [user_id, event_id]
+    );
+
+    res.json(result.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -1096,8 +1021,6 @@ app.get('/api/appeals/:id/replies', async (req, res) => {
 // ============================================================
 // 19. ЗАПРОСЫ НА ТЬЮТОРОВ
 // ============================================================
-
-// 19.1 ПОЛУЧЕНИЕ ВСЕХ ЗАПРОСОВ
 app.get('/api/tutor-requests', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -1139,7 +1062,6 @@ app.get('/api/tutor-requests', async (req, res) => {
   }
 });
 
-// 19.2 СОЗДАНИЕ ЗАПРОСА
 app.post('/api/tutor-requests', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -1191,7 +1113,6 @@ app.post('/api/tutor-requests', async (req, res) => {
   }
 });
 
-// 19.3 ОБНОВЛЕНИЕ ЗАПРОСА (ОДОБРЕНИЕ/ОТКЛОНЕНИЕ)
 app.patch('/api/tutor-requests/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1241,139 +1162,7 @@ app.patch('/api/tutor-requests/:id', async (req, res) => {
 });
 
 // ============================================================
-// 20. РЕГИСТРАЦИИ
-// ============================================================
-app.get('/api/registrations', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT r.*, u.full_name as user_name, e.title as event_title
-       FROM registrations r
-       LEFT JOIN users u ON r.user_id = u.id
-       LEFT JOIN events e ON r.event_id = e.id
-       ORDER BY r.registered_at DESC`
-    );
-    res.json(result.rows);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/registrations', async (req, res) => {
-  try {
-    const { user_id, event_id } = req.body;
-
-    if (!user_id || !event_id) {
-      return res.status(400).json({ error: 'user_id и event_id обязательны' });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO registrations (user_id, event_id, status, registered_at)
-       VALUES ($1, $2, 'pending', NOW())
-       RETURNING *`,
-      [user_id, event_id]
-    );
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== ОБНОВЛЕНИЕ СОБЫТИЯ =====
-app.patch('/api/events/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { title, description, location, event_date, end_date, start_time, end_time, type, capacity, club_id, form_url } = req.body;
-
-    const result = await pool.query(
-      `UPDATE events 
-       SET title = COALESCE($1, title),
-           description = COALESCE($2, description),
-           location = COALESCE($3, location),
-           event_date = COALESCE($4, event_date),
-           end_date = COALESCE($5, end_date),
-           start_time = COALESCE($6, start_time),
-           end_time = COALESCE($7, end_time),
-           type = COALESCE($8, type),
-           capacity = COALESCE($9, capacity),
-           club_id = COALESCE($10, club_id),
-           form_url = COALESCE($11, form_url),
-           updated_at = NOW()
-       WHERE id = $12
-       RETURNING *`,
-      [title, description, location, event_date, end_date, start_time, end_time, type, capacity, club_id, form_url, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Событие не найдено' });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Ошибка обновления события:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== УДАЛЕНИЕ СОБЫТИЯ =====
-app.delete('/api/events/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await pool.query('DELETE FROM events WHERE id = $1', [id]);
-    res.json({ message: 'Событие удалено' });
-  } catch (error) {
-    console.error('Ошибка удаления события:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 21. ТЕСТОВЫЙ ПОЛЬЗОВАТЕЛЬ
-// ============================================================
-app.post('/api/create-test-user', async (req, res) => {
-  try {
-    const email = 'newadmin@dod.ru';
-    const password = '123456';
-    const full_name = 'Новый Администратор';
-    const role = 'admin';
-
-    await pool.query('DELETE FROM users WHERE email = $1', [email]);
-    console.log('🗑️ Старый пользователь удалён');
-
-    const password_hash = await bcrypt.hash(password, 10);
-
-    const result = await pool.query(
-      `INSERT INTO users (email, password_hash, full_name, role, birth_date, registration_status)
-       VALUES ($1, $2, $3, $4, '2000-01-01', 'active')
-       RETURNING id, email, full_name, role, registration_status`,
-      [email, password_hash, full_name, role]
-    );
-
-    console.log('✅ Тестовый пользователь создан');
-    res.json({ message: 'Пользователь создан!', user: result.rows[0] });
-
-  } catch (error) {
-    console.error('❌ Ошибка:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 22. ЗАПУСК
-// ============================================================
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Сервер запущен на порту ${PORT}`);
-  console.log(`🔐 JWT_SECRET: установлен`);
-  console.log(`📝 Создать тестового пользователя: POST /api/create-test-user`);
-  console.log(`👤 Тестовый пользователь: newadmin@dod.ru / 123456`);
-});
-
-// ============================================================
-// ДОБАВИТЬ В server.js ПОСЛЕ ВСЕХ СУЩЕСТВУЮЩИХ ЭНДПОИНТОВ
-// ============================================================
-
-// ============================================================
-// 23. АВАТАР ПОЛЬЗОВАТЕЛЯ
+// 20. АВАТАР
 // ============================================================
 app.post('/api/upload-avatar', async (req, res) => {
   try {
@@ -1418,8 +1207,27 @@ app.post('/api/upload-avatar', async (req, res) => {
   }
 });
 
+app.get('/api/avatar/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const result = await pool.query(
+      'SELECT avatar_url FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    res.json({ avatar_url: result.rows[0].avatar_url });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ============================================================
-// 24. ИСТОРИЯ МЕРОПРИЯТИЙ УЧАСТНИКА
+// 21. ИСТОРИЯ УЧАСТНИКА
 // ============================================================
 app.get('/api/participant-events/:userId', async (req, res) => {
   try {
@@ -1448,9 +1256,6 @@ app.get('/api/participant-events/:userId', async (req, res) => {
   }
 });
 
-// ============================================================
-// 25. СТАТИСТИКА УЧАСТНИКА (уровень, прогресс)
-// ============================================================
 app.get('/api/participant-stats/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -1502,7 +1307,7 @@ app.get('/api/participant-stats/:userId', async (req, res) => {
 });
 
 // ============================================================
-// 26. ПРИВЯЗКА ДЕТЕЙ К РОДИТЕЛЮ
+// 22. ДЕТИ РОДИТЕЛЯ
 // ============================================================
 app.get('/api/parent-children', async (req, res) => {
   try {
@@ -1615,7 +1420,7 @@ app.delete('/api/parent-children/:childId', async (req, res) => {
 });
 
 // ============================================================
-// 27. АКТИВНОСТЬ РЕБЁНКА (TIMELINE)
+// 23. TIMELINE РЕБЁНКА
 // ============================================================
 app.get('/api/child-timeline/:childId', async (req, res) => {
   try {
@@ -1665,7 +1470,7 @@ app.get('/api/child-timeline/:childId', async (req, res) => {
 });
 
 // ============================================================
-// 28. ОБЪЯВЛЕНИЯ ДЛЯ КЛУБА
+// 24. ОБЪЯВЛЕНИЯ
 // ============================================================
 app.post('/api/announcements', async (req, res) => {
   try {
@@ -1745,7 +1550,7 @@ app.delete('/api/announcements/:id', async (req, res) => {
 });
 
 // ============================================================
-// 29. ШАБЛОНЫ ОТЧЁТОВ
+// 25. ШАБЛОНЫ ОТЧЁТОВ
 // ============================================================
 app.get('/api/report-templates', async (req, res) => {
   try {
@@ -1842,7 +1647,7 @@ app.delete('/api/report-templates/:id', async (req, res) => {
 });
 
 // ============================================================
-// 30. ПРЕЗИДЕНТ КЛУБА
+// 26. ПРЕЗИДЕНТ КЛУБА
 // ============================================================
 app.patch('/api/clubs/:clubId/president', async (req, res) => {
   try {
@@ -1940,7 +1745,7 @@ app.get('/api/clubs/:clubId/president', async (req, res) => {
 });
 
 // ============================================================
-// 31. РЕЙТИНГ УЧАСТНИКОВ КЛУБА
+// 27. РЕЙТИНГ УЧАСТНИКОВ КЛУБА
 // ============================================================
 app.get('/api/club-rating/:clubId', async (req, res) => {
   try {
@@ -1980,13 +1785,44 @@ app.get('/api/club-rating/:clubId', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-const result = await pool.query(
-  `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
-          u.birth_date, u.is_minor, u.registration_status, u.interests, u.bio, u.city, 
-          u.position, u.status, u.club_id, u.created_at, u.avatar_url, u.is_president,
-          c.name as club_name
-   FROM users u
-   LEFT JOIN clubs c ON u.club_id = c.id
-   WHERE u.id = $1`,
-  [decoded.userId]
-);
+
+// ============================================================
+// 28. СОЗДАНИЕ ТЕСТОВОГО ПОЛЬЗОВАТЕЛЯ
+// ============================================================
+app.post('/api/create-test-user', async (req, res) => {
+  try {
+    const email = 'newadmin@dod.ru';
+    const password = '123456';
+    const full_name = 'Новый Администратор';
+    const role = 'admin';
+
+    await pool.query('DELETE FROM users WHERE email = $1', [email]);
+    console.log('🗑️ Старый пользователь удалён');
+
+    const password_hash = await bcrypt.hash(password, 10);
+
+    const result = await pool.query(
+      `INSERT INTO users (email, password_hash, full_name, role, birth_date, registration_status)
+       VALUES ($1, $2, $3, $4, '2000-01-01', 'active')
+       RETURNING id, email, full_name, role, registration_status`,
+      [email, password_hash, full_name, role]
+    );
+
+    console.log('✅ Тестовый пользователь создан');
+    res.json({ message: 'Пользователь создан!', user: result.rows[0] });
+
+  } catch (error) {
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// ЗАПУСК СЕРВЕРА — ТОЛЬКО ОДИН РАЗ, В САМОМ КОНЦЕ!
+// ============================================================
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Сервер запущен на порту ${PORT}`);
+  console.log(`🔐 JWT_SECRET: установлен`);
+  console.log(`📝 Создать тестового пользователя: POST /api/create-test-user`);
+  console.log(`👤 Тестовый пользователь: newadmin@dod.ru / 123456`);
+});

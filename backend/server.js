@@ -2175,7 +2175,10 @@ app.post('/api/notifications', async (req, res) => {
 app.get('/api/news', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT * FROM news ORDER BY created_at DESC`
+      `SELECT n.*, u.full_name as author_name
+       FROM news n
+       LEFT JOIN users u ON n.created_by = u.id
+       ORDER BY n.created_at DESC`
     );
     res.json(result.rows);
   } catch (error) {
@@ -2212,9 +2215,10 @@ app.post('/api/news', async (req, res) => {
       [title, content, image_url || null, decoded.userId]
     );
 
+    console.log('✅ Создана новость:', result.rows[0].title);
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Ошибка создания новости:', error);
+    console.error('❌ Ошибка создания новости:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -2253,9 +2257,10 @@ app.put('/api/news/:id', async (req, res) => {
       return res.status(404).json({ error: 'Новость не найдена' });
     }
 
+    console.log('✅ Обновлена новость:', result.rows[0].title);
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Ошибка обновления новости:', error);
+    console.error('❌ Ошибка обновления новости:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -2278,9 +2283,10 @@ app.delete('/api/news/:id', async (req, res) => {
     const { id } = req.params;
     await pool.query('DELETE FROM news WHERE id = $1', [id]);
 
+    console.log('🗑️ Удалена новость:', id);
     res.json({ message: 'Новость удалена' });
   } catch (error) {
-    console.error('Ошибка удаления новости:', error);
+    console.error('❌ Ошибка удаления новости:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -2310,26 +2316,185 @@ app.post('/api/upload-news-image', async (req, res) => {
       return res.status(400).json({ error: 'Неверный формат изображения' });
     }
 
-    // Сохраняем как есть (base64) или можно сохранить на диск
-    // Здесь сохраняем как есть в поле image_url
-    
-    // В реальном проекте лучше сохранять на диск и возвращать URL
-    // Для простоты сохраняем base64 напрямую
-    
-    // Генерируем уникальное имя
-    const filename = `news_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.jpg`;
-    // Здесь можно сохранить файл на диск
-    
-    // Возвращаем URL (пока что возвращаем base64, но в продакшене лучше сохранять на диск)
+    // Сохраняем как есть (base64)
+    console.log('✅ Загружено изображение для новости');
     res.json({ 
       image_url: image_base64,
       message: 'Изображение загружено' 
     });
   } catch (error) {
-    console.error('Ошибка загрузки изображения:', error);
+    console.error('❌ Ошибка загрузки изображения:', error);
     res.status(500).json({ error: error.message });
   }
 });
+
+// ============================================================
+// НОВОСТИ
+// ============================================================
+
+// ПОЛУЧЕНИЕ ВСЕХ НОВОСТЕЙ
+app.get('/api/news', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT n.*, u.full_name as author_name
+       FROM news n
+       LEFT JOIN users u ON n.created_by = u.id
+       ORDER BY n.created_at DESC`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Ошибка получения новостей:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// СОЗДАНИЕ НОВОСТИ
+app.post('/api/news', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Только админ и координатор движения могут создавать новости
+    if (!['admin', 'movement_coordinator'].includes(decoded.role)) {
+      return res.status(403).json({ error: 'У вас нет прав' });
+    }
+
+    const { title, content, image_url } = req.body;
+
+    if (!title || !content) {
+      return res.status(400).json({ error: 'title и content обязательны' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO news (title, content, image_url, created_by, created_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       RETURNING *`,
+      [title.trim(), content.trim(), image_url || null, decoded.userId]
+    );
+
+    console.log('✅ Создана новость:', result.rows[0].title);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания новости:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ОБНОВЛЕНИЕ НОВОСТИ
+app.put('/api/news/:id', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    if (!['admin', 'movement_coordinator'].includes(decoded.role)) {
+      return res.status(403).json({ error: 'У вас нет прав' });
+    }
+
+    const { id } = req.params;
+    const { title, content, image_url } = req.body;
+
+    if (!title || !content) {
+      return res.status(400).json({ error: 'title и content обязательны' });
+    }
+
+    const result = await pool.query(
+      `UPDATE news 
+       SET title = $1, content = $2, image_url = $3, updated_at = NOW()
+       WHERE id = $4
+       RETURNING *`,
+      [title.trim(), content.trim(), image_url || null, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Новость не найдена' });
+    }
+
+    console.log('✅ Обновлена новость:', result.rows[0].title);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка обновления новости:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// УДАЛЕНИЕ НОВОСТИ
+app.delete('/api/news/:id', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    if (!['admin', 'movement_coordinator'].includes(decoded.role)) {
+      return res.status(403).json({ error: 'У вас нет прав' });
+    }
+
+    const { id } = req.params;
+    const result = await pool.query('DELETE FROM news WHERE id = $1 RETURNING id', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Новость не найдена' });
+    }
+
+    console.log('🗑️ Удалена новость:', id);
+    res.json({ message: 'Новость удалена' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления новости:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ЗАГРУЗКА ИЗОБРАЖЕНИЯ ДЛЯ НОВОСТИ
+app.post('/api/upload-news-image', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    if (!['admin', 'movement_coordinator'].includes(decoded.role)) {
+      return res.status(403).json({ error: 'У вас нет прав' });
+    }
+
+    const { image_base64 } = req.body;
+
+    if (!image_base64) {
+      return res.status(400).json({ error: 'Нет данных изображения' });
+    }
+
+    if (!image_base64.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'Неверный формат изображения' });
+    }
+
+    // Возвращаем base64 как есть (для простоты)
+    console.log('✅ Загружено изображение для новости');
+    res.json({ 
+      image_url: image_base64,
+      message: 'Изображение загружено' 
+    });
+  } catch (error) {
+    console.error('❌ Ошибка загрузки изображения:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+console.log('✅ Эндпоинты новостей загружены');
 
 // ============================================================
 // ЗАПУСК СЕРВЕРА

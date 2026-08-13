@@ -25,7 +25,6 @@ import CalendarPage from './pages/Calendar';
 import Analytics from './pages/Analytics';
 import ClubAnalytics from './pages/ClubAnalytics';
 import Settings from './pages/Settings';
-// ===== НОВЫЕ СТРАНИЦЫ =====
 import ParticipantDashboard from './pages/ParticipantDashboard';
 import ParentDashboard from './pages/ParentDashboard';
 import ClubCoordinatorDashboard from './pages/ClubCoordinatorDashboard';

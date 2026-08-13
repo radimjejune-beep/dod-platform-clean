@@ -37,6 +37,11 @@ export default function Login() {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
+      // ===== СОЗДАЁМ СЕССИЮ =====
+      sessionStorage.setItem('sessionId', Date.now().toString());
+      sessionStorage.setItem('userId', data.user.id);
+      sessionStorage.setItem('userRole', data.user.role);
+
       // ===== ПЕРЕНАПРАВЛЕНИЕ В ЗАВИСИМОСТИ ОТ РОЛИ =====
       const userRole = data.user.role;
       console.log('👤 Роль пользователя:', userRole);

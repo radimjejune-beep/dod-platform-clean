@@ -32,6 +32,8 @@ const routeRoles = {
   '/president-tasks': ['admin', 'movement_coordinator', 'club_coordinator', 'participant'],
   '/my-journal': ['tutor'],
   '/calendar': ['all'],
+  '/tutor-requests': ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'],
+  '/tutor-invitations': ['tutor', 'admin', 'movement_coordinator', 'president', 'vice_president'],
 };
 
 // ===== КАКАЯ СТРАНИЦА ДЛЯ КАЖДОЙ РОЛИ ПО УМОЛЧАНИЮ =====
@@ -55,6 +57,39 @@ export default function ProtectedRoute({ children }) {
 
   useEffect(() => {
     checkAuth();
+    
+    // ===== СЛУШАЕМ ЗАКРЫТИЕ ВКЛАДКИ =====
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Вкладка свернута или закрыта — ничего не делаем
+      } else {
+        // Вкладка снова активна — проверяем, есть ли сессия
+        const sessionId = sessionStorage.getItem('sessionId');
+        const token = localStorage.getItem('token');
+        
+        if (token && sessionId) {
+          // Проверяем, что сессия ещё активна
+          checkAuth();
+        } else {
+          // Сессии нет — выходим
+          logout();
+        }
+      }
+    };
+
+    // ===== СЛУШАЕМ ЗАКРЫТИЕ БРАУЗЕРА =====
+    const handleBeforeUnload = () => {
+      // При закрытии вкладки удаляем сессию
+      sessionStorage.removeItem('sessionId');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
 
   const checkAuth = async () => {
@@ -97,6 +132,12 @@ export default function ProtectedRoute({ children }) {
       console.log('👤 Пользователь:', user);
       
       if (user && user.id) {
+        // ===== СОЗДАЁМ СЕССИЮ =====
+        const sessionId = Date.now().toString();
+        sessionStorage.setItem('sessionId', sessionId);
+        sessionStorage.setItem('userId', user.id);
+        sessionStorage.setItem('userRole', user.role);
+        
         localStorage.setItem('user', JSON.stringify(user));
         setIsAuthenticated(true);
         setUserRole(user.role);
@@ -105,7 +146,6 @@ export default function ProtectedRoute({ children }) {
         console.log('📍 Текущий путь:', currentPath);
         console.log('👤 Роль пользователя:', user.role);
         
-        // ===== ПРОВЕРКА ДОСТУПА =====
         const allowedRoles = routeRoles[currentPath] || ['all'];
         console.log('✅ Разрешённые роли:', allowedRoles);
         
@@ -115,26 +155,29 @@ export default function ProtectedRoute({ children }) {
         } else {
           console.log('❌ Доступ запрещён');
           setHasAccess(false);
-          
-          // ===== ПЕРЕНАПРАВЛЕНИЕ НА СТРАНИЦУ ПО РОЛИ =====
           const defaultRoute = defaultRouteByRole[user.role] || '/dashboard';
-          console.log('🔄 Перенаправление на:', defaultRoute);
           setRedirectPath(defaultRoute);
         }
       } else {
         console.log('❌ Пользователь не найден');
-        setIsAuthenticated(false);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        logout();
       }
     } catch (err) {
       console.error('❌ Ошибка проверки авторизации:', err);
-      setIsAuthenticated(false);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      logout();
     } finally {
       setLoading(false);
     }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('sessionId');
+    sessionStorage.removeItem('userId');
+    sessionStorage.removeItem('userRole');
+    setIsAuthenticated(false);
+    setLoading(false);
   };
 
   if (loading) {

@@ -1836,6 +1836,141 @@ app.post('/api/create-test-user', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// ============================================================
+// 29. УВЕДОМЛЕНИЯ
+// ============================================================
+
+// ПОЛУЧЕНИЕ УВЕДОМЛЕНИЙ
+app.get('/api/notifications', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    // Получаем уведомления для пользователя
+    // Сначала системные (для всех), потом персональные
+    const result = await pool.query(
+      `SELECT n.*
+       FROM notifications n
+       WHERE n.user_id = $1 
+          OR (n.user_id IS NULL AND n.role = $2)
+          OR (n.user_id IS NULL AND n.role = 'all')
+       ORDER BY n.created_at DESC
+       LIMIT 50`,
+      [userId, userRole]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Ошибка получения уведомлений:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ОТМЕТИТЬ КАК ПРОЧИТАННОЕ
+app.patch('/api/notifications/:id/read', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+
+    // Проверяем, что уведомление принадлежит пользователю
+    const check = await pool.query(
+      'SELECT user_id FROM notifications WHERE id = $1',
+      [id]
+    );
+    
+    if (check.rows.length > 0) {
+      const ownerId = check.rows[0].user_id;
+      if (ownerId && ownerId !== userId) {
+        return res.status(403).json({ error: 'У вас нет прав' });
+      }
+    }
+
+    await pool.query(
+      'UPDATE notifications SET read = true, read_at = NOW() WHERE id = $1',
+      [id]
+    );
+
+    res.json({ message: 'Уведомление отмечено как прочитанное' });
+  } catch (error) {
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ОТМЕТИТЬ ВСЕ КАК ПРОЧИТАННЫЕ
+app.patch('/api/notifications/read-all', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+
+    await pool.query(
+      'UPDATE notifications SET read = true, read_at = NOW() WHERE user_id = $1 AND read = false',
+      [userId]
+    );
+
+    res.json({ message: 'Все уведомления отмечены как прочитанные' });
+  } catch (error) {
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// СОЗДАНИЕ УВЕДОМЛЕНИЯ (ДЛЯ АДМИНОВ)
+app.post('/api/notifications', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    // Только админ или координатор движения может создавать уведомления
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав' });
+    }
+
+    const { user_id, role, type, title, message, link, priority = 'normal' } = req.body;
+
+    if (!title || !message) {
+      return res.status(400).json({ error: 'title и message обязательны' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO notifications (user_id, role, type, title, message, link, priority, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+       RETURNING *`,
+      [user_id || null, role || null, type || 'system', title, message, link || null, priority]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Ошибка создания уведомления:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // ============================================================
 // ЗАПУСК СЕРВЕРА

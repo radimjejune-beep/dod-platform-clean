@@ -1,7 +1,8 @@
 // frontend/src/components/Navigation.jsx
 
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import Notifications from './Notifications';
 
 export default function Navigation({ profile }) {
   const location = useLocation();
@@ -207,7 +208,10 @@ export default function Navigation({ profile }) {
 
         {/* ПРАВАЯ ЧАСТЬ */}
         <div className="nav-compact-right">
-          {/* ПРОФИЛЬ */}
+          {/* ===== УВЕДОМЛЕНИЯ ===== */}
+          <Notifications profile={profile} />
+          
+          {/* ===== ПРОФИЛЬ ===== */}
           <Link to="/profile" className="nav-compact-profile">
             {getAvatar()}
             <span className="nav-compact-name">
@@ -215,12 +219,12 @@ export default function Navigation({ profile }) {
             </span>
           </Link>
 
-          {/* ВЫХОД */}
+          {/* ===== ВЫХОД ===== */}
           <button className="nav-compact-logout" onClick={handleLogout} title="Выйти">
             🚪
           </button>
 
-          {/* БУРГЕР */}
+          {/* ===== БУРГЕР (МОБИЛЬНАЯ ВЕРСИЯ) ===== */}
           <button 
             className="nav-compact-burger" 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -230,7 +234,7 @@ export default function Navigation({ profile }) {
         </div>
       </div>
 
-      {/* МОБИЛЬНОЕ МЕНЮ */}
+      {/* ===== МОБИЛЬНОЕ МЕНЮ ===== */}
       {isMobileMenuOpen && (
         <div className="nav-compact-mobile">
           {Object.entries(menuGroups).map(([key, items]) => {
@@ -256,7 +260,7 @@ export default function Navigation({ profile }) {
         </div>
       )}
 
-      {/* СТИЛИ */}
+      {/* ===== СТИЛИ ===== */}
       <style>{`
         /* ===== КОМПАКТНАЯ НАВИГАЦИЯ ===== */
         .nav-compact {
@@ -511,15 +515,6 @@ export default function Navigation({ profile }) {
           background: white;
           padding: 12px 16px;
           box-shadow: 0 8px 30px rgba(11, 31, 58, 0.1);
-        }
-
-        .nav-compact-mobile-group-title {
-          font-size: 11px;
-          font-weight: 600;
-          color: #98A2B3;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          padding: 4px 8px;
         }
 
         .nav-compact-mobile-item {

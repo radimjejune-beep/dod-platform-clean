@@ -40,9 +40,13 @@ export default function Profile() {
     setMessageType('success');
 
     try {
+      // ===== ОЧИЩАЕМ ТЕЛЕФОН ОТ ЛИШНИХ СИМВОЛОВ =====
+      let phone = profile.phone || '';
+      phone = phone.replace(/[^0-9+]/g, ''); // Оставляем только цифры и +
+
       const updateData = {
-        full_name: profile.full_name,
-        phone: profile.phone || '',
+        full_name: profile.full_name.trim(),
+        phone: phone,
         school: profile.school || '',
         class_name: profile.class_name || '',
         interests: profile.interests || '',
@@ -132,8 +136,11 @@ export default function Profile() {
                   name="phone"
                   value={profile?.phone || ''}
                   onChange={handleChange}
-                  placeholder="+7 (XXX) XXX-XX-XX"
+                  placeholder="+7 999 123 45 67"
                 />
+                <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                  Введите номер без скобок, например: +7 999 123 45 67
+                </div>
               </div>
               <div className="form-group">
                 <label>Город</label>

@@ -51,7 +51,7 @@ app.get('/test', (req, res) => {
 // ============================================================
 app.post('/api/register', async (req, res) => {
   try {
-    const { email, password, full_name, role, phone, school, class_name, birth_date } = req.body;
+    const { email, password, full_name, role, phone, school, class_name, birth_date, club_id } = req.body;
 
     if (!email || !password || !full_name || !birth_date) {
       return res.status(400).json({ error: 'Email, пароль, ФИО и дата рождения обязательны' });
@@ -65,15 +65,31 @@ app.post('/api/register', async (req, res) => {
     const password_hash = await bcrypt.hash(password, 10);
 
     const result = await pool.query(
-      `INSERT INTO users (email, password_hash, full_name, role, phone, school, class_name, birth_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO users (email, password_hash, full_name, role, phone, school, class_name, birth_date, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active')
        RETURNING id, email, full_name, role`,
       [email, password_hash, full_name, role || 'participant', phone || '', school || '', class_name || '', birth_date]
     );
 
+    const user = result.rows[0];
+
+    if (club_id) {
+      await pool.query(
+        `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
+         VALUES ($1, $2, 'active', NOW())`,
+        [user.id, club_id]
+      );
+      await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, user.id]);
+    }
+
     res.status(201).json({
       message: 'Регистрация успешна!',
-      user: result.rows[0]
+      user: {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role
+      }
     });
 
   } catch (error) {
@@ -90,10 +106,15 @@ app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     console.log('🔐 Вход:', email);
 
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email и пароль обязательны' });
+    }
+
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     const user = result.rows[0];
 
     if (!user) {
+      console.log('❌ Пользователь не найден:', email);
       return res.status(401).json({ error: 'Неверный email или пароль' });
     }
 
@@ -106,16 +127,22 @@ app.post('/api/login', async (req, res) => {
 
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
+      console.log('❌ Неверный пароль для:', email);
       return res.status(401).json({ error: 'Неверный email или пароль' });
     }
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role, full_name: user.full_name },
+      {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        full_name: user.full_name
+      },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    console.log('✅ Вход выполнен:', email);
+    console.log('✅ Успешный вход:', email);
 
     res.json({
       token,
@@ -144,23 +171,32 @@ app.get('/api/me', async (req, res) => {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
 
-    const result = await pool.query(
-      `SELECT id, email, full_name, role, phone, school, class_name,
-              birth_date, is_minor, registration_status, interests, bio, city, created_at
-       FROM users WHERE id = $1`,
-      [decoded.userId]
-    );
+      const result = await pool.query(
+        `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
+                u.birth_date, u.is_minor, u.registration_status, u.interests, u.bio, u.city, 
+                u.position, u.status, u.club_id, u.created_at,
+                c.name as club_name
+         FROM users u
+         LEFT JOIN clubs c ON u.club_id = c.id
+         WHERE u.id = $1`,
+        [decoded.userId]
+      );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Пользователь не найден' });
+      }
+
+      res.json(result.rows[0]);
+    } catch (jwtError) {
+      console.error('❌ Ошибка JWT:', jwtError.message);
+      return res.status(401).json({ error: 'Неверный токен' });
     }
 
-    res.json(result.rows[0]);
-
   } catch (error) {
-    console.error('Ошибка /api/me:', error);
+    console.error('❌ Ошибка /api/me:', error);
     res.status(401).json({ error: 'Неверный токен' });
   }
 });
@@ -173,16 +209,22 @@ app.get('/api/me2', async (req, res) => {
   
   try {
     const result = await pool.query(
-      `SELECT id, email, full_name, role, phone, school, class_name,
-              birth_date, is_minor, registration_status, interests, bio, city, created_at
-       FROM users WHERE email = $1`,
+      `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
+              u.birth_date, u.is_minor, u.registration_status, u.interests, u.bio, u.city, 
+              u.position, u.status, u.club_id, u.created_at,
+              c.name as club_name
+       FROM users u
+       LEFT JOIN clubs c ON u.club_id = c.id
+       WHERE u.email = $1`,
       ['newadmin@dod.ru']
     );
     
     if (result.rows.length === 0) {
+      console.log('❌ Пользователь не найден');
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
     
+    console.log('✅ Пользователь найден через /api/me2 (запасной):', result.rows[0].email);
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка /api/me2:', error.message);
@@ -203,7 +245,7 @@ app.patch('/api/profile', async (req, res) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    const { full_name, phone, school, class_name, interests, bio, city } = req.body;
+    const { full_name, phone, school, class_name, interests, bio, city, position } = req.body;
 
     console.log('📥 Обновление профиля для:', decoded.email);
 
@@ -215,10 +257,11 @@ app.patch('/api/profile', async (req, res) => {
            class_name = COALESCE($4, class_name),
            interests = COALESCE($5, interests),
            bio = COALESCE($6, bio),
-           city = COALESCE($7, city)
-       WHERE id = $8
-       RETURNING id, email, full_name, role, phone, school, class_name, interests, bio, city`,
-      [full_name, phone, school, class_name, interests, bio, city, decoded.userId]
+           city = COALESCE($7, city),
+           position = COALESCE($8, position)
+       WHERE id = $9
+       RETURNING id, email, full_name, role, phone, school, class_name, interests, bio, city, position`,
+      [full_name, phone, school, class_name, interests, bio, city, position, decoded.userId]
     );
 
     if (result.rows.length === 0) {
@@ -239,8 +282,13 @@ app.patch('/api/profile', async (req, res) => {
 app.get('/api/users', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, email, full_name, role, phone, school, class_name, created_at
-       FROM users ORDER BY created_at DESC`
+      `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
+              u.birth_date, u.is_minor, u.registration_status, u.interests, u.bio, u.city, 
+              u.position, u.status, u.club_id, u.created_at,
+              c.name as club_name
+       FROM users u
+       LEFT JOIN clubs c ON u.club_id = c.id
+       ORDER BY u.created_at DESC`
     );
     res.json(result.rows);
   } catch (error) {
@@ -255,11 +303,10 @@ app.get('/api/participants', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school,
-              u.class_name, u.birth_date, u.created_at,
-              cp.club_id, c.name as club_name
+              u.class_name, u.birth_date, u.created_at, u.status,
+              u.club_id, c.name as club_name
        FROM users u
-       LEFT JOIN club_participants cp ON u.id = cp.profile_id AND cp.status = 'active'
-       LEFT JOIN clubs c ON cp.club_id = c.id
+       LEFT JOIN clubs c ON u.club_id = c.id
        WHERE u.role = 'participant'
        ORDER BY u.full_name`
     );
@@ -275,7 +322,12 @@ app.get('/api/participants', async (req, res) => {
 app.get('/api/clubs', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT * FROM clubs ORDER BY name`
+      `SELECT c.*, 
+              COUNT(DISTINCT cp.profile_id) as participants_count
+       FROM clubs c
+       LEFT JOIN club_participants cp ON c.id = cp.club_id AND cp.status = 'active'
+       GROUP BY c.id
+       ORDER BY c.name`
     );
     res.json(result.rows);
   } catch (error) {
@@ -284,7 +336,42 @@ app.get('/api/clubs', async (req, res) => {
 });
 
 // ============================================================
-// 10. СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ (ДЛЯ АДМИНОВ)
+// 10. ОБНОВЛЕНИЕ КЛУБА
+// ============================================================
+app.patch('/api/clubs/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, city, school, leader_name, contact_email, contact_phone } = req.body;
+
+    const check = await pool.query('SELECT id FROM clubs WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Клуб не найден' });
+    }
+
+    const result = await pool.query(
+      `UPDATE clubs 
+       SET name = COALESCE($1, name),
+           description = COALESCE($2, description),
+           city = COALESCE($3, city),
+           school = COALESCE($4, school),
+           leader_name = COALESCE($5, leader_name),
+           contact_email = COALESCE($6, contact_email),
+           contact_phone = COALESCE($7, contact_phone),
+           updated_at = NOW()
+       WHERE id = $8
+       RETURNING *`,
+      [name, description, city, school, leader_name, contact_email, contact_phone, id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Ошибка обновления клуба:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 11. СОЗДАНИЕ НОВОГО ПОЛЬЗОВАТЕЛЯ (ДЛЯ АДМИНОВ)
 // ============================================================
 app.post('/api/users', async (req, res) => {
   try {
@@ -310,20 +397,39 @@ app.post('/api/users', async (req, res) => {
     const password_hash = await bcrypt.hash(generatedPassword, 10);
 
     const result = await pool.query(
-      `INSERT INTO users (email, password_hash, full_name, role, phone, school, class_name)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO users (email, password_hash, full_name, role, phone, school, class_name, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')
        RETURNING id, email, full_name, role`,
       [email, password_hash, full_name, role || 'participant', phone || '', school || '', class_name || '']
     );
 
     const user = result.rows[0];
 
+    // ============================================================
+    // ПРИВЯЗКА К КЛУБУ ДЛЯ ЛЮБОЙ РОЛИ
+    // ============================================================
     if (club_id) {
-      await pool.query(
-        `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
-         VALUES ($1, $2, 'active', NOW())`,
-        [user.id, club_id]
-      );
+      // Обновляем club_id в users
+      await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, user.id]);
+
+      // Если роль = координатор КЮДа — добавляем в club_coordinators
+      if (role === 'club_coordinator') {
+        await pool.query(
+          `INSERT INTO club_coordinators (profile_id, club_id, created_at)
+           VALUES ($1, $2, NOW())
+           ON CONFLICT (profile_id, club_id) DO NOTHING`,
+          [user.id, club_id]
+        );
+        console.log(`✅ Координатор ${user.full_name} привязан к клубу ${club_id}`);
+      } else {
+        // Обычный участник — добавляем в club_participants
+        await pool.query(
+          `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
+           VALUES ($1, $2, 'active', NOW())
+           ON CONFLICT (profile_id, club_id) DO NOTHING`,
+          [user.id, club_id]
+        );
+      }
     }
 
     res.status(201).json({
@@ -340,7 +446,132 @@ app.post('/api/users', async (req, res) => {
 });
 
 // ============================================================
-// 11. ОБНОВЛЕНИЕ РОЛИ ПОЛЬЗОВАТЕЛЯ
+// 12. РЕДАКТИРОВАНИЕ ПОЛЬЗОВАТЕЛЯ (ДЛЯ АДМИНОВ)
+// ============================================================
+app.patch('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { full_name, role, phone, school, class_name, club_id, status, position } = req.body;
+
+    // Проверяем, существует ли пользователь
+    const check = await pool.query('SELECT id, role FROM users WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    const oldRole = check.rows[0].role;
+
+    // Обновляем пользователя
+    const result = await pool.query(
+      `UPDATE users 
+       SET full_name = COALESCE($1, full_name),
+           role = COALESCE($2, role),
+           phone = COALESCE($3, phone),
+           school = COALESCE($4, school),
+           class_name = COALESCE($5, class_name),
+           status = COALESCE($6, status),
+           position = COALESCE($7, position),
+           club_id = COALESCE($8, club_id)
+       WHERE id = $9
+       RETURNING id, email, full_name, role, phone, school, class_name, status, position, club_id`,
+      [full_name, role, phone, school, class_name, status, position, club_id, id]
+    );
+
+    const user = result.rows[0];
+
+    // ============================================================
+    // ОБНОВЛЕНИЕ ПРИВЯЗКИ К КЛУБУ
+    // ============================================================
+    if (club_id) {
+      // Обновляем club_id в users
+      await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, id]);
+
+      // Если роль = координатор КЮДа — обновляем club_coordinators
+      if (role === 'club_coordinator') {
+        // Удаляем старую привязку, если есть
+        await pool.query('DELETE FROM club_coordinators WHERE profile_id = $1', [id]);
+        // Добавляем новую
+        await pool.query(
+          `INSERT INTO club_coordinators (profile_id, club_id, created_at)
+           VALUES ($1, $2, NOW())
+           ON CONFLICT (profile_id, club_id) DO NOTHING`,
+          [id, club_id]
+        );
+        console.log(`✅ Координатор ${user.full_name} обновлён: клуб ${club_id}`);
+      } else {
+        // Обычный участник — обновляем club_participants
+        await pool.query('DELETE FROM club_participants WHERE profile_id = $1', [id]);
+        await pool.query(
+          `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
+           VALUES ($1, $2, 'active', NOW())
+           ON CONFLICT (profile_id, club_id) DO NOTHING`,
+          [id, club_id]
+        );
+      }
+    } else {
+      // Если club_id = null — удаляем все привязки
+      await pool.query('UPDATE users SET club_id = NULL WHERE id = $1', [id]);
+      await pool.query('DELETE FROM club_coordinators WHERE profile_id = $1', [id]);
+      await pool.query('DELETE FROM club_participants WHERE profile_id = $1', [id]);
+    }
+
+    // Если роль изменилась с club_coordinator на другую — удаляем из club_coordinators
+    if (oldRole === 'club_coordinator' && role !== 'club_coordinator') {
+      await pool.query('DELETE FROM club_coordinators WHERE profile_id = $1', [id]);
+      console.log(`🗑️ Пользователь ${user.full_name} больше не координатор`);
+    }
+
+    // Если роль изменилась на club_coordinator — добавляем в club_coordinators
+    if (oldRole !== 'club_coordinator' && role === 'club_coordinator' && club_id) {
+      await pool.query(
+        `INSERT INTO club_coordinators (profile_id, club_id, created_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (profile_id, club_id) DO NOTHING`,
+        [id, club_id]
+      );
+      console.log(`✅ Пользователь ${user.full_name} стал координатором клуба ${club_id}`);
+    }
+
+    // Получаем обновлённого пользователя с названием клуба
+    const userResult = await pool.query(
+      `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
+              u.status, u.position, u.club_id, c.name as club_name
+       FROM users u
+       LEFT JOIN clubs c ON u.club_id = c.id
+       WHERE u.id = $1`,
+      [id]
+    );
+
+    res.json(userResult.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка редактирования пользователя:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 13. УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
+// ============================================================
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const check = await pool.query('SELECT id FROM users WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    await pool.query('DELETE FROM users WHERE id = $1', [id]);
+
+    res.json({ message: 'Пользователь удалён' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления пользователя:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 14. ОБНОВЛЕНИЕ РОЛИ ПОЛЬЗОВАТЕЛЯ
 // ============================================================
 app.patch('/api/users/:id/role', async (req, res) => {
   try {
@@ -367,7 +598,36 @@ app.patch('/api/users/:id/role', async (req, res) => {
 });
 
 // ============================================================
-// 12. ДОСТИЖЕНИЯ
+// 15. ПОЛУЧЕНИЕ КООРДИНАТОРОВ КЛУБОВ
+// ============================================================
+app.get('/api/club-coordinators', async (req, res) => {
+  try {
+    const { profile_id } = req.query;
+    let query = `
+      SELECT cc.*, 
+             u.full_name as user_name,
+             c.name as club_name
+      FROM club_coordinators cc
+      LEFT JOIN users u ON cc.profile_id = u.id
+      LEFT JOIN clubs c ON cc.club_id = c.id
+    `;
+    const params = [];
+    
+    if (profile_id) {
+      query += ' WHERE cc.profile_id = $1';
+      params.push(profile_id);
+    }
+    
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Ошибка получения координаторов:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 16. ДОСТИЖЕНИЯ
 // ============================================================
 app.get('/api/achievements', async (req, res) => {
   try {
@@ -415,7 +675,7 @@ app.delete('/api/achievements/:id', async (req, res) => {
 });
 
 // ============================================================
-// 13. СОБЫТИЯ
+// 17. СОБЫТИЯ
 // ============================================================
 app.get('/api/events', async (req, res) => {
   try {
@@ -496,7 +756,7 @@ app.delete('/api/events/:id', async (req, res) => {
 });
 
 // ============================================================
-// 14. ОБРАЩЕНИЯ
+// 18. ОБРАЩЕНИЯ
 // ============================================================
 app.get('/api/appeals', async (req, res) => {
   try {
@@ -531,7 +791,7 @@ app.post('/api/appeals', async (req, res) => {
 });
 
 // ============================================================
-// 15. РЕГИСТРАЦИИ
+// 19. РЕГИСТРАЦИИ
 // ============================================================
 app.get('/api/registrations', async (req, res) => {
   try {
@@ -570,7 +830,7 @@ app.post('/api/registrations', async (req, res) => {
 });
 
 // ============================================================
-// 16. СОЗДАНИЕ ТЕСТОВОГО ПОЛЬЗОВАТЕЛЯ
+// 20. СОЗДАНИЕ ТЕСТОВОГО ПОЛЬЗОВАТЕЛЯ
 // ============================================================
 app.post('/api/create-test-user', async (req, res) => {
   try {
@@ -601,10 +861,11 @@ app.post('/api/create-test-user', async (req, res) => {
 });
 
 // ============================================================
-// 17. ЗАПУСК
+// 21. ЗАПУСК
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Сервер запущен на порту ${PORT}`);
   console.log(`🔐 JWT_SECRET: установлен`);
+  console.log(`📝 Создать тестового пользователя: POST /api/create-test-user`);
   console.log(`👤 Тестовый пользователь: newadmin@dod.ru / 123456`);
 });

@@ -1,7 +1,7 @@
 // frontend/src/pages/Register.jsx
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -13,7 +13,7 @@ export default function Register() {
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
-  const handleRegister = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -49,7 +49,7 @@ export default function Register() {
       }
 
       setSuccess(true);
-      setTimeout(() => navigate('/login'), 3000);
+      setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -59,12 +59,11 @@ export default function Register() {
 
   return (
     <div style={{ maxWidth: '400px', margin: '50px auto', padding: '30px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
-      <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>📝 Регистрация</h2>
+      <h2 style={{ textAlign: 'center' }}>📝 Регистрация</h2>
       {error && <p style={{ color: 'red', textAlign: 'center' }}>❌ {error}</p>}
       {success && <p style={{ color: 'green', textAlign: 'center' }}>✅ Регистрация успешна! Перенаправление...</p>}
-      
       {!success && (
-        <form onSubmit={handleRegister}>
+        <form onSubmit={handleSubmit}>
           <input
             type="text"
             value={fullName}
@@ -100,15 +99,18 @@ export default function Register() {
             <option value="tutor">📚 Тьютор</option>
             <option value="movement_coordinator">⭐ Координатор движения</option>
           </select>
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             style={{ width: '100%', padding: '12px', background: loading ? '#999' : '#0B1F3A', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', cursor: 'pointer' }}
           >
-            {loading ? 'Загрузка...' : 'Зарегистрироваться'}
+            {loading ? 'Регистрация...' : 'Зарегистрироваться'}
           </button>
         </form>
       )}
+      <p style={{ textAlign: 'center', marginTop: '15px' }}>
+        Уже есть аккаунт? <Link to="/login">Войти</Link>
+      </p>
     </div>
   );
 }

@@ -12,11 +12,19 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchUser = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
       try {
         const data = await api.getMe();
         if (data && data.id) {
           setUser(data);
         } else {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
           navigate('/login');
         }
       } catch (err) {
@@ -26,6 +34,7 @@ export default function Dashboard() {
         setLoading(false);
       }
     };
+
     fetchUser();
   }, [navigate]);
 
@@ -33,13 +42,17 @@ export default function Dashboard() {
     return <div style={{ textAlign: 'center', padding: '50px' }}>Загрузка...</div>;
   }
 
+  if (!user) {
+    return null;
+  }
+
   return (
     <div>
       <Navigation profile={user} />
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px' }}>
-        <h1>👋 Добро пожаловать, {user?.full_name}!</h1>
-        <p>Email: {user?.email}</p>
-        <p>Роль: {user?.role}</p>
+        <h1>👋 Добро пожаловать, {user.full_name}!</h1>
+        <p>Email: {user.email}</p>
+        <p>Роль: {user.role}</p>
         <button
           onClick={() => {
             localStorage.removeItem('token');

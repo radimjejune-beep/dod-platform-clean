@@ -28,6 +28,12 @@ export default function AdminUsers() {
   const [filters, setFilters] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   
+  // ===== ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ =====
+  const [showParentChildModal, setShowParentChildModal] = useState(false);
+  const [parentChildForm, setParentChildForm] = useState({ parent_id: '', child_id: '' });
+  const [availableParents, setAvailableParents] = useState([]);
+  const [availableChildren, setAvailableChildren] = useState([]);
+  
   const [form, setForm] = useState({
     full_name: '',
     email: '',
@@ -68,6 +74,12 @@ export default function AdminUsers() {
       setClubs(clubsData || []);
       setAllUsers(usersData || []);
       setUsers(usersData || []);
+      
+      // ===== ДЛЯ ПРИВЯЗКИ РЕБЁНКА =====
+      const parents = usersData.filter(u => u.role === 'parent');
+      const children = usersData.filter(u => u.role === 'participant');
+      setAvailableParents(parents);
+      setAvailableChildren(children);
     } catch (err) {
       console.error('Ошибка:', err);
     } finally {
@@ -172,7 +184,7 @@ export default function AdminUsers() {
 
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  // ===== УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ (ТОЛЬКО ДЛЯ АДМИНА) =====
+  // ===== УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ =====
   const handleDeleteUser = async (userId, fullName) => {
     if (!isAdmin) {
       setMessage('❌ У вас нет прав для удаления пользователей');
@@ -193,6 +205,32 @@ export default function AdminUsers() {
       const usersData = await api.getUsers();
       setAllUsers(usersData || []);
       setUsers(usersData || []);
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
+
+  // ===== ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ =====
+  const handleAddParentChild = async () => {
+    if (!parentChildForm.parent_id || !parentChildForm.child_id) {
+      setMessage('❌ Выберите родителя и ребёнка');
+      setMessageType('error');
+      return;
+    }
+
+    try {
+      const result = await api.addParentChild({
+        parent_id: parentChildForm.parent_id,
+        child_id: parentChildForm.child_id
+      });
+      if (result.error) throw new Error(result.error);
+      setMessage('✅ Ребёнок привязан к родителю!');
+      setMessageType('success');
+      setShowParentChildModal(false);
+      setParentChildForm({ parent_id: '', child_id: '' });
+      loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
@@ -511,8 +549,15 @@ export default function AdminUsers() {
             <h1>Управление пользователями</h1>
             <p>Всего: {filteredUsers.length}</p>
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button className="btn-secondary" onClick={() => setShowImportModal(!showImportModal)}>📥 Импорт</button>
+            <button
+              className="btn-primary"
+              style={{ background: '#6B46C1' }}
+              onClick={() => setShowParentChildModal(true)}
+            >
+              👨‍👩‍👦 Привязать ребёнка
+            </button>
             {canCreate && (
               <button className="btn-primary" onClick={() => { 
                 setShowCreateUser(!showCreateUser); 
@@ -788,6 +833,61 @@ export default function AdminUsers() {
           </div>
         )}
 
+        {/* ============================================================
+            МОДАЛЬНОЕ ОКНО: ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ
+            ============================================================ */}
+        {showParentChildModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(11, 31, 58, 0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }} onClick={() => setShowParentChildModal(false)}>
+            <div className="card" style={{ maxWidth: '500px', width: '100%', padding: '32px' }} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>👨‍👩‍👦 Привязка ребёнка к родителю</h3>
+              <p style={{ fontSize: '13px', color: '#667085', marginBottom: '16px' }}>
+                Выберите родителя и ребёнка для привязки. После привязки родитель сможет видеть профиль ребёнка.
+              </p>
+              <div className="form-group">
+                <label>Родитель</label>
+                <select
+                  value={parentChildForm.parent_id}
+                  onChange={(e) => setParentChildForm({ ...parentChildForm, parent_id: e.target.value })}
+                >
+                  <option value="">Выберите родителя</option>
+                  {availableParents.map(p => (
+                    <option key={p.id} value={p.id}>{p.full_name} ({p.email})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Ребёнок</label>
+                <select
+                  value={parentChildForm.child_id}
+                  onChange={(e) => setParentChildForm({ ...parentChildForm, child_id: e.target.value })}
+                >
+                  <option value="">Выберите ребёнка</option>
+                  {availableChildren.map(c => (
+                    <option key={c.id} value={c.id}>{c.full_name} ({c.class_name || 'Класс не указан'})</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button className="btn-success" onClick={handleAddParentChild}>✅ Привязать</button>
+                <button className="btn-secondary" onClick={() => setShowParentChildModal(false)}>❌ Отмена</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ===== ТАБЛИЦА ПОЛЬЗОВАТЕЛЕЙ ===== */}
         <div className="table-wrapper">
           <table>
@@ -830,7 +930,6 @@ export default function AdminUsers() {
                         >
                           👁️
                         </button>
-                        {/* ===== КНОПКА УДАЛЕНИЯ (ТОЛЬКО ДЛЯ АДМИНА) ===== */}
                         {isAdmin && u.id !== profile?.id && (
                           <button
                             style={{

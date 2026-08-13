@@ -405,9 +405,6 @@ app.post('/api/users', async (req, res) => {
 
     const user = result.rows[0];
 
-    // ============================================================
-    // ПРИВЯЗКА К КЛУБУ ДЛЯ ЛЮБОЙ РОЛИ
-    // ============================================================
     if (club_id) {
       await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, user.id]);
 
@@ -418,7 +415,7 @@ app.post('/api/users', async (req, res) => {
            ON CONFLICT (profile_id, club_id) DO NOTHING`,
           [user.id, club_id]
         );
-        console.log(`✅ Координатор ${user.full_name} привязан к клубу ${club_id}`);
+        console.log(`✅ Координатор ${user.full_name} (${user.id}) привязан к клубу ${club_id}`);
       } else {
         await pool.query(
           `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
@@ -426,7 +423,10 @@ app.post('/api/users', async (req, res) => {
            ON CONFLICT (profile_id, club_id) DO NOTHING`,
           [user.id, club_id]
         );
+        console.log(`✅ Пользователь ${user.full_name} (${user.id}) привязан к клубу ${club_id} как участник`);
       }
+    } else {
+      console.log(`⚠️ Пользователь ${user.full_name} создан без клуба`);
     }
 
     res.status(201).json({
@@ -474,9 +474,6 @@ app.patch('/api/users/:id', async (req, res) => {
 
     const user = result.rows[0];
 
-    // ============================================================
-    // ОБНОВЛЕНИЕ ПРИВЯЗКИ К КЛУБУ
-    // ============================================================
     if (club_id) {
       await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, id]);
 
@@ -829,15 +826,36 @@ app.post('/api/appeals', async (req, res) => {
       return res.status(403).json({ error: 'Только координаторы КЮДа могут создавать обращения' });
     }
 
-    const clubResult = await pool.query(
+    // Получаем клуб координатора из club_coordinators
+    let clubResult = await pool.query(
       'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
       [userId]
     );
 
+    console.log(`🔍 Поиск клуба для координатора ${userId}`);
+    console.log(`📊 Результат club_coordinators:`, clubResult.rows);
+
     let clubId = null;
     if (clubResult.rows.length > 0) {
       clubId = clubResult.rows[0].club_id;
+    } else {
+      // Если в club_coordinators нет — пробуем взять из users
+      const userResult = await pool.query(
+        'SELECT club_id FROM users WHERE id = $1',
+        [userId]
+      );
+      if (userResult.rows.length > 0 && userResult.rows[0].club_id) {
+        clubId = userResult.rows[0].club_id;
+        console.log(`✅ Клуб найден в users: ${clubId}`);
+      }
     }
+
+    if (!clubId) {
+      console.log(`❌ Координатор ${userId} не привязан к клубу!`);
+      return res.status(400).json({ error: 'Вы не привязаны к КЮДу. Обратитесь к администратору.' });
+    }
+
+    console.log(`🏫 Клуб координатора: ${clubId}`);
 
     const result = await pool.query(
       `INSERT INTO appeals (club_id, coordinator_id, subject, message, priority, status, created_at)
@@ -846,7 +864,7 @@ app.post('/api/appeals', async (req, res) => {
       [clubId, userId, subject, message, priority || 'medium']
     );
 
-    console.log(`✅ Обращение создано от ${decoded.email}`);
+    console.log(`✅ Обращение создано от ${decoded.email} (клуб: ${clubId})`);
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка создания обращения:', error);

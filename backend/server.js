@@ -409,10 +409,8 @@ app.post('/api/users', async (req, res) => {
     // ПРИВЯЗКА К КЛУБУ ДЛЯ ЛЮБОЙ РОЛИ
     // ============================================================
     if (club_id) {
-      // Обновляем club_id в users
       await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, user.id]);
 
-      // Если роль = координатор КЮДа — добавляем в club_coordinators
       if (role === 'club_coordinator') {
         await pool.query(
           `INSERT INTO club_coordinators (profile_id, club_id, created_at)
@@ -422,7 +420,6 @@ app.post('/api/users', async (req, res) => {
         );
         console.log(`✅ Координатор ${user.full_name} привязан к клубу ${club_id}`);
       } else {
-        // Обычный участник — добавляем в club_participants
         await pool.query(
           `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
            VALUES ($1, $2, 'active', NOW())
@@ -453,7 +450,6 @@ app.patch('/api/users/:id', async (req, res) => {
     const { id } = req.params;
     const { full_name, role, phone, school, class_name, club_id, status, position } = req.body;
 
-    // Проверяем, существует ли пользователь
     const check = await pool.query('SELECT id, role FROM users WHERE id = $1', [id]);
     if (check.rows.length === 0) {
       return res.status(404).json({ error: 'Пользователь не найден' });
@@ -461,7 +457,6 @@ app.patch('/api/users/:id', async (req, res) => {
 
     const oldRole = check.rows[0].role;
 
-    // Обновляем пользователя
     const result = await pool.query(
       `UPDATE users 
        SET full_name = COALESCE($1, full_name),
@@ -483,14 +478,10 @@ app.patch('/api/users/:id', async (req, res) => {
     // ОБНОВЛЕНИЕ ПРИВЯЗКИ К КЛУБУ
     // ============================================================
     if (club_id) {
-      // Обновляем club_id в users
       await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, id]);
 
-      // Если роль = координатор КЮДа — обновляем club_coordinators
       if (role === 'club_coordinator') {
-        // Удаляем старую привязку, если есть
         await pool.query('DELETE FROM club_coordinators WHERE profile_id = $1', [id]);
-        // Добавляем новую
         await pool.query(
           `INSERT INTO club_coordinators (profile_id, club_id, created_at)
            VALUES ($1, $2, NOW())
@@ -499,7 +490,6 @@ app.patch('/api/users/:id', async (req, res) => {
         );
         console.log(`✅ Координатор ${user.full_name} обновлён: клуб ${club_id}`);
       } else {
-        // Обычный участник — обновляем club_participants
         await pool.query('DELETE FROM club_participants WHERE profile_id = $1', [id]);
         await pool.query(
           `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
@@ -509,19 +499,16 @@ app.patch('/api/users/:id', async (req, res) => {
         );
       }
     } else {
-      // Если club_id = null — удаляем все привязки
       await pool.query('UPDATE users SET club_id = NULL WHERE id = $1', [id]);
       await pool.query('DELETE FROM club_coordinators WHERE profile_id = $1', [id]);
       await pool.query('DELETE FROM club_participants WHERE profile_id = $1', [id]);
     }
 
-    // Если роль изменилась с club_coordinator на другую — удаляем из club_coordinators
     if (oldRole === 'club_coordinator' && role !== 'club_coordinator') {
       await pool.query('DELETE FROM club_coordinators WHERE profile_id = $1', [id]);
       console.log(`🗑️ Пользователь ${user.full_name} больше не координатор`);
     }
 
-    // Если роль изменилась на club_coordinator — добавляем в club_coordinators
     if (oldRole !== 'club_coordinator' && role === 'club_coordinator' && club_id) {
       await pool.query(
         `INSERT INTO club_coordinators (profile_id, club_id, created_at)
@@ -532,7 +519,6 @@ app.patch('/api/users/:id', async (req, res) => {
       console.log(`✅ Пользователь ${user.full_name} стал координатором клуба ${club_id}`);
     }
 
-    // Получаем обновлённого пользователя с названием клуба
     const userResult = await pool.query(
       `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
               u.status, u.position, u.club_id, c.name as club_name
@@ -756,42 +742,120 @@ app.delete('/api/events/:id', async (req, res) => {
 });
 
 // ============================================================
-// 18. ОБРАЩЕНИЯ
+// 18. ОБРАЩЕНИЯ (С ФИЛЬТРАЦИЕЙ ПО РОЛЯМ)
 // ============================================================
 app.get('/api/appeals', async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT * FROM appeals ORDER BY created_at DESC`
-    );
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (e) {
+      return res.status(401).json({ error: 'Неверный токен' });
+    }
+
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    console.log(`🔍 Запрос обращений от пользователя ${decoded.email} (роль: ${userRole})`);
+
+    let query = `
+      SELECT a.*, 
+             u.full_name as coordinator_name,
+             c.name as club_name
+      FROM appeals a
+      LEFT JOIN users u ON a.coordinator_id = u.id
+      LEFT JOIN clubs c ON a.club_id = c.id
+    `;
+    const params = [];
+
+    // ============================================================
+    // ЛОГИКА ПО РОЛЯМ
+    // ============================================================
+    if (userRole === 'club_coordinator') {
+      query += ' WHERE a.coordinator_id = $1';
+      params.push(userId);
+      console.log('👤 Координатор КЮДа: показываем только свои обращения');
+    } else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
+      console.log('👑 Административная роль: показываем все обращения');
+    } else {
+      console.log('🚫 Роль не имеет доступа к обращениям');
+      query += ' WHERE 1 = 0';
+    }
+
+    query += ' ORDER BY a.created_at DESC';
+
+    const result = await pool.query(query, params);
+    console.log(`📨 Найдено обращений: ${result.rows.length}`);
     res.json(result.rows);
   } catch (error) {
+    console.error('❌ Ошибка получения обращений:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
+// ============================================================
+// 19. СОЗДАНИЕ ОБРАЩЕНИЯ
+// ============================================================
 app.post('/api/appeals', async (req, res) => {
   try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (e) {
+      return res.status(401).json({ error: 'Неверный токен' });
+    }
+
     const { subject, message, priority } = req.body;
+    const userId = decoded.userId;
+    const userRole = decoded.role;
 
     if (!subject || !message) {
       return res.status(400).json({ error: 'subject и message обязательны' });
     }
 
-    const result = await pool.query(
-      `INSERT INTO appeals (subject, message, priority, status, created_at)
-       VALUES ($1, $2, $3, 'pending', NOW())
-       RETURNING *`,
-      [subject, message, priority || 'medium']
+    if (userRole !== 'club_coordinator') {
+      return res.status(403).json({ error: 'Только координаторы КЮДа могут создавать обращения' });
+    }
+
+    const clubResult = await pool.query(
+      'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+      [userId]
     );
 
+    let clubId = null;
+    if (clubResult.rows.length > 0) {
+      clubId = clubResult.rows[0].club_id;
+    }
+
+    const result = await pool.query(
+      `INSERT INTO appeals (club_id, coordinator_id, subject, message, priority, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, 'pending', NOW())
+       RETURNING *`,
+      [clubId, userId, subject, message, priority || 'medium']
+    );
+
+    console.log(`✅ Обращение создано от ${decoded.email}`);
     res.json(result.rows[0]);
   } catch (error) {
+    console.error('❌ Ошибка создания обращения:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // ============================================================
-// 19. РЕГИСТРАЦИИ
+// 20. РЕГИСТРАЦИИ
 // ============================================================
 app.get('/api/registrations', async (req, res) => {
   try {
@@ -830,7 +894,7 @@ app.post('/api/registrations', async (req, res) => {
 });
 
 // ============================================================
-// 20. СОЗДАНИЕ ТЕСТОВОГО ПОЛЬЗОВАТЕЛЯ
+// 21. СОЗДАНИЕ ТЕСТОВОГО ПОЛЬЗОВАТЕЛЯ
 // ============================================================
 app.post('/api/create-test-user', async (req, res) => {
   try {
@@ -861,7 +925,7 @@ app.post('/api/create-test-user', async (req, res) => {
 });
 
 // ============================================================
-// 21. ЗАПУСК
+// 22. ЗАПУСК
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Сервер запущен на порту ${PORT}`);

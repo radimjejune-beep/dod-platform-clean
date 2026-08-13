@@ -82,6 +82,9 @@ export default function Appeals() {
     }
   };
 
+  // ============================================================
+  // ОТВЕТ НА ОБРАЩЕНИЕ (ПРАВИЛЬНЫЙ ЭНДПОИНТ)
+  // ============================================================
   const handleReply = async (e) => {
     e.preventDefault();
     if (!replyMessage.trim()) return;
@@ -118,6 +121,7 @@ export default function Appeals() {
       
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
+      console.error('❌ Ошибка:', err);
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
@@ -363,19 +367,6 @@ export default function Appeals() {
                       📅 {new Date(appeal.created_at).toLocaleString('ru-RU')}
                       {appeal.resolved_at && ` • ✅ Рассмотрено: ${new Date(appeal.resolved_at).toLocaleString('ru-RU')}`}
                     </div>
-                    {appeal.resolution_comment && (
-                      <div style={{
-                        marginTop: '8px',
-                        padding: '8px 12px',
-                        background: '#F8FAFC',
-                        borderRadius: '6px',
-                        fontSize: '13px',
-                        color: '#475467',
-                        border: '1px solid #E2E7EF'
-                      }}>
-                        💬 {appeal.resolution_comment}
-                      </div>
-                    )}
                   </div>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button

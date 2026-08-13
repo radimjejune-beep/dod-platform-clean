@@ -335,7 +335,6 @@ app.patch('/api/profile', async (req, res) => {
     console.log('📥 Обновление профиля для:', decoded.email);
     console.log('📥 Полученные данные:', req.body);
 
-    // Обработка даты
     let birthDateValue = null;
     if (birth_date && birth_date !== '' && birth_date !== 'Invalid Date') {
       birthDateValue = birth_date;
@@ -364,8 +363,13 @@ app.patch('/api/profile', async (req, res) => {
                  social_links, skills, education, achievements, telegram, vk`,
       [
         full_name, phone, school, class_name, interests, bio, city, position,
-        birthDateValue, social_links || '', skills || '', education || '', 
-        achievements || '', telegram || '', vk || '',
+        birthDateValue, 
+        social_links || '', 
+        skills || '', 
+        education || '', 
+        achievements || '', 
+        telegram || '', 
+        vk || '',
         decoded.userId
       ]
     );

@@ -52,46 +52,35 @@ export default function Profile() {
       let phone = profile.phone || '';
       phone = phone.replace(/[^0-9+]/g, '');
 
-      // Обработка даты
       let birthDate = profile.birth_date || '';
       if (birthDate === '' || birthDate === 'Invalid Date') {
         birthDate = null;
       }
 
       const updateData = {
-        // ===== ОСНОВНОЕ =====
         full_name: profile.full_name.trim(),
         phone: phone,
         school: profile.school || '',
         class_name: profile.class_name || '',
-        city: profile.city || '',
-        birth_date: birthDate,
-        
-        // ===== ИНТЕРЕСЫ =====
         interests: profile.interests || '',
         bio: profile.bio || '',
-        skills: profile.skills || '',
-        
-        // ===== КОНТАКТЫ =====
+        city: profile.city || '',
+        birth_date: birthDate,
         social_links: profile.social_links || '',
+        skills: profile.skills || '',
+        education: profile.education || '',
+        achievements: profile.achievements || '',
         telegram: profile.telegram || '',
         vk: profile.vk || '',
-        
-        // ===== РОДИТЕЛИ (ДЛЯ НЕСОВЕРШЕННОЛЕТНИХ) =====
+        // НОВЫЕ ПОЛЯ
         parent_full_name: profile.parent_full_name || '',
         parent_phone: profile.parent_phone || '',
         parent_email: profile.parent_email || '',
-        
-        // ===== СОГЛАСИЯ =====
         consent_personal_data: profile.consent_personal_data || false,
         consent_photo_publication: profile.consent_photo_publication || false,
         consent_event_participation: profile.consent_event_participation || false,
         consent_agreement_date: profile.consent_agreement_date || null,
-        charter_acceptance_date: profile.charter_acceptance_date || null,
-        
-        // ===== ДОПОЛНИТЕЛЬНО =====
-        education: profile.education || '',
-        achievements: profile.achievements || ''
+        charter_acceptance_date: profile.charter_acceptance_date || null
       };
 
       console.log('📤 Отправка данных:', updateData);
@@ -158,7 +147,6 @@ export default function Profile() {
         )}
 
         <div className="card">
-          {/* АВАТАР */}
           <div style={{ 
             display: 'flex', 
             justifyContent: 'center', 
@@ -173,7 +161,6 @@ export default function Profile() {
             />
           </div>
 
-          {/* ВКЛАДКИ */}
           <div style={{
             display: 'flex',
             gap: '4px',
@@ -204,9 +191,7 @@ export default function Profile() {
           </div>
 
           <form onSubmit={handleSave}>
-            {/* ============================================================
-                ВКЛАДКА: ОСНОВНОЕ
-                ============================================================ */}
+            {/* ===== ВКЛАДКА: ОСНОВНОЕ ===== */}
             {activeTab === 'main' && (
               <div>
                 <div className="grid-2">
@@ -272,9 +257,7 @@ export default function Profile() {
               </div>
             )}
 
-            {/* ============================================================
-                ВКЛАДКА: КОНТАКТЫ
-                ============================================================ */}
+            {/* ===== ВКЛАДКА: КОНТАКТЫ ===== */}
             {activeTab === 'contacts' && (
               <div>
                 <div className="grid-2">
@@ -287,6 +270,9 @@ export default function Profile() {
                       onChange={handleChange}
                       placeholder="+7 999 123 45 67"
                     />
+                    <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                      Введите номер без скобок
+                    </div>
                   </div>
                   <div className="form-group">
                     <label>Telegram</label>
@@ -322,9 +308,7 @@ export default function Profile() {
               </div>
             )}
 
-            {/* ============================================================
-                ВКЛАДКА: ИНТЕРЕСЫ
-                ============================================================ */}
+            {/* ===== ВКЛАДКА: ИНТЕРЕСЫ ===== */}
             {activeTab === 'interests' && (
               <div>
                 <div className="form-group">
@@ -368,9 +352,7 @@ export default function Profile() {
               </div>
             )}
 
-            {/* ============================================================
-                ВКЛАДКА: РОДИТЕЛИ
-                ============================================================ */}
+            {/* ===== ВКЛАДКА: РОДИТЕЛИ ===== */}
             {activeTab === 'parents' && (
               <div>
                 <div className="grid-2">
@@ -418,9 +400,7 @@ export default function Profile() {
               </div>
             )}
 
-            {/* ============================================================
-                ВКЛАДКА: СОГЛАСИЯ
-                ============================================================ */}
+            {/* ===== ВКЛАДКА: СОГЛАСИЯ ===== */}
             {activeTab === 'consents' && (
               <div>
                 <div className="form-group">
@@ -436,7 +416,7 @@ export default function Profile() {
                       <strong>Согласие на обработку персональных данных</strong>
                       <br />
                       <span style={{ fontSize: '12px', color: '#667085' }}>
-                        В соответствии с Федеральным законом № 152-ФЗ «О персональных данных»
+                        В соответствии с Федеральным законом № 152-ФЗ
                       </span>
                     </span>
                   </label>
@@ -508,14 +488,12 @@ export default function Profile() {
                   color: '#16845B',
                   marginTop: '8px'
                 }}>
-                  ✅ Все согласия являются обязательными для участия в деятельности ДОД
+                  ✅ Все согласия обязательны для участия в деятельности ДОД
                 </div>
               </div>
             )}
 
-            {/* ============================================================
-                ВКЛАДКА: ДОПОЛНИТЕЛЬНО
-                ============================================================ */}
+            {/* ===== ВКЛАДКА: ДОПОЛНИТЕЛЬНО ===== */}
             {activeTab === 'extra' && (
               <div>
                 <div className="form-group">

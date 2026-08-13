@@ -281,7 +281,7 @@ app.get('/api/me2', async (req, res) => {
 });
 
 // ============================================================
-// 6. ОБНОВЛЕНИЕ ПРОФИЛЯ — С ВСЕМИ ПОЛЯМИ
+// 6. ОБНОВЛЕНИЕ ПРОФИЛЯ
 // ============================================================
 app.patch('/api/profile', async (req, res) => {
   try {
@@ -295,7 +295,10 @@ app.patch('/api/profile', async (req, res) => {
 
     const { 
       full_name, phone, school, class_name, interests, bio, city, position,
-      birth_date, social_links, skills, education, achievements, telegram, vk
+      birth_date, social_links, skills, education, achievements, telegram, vk,
+      parent_full_name, parent_phone, parent_email,
+      consent_personal_data, consent_photo_publication, consent_event_participation,
+      consent_agreement_date, charter_acceptance_date
     } = req.body;
 
     console.log('📥 Обновление профиля для:', decoded.email);
@@ -316,14 +319,23 @@ app.patch('/api/profile', async (req, res) => {
            education = COALESCE($12, education),
            achievements = COALESCE($13, achievements),
            telegram = COALESCE($14, telegram),
-           vk = COALESCE($15, vk)
-       WHERE id = $16
-       RETURNING id, email, full_name, role, phone, school, class_name, 
-                 interests, bio, city, position, birth_date, 
-                 social_links, skills, education, achievements, telegram, vk`,
+           vk = COALESCE($15, vk),
+           parent_full_name = COALESCE($16, parent_full_name),
+           parent_phone = COALESCE($17, parent_phone),
+           parent_email = COALESCE($18, parent_email),
+           consent_personal_data = COALESCE($19, consent_personal_data),
+           consent_photo_publication = COALESCE($20, consent_photo_publication),
+           consent_event_participation = COALESCE($21, consent_event_participation),
+           consent_agreement_date = $22,
+           charter_acceptance_date = $23
+       WHERE id = $24
+       RETURNING *`,
       [
         full_name, phone, school, class_name, interests, bio, city, position,
         birth_date || null, social_links, skills, education, achievements, telegram, vk,
+        parent_full_name, parent_phone, parent_email,
+        consent_personal_data, consent_photo_publication, consent_event_participation,
+        consent_agreement_date || null, charter_acceptance_date || null,
         decoded.userId
       ]
     );

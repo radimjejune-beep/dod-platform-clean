@@ -8,14 +8,11 @@ import Navigation from '../components/Navigation';
 export default function Appeals() {
   const [profile, setProfile] = useState(null);
   const [appeals, setAppeals] = useState([]);
-  const [allAppeals, setAllAppeals] = useState([]);
-  const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
-  const [selectedClubId, setSelectedClubId] = useState('');
   const [form, setForm] = useState({
     subject: '',
     message: '',
@@ -36,64 +33,15 @@ export default function Appeals() {
       }
       setProfile(userData);
 
-      const clubsData = await api.getClubs();
-      setClubs(clubsData || []);
-
-      const role = userData.role;
-      let filteredAppeals = [];
-
-      // ============================================================
-      // ЛОГИКА ПО РОЛЯМ
-      // ============================================================
-
-      if (role === 'participant' || role === 'parent' || role === 'tutor') {
-        // УЧАСТНИК, РОДИТЕЛЬ, ТЬЮТОР — не видят обращения
-        filteredAppeals = [];
-      } 
-      else if (role === 'club_coordinator') {
-        // КООРДИНАТОР КЮДА — видит свои обращения
-        const coordinatorClub = clubsData.find(c => 
-          c.coordinator_id === userData.id || 
-          c.leader_id === userData.id
-        );
-        // TODO: добавить API для получения обращений по координатору
-        filteredAppeals = [];
-      } 
-      else if (role === 'movement_coordinator' || 
-               role === 'admin' || 
-               role === 'president' || 
-               role === 'vice_president') {
-        // КООРДИНАТОР, АДМИН, ПРЕЗИДЕНТ, ВИЦЕ — видят все обращения
-        // TODO: добавить API для получения всех обращений
-        filteredAppeals = [];
-      } 
-      else {
-        filteredAppeals = [];
-      }
-
-      setAllAppeals(filteredAppeals);
-      setAppeals(filteredAppeals);
-
+      const appealsData = await api.getAppeals();
+      console.log('📥 Загружено обращений:', appealsData);
+      setAppeals(appealsData || []);
     } catch (err) {
       console.error('Ошибка:', err);
     } finally {
       setLoading(false);
     }
   };
-
-  // Фильтр по клубу
-  const canFilterByClub = profile?.role === 'admin' || 
-                          profile?.role === 'movement_coordinator' || 
-                          profile?.role === 'president' ||
-                          profile?.role === 'vice_president';
-
-  useEffect(() => {
-    if (selectedClubId && canFilterByClub) {
-      setAppeals(allAppeals.filter(a => a.club_id === selectedClubId));
-    } else {
-      setAppeals(allAppeals);
-    }
-  }, [selectedClubId, allAppeals, canFilterByClub]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -107,6 +55,8 @@ export default function Appeals() {
         priority: form.priority
       });
 
+      console.log('📥 Ответ при создании:', result);
+
       if (result.error) {
         throw new Error(result.error);
       }
@@ -115,9 +65,13 @@ export default function Appeals() {
       setMessageType('success');
       setForm({ subject: '', message: '', priority: 'medium' });
       setShowForm(false);
-      loadData();
+      
+      // ===== ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ СПИСОК =====
+      await loadData();
+      
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
+      console.error('❌ Ошибка:', err);
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
@@ -145,16 +99,6 @@ export default function Appeals() {
     return labels[status] || status;
   };
 
-  // Кто может создавать обращения
-  const canCreate = profile?.role === 'club_coordinator';
-
-  // Кто может просматривать обращения
-  const canView = profile?.role === 'club_coordinator' || 
-                  profile?.role === 'movement_coordinator' || 
-                  profile?.role === 'admin' ||
-                  profile?.role === 'president' ||
-                  profile?.role === 'vice_president';
-
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
@@ -162,6 +106,15 @@ export default function Appeals() {
       </div>
     );
   }
+
+  // Проверка прав доступа
+  const canView = profile?.role === 'club_coordinator' || 
+                  profile?.role === 'movement_coordinator' || 
+                  profile?.role === 'admin' ||
+                  profile?.role === 'president' ||
+                  profile?.role === 'vice_president';
+
+  const canCreate = profile?.role === 'club_coordinator';
 
   if (!canView) {
     return (
@@ -188,8 +141,8 @@ export default function Appeals() {
             <h1>Обращения</h1>
             <p>
               {profile?.role === 'club_coordinator' 
-                ? 'Ваши обращения к руководству' 
-                : 'Все обращения от координаторов КЮДов'}
+                ? `Ваши обращения к руководству (${appeals.length})` 
+                : `Все обращения от координаторов КЮДов (${appeals.length})`}
             </p>
           </div>
           {canCreate && (
@@ -206,61 +159,6 @@ export default function Appeals() {
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
             {message}
-          </div>
-        )}
-
-        {/* ФИЛЬТР ПО КЮДАМ */}
-        {canFilterByClub && clubs.length > 0 && (
-          <div style={{
-            display: 'flex',
-            gap: '16px',
-            marginBottom: '20px',
-            flexWrap: 'wrap',
-            alignItems: 'center'
-          }}>
-            <div style={{ minWidth: '200px' }}>
-              <select
-                value={selectedClubId}
-                onChange={(e) => setSelectedClubId(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '1.5px solid #D5DCE7',
-                  borderRadius: '10px',
-                  fontSize: '14px',
-                  outline: 'none',
-                  background: 'white'
-                }}
-              >
-                <option value="">Все КЮДы</option>
-                {clubs.map((club) => (
-                  <option key={club.id} value={club.id}>{club.name}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ fontSize: '14px', color: '#667085' }}>
-              {selectedClubId ? (
-                <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
-              ) : (
-                <span>📋 Все обращения</span>
-              )}
-            </div>
-            {selectedClubId && (
-              <button
-                style={{
-                  padding: '4px 12px',
-                  background: '#FCEBEC',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  color: '#B3262E'
-                }}
-                onClick={() => setSelectedClubId('')}
-              >
-                ✕ Сбросить
-              </button>
-            )}
           </div>
         )}
 
@@ -364,6 +262,14 @@ export default function Appeals() {
                       }}>
                         {getStatusLabel(appeal.status)}
                       </span>
+                      {appeal.club_name && (
+                        <span className="tag tag-blue">🏫 {appeal.club_name}</span>
+                      )}
+                      {appeal.coordinator_name && (
+                        <span className="tag" style={{ background: '#F4F6F9', color: '#667085' }}>
+                          👤 {appeal.coordinator_name}
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: '14px', color: '#475467', marginTop: '8px' }}>
                       {appeal.message}

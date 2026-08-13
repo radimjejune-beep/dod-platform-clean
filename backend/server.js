@@ -327,7 +327,10 @@ app.patch('/api/profile', async (req, res) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    const { full_name, phone, school, class_name, interests, bio, city, position } = req.body;
+    const { 
+      full_name, phone, school, class_name, interests, bio, city, position,
+      birth_date, social_links, skills, education, achievements_text, telegram, vk
+    } = req.body;
 
     console.log('📥 Обновление профиля для:', decoded.email);
 
@@ -340,10 +343,21 @@ app.patch('/api/profile', async (req, res) => {
            interests = COALESCE($5, interests),
            bio = COALESCE($6, bio),
            city = COALESCE($7, city),
-           position = COALESCE($8, position)
-       WHERE id = $9
-       RETURNING id, email, full_name, role, phone, school, class_name, interests, bio, city, position`,
-      [full_name, phone, school, class_name, interests, bio, city, position, decoded.userId]
+           position = COALESCE($8, position),
+           birth_date = COALESCE($9, birth_date),
+           social_links = COALESCE($10, social_links),
+           skills = COALESCE($11, skills),
+           education = COALESCE($12, education),
+           achievements_text = COALESCE($13, achievements_text),
+           telegram = COALESCE($14, telegram),
+           vk = COALESCE($15, vk)
+       WHERE id = $16
+       RETURNING id, email, full_name, role, phone, school, class_name, interests, bio, city, position, birth_date, social_links, skills, education, achievements_text, telegram, vk`,
+      [
+        full_name, phone, school, class_name, interests, bio, city, position,
+        birth_date, social_links, skills, education, achievements_text, telegram, vk,
+        decoded.userId
+      ]
     );
 
     if (result.rows.length === 0) {

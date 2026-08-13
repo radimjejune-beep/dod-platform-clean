@@ -60,12 +60,17 @@ export default function Profile() {
         interests: profile.interests || '',
         bio: profile.bio || '',
         city: profile.city || '',
-        // Новые поля
+        // НОВЫЕ ПОЛЯ
         birth_date: profile.birth_date || '',
         social_links: profile.social_links || '',
         skills: profile.skills || '',
-        education: profile.education || ''
+        education: profile.education || '',
+        achievements_text: profile.achievements_text || '',
+        telegram: profile.telegram || '',
+        vk: profile.vk || ''
       };
+
+      console.log('📤 Отправка данных:', updateData);
 
       const result = await api.updateProfile(updateData);
 
@@ -384,11 +389,11 @@ export default function Profile() {
                 </div>
 
                 <div className="form-group">
-                  <label>Достижения</label>
+                  <label>Личные достижения</label>
                   <textarea
-                    name="achievements"
+                    name="achievements_text"
                     rows="3"
-                    value={profile?.achievements || ''}
+                    value={profile?.achievements_text || ''}
                     onChange={handleChange}
                     placeholder="Ваши основные достижения..."
                   />

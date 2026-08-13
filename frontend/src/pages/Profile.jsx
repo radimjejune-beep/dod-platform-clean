@@ -60,12 +60,11 @@ export default function Profile() {
         interests: profile.interests || '',
         bio: profile.bio || '',
         city: profile.city || '',
-        // НОВЫЕ ПОЛЯ
         birth_date: profile.birth_date || '',
         social_links: profile.social_links || '',
         skills: profile.skills || '',
         education: profile.education || '',
-        achievements_text: profile.achievements_text || '',
+        achievements: profile.achievements || '',
         telegram: profile.telegram || '',
         vk: profile.vk || ''
       };
@@ -122,7 +121,6 @@ export default function Profile() {
         )}
 
         <div className="card">
-          {/* АВАТАР */}
           <div style={{ 
             display: 'flex', 
             justifyContent: 'center', 
@@ -137,7 +135,6 @@ export default function Profile() {
             />
           </div>
 
-          {/* ВКЛАДКИ */}
           <div style={{
             display: 'flex',
             gap: '4px',
@@ -156,8 +153,7 @@ export default function Profile() {
                 borderRadius: '8px 8px 0 0',
                 cursor: 'pointer',
                 fontWeight: activeTab === 'main' ? '600' : '500',
-                fontSize: '14px',
-                transition: 'all 0.3s ease'
+                fontSize: '14px'
               }}
             >
               📋 Основное
@@ -172,8 +168,7 @@ export default function Profile() {
                 borderRadius: '8px 8px 0 0',
                 cursor: 'pointer',
                 fontWeight: activeTab === 'contacts' ? '600' : '500',
-                fontSize: '14px',
-                transition: 'all 0.3s ease'
+                fontSize: '14px'
               }}
             >
               📞 Контакты
@@ -188,8 +183,7 @@ export default function Profile() {
                 borderRadius: '8px 8px 0 0',
                 cursor: 'pointer',
                 fontWeight: activeTab === 'interests' ? '600' : '500',
-                fontSize: '14px',
-                transition: 'all 0.3s ease'
+                fontSize: '14px'
               }}
             >
               🎯 Интересы
@@ -204,8 +198,7 @@ export default function Profile() {
                 borderRadius: '8px 8px 0 0',
                 cursor: 'pointer',
                 fontWeight: activeTab === 'extra' ? '600' : '500',
-                fontSize: '14px',
-                transition: 'all 0.3s ease'
+                fontSize: '14px'
               }}
             >
               🌟 Дополнительно
@@ -213,7 +206,6 @@ export default function Profile() {
           </div>
 
           <form onSubmit={handleSave}>
-            {/* ===== ВКЛАДКА: ОСНОВНОЕ ===== */}
             {activeTab === 'main' && (
               <div>
                 <div className="grid-2">
@@ -279,7 +271,6 @@ export default function Profile() {
               </div>
             )}
 
-            {/* ===== ВКЛАДКА: КОНТАКТЫ ===== */}
             {activeTab === 'contacts' && (
               <div>
                 <div className="grid-2">
@@ -292,9 +283,6 @@ export default function Profile() {
                       onChange={handleChange}
                       placeholder="+7 999 123 45 67"
                     />
-                    <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                      Введите номер без скобок
-                    </div>
                   </div>
                   <div className="form-group">
                     <label>Telegram</label>
@@ -330,7 +318,6 @@ export default function Profile() {
               </div>
             )}
 
-            {/* ===== ВКЛАДКА: ИНТЕРЕСЫ ===== */}
             {activeTab === 'interests' && (
               <div>
                 <div className="form-group">
@@ -342,11 +329,7 @@ export default function Profile() {
                     onChange={handleChange}
                     placeholder="Дипломатия, история, иностранные языки, спорт"
                   />
-                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                    Перечислите интересы через запятую
-                  </div>
                 </div>
-
                 <div className="form-group">
                   <label>Навыки</label>
                   <input
@@ -356,14 +339,10 @@ export default function Profile() {
                     onChange={handleChange}
                     placeholder="Публичные выступления, переговоры, английский язык"
                   />
-                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                    Перечислите навыки через запятую
-                  </div>
                 </div>
               </div>
             )}
 
-            {/* ===== ВКЛАДКА: ДОПОЛНИТЕЛЬНО ===== */}
             {activeTab === 'extra' && (
               <div>
                 <div className="form-group">
@@ -376,7 +355,6 @@ export default function Profile() {
                     placeholder="Расскажите о себе, своих целях и увлечениях..."
                   />
                 </div>
-
                 <div className="form-group">
                   <label>Дополнительное образование</label>
                   <textarea
@@ -387,13 +365,12 @@ export default function Profile() {
                     placeholder="Курсы, кружки, секции..."
                   />
                 </div>
-
                 <div className="form-group">
                   <label>Личные достижения</label>
                   <textarea
-                    name="achievements_text"
+                    name="achievements"
                     rows="3"
-                    value={profile?.achievements_text || ''}
+                    value={profile?.achievements || ''}
                     onChange={handleChange}
                     placeholder="Ваши основные достижения..."
                   />

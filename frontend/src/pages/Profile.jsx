@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import PageLayout from '../components/PageLayout';
+import Navigation from '../components/Navigation';
 
 export default function Profile() {
   const [profile, setProfile] = useState(null);
@@ -35,7 +35,6 @@ export default function Profile() {
     e.preventDefault();
     setSaving(true);
     setMessage('');
-
     try {
       // TODO: добавить API для обновления профиля
       setMessage('✅ Профиль обновлён!');
@@ -53,223 +52,74 @@ export default function Profile() {
   };
 
   if (loading) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        background: '#F4F6F9'
-      }}>
-        <div style={{ fontSize: '18px', color: '#667085' }}>⏳ Загрузка...</div>
-      </div>
-    );
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ fontSize: '18px', color: '#667085' }}>⏳ Загрузка...</div>
+    </div>;
   }
 
   return (
-    <PageLayout 
-      title="👤 Мой профиль"
-      subtitle="Управление личными данными"
-      icon="👤"
-      profile={profile}
-    >
-      {message && (
-        <div style={{
-          padding: '12px 16px',
-          borderRadius: '10px',
-          marginBottom: '16px',
-          background: message.includes('✅') ? '#E8F5EF' : '#FCEBEC',
-          color: message.includes('✅') ? '#16845B' : '#B3262E',
-          fontSize: '14px',
-          fontWeight: '500'
-        }}>
-          {message}
-        </div>
-      )}
-
-      <form onSubmit={handleSave}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+    <div className="page-background">
+      <Navigation profile={profile} />
+      <div className="container-page">
+        <div className="page-header">
+          <span style={{ fontSize: '32px' }}>👤</span>
           <div>
-            <label style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-              ФИО *
-            </label>
-            <input
-              type="text"
-              name="full_name"
-              value={profile?.full_name || ''}
-              onChange={handleChange}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                border: '1.5px solid #D5DCE7',
-                borderRadius: '10px',
-                fontSize: '14px'
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-              Email
-            </label>
-            <input
-              type="email"
-              value={profile?.email || ''}
-              disabled
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                border: '1.5px solid #D5DCE7',
-                borderRadius: '10px',
-                fontSize: '14px',
-                background: '#F4F6F9',
-                cursor: 'not-allowed'
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-              Телефон
-            </label>
-            <input
-              type="tel"
-              name="phone"
-              value={profile?.phone || ''}
-              onChange={handleChange}
-              placeholder="+7 (XXX) XXX-XX-XX"
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                border: '1.5px solid #D5DCE7',
-                borderRadius: '10px',
-                fontSize: '14px'
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-              Город
-            </label>
-            <input
-              type="text"
-              name="city"
-              value={profile?.city || ''}
-              onChange={handleChange}
-              placeholder="Москва"
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                border: '1.5px solid #D5DCE7',
-                borderRadius: '10px',
-                fontSize: '14px'
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-              Школа
-            </label>
-            <input
-              type="text"
-              name="school"
-              value={profile?.school || ''}
-              onChange={handleChange}
-              placeholder="Школа №1"
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                border: '1.5px solid #D5DCE7',
-                borderRadius: '10px',
-                fontSize: '14px'
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-              Класс
-            </label>
-            <input
-              type="text"
-              name="class_name"
-              value={profile?.class_name || ''}
-              onChange={handleChange}
-              placeholder="8А"
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                border: '1.5px solid #D5DCE7',
-                borderRadius: '10px',
-                fontSize: '14px'
-              }}
-            />
+            <h1>Мой профиль</h1>
+            <p>Управление личными данными</p>
           </div>
         </div>
 
-        <div style={{ marginTop: '16px' }}>
-          <label style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-            Интересы
-          </label>
-          <input
-            type="text"
-            name="interests"
-            value={profile?.interests || ''}
-            onChange={handleChange}
-            placeholder="Дипломатия, история, иностранные языки"
-            style={{
-              width: '100%',
-              padding: '10px 14px',
-              border: '1.5px solid #D5DCE7',
-              borderRadius: '10px',
-              fontSize: '14px'
-            }}
-          />
-        </div>
+        {message && (
+          <div className={message.includes('✅') ? 'message-success' : 'message-error'}>
+            {message}
+          </div>
+        )}
 
-        <div style={{ marginTop: '16px' }}>
-          <label style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-            О себе
-          </label>
-          <textarea
-            name="bio"
-            rows="3"
-            value={profile?.bio || ''}
-            onChange={handleChange}
-            placeholder="Расскажите о себе..."
-            style={{
-              width: '100%',
-              padding: '10px 14px',
-              border: '1.5px solid #D5DCE7',
-              borderRadius: '10px',
-              fontSize: '14px',
-              resize: 'vertical'
-            }}
-          />
-        </div>
+        <div className="card">
+          <form onSubmit={handleSave}>
+            <div className="grid-2">
+              <div className="form-group">
+                <label>ФИО *</label>
+                <input type="text" name="full_name" value={profile?.full_name || ''} onChange={handleChange} required />
+              </div>
+              <div className="form-group">
+                <label>Email</label>
+                <input type="email" value={profile?.email || ''} disabled style={{ background: '#F4F6F9', cursor: 'not-allowed' }} />
+              </div>
+              <div className="form-group">
+                <label>Телефон</label>
+                <input type="tel" name="phone" value={profile?.phone || ''} onChange={handleChange} placeholder="+7 (XXX) XXX-XX-XX" />
+              </div>
+              <div className="form-group">
+                <label>Город</label>
+                <input type="text" name="city" value={profile?.city || ''} onChange={handleChange} placeholder="Москва" />
+              </div>
+              <div className="form-group">
+                <label>Школа</label>
+                <input type="text" name="school" value={profile?.school || ''} onChange={handleChange} placeholder="Школа №1" />
+              </div>
+              <div className="form-group">
+                <label>Класс</label>
+                <input type="text" name="class_name" value={profile?.class_name || ''} onChange={handleChange} placeholder="8А" />
+              </div>
+            </div>
 
-        <button
-          type="submit"
-          disabled={saving}
-          style={{
-            width: '100%',
-            padding: '14px',
-            marginTop: '20px',
-            background: saving ? '#6c757d' : '#0B1F3A',
-            color: 'white',
-            border: 'none',
-            borderRadius: '10px',
-            fontSize: '16px',
-            fontWeight: '600',
-            cursor: saving ? 'not-allowed' : 'pointer'
-          }}
-        >
-          {saving ? '⏳ Сохранение...' : '💾 Сохранить изменения'}
-        </button>
-      </form>
-    </PageLayout>
+            <div className="form-group">
+              <label>Интересы</label>
+              <input type="text" name="interests" value={profile?.interests || ''} onChange={handleChange} placeholder="Дипломатия, история, иностранные языки" />
+            </div>
+
+            <div className="form-group">
+              <label>О себе</label>
+              <textarea name="bio" rows="3" value={profile?.bio || ''} onChange={handleChange} placeholder="Расскажите о себе..." />
+            </div>
+
+            <button type="submit" disabled={saving} className="btn-primary" style={{ width: '100%' }}>
+              {saving ? '⏳ Сохранение...' : '💾 Сохранить изменения'}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
   );
 }

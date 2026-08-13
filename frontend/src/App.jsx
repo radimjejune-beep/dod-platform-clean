@@ -10,7 +10,7 @@ import Participants from './pages/Participants';
 import Clubs from './pages/Clubs';
 import Events from './pages/Events';
 import Achievements from './pages/Achievements';
-import CalendarPage from './pages/Calendar';
+import Calendar from './pages/Calendar';
 import ClubDetail from './pages/ClubDetail';
 import ParticipantProfile from './pages/ParticipantProfile';
 import Settings from './pages/Settings';
@@ -53,7 +53,7 @@ function App() {
             <Route path="/clubs" element={<ProtectedRoute><Clubs /></ProtectedRoute>} />
             <Route path="/club/:id" element={<ProtectedRoute><ClubDetail /></ProtectedRoute>} />
             <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
-            <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
+            <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
             <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
             <Route path="/my-achievements" element={<ProtectedRoute><MyAchievements /></ProtectedRoute>} />
             <Route path="/my-reviews" element={<ProtectedRoute><MyReviews /></ProtectedRoute>} />

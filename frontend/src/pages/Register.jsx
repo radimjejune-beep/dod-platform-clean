@@ -1,7 +1,7 @@
 // frontend/src/pages/Register.jsx
 
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -69,7 +69,7 @@ export default function Register() {
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="ФИО"
-            style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+            style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '16px' }}
             required
           />
           <input
@@ -77,7 +77,7 @@ export default function Register() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
-            style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+            style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '16px' }}
             required
           />
           <input
@@ -85,13 +85,13 @@ export default function Register() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Пароль"
-            style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+            style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '16px' }}
             required
           />
           <select
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+            style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '16px' }}
           >
             <option value="participant">👤 Участник</option>
             <option value="parent">👨‍👩‍👦 Родитель</option>
@@ -108,9 +108,6 @@ export default function Register() {
           </button>
         </form>
       )}
-      <p style={{ textAlign: 'center', marginTop: '15px' }}>
-        Уже есть аккаунт? <Link to="/login">Войти</Link>
-      </p>
     </div>
   );
 }

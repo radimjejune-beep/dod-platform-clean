@@ -1,30 +1,26 @@
 // frontend/src/components/Navigation.jsx
 
-import { Link, useLocation } from 'react-router-dom';
-import api from '../lib/api';
-import logo from '../assets/Image.png';
-import logoArd from '../assets/АРДЛОГО.png';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
 export default function Navigation({ profile }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isEventsOpen, setIsEventsOpen] = useState(false);
   const [isClubsOpen, setIsClubsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
-  const isActive = (path) => {
-    return location.pathname === path;
-  };
-
+  const isActive = (path) => location.pathname === path;
   const role = profile?.role || 'participant';
 
-  // ===== ВЫХОД =====
   const handleLogout = () => {
-    api.logout();
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/login');
   };
 
-  // ===== МЕНЮ (БЕЗ ИЗМЕНЕНИЙ) =====
+  // ===== МЕНЮ =====
   const getMenuItems = () => {
     const baseItems = [
       { path: '/', label: 'Главная', roles: ['all'] },
@@ -161,7 +157,6 @@ export default function Navigation({ profile }) {
 
   const menuItems = getMenuItems();
 
-  // Группировка для выпадающих меню
   const groupedItems = {
     main: menuItems.filter(item => 
       ['/', '/profile', '/dashboard'].includes(item.path)
@@ -214,107 +209,21 @@ export default function Navigation({ profile }) {
         gap: '4px',
         minHeight: '48px'
       }}>
-        {/* ===== ЛОГОТИПЫ ===== */}
-        <Link to="/" style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          textDecoration: 'none',
-          padding: '4px 8px',
-          borderRadius: '6px',
-          transition: 'background 0.2s ease'
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.background = '#F4F6F9'}
-        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-        >
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <img 
-              src={logo} 
-              alt="Логотип ДОД Дипломаты будущего"
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                objectFit: 'cover',
-                border: '2px solid #C9A227'
-              }}
-            />
-            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
-              <span style={{
-                fontSize: '14px',
-                fontWeight: '700',
-                color: '#0B1F3A',
-                letterSpacing: '0.3px'
-              }}>
-                Дипломаты будущего
-              </span>
-              <span style={{
-                fontSize: '8px',
-                fontWeight: '500',
-                color: '#C9A227',
-                letterSpacing: '0.5px',
-                textTransform: 'uppercase'
-              }}>
-                Ассоциация российских дипломатов
-              </span>
-            </div>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Link to="/" style={{ fontSize: '18px', fontWeight: '700', color: '#0B1F3A', textDecoration: 'none' }}>
+            🌍 ДОД «Дипломаты будущего»
+          </Link>
+        </div>
 
-          <span style={{
-            width: '1px',
-            height: '30px',
-            background: '#E2E7EF',
-            margin: '0 4px'
-          }} />
-
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
-            <img 
-              src={logoArd} 
-              alt="Ассоциация российских дипломатов"
-              style={{
-                height: '28px',
-                objectFit: 'contain'
-              }}
-            />
-          </div>
-        </Link>
-
-        {/* БУРГЕР-МЕНЮ */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          style={{
-            display: 'none',
-            background: 'none',
-            border: 'none',
-            fontSize: '24px',
-            cursor: 'pointer',
-            padding: '4px 8px',
-            color: '#0B1F3A'
-          }}
+          style={{ display: 'none', background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#0B1F3A' }}
           className="burger-button"
         >
           ☰
         </button>
 
-        {/* ДЕСКТОПНОЕ МЕНЮ */}
-        <div style={{
-          display: 'flex',
-          gap: '2px',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          flex: 1,
-          justifyContent: 'center'
-        }}
-        className="desktop-menu"
-        >
+        <div style={{ display: 'flex', gap: '2px', alignItems: 'center', flexWrap: 'wrap', flex: 1, justifyContent: 'center' }} className="desktop-menu">
           {groupedItems.main.map((item) => (
             <Link
               key={item.path}
@@ -328,42 +237,15 @@ export default function Navigation({ profile }) {
                 color: isActive(item.path) ? '#0B1F3A' : '#667085',
                 background: isActive(item.path) ? '#F4F6F9' : 'transparent',
                 transition: 'all 0.2s ease',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                letterSpacing: '0.2px',
-                position: 'relative'
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive(item.path)) {
-                  e.target.style.background = '#F4F6F9';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive(item.path)) {
-                  e.target.style.background = 'transparent';
-                }
+                whiteSpace: 'nowrap'
               }}
             >
               {item.label}
-              {isActive(item.path) && (
-                <span style={{
-                  position: 'absolute',
-                  bottom: '2px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: '16px',
-                  height: '2px',
-                  background: '#C9A227',
-                  borderRadius: '2px'
-                }} />
-              )}
             </Link>
           ))}
 
           {categories.map((category) => (
-            <div
-              key={category.key}
-              style={{ position: 'relative' }}
+            <div key={category.key} style={{ position: 'relative' }}
               onMouseEnter={() => {
                 if (category.key === 'events') setIsEventsOpen(true);
                 if (category.key === 'clubs') setIsClubsOpen(true);
@@ -375,30 +257,20 @@ export default function Navigation({ profile }) {
                 if (category.key === 'settings') setIsSettingsOpen(false);
               }}
             >
-              <button
-                style={{
-                  padding: '6px 16px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: 'transparent',
-                  fontSize: '13px',
-                  fontWeight: category.items.some(item => isActive(item.path)) ? '600' : '400',
-                  color: category.items.some(item => isActive(item.path)) ? '#0B1F3A' : '#667085',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  whiteSpace: 'nowrap',
-                  letterSpacing: '0.2px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = '#F4F6F9';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = 'transparent';
-                }}
-              >
+              <button style={{
+                padding: '6px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                background: 'transparent',
+                fontSize: '13px',
+                fontWeight: category.items.some(item => isActive(item.path)) ? '600' : '400',
+                color: category.items.some(item => isActive(item.path)) ? '#0B1F3A' : '#667085',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
                 {category.title} ▼
               </button>
               
@@ -415,8 +287,7 @@ export default function Navigation({ profile }) {
                   border: '1px solid #E2E7EF',
                   minWidth: '200px',
                   padding: '8px',
-                  zIndex: 100,
-                  animation: 'fadeIn 0.2s ease'
+                  zIndex: 100
                 }}>
                   {category.items.map((item) => (
                     <Link
@@ -430,16 +301,7 @@ export default function Navigation({ profile }) {
                         fontSize: '13px',
                         fontWeight: isActive(item.path) ? '600' : '400',
                         color: isActive(item.path) ? '#0B1F3A' : '#667085',
-                        background: isActive(item.path) ? '#F4F6F9' : 'transparent',
-                        transition: 'all 0.15s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.background = '#F4F6F9';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActive(item.path)) {
-                          e.target.style.background = 'transparent';
-                        }
+                        background: isActive(item.path) ? '#F4F6F9' : 'transparent'
                       }}
                     >
                       {item.label}
@@ -451,7 +313,6 @@ export default function Navigation({ profile }) {
           ))}
         </div>
 
-        {/* КНОПКА ВЫХОДА */}
         <button
           onClick={handleLogout}
           style={{
@@ -463,35 +324,15 @@ export default function Navigation({ profile }) {
             fontSize: '13px',
             fontWeight: '400',
             cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            whiteSpace: 'nowrap',
-            letterSpacing: '0.2px'
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.background = '#FCEBEC';
-            e.target.style.color = '#B3262E';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = 'transparent';
-            e.target.style.color = '#667085';
+            whiteSpace: 'nowrap'
           }}
         >
           Выйти
         </button>
       </div>
 
-      {/* МОБИЛЬНОЕ МЕНЮ */}
       {isMobileMenuOpen && (
-        <div style={{
-          display: 'none',
-          flexDirection: 'column',
-          gap: '4px',
-          padding: '12px 0',
-          borderTop: '1px solid #E2E7EF',
-          marginTop: '8px'
-        }}
-        className="mobile-menu"
-        >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '12px 0', borderTop: '1px solid #E2E7EF', marginTop: '8px' }} className="mobile-menu">
           {menuItems.map((item) => (
             <Link
               key={item.path}
@@ -503,8 +344,7 @@ export default function Navigation({ profile }) {
                 fontSize: '14px',
                 fontWeight: isActive(item.path) ? '600' : '400',
                 color: isActive(item.path) ? '#0B1F3A' : '#667085',
-                background: isActive(item.path) ? '#F4F6F9' : 'transparent',
-                transition: 'all 0.2s ease'
+                background: isActive(item.path) ? '#F4F6F9' : 'transparent'
               }}
               onClick={() => setIsMobileMenuOpen(false)}
             >
@@ -516,27 +356,13 @@ export default function Navigation({ profile }) {
 
       <style>{`
         @media (max-width: 768px) {
-          .desktop-menu {
-            display: none !important;
-          }
-          .burger-button {
-            display: block !important;
-          }
-          .mobile-menu {
-            display: flex !important;
-          }
+          .desktop-menu { display: none !important; }
+          .burger-button { display: block !important; }
+          .mobile-menu { display: flex !important; }
         }
         @media (min-width: 769px) {
-          .burger-button {
-            display: none !important;
-          }
-          .mobile-menu {
-            display: none !important;
-          }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-8px); }
-          to { opacity: 1; transform: translateY(0); }
+          .burger-button { display: none !important; }
+          .mobile-menu { display: none !important; }
         }
       `}</style>
     </nav>

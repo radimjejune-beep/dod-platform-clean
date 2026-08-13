@@ -42,13 +42,17 @@ export default function Dashboard() {
     return <div style={{ textAlign: 'center', padding: '50px' }}>Загрузка...</div>;
   }
 
+  if (!user) {
+    return null;
+  }
+
   return (
     <div>
       <Navigation profile={user} />
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px' }}>
-        <h1>👋 Добро пожаловать, {user?.full_name || 'Пользователь'}!</h1>
-        <p>Email: {user?.email}</p>
-        <p>Роль: {user?.role}</p>
+        <h1>👋 Добро пожаловать, {user.full_name}!</h1>
+        <p>Email: {user.email}</p>
+        <p>Роль: {user.role}</p>
         <button
           onClick={() => {
             localStorage.removeItem('token');

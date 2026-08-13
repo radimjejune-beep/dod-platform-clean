@@ -10,7 +10,6 @@ import Participants from './pages/Participants';
 import Clubs from './pages/Clubs';
 import Events from './pages/Events';
 import Achievements from './pages/Achievements';
-import AdminUsers from './pages/AdminUsers';
 import CalendarPage from './pages/Calendar';
 import ClubDetail from './pages/ClubDetail';
 import ParticipantProfile from './pages/ParticipantProfile';
@@ -64,7 +63,7 @@ function App() {
             <Route path="/club-analytics" element={<ProtectedRoute><ClubAnalytics /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute><Participants /></ProtectedRoute>} />
             <Route path="/admin/invite" element={<ProtectedRoute><AdminInvite /></ProtectedRoute>} />
             <Route path="/manage-achievements" element={<ProtectedRoute><ManageAchievements /></ProtectedRoute>} />
             <Route path="/import-participants" element={<ProtectedRoute><ImportParticipants /></ProtectedRoute>} />

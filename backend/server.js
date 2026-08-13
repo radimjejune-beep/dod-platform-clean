@@ -833,7 +833,7 @@ app.post('/api/appeals', async (req, res) => {
 });
 
 // ============================================================
-// 20. ОБРАЩЕНИЯ - ОТВЕТ (С СОХРАНЕНИЕМ СТАТУСОВ)
+// 20. ОБРАЩЕНИЯ - ОТВЕТ (УПРОЩЁННАЯ ВЕРСИЯ)
 // ============================================================
 app.post('/api/appeals/:id/reply', async (req, res) => {
   try {
@@ -859,6 +859,7 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       return res.status(400).json({ error: 'Текст ответа обязателен' });
     }
 
+    // Проверяем существование обращения
     const appealCheck = await pool.query('SELECT status FROM appeals WHERE id = $1', [id]);
     if (appealCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Обращение не найдено' });
@@ -867,13 +868,14 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
     const oldStatus = appealCheck.rows[0].status;
     const newStatus = status || 'in_progress';
 
-    // Сохраняем ответ с указанием старых и новых статусов
+    // Сохраняем ответ (ТОЛЬКО ОБЯЗАТЕЛЬНЫЕ ПОЛЯ)
     await pool.query(
-      `INSERT INTO appeal_replies (appeal_id, author_id, message, status_before, status_after, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())`,
-      [id, userId, message, oldStatus, newStatus]
+      `INSERT INTO appeal_replies (appeal_id, author_id, message, created_at)
+       VALUES ($1, $2, $3, NOW())`,
+      [id, userId, message]
     );
 
+    // Обновляем статус обращения
     await pool.query(
       `UPDATE appeals 
        SET status = $1,
@@ -884,6 +886,7 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       [newStatus, userId, id]
     );
 
+    // Получаем обновлённое обращение
     const result = await pool.query(
       `SELECT a.*, 
               u.full_name as coordinator_name,

@@ -253,32 +253,8 @@ export const getAppealReplies = async (appealId) => {
 };
 
 // ============================================================
-// 9. РЕГИСТРАЦИЯ (ПУБЛИЧНАЯ)
+// 9. ЗАПРОСЫ НА ТЬЮТОРОВ
 // ============================================================
-export const registerUser = async (data) => {
-  const response = await fetch(`${API_URL}/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
-  return response.json();
-};
-
-// ============================================================
-// 10. ИМПОРТ
-// ============================================================
-export const importParticipants = async (data) => {
-  const response = await fetch(`${API_URL}/import-participants`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify(data)
-  });
-  return response.json();
-};
-
-// frontend/src/lib/api.js
-
-// ===== ЗАПРОСЫ НА ТЬЮТОРОВ =====
 export const getTutorRequests = async () => {
   const response = await fetch(`${API_URL}/tutor-requests`, {
     method: 'GET',
@@ -305,7 +281,9 @@ export const updateTutorRequest = async (id, data) => {
   return response.json();
 };
 
-// ===== ПРИГЛАШЕНИЯ ДЛЯ ТЬЮТОРОВ =====
+// ============================================================
+// 10. ПРИГЛАШЕНИЯ ДЛЯ ТЬЮТОРОВ
+// ============================================================
 export const getTutorInvitations = async () => {
   const response = await fetch(`${API_URL}/tutor-invitations`, {
     method: 'GET',
@@ -341,7 +319,31 @@ export const cancelTutorInvitation = async (id) => {
 };
 
 // ============================================================
-// 11. ЭКСПОРТ API ОБЪЕКТА
+// 11. РЕГИСТРАЦИЯ (ПУБЛИЧНАЯ)
+// ============================================================
+export const registerUser = async (data) => {
+  const response = await fetch(`${API_URL}/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+// ============================================================
+// 12. ИМПОРТ
+// ============================================================
+export const importParticipants = async (data) => {
+  const response = await fetch(`${API_URL}/import-participants`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+// ============================================================
+// 13. ЭКСПОРТ API ОБЪЕКТА
 // ============================================================
 const api = {
   getMe,
@@ -367,6 +369,13 @@ const api = {
   addAppeal,
   replyToAppeal,
   getAppealReplies,
+  getTutorRequests,
+  createTutorRequest,
+  updateTutorRequest,
+  getTutorInvitations,
+  createTutorInvitation,
+  respondToTutorInvitation,
+  cancelTutorInvitation,
   registerUser,
   importParticipants
 };

@@ -34,6 +34,7 @@ import MyJournal from './pages/MyJournal';
 import ClubDetail from './pages/ClubDetail';
 import ParticipantProfile from './pages/ParticipantProfile';
 import DashboardAnalytics from './pages/DashboardAnalytics';
+import TutorRequests from './pages/TutorRequests';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import Footer from './components/Footer';
@@ -86,6 +87,9 @@ function App() {
             
             {/* Обращения */}
             <Route path="/appeals" element={<ProtectedRoute><Appeals /></ProtectedRoute>} />
+            
+            {/* Запросы на тьюторов */}
+            <Route path="/tutor-requests" element={<ProtectedRoute><TutorRequests /></ProtectedRoute>} />
             
             {/* Администрирование */}
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />

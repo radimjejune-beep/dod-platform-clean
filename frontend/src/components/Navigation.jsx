@@ -60,7 +60,7 @@ export default function Navigation({ profile }) {
         { path: '/my-reviews', label: '📊 Оценки клуба', roles: ['club_coordinator'] },
         { path: '/reports', label: '📋 Отчёты', roles: ['club_coordinator'] },
         { path: '/appeals', label: '📨 Обращения', roles: ['club_coordinator'] },
-        { path: '/staff', label: '👥 Сотрудники', roles: ['club_coordinator'] },
+        { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', roles: ['club_coordinator'] },
         { path: '/staff-calendar', label: '📅 Календарь', roles: ['club_coordinator'] },
         { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['club_coordinator'] },
       ],
@@ -76,7 +76,6 @@ export default function Navigation({ profile }) {
         { path: '/achievements', label: '🏆 Достижения', roles: ['tutor'] },
         { path: '/my-reviews', label: '📊 Оценки участников', roles: ['tutor'] },
         { path: '/staff-calendar', label: '📅 Мой календарь', roles: ['tutor'] },
-        { path: '/staff', label: '👥 Приглашения', roles: ['tutor'] },
         { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['tutor'] },
       ],
 
@@ -99,6 +98,7 @@ export default function Navigation({ profile }) {
         { path: '/import-participants', label: '📥 Импорт участников', roles: ['movement_coordinator'] },
         { path: '/appeals', label: '📨 Обращения координаторов', roles: ['movement_coordinator'] },
         { path: '/staff', label: '👥 Сотрудники', roles: ['movement_coordinator'] },
+        { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', roles: ['movement_coordinator'] },
         { path: '/staff-calendar', label: '📅 Календарь сотрудников', roles: ['movement_coordinator'] },
         { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['movement_coordinator'] },
       ],
@@ -122,6 +122,7 @@ export default function Navigation({ profile }) {
         { path: '/import-participants', label: '📥 Импорт участников', roles: ['admin'] },
         { path: '/appeals', label: '📨 Обращения координаторов', roles: ['admin'] },
         { path: '/staff', label: '👥 Сотрудники', roles: ['admin'] },
+        { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', roles: ['admin'] },
         { path: '/staff-calendar', label: '📅 Календарь сотрудников', roles: ['admin'] },
         { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['admin'] },
       ],
@@ -187,10 +188,10 @@ export default function Navigation({ profile }) {
       ['/my-journal', '/tutor-journal'].includes(item.path)
     ),
     settings: menuItems.filter(item => 
-      ['/settings', '/admin/invite', '/admin/users', '/import-participants', '/appeals', '/staff', '/staff-calendar', '/reports', '/analytics'].includes(item.path)
+      ['/settings', '/admin/invite', '/admin/users', '/import-participants', '/appeals', '/staff', '/tutor-requests', '/staff-calendar', '/reports', '/analytics'].includes(item.path)
     ),
     other: menuItems.filter(item => 
-      !['/', '/profile', '/dashboard', '/participant-dashboard', '/parent-dashboard', '/club-coordinator-dashboard', '/tutor-dashboard', '/events', '/calendar', '/participants', '/clubs', '/club-analytics', '/my-reviews', '/achievements', '/manage-achievements', '/my-journal', '/tutor-journal', '/settings', '/admin/invite', '/admin/users', '/import-participants', '/appeals', '/staff', '/staff-calendar', '/reports', '/analytics'].includes(item.path)
+      !['/', '/profile', '/dashboard', '/participant-dashboard', '/parent-dashboard', '/club-coordinator-dashboard', '/tutor-dashboard', '/events', '/calendar', '/participants', '/clubs', '/club-analytics', '/my-reviews', '/achievements', '/manage-achievements', '/my-journal', '/tutor-journal', '/settings', '/admin/invite', '/admin/users', '/import-participants', '/appeals', '/staff', '/tutor-requests', '/staff-calendar', '/reports', '/analytics'].includes(item.path)
     )
   };
 

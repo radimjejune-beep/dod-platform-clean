@@ -276,6 +276,35 @@ export const importParticipants = async (data) => {
   return response.json();
 };
 
+// frontend/src/lib/api.js
+
+// ===== ЗАПРОСЫ НА ТЬЮТОРОВ =====
+export const getTutorRequests = async () => {
+  const response = await fetch(`${API_URL}/tutor-requests`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const createTutorRequest = async (data) => {
+  const response = await fetch(`${API_URL}/tutor-requests`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateTutorRequest = async (id, data) => {
+  const response = await fetch(`${API_URL}/tutor-requests/${id}`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
 // ============================================================
 // 11. ЭКСПОРТ API ОБЪЕКТА
 // ============================================================

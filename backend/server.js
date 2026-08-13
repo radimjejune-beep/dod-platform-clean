@@ -10,10 +10,14 @@ import jwt from 'jsonwebtoken';
 dotenv.config();
 
 const app = express();
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-me';
+
+// ===== ПРАВИЛЬНЫЙ JWT СЕКРЕТ =====
+const JWT_SECRET = 'super-secret-key-for-dod-platform-2024';
 const PORT = process.env.PORT || 8080;
 
-// ===== MIDDLEWARE (ИСПРАВЛЕННЫЙ CORS) =====
+console.log('🔐 JWT_SECRET установлен:', JWT_SECRET.substring(0, 20) + '...');
+
+// ===== MIDDLEWARE =====
 app.use(cors({
   origin: '*',
   credentials: true,
@@ -23,7 +27,7 @@ app.use(cors({
 app.options('*', cors());
 app.use(express.json());
 
-// ===== ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ =====
+// ===== ПОДКЛЮЧЕНИЕ К БАЗЕ =====
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
@@ -183,12 +187,28 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: 'Неверный email или пароль' });
     }
 
+    console.log('👤 Найден пользователь:', user.email);
+
+    // Если пароль не захеширован - обновляем
+    if (!user.password_hash || !user.password_hash.startsWith('$2')) {
+      console.log('⚠️ Пароль не захеширован! Обновляем...');
+      const saltRounds = 10;
+      const newHash = await bcrypt.hash(password, saltRounds);
+      await pool.query(
+        'UPDATE users SET password_hash = $1 WHERE id = $2',
+        [newHash, user.id]
+      );
+      user.password_hash = newHash;
+      console.log('✅ Пароль обновлён');
+    }
+
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
       console.log('❌ Неверный пароль для:', email);
       return res.status(401).json({ error: 'Неверный email или пароль' });
     }
 
+    // СОЗДАЁМ ТОКЕН С ПРАВИЛЬНЫМ СЕКРЕТОМ
     const token = jwt.sign(
       {
         userId: user.id,
@@ -201,6 +221,7 @@ app.post('/api/login', async (req, res) => {
     );
 
     console.log('✅ Успешный вход:', email);
+    console.log('🔑 Токен создан:', token.substring(0, 30) + '...');
 
     res.json({
       token,
@@ -213,7 +234,7 @@ app.post('/api/login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Ошибка входа:', error);
+    console.error('❌ Ошибка входа:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -224,27 +245,39 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/me', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
+    console.log('🔍 Заголовок Authorization:', authHeader ? 'есть' : 'нет');
+    
     if (!authHeader) {
       return res.status(401).json({ error: 'Нет токена' });
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('🔍 Токен (первые 30 символов):', token.substring(0, 30) + '...');
+    
+    try {
+      // ПРОВЕРЯЕМ ТОКЕН С ПРАВИЛЬНЫМ СЕКРЕТОМ
+      const decoded = jwt.verify(token, JWT_SECRET);
+      console.log('✅ Токен валиден для:', decoded.email);
 
-    const result = await pool.query(
-      `SELECT id, email, full_name, role, phone, school, class_name,
-              birth_date, is_minor, registration_status, interests, bio, city, created_at
-       FROM users WHERE id = $1`,
-      [decoded.userId]
-    );
+      const result = await pool.query(
+        `SELECT id, email, full_name, role, phone, school, class_name,
+                birth_date, is_minor, registration_status, interests, bio, city, created_at
+         FROM users WHERE id = $1`,
+        [decoded.userId]
+      );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Пользователь не найден' });
+      }
+
+      res.json(result.rows[0]);
+    } catch (jwtError) {
+      console.error('❌ Ошибка JWT:', jwtError.message);
+      return res.status(401).json({ error: 'Неверный токен' });
     }
 
-    res.json(result.rows[0]);
-
   } catch (error) {
+    console.error('❌ Ошибка /api/me:', error);
     res.status(401).json({ error: 'Неверный токен' });
   }
 });
@@ -315,8 +348,49 @@ app.get('/api/registrations', async (req, res) => {
 });
 
 // ============================================================
-// 9. ЗАПУСК СЕРВЕРА
+// 9. СОЗДАНИЕ ТЕСТОВОГО ПОЛЬЗОВАТЕЛЯ
 // ============================================================
-app.listen(PORT, () => {
+app.post('/api/create-test-user', async (req, res) => {
+  try {
+    const email = 'newadmin@dod.ru';
+    const password = '123456';
+    const full_name = 'Новый Администратор';
+    const role = 'admin';
+
+    // Удаляем старого пользователя
+    await pool.query('DELETE FROM users WHERE email = $1', [email]);
+    console.log('🗑️ Старый пользователь удалён');
+
+    // Создаём нового с хешированным паролем
+    const saltRounds = 10;
+    const password_hash = await bcrypt.hash(password, saltRounds);
+
+    const result = await pool.query(
+      `INSERT INTO users (email, password_hash, full_name, role, birth_date)
+       VALUES ($1, $2, $3, $4, '2000-01-01')
+       RETURNING id, email, full_name, role`,
+      [email, password_hash, full_name, role]
+    );
+
+    const user = result.rows[0];
+    console.log('✅ Создан тестовый пользователь:', user.email);
+
+    res.json({
+      message: 'Тестовый пользователь создан!',
+      user: user
+    });
+
+  } catch (error) {
+    console.error('❌ Ошибка создания пользователя:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 10. ЗАПУСК
+// ============================================================
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Сервер запущен на порту ${PORT}`);
+  console.log(`🔐 JWT_SECRET: ${JWT_SECRET ? '✅ установлен' : '❌ НЕ УСТАНОВЛЕН!'}`);
+  console.log(`📝 Создайте тестового пользователя: POST /api/create-test-user`);
 });

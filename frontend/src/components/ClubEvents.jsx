@@ -64,8 +64,7 @@ export default function ClubEvents({ clubId, profile }) {
         },
         body: JSON.stringify({
           ...form,
-          club_id: clubId,
-          is_club_event: true
+          club_id: clubId
         })
       });
 

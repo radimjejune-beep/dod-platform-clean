@@ -39,6 +39,30 @@ pool.connect((err) => {
 });
 
 // ============================================================
+// ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ УВЕДОМЛЕНИЙ
+// ============================================================
+
+async function createNotification(userId, type, title, message, link = null, priority = 'normal') {
+  try {
+    if (!userId) {
+      console.log('⚠️ Попытка создать уведомление без userId');
+      return null;
+    }
+    
+    const result = await pool.query(
+      `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       RETURNING *`,
+      [userId, type, title, message, link, priority]
+    );
+    
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка создания уведомления:', error.message);
+    return null;
+  }
+}
+// ============================================================
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================================
 
@@ -1246,6 +1270,45 @@ app.post('/api/upload-avatar', async (req, res) => {
     });
   } catch (error) {
     console.error('Ошибка загрузки аватара:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// ЗАГРУЗКА ИЗОБРАЖЕНИЯ ДЛЯ НОВОСТЕЙ
+// ============================================================
+app.post('/api/upload-news-image', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    if (!['admin', 'movement_coordinator'].includes(decoded.role)) {
+      return res.status(403).json({ error: 'У вас нет прав' });
+    }
+
+    const { image_base64 } = req.body;
+
+    if (!image_base64) {
+      return res.status(400).json({ error: 'Нет данных изображения' });
+    }
+
+    if (!image_base64.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'Неверный формат изображения' });
+    }
+
+    // Сохраняем изображение как base64 (или можно сохранять на диск)
+    // Для простоты возвращаем тот же base64
+    res.json({ 
+      message: 'Изображение загружено', 
+      image_url: image_base64 
+    });
+  } catch (error) {
+    console.error('Ошибка загрузки изображения:', error);
     res.status(500).json({ error: error.message });
   }
 });

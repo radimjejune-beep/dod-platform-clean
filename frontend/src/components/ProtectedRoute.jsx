@@ -26,11 +26,11 @@ const routeRoles = {
   '/admin/invite': ['admin', 'movement_coordinator'],
   '/admin/users': ['admin', 'movement_coordinator', 'president', 'vice_president'],
   '/admin/news': ['admin', 'movement_coordinator'],
-  '/import-participants': ['admin', 'movement_coordinator', 'president', 'vice_president'],
+  '/import-participants': ['admin', 'movement_coordinator'],
   '/appeals': ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'],
   '/staff': ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'],
   '/staff-calendar': ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'],
-  '/president-tasks': ['admin', 'movement_coordinator', 'club_coordinator', 'participant'],
+  '/president-tasks': ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'],
   '/my-journal': ['tutor'],
   '/calendar': ['all'],
   '/tutor-requests': ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'],
@@ -62,13 +62,11 @@ export default function ProtectedRoute({ children }) {
     const sessionId = sessionStorage.getItem('sessionId');
     const userId = sessionStorage.getItem('userId');
     
-    // Нет токена — не авторизован
     if (!token) {
       console.log('❌ Нет токена');
       return false;
     }
     
-    // Есть токен, но нет сессии — сессия истекла
     if (!sessionId) {
       console.log('❌ Сессия истекла (закрыта вкладка)');
       localStorage.removeItem('token');
@@ -76,7 +74,6 @@ export default function ProtectedRoute({ children }) {
       return false;
     }
     
-    // Проверяем, что userId совпадает
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     if (user.id && userId && user.id !== userId) {
       console.log('❌ Несовпадение userId');
@@ -92,7 +89,6 @@ export default function ProtectedRoute({ children }) {
 
   useEffect(() => {
     const validateAuth = async () => {
-      // Проверяем сессию
       if (!checkSession()) {
         setIsAuthenticated(false);
         setLoading(false);
@@ -118,7 +114,6 @@ export default function ProtectedRoute({ children }) {
             setRedirectPath(defaultRoute);
           }
         } else {
-          // Пробуем получить данные с сервера
           try {
             const userData = await api.getMe();
             if (userData && userData.id) {
@@ -154,17 +149,11 @@ export default function ProtectedRoute({ children }) {
 
     validateAuth();
 
-    // ===== СЛУШАЕМ ЗАКРЫТИЕ ВКЛАДКИ =====
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // Вкладка скрыта — ничего не делаем
-      } else {
-        // Вкладка снова активна — проверяем сессию
+      if (!document.hidden) {
         const token = localStorage.getItem('token');
         const sessionId = sessionStorage.getItem('sessionId');
-        
         if (token && !sessionId) {
-          // Сессия потеряна — выходим
           console.log('🔒 Сессия потеряна при возврате');
           logout();
           window.location.href = '/login';
@@ -172,9 +161,7 @@ export default function ProtectedRoute({ children }) {
       }
     };
 
-    // ===== СЛУШАЕМ ЗАКРЫТИЕ БРАУЗЕРА =====
     const handleBeforeUnload = () => {
-      // При закрытии вкладки удаляем сессию
       sessionStorage.removeItem('sessionId');
       sessionStorage.removeItem('userId');
       sessionStorage.removeItem('userRole');

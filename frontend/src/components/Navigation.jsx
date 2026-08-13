@@ -25,7 +25,12 @@ export default function Navigation({ profile }) {
 
   const getAvatar = () => {
     if (profile?.avatar_url) {
-      return <img src={profile.avatar_url} alt="Аватар" className="nav-avatar" />;
+      const isBase64 = profile.avatar_url.startsWith('data:image/');
+      const isUrl = profile.avatar_url.startsWith('http');
+      if (isBase64 || isUrl) {
+        return <img src={profile.avatar_url} alt="Аватар" className="nav-avatar" />;
+      }
+      return <img src={`/uploads/${profile.avatar_url}`} alt="Аватар" className="nav-avatar" />;
     }
     const initial = profile?.full_name?.charAt(0) || '?';
     return (
@@ -53,7 +58,7 @@ export default function Navigation({ profile }) {
       ],
       clubs: [
         { path: '/clubs', label: '🏫 КЮДы', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'] },
-        { path: '/club-analytics', label: '📊 Аналитика', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
+        { path: '/club-analytics', label: '📊 Аналитика клубов', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
       ],
       achievements: [
         { path: '/achievements', label: '🏆 Достижения', roles: ['admin', 'movement_coordinator', 'tutor', 'president', 'vice_president'] },
@@ -67,17 +72,17 @@ export default function Navigation({ profile }) {
         { path: '/reports', label: '📋 Отчёты', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
       ],
       analytics: [
-        { path: '/analytics', label: '📊 Аналитика', roles: ['admin', 'movement_coordinator', 'president', 'vice_president'] },
+        { path: '/analytics', label: '📊 Общая аналитика', roles: ['admin', 'movement_coordinator', 'president', 'vice_president'] },
       ],
       tasks: [
-        { path: '/president-tasks', label: '👑 Задания', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'participant'] },
+        { path: '/president-tasks', label: '👑 Задания президента', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
       ],
       journal: [
         { path: '/my-journal', label: '📓 Журнал', roles: ['tutor'] },
       ],
       staff: [
         { path: '/staff', label: '👥 Сотрудники', roles: ['admin', 'movement_coordinator'] },
-        { path: '/staff-calendar', label: '📅 Календарь', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'] },
+        { path: '/staff-calendar', label: '📅 Календарь сотрудников', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'] },
         { path: '/tutor-requests', label: '🤝 Запросы', roles: ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'] },
         { path: '/tutor-invitations', label: '📨 Приглашения', roles: ['tutor', 'admin', 'movement_coordinator', 'president', 'vice_president'] },
       ],
@@ -124,10 +129,48 @@ export default function Navigation({ profile }) {
   };
 
   useEffect(() => {
-    const handleClickOutside = () => setOpenDropdown(null);
+    const handleClickOutside = (event) => {
+      const dropdowns = document.querySelectorAll('.nav-new-dropdown');
+      let clickedOnDropdown = false;
+      dropdowns.forEach(dropdown => {
+        if (dropdown.contains(event.target)) {
+          clickedOnDropdown = true;
+        }
+      });
+      if (!clickedOnDropdown) {
+        setOpenDropdown(null);
+      }
+    };
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen]);
+
+  if (!profile) {
+    return (
+      <nav className="nav-new">
+        <div className="nav-new-container">
+          <Link to="/" className="nav-new-logo">
+            <img src={logo} alt="ДОД «Дипломаты будущего»" className="nav-new-logo-img" />
+            <span className="nav-new-logo-text">Дипломаты будущего</span>
+          </Link>
+          <div className="nav-new-right">
+            <Link to="/login" className="nav-new-link">Войти</Link>
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className="nav-new">
@@ -164,6 +207,8 @@ export default function Navigation({ profile }) {
                 <button 
                   className={`nav-new-dropdown-btn ${hasActive ? 'active' : ''}`}
                   onClick={() => setOpenDropdown(isOpen ? null : key)}
+                  aria-expanded={isOpen}
+                  aria-haspopup="true"
                 >
                   <span className="nav-new-dropdown-label">{groupLabels[key] || key}</span>
                   <span className="nav-new-dropdown-arrow">▾</span>
@@ -175,7 +220,10 @@ export default function Navigation({ profile }) {
                         key={item.path}
                         to={item.path}
                         className={`nav-new-dropdown-item ${isActive(item.path) ? 'active' : ''}`}
-                        onClick={() => setOpenDropdown(null)}
+                        onClick={() => {
+                          setOpenDropdown(null);
+                          setIsMobileMenuOpen(false);
+                        }}
                       >
                         {item.label}
                       </Link>
@@ -197,13 +245,19 @@ export default function Navigation({ profile }) {
             </span>
           </Link>
 
-          <button className="nav-new-logout" onClick={handleLogout} title="Выйти">
+          <button 
+            className="nav-new-logout" 
+            onClick={handleLogout} 
+            title="Выйти"
+            aria-label="Выйти из системы"
+          >
             <span>🚪</span>
           </button>
 
           <button 
             className="nav-new-burger" 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label={isMobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
           >
             {isMobileMenuOpen ? '✕' : '☰'}
           </button>
@@ -361,7 +415,7 @@ export default function Navigation({ profile }) {
           border: 1px solid #E2E7EF;
           min-width: 200px;
           padding: 6px;
-          z-index: 100;
+          z-index: 1000;
           animation: fadeIn 0.15s ease;
         }
 
@@ -484,12 +538,13 @@ export default function Navigation({ profile }) {
           margin-top: 0;
           max-height: 70vh;
           overflow-y: auto;
-          position: absolute;
-          top: 100%;
+          position: fixed;
+          top: 60px;
           left: 0;
           right: 0;
           background: white;
           box-shadow: 0 8px 30px rgba(11, 31, 58, 0.1);
+          z-index: 1000;
         }
 
         .nav-new-mobile-group {
@@ -574,6 +629,9 @@ export default function Navigation({ profile }) {
           .nav-new-profile {
             padding: 4px;
           }
+          .nav-new-mobile {
+            top: 54px;
+          }
         }
 
         @media (max-width: 480px) {
@@ -600,6 +658,9 @@ export default function Navigation({ profile }) {
             width: 28px;
             height: 28px;
             font-size: 11px;
+          }
+          .nav-new-mobile {
+            top: 48px;
           }
         }
       `}</style>

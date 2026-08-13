@@ -2,7 +2,7 @@
 
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';  // ← ДОБАВИТЬ ЭТУ СТРОЧКУ
+import { useNavigate } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Публичные страницы
@@ -61,23 +61,19 @@ import Participants from './pages/Participants';
 // Стили
 import './styles/global.css';
 
-// ===== ВЫНОСИМ МАРШРУТЫ В ОТДЕЛЬНЫЙ КОМПОНЕНТ =====
 function AppRoutes() {
-  const navigate = useNavigate();  // ← ДОБАВИТЬ ЭТУ СТРОЧКУ
+  const navigate = useNavigate();
 
-  // ===== ПРОВЕРКА СЕССИИ (МИНИМАЛЬНОЕ ДОБАВЛЕНИЕ) =====
-  useEffect(() => {  // ← ВЕСЬ ЭТОТ БЛОК ДОБАВИТЬ
+  // ===== ПРОВЕРКА СЕССИИ =====
+  useEffect(() => {
     const token = localStorage.getItem('token');
     const sessionId = sessionStorage.getItem('sessionId');
     const currentPath = window.location.pathname;
     
-    // Если есть токен, но нет сессии — выходим
     if (token && !sessionId) {
       console.log('🔒 Сессия истекла (закрыта вкладка)');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      
-      // Если мы не на странице входа/регистрации — перенаправляем
       if (currentPath !== '/login' && currentPath !== '/register' && currentPath !== '/') {
         navigate('/login');
       }
@@ -342,7 +338,6 @@ function AppRoutes() {
   );
 }
 
-// ===== ОСНОВНОЙ КОМПОНЕНТ =====
 function App() {
   return (
     <Router>

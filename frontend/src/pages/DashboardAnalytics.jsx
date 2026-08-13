@@ -7,12 +7,17 @@ import Navigation from '../components/Navigation';
 
 export default function DashboardAnalytics() {
   const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalParticipants: 0,
     totalClubs: 0,
-    totalEvents: 0
+    totalEvents: 0,
+    totalAchievements: 0,
+    newParticipantsThisMonth: 0,
+    topClubs: [],
+    monthlyLabels: [],
+    monthlyActivity: []
   });
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,22 +31,74 @@ export default function DashboardAnalytics() {
         navigate('/login');
         return;
       }
+
+      // ============================================================
+      // ТОЛЬКО АДМИН И КООРДИНАТОР ДВИЖЕНИЯ
+      // ============================================================
+      if (userData.role !== 'admin' && userData.role !== 'movement_coordinator') {
+        navigate('/dashboard');
+        return;
+      }
+
       setProfile(userData);
 
-      const users = await api.getUsers();
-      const clubs = await api.getClubs();
-      const events = await api.getEvents();
+      const [users, clubs, events, achievements] = await Promise.all([
+        api.getUsers(),
+        api.getClubs(),
+        api.getEvents(),
+        api.getAchievements()
+      ]);
+
+      // Общая статистика
+      const participants = users.filter(u => u.role === 'participant');
+      
+      // Новые участники за месяц
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      const newParticipants = participants.filter(p => 
+        new Date(p.created_at) > oneMonthAgo
+      );
+
+      // Топ клубов
+      const clubsWithCount = clubs.map(club => {
+        const count = participants.filter(p => p.club_id === club.id).length;
+        const clubEvents = events.filter(e => e.club_id === club.id).length;
+        return { ...club, participantsCount: count, eventsCount: clubEvents, rating: count * 5 + clubEvents * 10 };
+      });
+      clubsWithCount.sort((a, b) => b.rating - a.rating);
+
+      // Активность по месяцам (последние 6 месяцев)
+      const monthlyLabels = [];
+      const monthlyActivity = [];
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        monthlyLabels.push(date.toLocaleString('ru-RU', { month: 'short' }));
+        
+        const monthEvents = events.filter(e => {
+          const eventDate = new Date(e.event_date);
+          return eventDate.getMonth() === date.getMonth() && 
+                 eventDate.getFullYear() === date.getFullYear();
+        });
+        monthlyActivity.push(monthEvents.length);
+      }
 
       setStats({
-        totalParticipants: users.filter(u => u.role === 'participant').length,
+        totalParticipants: participants.length,
         totalClubs: clubs.length,
-        totalEvents: events.length
+        totalEvents: events.length,
+        totalAchievements: achievements.length,
+        newParticipantsThisMonth: newParticipants.length,
+        topClubs: clubsWithCount.slice(0, 5),
+        monthlyLabels,
+        monthlyActivity
       });
 
     } catch (err) {
       console.error('Ошибка:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   if (loading) {
@@ -52,24 +109,134 @@ export default function DashboardAnalytics() {
     );
   }
 
+  const maxMonthly = Math.max(...stats.monthlyActivity, 1);
+
   return (
-    <div style={{ background: '#F4F6F9', minHeight: '100vh' }}>
+    <div className="page-background">
       <Navigation profile={profile} />
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '30px 24px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0B1F3A' }}>📊 Аналитика</h1>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '20px' }}>
-          <div style={{ background: 'white', padding: '24px', borderRadius: '16px', textAlign: 'center', border: '1px solid #E2E7EF' }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: '#0B1F3A' }}>{stats.totalParticipants}</div>
-            <div style={{ fontSize: '14px', color: '#667085' }}>Участников</div>
+      <div className="container-page">
+        <div className="page-header">
+          <span style={{ fontSize: '32px' }}>📊</span>
+          <div>
+            <h1>Аналитика движения</h1>
+            <p>Статистика и показатели ДОД «Дипломаты будущего»</p>
           </div>
-          <div style={{ background: 'white', padding: '24px', borderRadius: '16px', textAlign: 'center', border: '1px solid #E2E7EF' }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: '#0B1F3A' }}>{stats.totalClubs}</div>
-            <div style={{ fontSize: '14px', color: '#667085' }}>КЮДов</div>
+        </div>
+
+        {/* СТАТИСТИКА В ЦИФРАХ */}
+        <div className="grid-4" style={{ marginBottom: '24px' }}>
+          <div className="stat-card">
+            <div className="number">{stats.totalParticipants}</div>
+            <div className="label">👥 Участников</div>
           </div>
-          <div style={{ background: 'white', padding: '24px', borderRadius: '16px', textAlign: 'center', border: '1px solid #E2E7EF' }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: '#0B1F3A' }}>{stats.totalEvents}</div>
-            <div style={{ fontSize: '14px', color: '#667085' }}>Мероприятий</div>
+          <div className="stat-card">
+            <div className="number">{stats.totalClubs}</div>
+            <div className="label">🏫 КЮДов</div>
+          </div>
+          <div className="stat-card">
+            <div className="number">{stats.totalEvents}</div>
+            <div className="label">📅 Мероприятий</div>
+          </div>
+          <div className="stat-card" style={{ borderTop: '4px solid #C9A227' }}>
+            <div className="number" style={{ color: '#C9A227' }}>{stats.newParticipantsThisMonth}</div>
+            <div className="label">⭐ Новых за месяц</div>
+          </div>
+        </div>
+
+        {/* ТОП-5 КЮДОВ + ГРАФИК */}
+        <div className="grid-2" style={{ marginBottom: '24px' }}>
+          <div className="card">
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+              🏆 Топ-5 КЮДов
+            </h3>
+            {stats.topClubs.length === 0 ? (
+              <p style={{ color: '#667085' }}>Нет данных</p>
+            ) : (
+              stats.topClubs.map((club, index) => (
+                <div key={club.id} className="list-item" style={{
+                  borderLeftColor: index === 0 ? '#C9A227' : '#667085',
+                  background: index === 0 ? '#FBF4DC' : 'transparent'
+                }}>
+                  <div className="title">
+                    #{index + 1} {club.name}
+                  </div>
+                  <div className="subtitle">
+                    👥 {club.participantsCount} участников • 📅 {club.eventsCount} мероприятий
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="card">
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+              📈 Активность по месяцам
+            </h3>
+            {stats.monthlyActivity.length === 0 || stats.monthlyActivity.every(v => v === 0) ? (
+              <p style={{ color: '#667085' }}>Нет данных</p>
+            ) : (
+              <div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  justifyContent: 'space-between',
+                  height: '120px',
+                  paddingBottom: '4px',
+                  gap: '4px'
+                }}>
+                  {stats.monthlyActivity.map((count, index) => (
+                    <div key={index} style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      flex: 1,
+                      height: '100%'
+                    }}>
+                      <div style={{
+                        width: '100%',
+                        height: `${(count / maxMonthly) * 100}%`,
+                        minHeight: count > 0 ? '4px' : '0',
+                        background: '#174A7E',
+                        borderRadius: '4px 4px 0 0',
+                        transition: 'height 0.5s ease'
+                      }} />
+                      <div style={{
+                        fontSize: '10px',
+                        color: '#667085',
+                        marginTop: '4px',
+                        textAlign: 'center'
+                      }}>
+                        {stats.monthlyLabels[index] || ''}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize: '12px', color: '#667085', marginTop: '8px', textAlign: 'center' }}>
+                  Всего мероприятий: {stats.monthlyActivity.reduce((a, b) => a + b, 0)}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* БЫСТРЫЕ ДЕЙСТВИЯ */}
+        <div className="card">
+          <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
+            🚀 Быстрые действия
+          </h3>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <button className="btn-primary" onClick={() => navigate('/clubs')}>
+              🏫 КЮДы
+            </button>
+            <button className="btn-primary" onClick={() => navigate('/participants')}>
+              👥 Участники
+            </button>
+            <button className="btn-primary" onClick={() => navigate('/events')}>
+              📅 Мероприятия
+            </button>
+            <button className="btn-primary" onClick={() => navigate('/reports')}>
+              📋 Отчёты
+            </button>
           </div>
         </div>
       </div>

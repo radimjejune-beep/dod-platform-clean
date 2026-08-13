@@ -7,6 +7,7 @@ import Navigation from '../components/Navigation';
 
 export default function MyJournal() {
   const [profile, setProfile] = useState(null);
+  const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -21,11 +22,24 @@ export default function MyJournal() {
         navigate('/login');
         return;
       }
+
+      // ============================================================
+      // ТОЛЬКО ТЬЮТОР
+      // ============================================================
+      if (userData.role !== 'tutor') {
+        navigate('/dashboard');
+        return;
+      }
+
       setProfile(userData);
+
+      // TODO: добавить API для получения назначений тьютора
+      setAssignments([]);
     } catch (err) {
       console.error('Ошибка:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   if (loading) {
@@ -37,13 +51,51 @@ export default function MyJournal() {
   }
 
   return (
-    <div style={{ background: '#F4F6F9', minHeight: '100vh' }}>
+    <div className="page-background">
       <Navigation profile={profile} />
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '30px 24px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0B1F3A' }}>📓 Мой журнал</h1>
-        <div style={{ background: 'white', borderRadius: '16px', padding: '40px', textAlign: 'center', border: '1px solid #E2E7EF', marginTop: '20px' }}>
-          <p style={{ color: '#667085' }}>Ваш журнал</p>
+      <div className="container-page">
+        <div className="page-header">
+          <span style={{ fontSize: '32px' }}>📓</span>
+          <div>
+            <h1>Мой журнал</h1>
+            <p>Ваши мероприятия для оценки участников</p>
+          </div>
         </div>
+
+        {assignments.length === 0 ? (
+          <div className="empty-state">
+            <div className="icon">📋</div>
+            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>У вас пока нет мероприятий для оценки</p>
+            <p style={{ color: '#667085' }}>Когда вас назначат на мероприятие, оно появится здесь</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {assignments.map((a) => (
+              <div
+                key={a.id}
+                className="list-item"
+                style={{ borderLeftColor: a.is_lead_tutor ? '#C9A227' : '#174A7E' }}
+                onClick={() => navigate(`/tutor-journal/${a.event_id}`)}
+              >
+                <div className="title">
+                  {a.event_title || 'Мероприятие'}
+                  {a.is_lead_tutor && (
+                    <span className="tag tag-gold" style={{ marginLeft: '8px', fontSize: '10px' }}>
+                      ⭐ Старший тьютор
+                    </span>
+                  )}
+                </div>
+                <div className="subtitle">
+                  📅 {a.event_date ? new Date(a.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
+                  {a.location && ` • 📍 ${a.location}`}
+                </div>
+                <div className="meta">
+                  🎯 Роль: <span className="tag tag-blue">{a.role || 'Тьютор'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ export default function Navigation({ profile }) {
   const [isEventsOpen, setIsEventsOpen] = useState(false);
   const [isClubsOpen, setIsClubsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   
   const isActive = (path) => location.pathname === path;
   const role = profile?.role || 'participant';
@@ -30,7 +31,7 @@ export default function Navigation({ profile }) {
     const roleItems = {
       // ===== УЧАСТНИК =====
       'participant': [
-        { path: '/dashboard', label: '📊 Мой кабинет', roles: ['participant'] },
+        { path: '/participant-dashboard', label: '📊 Мой кабинет', roles: ['participant'] },
         { path: '/events', label: '📅 Мероприятия', roles: ['participant'] },
         { path: '/my-achievements', label: '🏆 Мои достижения', roles: ['participant'] },
         { path: '/my-reviews', label: '📊 Мои оценки', roles: ['participant'] },
@@ -40,7 +41,7 @@ export default function Navigation({ profile }) {
 
       // ===== РОДИТЕЛЬ =====
       'parent': [
-        { path: '/dashboard', label: '📊 Кабинет родителя', roles: ['parent'] },
+        { path: '/parent-dashboard', label: '📊 Кабинет родителя', roles: ['parent'] },
         { path: '/events', label: '📅 Мероприятия', roles: ['parent'] },
         { path: '/my-achievements', label: '🏆 Достижения ребенка', roles: ['parent'] },
         { path: '/my-reviews', label: '📊 Оценки ребенка', roles: ['parent'] },
@@ -49,15 +50,15 @@ export default function Navigation({ profile }) {
 
       // ===== КООРДИНАТОР КЛУБА =====
       'club_coordinator': [
-        { path: '/dashboard', label: '📊 Управление клубом', roles: ['club_coordinator'] },
+        { path: '/club-coordinator-dashboard', label: '📊 Управление клубом', roles: ['club_coordinator'] },
         { path: '/clubs', label: '🏫 Мой КЮД', roles: ['club_coordinator'] },
+        { path: '/club-analytics', label: '📊 Аналитика клуба', roles: ['club_coordinator'] },
         { path: '/president-tasks', label: '👑 Задания президента', roles: ['club_coordinator'] },
         { path: '/events', label: '📅 Мероприятия', roles: ['club_coordinator'] },
         { path: '/participants', label: '👥 Участники клуба', roles: ['club_coordinator'] },
         { path: '/manage-achievements', label: '🏆 Достижения клуба', roles: ['club_coordinator'] },
         { path: '/my-reviews', label: '📊 Оценки клуба', roles: ['club_coordinator'] },
         { path: '/reports', label: '📋 Отчёты', roles: ['club_coordinator'] },
-        { path: '/club-analytics', label: '📊 Аналитика клуба', roles: ['club_coordinator'] },
         { path: '/appeals', label: '📨 Обращения', roles: ['club_coordinator'] },
         { path: '/staff', label: '👥 Сотрудники', roles: ['club_coordinator'] },
         { path: '/staff-calendar', label: '📅 Календарь', roles: ['club_coordinator'] },
@@ -66,7 +67,9 @@ export default function Navigation({ profile }) {
 
       // ===== ТЬЮТОР =====
       'tutor': [
-        { path: '/dashboard', label: '📊 Кабинет тьютора', roles: ['tutor'] },
+        { path: '/tutor-dashboard', label: '📊 Кабинет тьютора', roles: ['tutor'] },
+        { path: '/my-journal', label: '📓 Мой журнал', roles: ['tutor'] },
+        { path: '/tutor-journal', label: '📋 Журнал тьютора', roles: ['tutor'] },
         { path: '/clubs', label: '🏫 КЮДы', roles: ['tutor'] },
         { path: '/events', label: '📅 Мероприятия', roles: ['tutor'] },
         { path: '/participants', label: '👥 Участники', roles: ['tutor'] },
@@ -74,13 +77,14 @@ export default function Navigation({ profile }) {
         { path: '/my-reviews', label: '📊 Оценки участников', roles: ['tutor'] },
         { path: '/staff-calendar', label: '📅 Мой календарь', roles: ['tutor'] },
         { path: '/staff', label: '👥 Приглашения', roles: ['tutor'] },
-        { path: '/my-journal', label: '📓 Мой журнал', roles: ['tutor'] },
         { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['tutor'] },
       ],
 
       // ===== КООРДИНАТОР ДВИЖЕНИЯ =====
       'movement_coordinator': [
         { path: '/dashboard', label: '📊 Дашборд', roles: ['movement_coordinator'] },
+        { path: '/analytics', label: '📊 Аналитика', roles: ['movement_coordinator'] },
+        { path: '/club-analytics', label: '📊 Аналитика клубов', roles: ['movement_coordinator'] },
         { path: '/president-tasks', label: '👑 Задания президента', roles: ['movement_coordinator'] },
         { path: '/clubs', label: '🏫 КЮДы', roles: ['movement_coordinator'] },
         { path: '/events', label: '📅 Мероприятия', roles: ['movement_coordinator'] },
@@ -89,7 +93,6 @@ export default function Navigation({ profile }) {
         { path: '/manage-achievements', label: '🏆 Управление достижениями', roles: ['movement_coordinator'] },
         { path: '/my-reviews', label: '📊 Оценки участников', roles: ['movement_coordinator'] },
         { path: '/reports', label: '📋 Отчёты', roles: ['movement_coordinator'] },
-        { path: '/analytics', label: '📊 Аналитика', roles: ['movement_coordinator'] },
         { path: '/settings', label: '⚙️ Настройки', roles: ['movement_coordinator'] },
         { path: '/admin/invite', label: '🎫 Пригласить', roles: ['movement_coordinator'] },
         { path: '/admin/users', label: '👥 Управление пользователями', roles: ['movement_coordinator'] },
@@ -97,13 +100,14 @@ export default function Navigation({ profile }) {
         { path: '/appeals', label: '📨 Обращения координаторов', roles: ['movement_coordinator'] },
         { path: '/staff', label: '👥 Сотрудники', roles: ['movement_coordinator'] },
         { path: '/staff-calendar', label: '📅 Календарь сотрудников', roles: ['movement_coordinator'] },
-        { path: '/club-analytics', label: '📊 Аналитика клубов', roles: ['movement_coordinator'] },
         { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['movement_coordinator'] },
       ],
 
       // ===== АДМИНИСТРАТОР =====
       'admin': [
         { path: '/dashboard', label: '📊 Дашборд', roles: ['admin'] },
+        { path: '/analytics', label: '📊 Аналитика', roles: ['admin'] },
+        { path: '/club-analytics', label: '📊 Аналитика клубов', roles: ['admin'] },
         { path: '/president-tasks', label: '👑 Задания президента', roles: ['admin'] },
         { path: '/clubs', label: '🏫 КЮДы', roles: ['admin'] },
         { path: '/events', label: '📅 Мероприятия', roles: ['admin'] },
@@ -112,7 +116,6 @@ export default function Navigation({ profile }) {
         { path: '/manage-achievements', label: '🏆 Управление достижениями', roles: ['admin'] },
         { path: '/my-reviews', label: '📊 Оценки участников', roles: ['admin'] },
         { path: '/reports', label: '📋 Отчёты', roles: ['admin'] },
-        { path: '/analytics', label: '📊 Аналитика', roles: ['admin'] },
         { path: '/settings', label: '⚙️ Настройки', roles: ['admin'] },
         { path: '/admin/invite', label: '🎫 Пригласить', roles: ['admin'] },
         { path: '/admin/users', label: '👥 Управление пользователями', roles: ['admin'] },
@@ -120,13 +123,14 @@ export default function Navigation({ profile }) {
         { path: '/appeals', label: '📨 Обращения координаторов', roles: ['admin'] },
         { path: '/staff', label: '👥 Сотрудники', roles: ['admin'] },
         { path: '/staff-calendar', label: '📅 Календарь сотрудников', roles: ['admin'] },
-        { path: '/club-analytics', label: '📊 Аналитика клубов', roles: ['admin'] },
         { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['admin'] },
       ],
 
       // ===== ПРЕЗИДЕНТ =====
       'president': [
         { path: '/dashboard', label: '📊 Дашборд президента', roles: ['president'] },
+        { path: '/analytics', label: '📊 Аналитика', roles: ['president'] },
+        { path: '/club-analytics', label: '📊 Аналитика клубов', roles: ['president'] },
         { path: '/clubs', label: '🏫 КЮДы', roles: ['president'] },
         { path: '/events', label: '📅 Мероприятия', roles: ['president'] },
         { path: '/participants', label: '👥 Участники', roles: ['president'] },
@@ -134,12 +138,7 @@ export default function Navigation({ profile }) {
         { path: '/my-reviews', label: '📊 Оценки участников', roles: ['president'] },
         { path: '/reports', label: '📋 Отчёты', roles: ['president'] },
         { path: '/appeals', label: '📨 Обращения', roles: ['president'] },
-        { path: '/analytics', label: '📊 Аналитика', roles: ['president'] },
         { path: '/admin/users', label: '👥 Пользователи', roles: ['president'] },
-        { path: '/import-participants', label: '📥 Импорт участников', roles: ['president'] },
-        { path: '/staff', label: '👥 Сотрудники', roles: ['president'] },
-        { path: '/staff-calendar', label: '📅 Календарь сотрудников', roles: ['president'] },
-        { path: '/club-analytics', label: '📊 Аналитика клубов', roles: ['president'] },
         { path: '/profile', label: '👤 Профиль', roles: ['president'] },
         { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['president'] },
       ],
@@ -147,6 +146,8 @@ export default function Navigation({ profile }) {
       // ===== ВИЦЕ-ПРЕЗИДЕНТ =====
       'vice_president': [
         { path: '/dashboard', label: '📊 Дашборд', roles: ['vice_president'] },
+        { path: '/analytics', label: '📊 Аналитика', roles: ['vice_president'] },
+        { path: '/club-analytics', label: '📊 Аналитика клубов', roles: ['vice_president'] },
         { path: '/clubs', label: '🏫 КЮДы', roles: ['vice_president'] },
         { path: '/events', label: '📅 Мероприятия', roles: ['vice_president'] },
         { path: '/participants', label: '👥 Участники', roles: ['vice_president'] },
@@ -154,12 +155,7 @@ export default function Navigation({ profile }) {
         { path: '/my-reviews', label: '📊 Оценки участников', roles: ['vice_president'] },
         { path: '/reports', label: '📋 Отчёты', roles: ['vice_president'] },
         { path: '/appeals', label: '📨 Обращения', roles: ['vice_president'] },
-        { path: '/analytics', label: '📊 Аналитика', roles: ['vice_president'] },
         { path: '/admin/users', label: '👥 Пользователи', roles: ['vice_president'] },
-        { path: '/import-participants', label: '📥 Импорт участников', roles: ['vice_president'] },
-        { path: '/staff', label: '👥 Сотрудники', roles: ['vice_president'] },
-        { path: '/staff-calendar', label: '📅 Календарь сотрудников', roles: ['vice_president'] },
-        { path: '/club-analytics', label: '📊 Аналитика клубов', roles: ['vice_president'] },
         { path: '/profile', label: '👤 Профиль', roles: ['vice_president'] },
         { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['vice_president'] },
       ],
@@ -179,7 +175,7 @@ export default function Navigation({ profile }) {
 
   const groupedItems = {
     main: menuItems.filter(item => 
-      ['/', '/profile', '/dashboard'].includes(item.path)
+      ['/', '/profile', '/dashboard', '/participant-dashboard', '/parent-dashboard', '/club-coordinator-dashboard', '/tutor-dashboard'].includes(item.path)
     ),
     events: menuItems.filter(item => 
       ['/events', '/calendar', '/participants'].includes(item.path)
@@ -187,11 +183,14 @@ export default function Navigation({ profile }) {
     clubs: menuItems.filter(item => 
       ['/clubs', '/club-analytics', '/my-reviews', '/achievements', '/manage-achievements'].includes(item.path)
     ),
+    journal: menuItems.filter(item => 
+      ['/my-journal', '/tutor-journal'].includes(item.path)
+    ),
     settings: menuItems.filter(item => 
       ['/settings', '/admin/invite', '/admin/users', '/import-participants', '/appeals', '/staff', '/staff-calendar', '/reports', '/analytics'].includes(item.path)
     ),
     other: menuItems.filter(item => 
-      !['/', '/profile', '/dashboard', '/events', '/calendar', '/participants', '/clubs', '/club-analytics', '/my-reviews', '/achievements', '/manage-achievements', '/settings', '/admin/invite', '/admin/users', '/import-participants', '/appeals', '/staff', '/staff-calendar', '/reports', '/analytics'].includes(item.path)
+      !['/', '/profile', '/dashboard', '/participant-dashboard', '/parent-dashboard', '/club-coordinator-dashboard', '/tutor-dashboard', '/events', '/calendar', '/participants', '/clubs', '/club-analytics', '/my-reviews', '/achievements', '/manage-achievements', '/my-journal', '/tutor-journal', '/settings', '/admin/invite', '/admin/users', '/import-participants', '/appeals', '/staff', '/staff-calendar', '/reports', '/analytics'].includes(item.path)
     )
   };
 
@@ -201,6 +200,9 @@ export default function Navigation({ profile }) {
   }
   if (groupedItems.clubs.length > 0) {
     categories.push({ title: '🏫 Клубы', items: groupedItems.clubs, key: 'clubs' });
+  }
+  if (groupedItems.journal.length > 0) {
+    categories.push({ title: '📓 Журнал', items: groupedItems.journal, key: 'journal' });
   }
   if (groupedItems.settings.length > 0) {
     categories.push({ title: '⚙️ Настройки', items: groupedItems.settings, key: 'settings' });
@@ -269,11 +271,13 @@ export default function Navigation({ profile }) {
               onMouseEnter={() => {
                 if (category.key === 'events') setIsEventsOpen(true);
                 if (category.key === 'clubs') setIsClubsOpen(true);
+                if (category.key === 'journal') setIsDashboardOpen(true);
                 if (category.key === 'settings') setIsSettingsOpen(true);
               }}
               onMouseLeave={() => {
                 if (category.key === 'events') setIsEventsOpen(false);
                 if (category.key === 'clubs') setIsClubsOpen(false);
+                if (category.key === 'journal') setIsDashboardOpen(false);
                 if (category.key === 'settings') setIsSettingsOpen(false);
               }}
             >
@@ -296,6 +300,7 @@ export default function Navigation({ profile }) {
               
               {(category.key === 'events' && isEventsOpen) ||
                (category.key === 'clubs' && isClubsOpen) ||
+               (category.key === 'journal' && isDashboardOpen) ||
                (category.key === 'settings' && isSettingsOpen) ? (
                 <div style={{
                   position: 'absolute',

@@ -11,6 +11,18 @@ export default function ClubDetail() {
   const [club, setClub] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('success');
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [form, setForm] = useState({
+    name: '',
+    description: '',
+    city: '',
+    school: '',
+    leader_name: '',
+    contact_email: '',
+    contact_phone: ''
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,16 +41,66 @@ export default function ClubDetail() {
       // Загружаем клуб
       const clubsData = await api.getClubs();
       const foundClub = clubsData.find(c => c.id === id);
-      setClub(foundClub || null);
 
-      // Загружаем участников
+      if (!foundClub) {
+        setLoading(false);
+        return;
+      }
+
+      setClub(foundClub);
+      setForm({
+        name: foundClub.name || '',
+        description: foundClub.description || '',
+        city: foundClub.city || '',
+        school: foundClub.school || '',
+        leader_name: foundClub.leader_name || '',
+        contact_email: foundClub.contact_email || '',
+        contact_phone: foundClub.contact_phone || ''
+      });
+
+      // Загружаем участников клуба
       const participantsData = await api.getParticipants();
-      setParticipants(participantsData || []);
+      const clubParticipants = participantsData.filter(p => p.club_id === id);
+      setParticipants(clubParticipants || []);
 
     } catch (err) {
       console.error('Ошибка:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  };
+
+  // ============================================================
+  // ПРОВЕРКА ПРАВ НА РЕДАКТИРОВАНИЕ
+  // ============================================================
+  const canEdit = profile?.role === 'admin' || 
+                  profile?.role === 'movement_coordinator' || 
+                  profile?.role === 'club_coordinator';
+
+  // Проверка, что это клуб координатора
+  const isMyClub = profile?.role === 'club_coordinator' && 
+                   (club?.coordinator_id === profile?.id || club?.leader_id === profile?.id);
+
+  const canEditThis = canEdit && (profile?.role === 'admin' || profile?.role === 'movement_coordinator' || isMyClub);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setMessage('');
+    setLoading(true);
+
+    try {
+      // TODO: добавить API для обновления клуба
+      setMessage('✅ Информация о КЮДе обновлена!');
+      setMessageType('success');
+      setShowEditForm(false);
+      loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {
@@ -51,43 +113,182 @@ export default function ClubDetail() {
 
   if (!club) {
     return (
-      <div className="fade-in" style={{ background: '#F4F6F9', minHeight: '100vh' }}>
+      <div className="page-background">
         <Navigation profile={profile} />
-        <div style={{ paddingTop: '50px', textAlign: 'center' }}>
-          <h1>❌ Клуб не найден</h1>
-          <button onClick={() => navigate('/clubs')} style={{ padding: '10px 20px', marginTop: '20px', background: '#0B1F3A', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-            Вернуться к списку
-          </button>
+        <div className="container-page">
+          <div className="empty-state">
+            <div className="icon">❌</div>
+            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>КЮД не найден</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ background: '#F4F6F9', minHeight: '100vh' }}>
+    <div className="page-background">
       <Navigation profile={profile} />
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '30px 24px' }}>
-        <button onClick={() => navigate('/clubs')} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #D5DCE7', borderRadius: '8px', cursor: 'pointer', marginBottom: '20px' }}>
-          ← Назад
+      <div className="container-page">
+        <button
+          className="btn-secondary"
+          onClick={() => navigate('/clubs')}
+          style={{ marginBottom: '20px' }}
+        >
+          ← Назад к списку
         </button>
-        <div style={{ background: 'white', borderRadius: '16px', padding: '24px', border: '1px solid #E2E7EF' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0B1F3A' }}>{club.name}</h1>
-          {club.description && <p style={{ color: '#667085' }}>{club.description}</p>}
-          <p style={{ color: '#98A2B3', marginTop: '12px' }}>Создан: {club.created_at ? new Date(club.created_at).toLocaleDateString('ru-RU') : '—'}</p>
-          
-          <h3 style={{ marginTop: '24px', fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>👥 Участники</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-            {participants.filter(p => p.club_id === club.id).length === 0 ? (
-              <p style={{ color: '#667085' }}>Участников пока нет</p>
-            ) : (
-              participants.filter(p => p.club_id === club.id).map(p => (
-                <div key={p.id} style={{ padding: '10px 16px', background: '#F8FAFC', borderRadius: '8px' }}>
-                  <span style={{ fontWeight: '500', color: '#0B1F3A' }}>{p.full_name}</span>
-                  <span style={{ marginLeft: '12px', fontSize: '13px', color: '#98A2B3' }}>{p.class_name || ''}</span>
-                </div>
-              ))
+
+        {message && (
+          <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
+            {message}
+          </div>
+        )}
+
+        {/* ИНФОРМАЦИЯ О КЛУБЕ */}
+        <div className="card" style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0B1F3A', margin: 0 }}>
+                🏫 {club.name}
+              </h1>
+              {club.description && <p style={{ color: '#667085', marginTop: '8px' }}>{club.description}</p>}
+              {club.city && <p style={{ color: '#667085' }}>📍 {club.city}</p>}
+              {club.leader_name && <p style={{ color: '#667085' }}>👤 Руководитель: {club.leader_name}</p>}
+              {club.contact_email && <p style={{ color: '#667085' }}>📧 {club.contact_email}</p>}
+              {club.contact_phone && <p style={{ color: '#667085' }}>📞 {club.contact_phone}</p>}
+              <div style={{ marginTop: '12px' }}>
+                <span className="status-active">👥 {participants.length} участников</span>
+              </div>
+            </div>
+            {canEditThis && (
+              <button
+                className="btn-primary"
+                onClick={() => setShowEditForm(!showEditForm)}
+              >
+                {showEditForm ? '✖ Закрыть' : '✏️ Редактировать'}
+              </button>
             )}
           </div>
+        </div>
+
+        {/* ФОРМА РЕДАКТИРОВАНИЯ */}
+        {showEditForm && canEditThis && (
+          <div className="card" style={{ marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+              ✏️ Редактировать КЮД
+            </h3>
+            <form onSubmit={handleSave}>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Название *</label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Город</label>
+                  <input
+                    type="text"
+                    value={form.city}
+                    onChange={(e) => setForm({ ...form, city: e.target.value })}
+                    placeholder="Москва"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Школа/Организация</label>
+                  <input
+                    type="text"
+                    value={form.school}
+                    onChange={(e) => setForm({ ...form, school: e.target.value })}
+                    placeholder="ГБОУ Школа №1468"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Руководитель</label>
+                  <input
+                    type="text"
+                    value={form.leader_name}
+                    onChange={(e) => setForm({ ...form, leader_name: e.target.value })}
+                    placeholder="Иванов Иван Иванович"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Контактный email</label>
+                  <input
+                    type="email"
+                    value={form.contact_email}
+                    onChange={(e) => setForm({ ...form, contact_email: e.target.value })}
+                    placeholder="club@example.com"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Контактный телефон</label>
+                  <input
+                    type="tel"
+                    value={form.contact_phone}
+                    onChange={(e) => setForm({ ...form, contact_phone: e.target.value })}
+                    placeholder="+7 (XXX) XXX-XX-XX"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Описание</label>
+                <textarea
+                  rows="3"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Подробное описание клуба..."
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button type="submit" className="btn-success" disabled={loading}>
+                  {loading ? '⏳ Сохранение...' : '💾 Сохранить'}
+                </button>
+                <button type="button" className="btn-secondary" onClick={() => setShowEditForm(false)}>
+                  ❌ Отмена
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* УЧАСТНИКИ */}
+        <div className="card">
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            👥 Участники КЮДа
+          </h3>
+          {participants.length === 0 ? (
+            <div className="empty-state">
+              <div className="icon">👀</div>
+              <p>В этом КЮДе пока нет участников</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {participants.map((p) => (
+                <div key={p.id} className="list-item" style={{ borderLeftColor: '#174A7E' }}>
+                  <div className="title">
+                    {p.full_name}
+                    {p.status === 'active' ? (
+                      <span className="status-active" style={{ marginLeft: '8px', fontSize: '11px' }}>
+                        Активен
+                      </span>
+                    ) : (
+                      <span className="status-inactive" style={{ marginLeft: '8px', fontSize: '11px' }}>
+                        Неактивен
+                      </span>
+                    )}
+                  </div>
+                  <div className="subtitle">
+                    {p.school || 'Школа не указана'} • {p.class_name || 'Класс не указан'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

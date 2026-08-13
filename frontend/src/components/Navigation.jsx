@@ -75,12 +75,12 @@ export default function Navigation({ profile }) {
       journal: [
         { path: '/my-journal', label: '📓 Журнал', roles: ['tutor'] },
       ],
-      staff: [
-        { path: '/staff', label: '👥 Сотрудники', roles: ['admin', 'movement_coordinator', 'club_coordinator'] },
-        { path: '/staff-calendar', label: '📅 Календарь', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'] },
-        { path: '/tutor-requests', label: '🤝 Запросы', roles: ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'] },
-        { path: '/tutor-invitations', label: '📨 Приглашения', roles: ['tutor', 'admin', 'movement_coordinator', 'president', 'vice_president'] },
-      ],
+     staff: [
+  { path: '/staff', label: '👥 Сотрудники', roles: ['admin', 'movement_coordinator'] },
+  { path: '/staff-calendar', label: '📅 Календарь', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'] },
+  { path: '/tutor-requests', label: '🤝 Запросы', roles: ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'] },
+  { path: '/tutor-invitations', label: '📨 Приглашения', roles: ['tutor', 'admin', 'movement_coordinator', 'president', 'vice_president'] },
+],
       appeals: [
         { path: '/appeals', label: '📨 Обращения', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
       ],

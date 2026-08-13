@@ -14,6 +14,7 @@ export default function ProtectedRoute({ children }) {
 
   const checkAuth = async () => {
     const token = localStorage.getItem('token');
+    console.log('🔍 Проверка токена:', token ? '✅ есть' : '❌ нет');
     
     if (!token) {
       setIsAuthenticated(false);
@@ -23,15 +24,18 @@ export default function ProtectedRoute({ children }) {
 
     try {
       const user = await api.getMe();
+      console.log('👤 Пользователь:', user);
+      
       if (user && user.id) {
         setIsAuthenticated(true);
       } else {
+        console.log('❌ Пользователь не найден');
         setIsAuthenticated(false);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       }
     } catch (err) {
-      console.error('Ошибка проверки авторизации:', err);
+      console.error('❌ Ошибка проверки авторизации:', err);
       setIsAuthenticated(false);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -41,12 +45,25 @@ export default function ProtectedRoute({ children }) {
   };
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: '50px' }}>Загрузка...</div>;
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontSize: '18px',
+        color: '#667085'
+      }}>
+        ⏳ Загрузка...
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
+    console.log('🔒 Не авторизован, перенаправление на /login');
     return <Navigate to="/login" replace />;
   }
 
+  console.log('✅ Авторизован, показываем страницу');
   return children;
 }

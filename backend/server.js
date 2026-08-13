@@ -1218,7 +1218,7 @@ app.post('/api/upload-avatar', async (req, res) => {
 
     const result = await pool.query(
       `UPDATE users 
-       SET avatar_url = $1, updated_at = NOW()
+       SET avatar_url = $1
        WHERE id = $2
        RETURNING id, avatar_url`,
       [avatar_base64, userId]

@@ -170,6 +170,7 @@ export default function Notifications({ profile }) {
       <button 
         className="notifications-btn"
         onClick={() => setIsOpen(!isOpen)}
+        title="Уведомления"
       >
         <span className="notifications-icon">🔔</span>
         {unreadCount > 0 && (
@@ -251,6 +252,7 @@ export default function Notifications({ profile }) {
       <style>{`
         .notifications-wrapper {
           position: relative;
+          display: inline-block;
         }
 
         .notifications-btn {
@@ -263,6 +265,9 @@ export default function Notifications({ profile }) {
           font-size: 20px;
           transition: all 0.2s ease;
           color: #667085;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .notifications-btn:hover {
@@ -272,6 +277,7 @@ export default function Notifications({ profile }) {
 
         .notifications-icon {
           display: block;
+          line-height: 1;
         }
 
         .notifications-badge {
@@ -290,11 +296,12 @@ export default function Notifications({ profile }) {
           justify-content: center;
           padding: 0 4px;
           border: 2px solid white;
+          transform: translate(4px, -4px);
         }
 
         .notifications-dropdown {
           position: absolute;
-          top: calc(100% + 4px);
+          top: calc(100% + 6px);
           right: 0;
           width: 380px;
           max-height: 460px;
@@ -379,7 +386,7 @@ export default function Notifications({ profile }) {
         .notification-icon {
           font-size: 18px;
           flex-shrink: 0;
-          width: 32px;
+          width: 28px;
           text-align: center;
           margin-top: 2px;
         }
@@ -452,7 +459,7 @@ export default function Notifications({ profile }) {
         @media (max-width: 480px) {
           .notifications-dropdown {
             width: 300px;
-            right: -60px;
+            right: -50px;
           }
         }
       `}</style>

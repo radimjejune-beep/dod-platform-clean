@@ -118,19 +118,19 @@ export default function Navigation({ profile }) {
   // НАЗВАНИЯ ГРУПП
   // ============================================================
   const groupLabels = {
-    main: '🏠',
-    events: '📅',
-    participants: '👥',
-    clubs: '🏫',
-    achievements: '🏆',
-    reviews: '📊',
-    reports: '📋',
-    analytics: '📊',
-    tasks: '👑',
-    journal: '📓',
-    staff: '👥',
-    appeals: '📨',
-    settings: '⚙️',
+    main: '🏠 Главная',
+    events: '📅 Мероприятия',
+    participants: '👥 Участники',
+    clubs: '🏫 Клубы',
+    achievements: '🏆 Достижения',
+    reviews: '📊 Оценки',
+    reports: '📋 Отчёты',
+    analytics: '📊 Аналитика',
+    tasks: '👑 Задания',
+    journal: '📓 Журнал',
+    staff: '👥 Сотрудники',
+    appeals: '📨 Обращения',
+    settings: '⚙️ Настройки',
   };
 
   // ============================================================
@@ -143,57 +143,55 @@ export default function Navigation({ profile }) {
   }, []);
 
   return (
-    <nav className="nav-compact">
-      <div className="nav-compact-container">
-        {/* ЛОГОТИП */}
-        <Link to="/" className="nav-compact-logo">
-          <span>🌍</span>
-          <span>ДОД</span>
+    <nav className="nav-new">
+      <div className="nav-new-container">
+        {/* ЛЕВАЯ ЧАСТЬ: ЛОГОТИП */}
+        <Link to="/" className="nav-new-logo">
+          <span className="nav-new-logo-icon">🌍</span>
+          <span className="nav-new-logo-text">ДОД</span>
         </Link>
 
-        {/* ОСНОВНЫЕ ПУНКТЫ (всегда видны) */}
-        <div className="nav-compact-main">
+        {/* ЦЕНТРАЛЬНАЯ ЧАСТЬ: МЕНЮ */}
+        <div className="nav-new-menu">
+          {/* ОСНОВНЫЕ ПУНКТЫ */}
           {menuGroups.main?.map((item) => (
             <Link
               key={item.path}
               to={item.path}
-              className={`nav-compact-link ${isActive(item.path) ? 'active' : ''}`}
+              className={`nav-new-link ${isActive(item.path) ? 'active' : ''}`}
             >
               {item.label}
             </Link>
           ))}
-        </div>
 
-        {/* ВЫПАДАЮЩИЕ ГРУППЫ */}
-        <div className="nav-compact-groups">
+          {/* ВЫПАДАЮЩИЕ ГРУППЫ */}
           {Object.entries(menuGroups).map(([key, items]) => {
             if (key === 'main') return null;
             
             const isOpen = openDropdown === key;
             const hasActive = items.some(item => isActive(item.path));
-            const icon = groupLabels[key] || '📌';
             
             return (
               <div 
                 key={key} 
-                className="nav-compact-dropdown"
+                className="nav-new-dropdown"
                 onMouseEnter={() => setOpenDropdown(key)}
                 onMouseLeave={() => setOpenDropdown(null)}
               >
                 <button 
-                  className={`nav-compact-dropdown-btn ${hasActive ? 'active' : ''}`}
+                  className={`nav-new-dropdown-btn ${hasActive ? 'active' : ''}`}
                   onClick={() => setOpenDropdown(isOpen ? null : key)}
                 >
-                  <span>{icon}</span>
-                  <span className="nav-compact-dropdown-arrow">▾</span>
+                  <span className="nav-new-dropdown-label">{groupLabels[key] || key}</span>
+                  <span className="nav-new-dropdown-arrow">▾</span>
                 </button>
                 {isOpen && (
-                  <div className="nav-compact-dropdown-menu">
+                  <div className="nav-new-dropdown-menu">
                     {items.map((item) => (
                       <Link
                         key={item.path}
                         to={item.path}
-                        className={`nav-compact-dropdown-item ${isActive(item.path) ? 'active' : ''}`}
+                        className={`nav-new-dropdown-item ${isActive(item.path) ? 'active' : ''}`}
                         onClick={() => setOpenDropdown(null)}
                       >
                         {item.label}
@@ -206,27 +204,27 @@ export default function Navigation({ profile }) {
           })}
         </div>
 
-        {/* ПРАВАЯ ЧАСТЬ */}
-        <div className="nav-compact-right">
-          {/* ===== УВЕДОМЛЕНИЯ ===== */}
+        {/* ПРАВАЯ ЧАСТЬ: УВЕДОМЛЕНИЯ + ПРОФИЛЬ + ВЫХОД */}
+        <div className="nav-new-right">
+          {/* УВЕДОМЛЕНИЯ */}
           <Notifications profile={profile} />
           
-          {/* ===== ПРОФИЛЬ ===== */}
-          <Link to="/profile" className="nav-compact-profile">
+          {/* ПРОФИЛЬ */}
+          <Link to="/profile" className="nav-new-profile">
             {getAvatar()}
-            <span className="nav-compact-name">
+            <span className="nav-new-profile-name">
               {profile?.full_name?.split(' ')[0] || 'Профиль'}
             </span>
           </Link>
 
-          {/* ===== ВЫХОД ===== */}
-          <button className="nav-compact-logout" onClick={handleLogout} title="Выйти">
-            🚪
+          {/* ВЫХОД */}
+          <button className="nav-new-logout" onClick={handleLogout} title="Выйти">
+            <span>🚪</span>
           </button>
 
-          {/* ===== БУРГЕР (МОБИЛЬНАЯ ВЕРСИЯ) ===== */}
+          {/* БУРГЕР (МОБИЛЬНАЯ ВЕРСИЯ) */}
           <button 
-            className="nav-compact-burger" 
+            className="nav-new-burger" 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
             {isMobileMenuOpen ? '✕' : '☰'}
@@ -234,21 +232,19 @@ export default function Navigation({ profile }) {
         </div>
       </div>
 
-      {/* ===== МОБИЛЬНОЕ МЕНЮ ===== */}
+      {/* МОБИЛЬНОЕ МЕНЮ */}
       {isMobileMenuOpen && (
-        <div className="nav-compact-mobile">
+        <div className="nav-new-mobile">
           {Object.entries(menuGroups).map(([key, items]) => {
-            const icon = groupLabels[key] || '📌';
+            const label = groupLabels[key] || key;
             return (
-              <div key={key} className="nav-compact-mobile-group">
-                <div className="nav-compact-mobile-title">
-                  {icon} {key.charAt(0).toUpperCase() + key.slice(1)}
-                </div>
+              <div key={key} className="nav-new-mobile-group">
+                <div className="nav-new-mobile-title">{label}</div>
                 {items.map((item) => (
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`nav-compact-mobile-item ${isActive(item.path) ? 'active' : ''}`}
+                    className={`nav-new-mobile-item ${isActive(item.path) ? 'active' : ''}`}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     {item.label}
@@ -260,59 +256,66 @@ export default function Navigation({ profile }) {
         </div>
       )}
 
-      {/* ===== СТИЛИ ===== */}
+      {/* СТИЛИ */}
       <style>{`
-        /* ===== КОМПАКТНАЯ НАВИГАЦИЯ ===== */
-        .nav-compact {
+        /* ===== НОВАЯ НАВИГАЦИЯ ===== */
+        .nav-new {
           background: #FFFFFF;
           border-bottom: 1px solid #E2E7EF;
-          padding: 4px 16px;
+          padding: 0 20px;
           position: sticky;
           top: 0;
           z-index: 999;
-          min-height: 48px;
+          height: 56px;
           display: flex;
           align-items: center;
+          box-shadow: 0 1px 4px rgba(11, 31, 58, 0.04);
         }
 
-        .nav-compact-container {
+        .nav-new-container {
           max-width: 1400px;
           margin: 0 auto;
           display: flex;
           align-items: center;
-          gap: 8px;
+          justify-content: space-between;
           width: 100%;
           height: 100%;
-          min-height: 44px;
         }
 
-        /* ЛОГОТИП */
-        .nav-compact-logo {
+        /* ===== ЛЕВАЯ ЧАСТЬ: ЛОГОТИП ===== */
+        .nav-new-logo {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
           text-decoration: none;
-          font-size: 16px;
-          font-weight: 700;
-          color: #0B1F3A;
           flex-shrink: 0;
         }
 
-        .nav-compact-logo span:first-child {
-          font-size: 20px;
+        .nav-new-logo-icon {
+          font-size: 24px;
         }
 
-        /* ОСНОВНЫЕ ПУНКТЫ */
-        .nav-compact-main {
+        .nav-new-logo-text {
+          font-size: 18px;
+          font-weight: 700;
+          color: #0B1F3A;
+          letter-spacing: -0.5px;
+        }
+
+        /* ===== ЦЕНТРАЛЬНАЯ ЧАСТЬ: МЕНЮ ===== */
+        .nav-new-menu {
           display: flex;
           align-items: center;
-          gap: 2px;
+          gap: 4px;
           flex: 1;
+          justify-content: center;
+          padding: 0 16px;
         }
 
-        .nav-compact-link {
-          padding: 4px 12px;
-          border-radius: 6px;
+        /* ОСНОВНЫЕ ССЫЛКИ */
+        .nav-new-link {
+          padding: 6px 14px;
+          border-radius: 8px;
           text-decoration: none;
           font-size: 13px;
           font-weight: 500;
@@ -321,71 +324,68 @@ export default function Navigation({ profile }) {
           white-space: nowrap;
         }
 
-        .nav-compact-link:hover {
+        .nav-new-link:hover {
           background: #F4F6F9;
           color: #0B1F3A;
         }
 
-        .nav-compact-link.active {
+        .nav-new-link.active {
           background: #F4F6F9;
           color: #0B1F3A;
           font-weight: 600;
         }
 
-        /* ГРУППЫ */
-        .nav-compact-groups {
-          display: flex;
-          align-items: center;
-          gap: 2px;
-        }
-
-        .nav-compact-dropdown {
+        /* ВЫПАДАЮЩИЕ МЕНЮ */
+        .nav-new-dropdown {
           position: relative;
         }
 
-        .nav-compact-dropdown-btn {
-          padding: 4px 10px;
-          border: none;
-          background: transparent;
-          border-radius: 6px;
-          font-size: 14px;
-          cursor: pointer;
-          color: #667085;
-          transition: all 0.2s ease;
+        .nav-new-dropdown-btn {
           display: flex;
           align-items: center;
-          gap: 2px;
+          gap: 4px;
+          padding: 6px 14px;
+          border: none;
+          background: transparent;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 500;
+          color: #667085;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          white-space: nowrap;
         }
 
-        .nav-compact-dropdown-btn:hover {
+        .nav-new-dropdown-btn:hover {
           background: #F4F6F9;
           color: #0B1F3A;
         }
 
-        .nav-compact-dropdown-btn.active {
+        .nav-new-dropdown-btn.active {
           background: #F4F6F9;
           color: #0B1F3A;
+          font-weight: 600;
         }
 
-        .nav-compact-dropdown-arrow {
+        .nav-new-dropdown-arrow {
           font-size: 8px;
           transition: transform 0.2s ease;
         }
 
-        .nav-compact-dropdown:hover .nav-compact-dropdown-arrow {
+        .nav-new-dropdown:hover .nav-new-dropdown-arrow {
           transform: rotate(180deg);
         }
 
-        .nav-compact-dropdown-menu {
+        .nav-new-dropdown-menu {
           position: absolute;
           top: calc(100% + 4px);
           left: 50%;
           transform: translateX(-50%);
           background: white;
-          border-radius: 10px;
+          border-radius: 12px;
           box-shadow: 0 8px 30px rgba(11, 31, 58, 0.12);
           border: 1px solid #E2E7EF;
-          min-width: 180px;
+          min-width: 200px;
           padding: 6px;
           z-index: 100;
           animation: fadeIn 0.15s ease;
@@ -396,10 +396,10 @@ export default function Navigation({ profile }) {
           to { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
 
-        .nav-compact-dropdown-item {
+        .nav-new-dropdown-item {
           display: block;
-          padding: 6px 14px;
-          border-radius: 6px;
+          padding: 8px 16px;
+          border-radius: 8px;
           text-decoration: none;
           color: #667085;
           font-size: 13px;
@@ -407,105 +407,112 @@ export default function Navigation({ profile }) {
           white-space: nowrap;
         }
 
-        .nav-compact-dropdown-item:hover {
+        .nav-new-dropdown-item:hover {
           background: #F4F6F9;
           color: #0B1F3A;
         }
 
-        .nav-compact-dropdown-item.active {
+        .nav-new-dropdown-item.active {
           background: #F4F6F9;
           color: #0B1F3A;
           font-weight: 600;
         }
 
-        /* ПРАВАЯ ЧАСТЬ */
-        .nav-compact-right {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          flex-shrink: 0;
-        }
-
-        .nav-compact-profile {
+        /* ===== ПРАВАЯ ЧАСТЬ ===== */
+        .nav-new-right {
           display: flex;
           align-items: center;
           gap: 6px;
-          padding: 2px 10px 2px 2px;
-          border-radius: 20px;
+          flex-shrink: 0;
+        }
+
+        /* ПРОФИЛЬ */
+        .nav-new-profile {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 4px 12px 4px 4px;
+          border-radius: 30px;
           text-decoration: none;
           color: #0B1F3A;
           transition: all 0.2s ease;
         }
 
-        .nav-compact-profile:hover {
+        .nav-new-profile:hover {
           background: #F4F6F9;
         }
 
         .nav-avatar {
-          width: 28px;
-          height: 28px;
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
           object-fit: cover;
           border: 2px solid #E2E7EF;
         }
 
         .nav-avatar-letter {
-          width: 28px;
-          height: 28px;
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 12px;
+          font-size: 13px;
           font-weight: bold;
           background: linear-gradient(135deg, #0B1F3A, #174A7E);
           color: white;
           border: 2px solid #E2E7EF;
         }
 
-        .nav-compact-name {
-          font-size: 12px;
+        .nav-new-profile-name {
+          font-size: 13px;
           font-weight: 500;
-          max-width: 70px;
+          max-width: 80px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
         }
 
-        .nav-compact-logout {
-          padding: 4px 8px;
+        /* ВЫХОД */
+        .nav-new-logout {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
           border: none;
           background: transparent;
-          border-radius: 6px;
+          border-radius: 8px;
           cursor: pointer;
-          font-size: 16px;
+          font-size: 18px;
           transition: all 0.2s ease;
           color: #98A2B3;
         }
 
-        .nav-compact-logout:hover {
+        .nav-new-logout:hover {
           background: #FCEBEC;
           color: #B3262E;
         }
 
-        .nav-compact-burger {
+        /* БУРГЕР */
+        .nav-new-burger {
           display: none;
           padding: 4px 8px;
           border: none;
           background: transparent;
-          font-size: 20px;
+          font-size: 22px;
           cursor: pointer;
           color: #0B1F3A;
         }
 
-        /* МОБИЛЬНОЕ МЕНЮ */
-        .nav-compact-mobile {
+        /* ===== МОБИЛЬНОЕ МЕНЮ ===== */
+        .nav-new-mobile {
           display: none;
           flex-direction: column;
           gap: 8px;
-          padding: 12px 0;
+          padding: 16px 20px;
           border-top: 1px solid #E2E7EF;
-          margin-top: 4px;
+          margin-top: 0;
           max-height: 70vh;
           overflow-y: auto;
           position: absolute;
@@ -513,76 +520,118 @@ export default function Navigation({ profile }) {
           left: 0;
           right: 0;
           background: white;
-          padding: 12px 16px;
           box-shadow: 0 8px 30px rgba(11, 31, 58, 0.1);
         }
 
-        .nav-compact-mobile-item {
+        .nav-new-mobile-group {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .nav-new-mobile-title {
+          font-size: 12px;
+          font-weight: 600;
+          color: #98A2B3;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          padding: 6px 8px 4px;
+        }
+
+        .nav-new-mobile-item {
           display: block;
-          padding: 8px 12px;
-          border-radius: 6px;
+          padding: 10px 12px;
+          border-radius: 8px;
           text-decoration: none;
           color: #667085;
           font-size: 14px;
           transition: all 0.2s ease;
         }
 
-        .nav-compact-mobile-item:hover {
+        .nav-new-mobile-item:hover {
           background: #F4F6F9;
         }
 
-        .nav-compact-mobile-item.active {
+        .nav-new-mobile-item.active {
           background: #F4F6F9;
           color: #0B1F3A;
           font-weight: 600;
         }
 
-        .nav-compact-mobile-title {
-          font-size: 12px;
-          font-weight: 600;
-          color: #98A2B3;
-          padding: 4px 8px;
-          margin-top: 4px;
+        /* ===== АДАПТИВНОСТЬ ===== */
+
+        /* Планшеты и маленькие ноутбуки */
+        @media (max-width: 1200px) {
+          .nav-new-menu {
+            gap: 2px;
+          }
+          .nav-new-link,
+          .nav-new-dropdown-btn {
+            padding: 6px 10px;
+            font-size: 12px;
+          }
+          .nav-new-dropdown-label {
+            font-size: 12px;
+          }
+          .nav-new-profile-name {
+            max-width: 60px;
+            font-size: 12px;
+          }
         }
 
-        /* АДАПТИВНОСТЬ */
+        /* Мобильные устройства */
         @media (max-width: 1024px) {
-          .nav-compact-main {
+          .nav-new-menu {
             display: none;
           }
-          .nav-compact-groups {
-            display: none;
-          }
-          .nav-compact-burger {
+          .nav-new-burger {
             display: block;
           }
-          .nav-compact-mobile {
+          .nav-new-mobile {
             display: flex;
           }
         }
 
         @media (max-width: 768px) {
-          .nav-compact {
-            padding: 2px 12px;
-            min-height: 40px;
+          .nav-new {
+            height: 50px;
+            padding: 0 12px;
           }
-          .nav-compact-container {
-            min-height: 36px;
+          .nav-new-logo-text {
+            font-size: 16px;
           }
-          .nav-compact-logo {
-            font-size: 14px;
+          .nav-new-logo-icon {
+            font-size: 20px;
           }
-          .nav-compact-name {
+          .nav-new-profile-name {
             display: none;
           }
-          .nav-compact-profile {
-            padding: 2px 4px 2px 2px;
+          .nav-new-profile {
+            padding: 4px;
           }
         }
 
         @media (max-width: 480px) {
-          .nav-compact-logo span:last-child {
+          .nav-new {
+            height: 44px;
+            padding: 0 8px;
+          }
+          .nav-new-logo-text {
             display: none;
+          }
+          .nav-new-right {
+            gap: 2px;
+          }
+          .nav-new-logout {
+            width: 32px;
+            height: 32px;
+            font-size: 16px;
+          }
+          .nav-avatar,
+          .nav-avatar-letter {
+            width: 28px;
+            height: 28px;
+            font-size: 11px;
           }
         }
       `}</style>

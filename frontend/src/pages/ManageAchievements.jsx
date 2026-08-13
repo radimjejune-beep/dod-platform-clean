@@ -8,7 +8,10 @@ import Navigation from '../components/Navigation';
 export default function ManageAchievements() {
   const [profile, setProfile] = useState(null);
   const [achievements, setAchievements] = useState([]);
+  const [allAchievements, setAllAchievements] = useState([]);
   const [participants, setParticipants] = useState([]);
+  const [allParticipants, setAllParticipants] = useState([]);
+  const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
@@ -17,6 +20,7 @@ export default function ManageAchievements() {
   const [selectedParticipant, setSelectedParticipant] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedClubId, setSelectedClubId] = useState('');
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -50,25 +54,88 @@ export default function ManageAchievements() {
         return;
       }
 
-      if (userData.role !== 'admin' && userData.role !== 'movement_coordinator' && userData.role !== 'club_coordinator') {
+      const role = userData.role;
+      const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'];
+      if (!allowedRoles.includes(role)) {
         navigate('/dashboard');
         return;
       }
 
       setProfile(userData);
 
-      const [participantsData, achievementsData] = await Promise.all([
+      const [participantsData, clubsData, achievementsData] = await Promise.all([
         api.getParticipants(),
+        api.getClubs(),
         api.getAchievements()
       ]);
-      setParticipants(participantsData || []);
-      setAchievements(achievementsData || []);
+
+      setClubs(clubsData || []);
+      setAllParticipants(participantsData || []);
+      setAllAchievements(achievementsData || []);
+
+      let filteredParticipants = [];
+      let filteredAchievements = [];
+
+      // ============================================================
+      // ЛОГИКА ПО РОЛЯМ
+      // ============================================================
+
+      if (role === 'club_coordinator') {
+        // КООРДИНАТОР КЮДА — видит только свой клуб
+        const coordinatorClub = clubsData.find(c => 
+          c.coordinator_id === userData.id || 
+          c.leader_id === userData.id
+        );
+        if (coordinatorClub) {
+          filteredParticipants = participantsData.filter(p => p.club_id === coordinatorClub.id);
+          const participantIds = filteredParticipants.map(p => p.id);
+          filteredAchievements = achievementsData.filter(a => participantIds.includes(a.participant_id));
+        } else {
+          filteredParticipants = [];
+          filteredAchievements = [];
+        }
+      } 
+      else if (role === 'tutor' || 
+               role === 'movement_coordinator' || 
+               role === 'admin') {
+        // ТЬЮТОР, КООРДИНАТОР, АДМИН — видят всех
+        filteredParticipants = participantsData;
+        filteredAchievements = achievementsData;
+      } 
+      else {
+        filteredParticipants = [];
+        filteredAchievements = [];
+      }
+
+      setParticipants(filteredParticipants);
+      setAllParticipants(filteredParticipants);
+      setAchievements(filteredAchievements);
+      setAllAchievements(filteredAchievements);
+
     } catch (err) {
       console.error('Ошибка:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  // Фильтр по клубу (только для тех, кто видит всех)
+  const canFilterByClub = profile?.role === 'admin' || 
+                          profile?.role === 'movement_coordinator' || 
+                          profile?.role === 'tutor';
+
+  useEffect(() => {
+    if (selectedClubId && canFilterByClub) {
+      const clubParticipantIds = allParticipants
+        .filter(p => p.club_id === selectedClubId)
+        .map(p => p.id);
+      setAchievements(allAchievements.filter(a => clubParticipantIds.includes(a.participant_id)));
+      setParticipants(allParticipants.filter(p => p.club_id === selectedClubId));
+    } else {
+      setAchievements(allAchievements);
+      setParticipants(allParticipants);
+    }
+  }, [selectedClubId, allAchievements, allParticipants, canFilterByClub]);
 
   const handleSearchChange = (e) => {
     const query = e.target.value;
@@ -174,7 +241,7 @@ export default function ManageAchievements() {
       achievement_date: achievement.achievement_date || '',
       participant_id: achievement.participant_id || ''
     });
-    const participant = participants.find(p => p.id === achievement.participant_id);
+    const participant = allParticipants.find(p => p.id === achievement.participant_id);
     if (participant) {
       setSelectedParticipant(participant);
       setSearchQuery(participant.full_name);
@@ -183,9 +250,14 @@ export default function ManageAchievements() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const isAdmin = profile?.role === 'admin';
-  const isMovementCoordinator = profile?.role === 'movement_coordinator';
-  const canDelete = isAdmin || isMovementCoordinator;
+  // Кто может управлять достижениями
+  const canManage = profile?.role === 'admin' || 
+                    profile?.role === 'movement_coordinator' || 
+                    profile?.role === 'club_coordinator' ||
+                    profile?.role === 'tutor';
+
+  // Кто может удалять
+  const canDelete = profile?.role === 'admin' || profile?.role === 'movement_coordinator';
 
   if (loading) {
     return (
@@ -203,20 +275,26 @@ export default function ManageAchievements() {
           <span style={{ fontSize: '32px' }}>🏆</span>
           <div>
             <h1>Управление достижениями</h1>
-            <p>Все достижения участников движения</p>
+            <p>
+              {profile?.role === 'club_coordinator' 
+                ? `Участники вашего клуба (${achievements.length})` 
+                : `Все достижения участников движения (${achievements.length})`}
+            </p>
           </div>
-          <button
-            className="btn-primary"
-            style={{ marginLeft: 'auto' }}
-            onClick={() => {
-              setShowForm(!showForm);
-              if (!showForm) {
-                setTimeout(() => inputRef.current?.focus(), 100);
-              }
-            }}
-          >
-            {showForm ? '✖ Закрыть' : '➕ Добавить достижение'}
-          </button>
+          {canManage && (
+            <button
+              className="btn-primary"
+              style={{ marginLeft: 'auto' }}
+              onClick={() => {
+                setShowForm(!showForm);
+                if (!showForm) {
+                  setTimeout(() => inputRef.current?.focus(), 100);
+                }
+              }}
+            >
+              {showForm ? '✖ Закрыть' : '➕ Добавить достижение'}
+            </button>
+          )}
         </div>
 
         {message && (
@@ -225,8 +303,63 @@ export default function ManageAchievements() {
           </div>
         )}
 
+        {/* ФИЛЬТР ПО КЮДАМ */}
+        {canFilterByClub && clubs.length > 0 && (
+          <div style={{
+            display: 'flex',
+            gap: '16px',
+            marginBottom: '20px',
+            flexWrap: 'wrap',
+            alignItems: 'center'
+          }}>
+            <div style={{ minWidth: '200px' }}>
+              <select
+                value={selectedClubId}
+                onChange={(e) => setSelectedClubId(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: '1.5px solid #D5DCE7',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  background: 'white'
+                }}
+              >
+                <option value="">Все КЮДы</option>
+                {clubs.map((club) => (
+                  <option key={club.id} value={club.id}>{club.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ fontSize: '14px', color: '#667085' }}>
+              {selectedClubId ? (
+                <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
+              ) : (
+                <span>📋 Все достижения</span>
+              )}
+            </div>
+            {selectedClubId && (
+              <button
+                style={{
+                  padding: '4px 12px',
+                  background: '#FCEBEC',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: '#B3262E'
+                }}
+                onClick={() => setSelectedClubId('')}
+              >
+                ✕ Сбросить
+              </button>
+            )}
+          </div>
+        )}
+
         {/* ФОРМА ДОБАВЛЕНИЯ */}
-        {showForm && (
+        {showForm && canManage && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
               {editingAchievement ? '✏️ Редактировать достижение' : '📝 Добавить достижение'}
@@ -402,13 +535,15 @@ export default function ManageAchievements() {
                   </div>
                   {a.description && <div className="meta">{a.description}</div>}
                   <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
-                    <button
-                      className="btn-secondary"
-                      style={{ padding: '4px 12px', fontSize: '12px' }}
-                      onClick={() => handleEdit(a)}
-                    >
-                      ✏️ Редактировать
-                    </button>
+                    {canManage && (
+                      <button
+                        className="btn-secondary"
+                        style={{ padding: '4px 12px', fontSize: '12px' }}
+                        onClick={() => handleEdit(a)}
+                      >
+                        ✏️ Редактировать
+                      </button>
+                    )}
                     {canDelete && (
                       <button
                         className="btn-danger"

@@ -8,6 +8,7 @@ import Navigation from '../components/Navigation';
 export default function Reports() {
   const [profile, setProfile] = useState(null);
   const [reports, setReports] = useState([]);
+  const [allReports, setAllReports] = useState([]);
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -15,6 +16,7 @@ export default function Reports() {
   const [messageType, setMessageType] = useState('success');
   const [selectedReport, setSelectedReport] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [selectedClubId, setSelectedClubId] = useState('');
   const [form, setForm] = useState({
     id: null,
     club_id: '',
@@ -38,16 +40,72 @@ export default function Reports() {
       }
       setProfile(userData);
 
-      const clubsData = await api.getClubs();
+      const [clubsData] = await Promise.all([
+        api.getClubs()
+      ]);
+
       setClubs(clubsData || []);
-      // TODO: добавить API для получения отчётов
-      setReports([]);
+
+      const role = userData.role;
+      let filteredReports = [];
+
+      // ============================================================
+      // ЛОГИКА ПО РОЛЯМ
+      // ============================================================
+
+      if (role === 'participant' || role === 'parent' || role === 'tutor') {
+        // УЧАСТНИК, РОДИТЕЛЬ, ТЬЮТОР — не видят отчёты
+        filteredReports = [];
+      } 
+      else if (role === 'club_coordinator') {
+        // КООРДИНАТОР КЮДА — видит отчёты своего клуба
+        const coordinatorClub = clubsData.find(c => 
+          c.coordinator_id === userData.id || 
+          c.leader_id === userData.id
+        );
+        if (coordinatorClub) {
+          // TODO: добавить API для получения отчётов по клубу
+          // filteredReports = reportsData.filter(r => r.club_id === coordinatorClub.id);
+          filteredReports = [];
+        } else {
+          filteredReports = [];
+        }
+      } 
+      else if (role === 'movement_coordinator' || 
+               role === 'admin' || 
+               role === 'president' || 
+               role === 'vice_president') {
+        // КООРДИНАТОР, АДМИН, ПРЕЗИДЕНТ, ВИЦЕ — видят все отчёты
+        // TODO: добавить API для получения всех отчётов
+        filteredReports = [];
+      } 
+      else {
+        filteredReports = [];
+      }
+
+      setAllReports(filteredReports);
+      setReports(filteredReports);
+
     } catch (err) {
       console.error('Ошибка:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  // Фильтр по клубу
+  const canFilterByClub = profile?.role === 'admin' || 
+                          profile?.role === 'movement_coordinator' || 
+                          profile?.role === 'president' ||
+                          profile?.role === 'vice_president';
+
+  useEffect(() => {
+    if (selectedClubId && canFilterByClub) {
+      setReports(allReports.filter(r => r.club_id === selectedClubId));
+    } else {
+      setReports(allReports);
+    }
+  }, [selectedClubId, allReports, canFilterByClub]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -87,9 +145,17 @@ export default function Reports() {
     return badges[status] || badges['draft'];
   };
 
+  // Кто может создавать отчёты
   const canCreate = profile?.role === 'admin' || 
                     profile?.role === 'movement_coordinator' || 
                     profile?.role === 'club_coordinator';
+
+  // Кто может просматривать отчёты
+  const canView = profile?.role === 'admin' || 
+                  profile?.role === 'movement_coordinator' || 
+                  profile?.role === 'club_coordinator' ||
+                  profile?.role === 'president' ||
+                  profile?.role === 'vice_president';
 
   const isClubCoordinator = profile?.role === 'club_coordinator';
 
@@ -97,6 +163,21 @@ export default function Reports() {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
         <div className="spinner" />
+      </div>
+    );
+  }
+
+  if (!canView) {
+    return (
+      <div className="page-background">
+        <Navigation profile={profile} />
+        <div className="container-page">
+          <div className="empty-state">
+            <div className="icon">⛔</div>
+            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Доступ запрещён</p>
+            <p style={{ color: '#667085' }}>Только координаторы и администраторы</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -139,6 +220,61 @@ export default function Reports() {
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
             {message}
+          </div>
+        )}
+
+        {/* ФИЛЬТР ПО КЮДАМ */}
+        {canFilterByClub && clubs.length > 0 && (
+          <div style={{
+            display: 'flex',
+            gap: '16px',
+            marginBottom: '20px',
+            flexWrap: 'wrap',
+            alignItems: 'center'
+          }}>
+            <div style={{ minWidth: '200px' }}>
+              <select
+                value={selectedClubId}
+                onChange={(e) => setSelectedClubId(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: '1.5px solid #D5DCE7',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  background: 'white'
+                }}
+              >
+                <option value="">Все КЮДы</option>
+                {clubs.map((club) => (
+                  <option key={club.id} value={club.id}>{club.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ fontSize: '14px', color: '#667085' }}>
+              {selectedClubId ? (
+                <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
+              ) : (
+                <span>📋 Все отчёты</span>
+              )}
+            </div>
+            {selectedClubId && (
+              <button
+                style={{
+                  padding: '4px 12px',
+                  background: '#FCEBEC',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: '#B3262E'
+                }}
+                onClick={() => setSelectedClubId('')}
+              >
+                ✕ Сбросить
+              </button>
+            )}
           </div>
         )}
 

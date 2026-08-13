@@ -8,14 +8,17 @@ import Navigation from '../components/Navigation';
 export default function StaffManagement() {
   const [profile, setProfile] = useState(null);
   const [staff, setStaff] = useState([]);
+  const [allStaff, setAllStaff] = useState([]);
   const [events, setEvents] = useState([]);
   const [assignments, setAssignments] = useState([]);
+  const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
   const [showAssignmentForm, setShowAssignmentForm] = useState(false);
   const [showStaffForm, setShowStaffForm] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
+  const [selectedClubId, setSelectedClubId] = useState('');
   const [staffSearch, setStaffSearch] = useState('');
   const [staffResults, setStaffResults] = useState([]);
   const [showStaffDropdown, setShowStaffDropdown] = useState(false);
@@ -54,7 +57,7 @@ export default function StaffManagement() {
 
   useEffect(() => {
     if (staffSearch.length > 1) {
-      const filtered = staff.filter(s =>
+      const filtered = allStaff.filter(s =>
         s.full_name?.toLowerCase().includes(staffSearch.toLowerCase()) ||
         s.role?.toLowerCase().includes(staffSearch.toLowerCase())
       );
@@ -64,7 +67,7 @@ export default function StaffManagement() {
       setStaffResults([]);
       setShowStaffDropdown(false);
     }
-  }, [staffSearch, staff]);
+  }, [staffSearch, allStaff]);
 
   useEffect(() => {
     if (eventSearch.length > 1) {
@@ -87,32 +90,80 @@ export default function StaffManagement() {
         return;
       }
 
-      if (userData.role !== 'admin' && userData.role !== 'movement_coordinator' && userData.role !== 'club_coordinator') {
+      const role = userData.role;
+      const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'];
+      if (!allowedRoles.includes(role)) {
         navigate('/dashboard');
         return;
       }
 
       setProfile(userData);
 
-      const [usersData, eventsData] = await Promise.all([
+      const [usersData, clubsData, eventsData] = await Promise.all([
         api.getUsers(),
+        api.getClubs(),
         api.getEvents()
       ]);
 
-      // Фильтруем только сотрудников (тьюторы, координаторы, админы)
-      const staffRoles = ['tutor', 'club_coordinator', 'movement_coordinator', 'admin'];
-      const staffData = usersData.filter(u => staffRoles.includes(u.role));
-      setStaff(staffData || []);
+      setClubs(clubsData || []);
       setEvents(eventsData || []);
+
+      // ============================================================
+      // ЛОГИКА ПО РОЛЯМ
+      // ============================================================
+
+      const staffRoles = ['tutor', 'club_coordinator', 'movement_coordinator', 'admin'];
+      let filteredStaff = [];
+
+      if (role === 'club_coordinator') {
+        // КООРДИНАТОР КЮДА — видит сотрудников своего клуба
+        const coordinatorClub = clubsData.find(c => 
+          c.coordinator_id === userData.id || 
+          c.leader_id === userData.id
+        );
+        if (coordinatorClub) {
+          // TODO: добавить связь сотрудников с клубом
+          filteredStaff = usersData.filter(u => staffRoles.includes(u.role));
+        } else {
+          filteredStaff = [];
+        }
+      } 
+      else if (role === 'tutor') {
+        // ТЬЮТОР — видит только себя
+        filteredStaff = usersData.filter(u => u.id === userData.id);
+      } 
+      else if (role === 'movement_coordinator' || role === 'admin') {
+        // КООРДИНАТОР и АДМИН — видят всех
+        filteredStaff = usersData.filter(u => staffRoles.includes(u.role));
+      } 
+      else {
+        filteredStaff = [];
+      }
+
+      setAllStaff(filteredStaff);
+      setStaff(filteredStaff);
 
       // TODO: добавить API для получения назначений
       setAssignments([]);
+
     } catch (err) {
       console.error('Ошибка:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  // Фильтр по клубу (только для admin и movement_coordinator)
+  const canFilterByClub = profile?.role === 'admin' || profile?.role === 'movement_coordinator';
+
+  useEffect(() => {
+    if (selectedClubId && canFilterByClub) {
+      // TODO: фильтрация по клубу
+      setStaff(allStaff);
+    } else {
+      setStaff(allStaff);
+    }
+  }, [selectedClubId, allStaff, canFilterByClub]);
 
   const handleSelectStaff = (staffMember) => {
     setForm({ ...form, staff_id: staffMember.id, staff_name: staffMember.full_name, staff_email: staffMember.email || '' });
@@ -227,14 +278,42 @@ export default function StaffManagement() {
 
   const filteredStaff = getFilteredStaff();
 
-  const canManage = profile?.role === 'admin' || profile?.role === 'movement_coordinator' || profile?.role === 'club_coordinator';
+  // Кто может управлять сотрудниками
+  const canManage = profile?.role === 'admin' || 
+                    profile?.role === 'movement_coordinator' || 
+                    profile?.role === 'club_coordinator';
+
   const isAdmin = profile?.role === 'admin';
   const isMovementCoordinator = profile?.role === 'movement_coordinator';
+  const isTutor = profile?.role === 'tutor';
 
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
         <div className="spinner" />
+      </div>
+    );
+  }
+
+  // Тьютор видит только приглашения
+  if (isTutor) {
+    return (
+      <div className="page-background">
+        <Navigation profile={profile} />
+        <div className="container-page">
+          <div className="page-header">
+            <span style={{ fontSize: '32px' }}>📨</span>
+            <div>
+              <h1>Мои приглашения</h1>
+              <p>Приглашения на мероприятия от координаторов</p>
+            </div>
+          </div>
+          <div className="card">
+            <p style={{ color: '#667085', textAlign: 'center', padding: '20px' }}>
+              У вас пока нет приглашений
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -247,7 +326,11 @@ export default function StaffManagement() {
           <span style={{ fontSize: '32px' }}>👥</span>
           <div>
             <h1>Сотрудники</h1>
-            <p>Управление сотрудниками движения</p>
+            <p>
+              {profile?.role === 'club_coordinator' 
+                ? 'Сотрудники вашего клуба' 
+                : 'Управление сотрудниками движения'}
+            </p>
           </div>
           {canManage && (
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
@@ -271,6 +354,61 @@ export default function StaffManagement() {
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
             {message}
+          </div>
+        )}
+
+        {/* ФИЛЬТР ПО КЮДАМ */}
+        {canFilterByClub && clubs.length > 0 && (
+          <div style={{
+            display: 'flex',
+            gap: '16px',
+            marginBottom: '20px',
+            flexWrap: 'wrap',
+            alignItems: 'center'
+          }}>
+            <div style={{ minWidth: '200px' }}>
+              <select
+                value={selectedClubId}
+                onChange={(e) => setSelectedClubId(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: '1.5px solid #D5DCE7',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  background: 'white'
+                }}
+              >
+                <option value="">Все КЮДы</option>
+                {clubs.map((club) => (
+                  <option key={club.id} value={club.id}>{club.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ fontSize: '14px', color: '#667085' }}>
+              {selectedClubId ? (
+                <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
+              ) : (
+                <span>📋 Все сотрудники</span>
+              )}
+            </div>
+            {selectedClubId && (
+              <button
+                style={{
+                  padding: '4px 12px',
+                  background: '#FCEBEC',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: '#B3262E'
+                }}
+                onClick={() => setSelectedClubId('')}
+              >
+                ✕ Сбросить
+              </button>
+            )}
           </div>
         )}
 
@@ -372,7 +510,7 @@ export default function StaffManagement() {
                     }}
                     onFocus={() => {
                       if (staffSearch.length > 1) {
-                        const filtered = staff.filter(s =>
+                        const filtered = allStaff.filter(s =>
                           s.full_name?.toLowerCase().includes(staffSearch.toLowerCase())
                         );
                         setStaffResults(filtered);
@@ -639,7 +777,7 @@ export default function StaffManagement() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
-              Все сотрудники
+              {profile?.role === 'club_coordinator' ? 'Сотрудники вашего клуба' : 'Все сотрудники'}
             </h3>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               <button
@@ -683,13 +821,21 @@ export default function StaffManagement() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {filteredStaff.map((s) => (
-                <div key={s.id} className="list-item" style={{ borderLeftColor: s.role === 'admin' ? '#B3262E' : s.role === 'movement_coordinator' ? '#6B46C1' : s.role === 'club_coordinator' ? '#C9A227' : '#174A7E' }}>
+                <div key={s.id} className="list-item" style={{ 
+                  borderLeftColor: s.role === 'admin' ? '#B3262E' : 
+                                  s.role === 'movement_coordinator' ? '#6B46C1' : 
+                                  s.role === 'club_coordinator' ? '#C9A227' : '#174A7E'
+                }}>
                   <div className="title">
                     {s.full_name}
                     <span className="tag" style={{
                       marginLeft: '8px',
-                      background: s.role === 'admin' ? '#FCEBEC' : s.role === 'movement_coordinator' ? '#EDE7F6' : s.role === 'club_coordinator' ? '#FBF4DC' : '#EAF2FA',
-                      color: s.role === 'admin' ? '#B3262E' : s.role === 'movement_coordinator' ? '#6B46C1' : s.role === 'club_coordinator' ? '#8A6A00' : '#174A7E'
+                      background: s.role === 'admin' ? '#FCEBEC' : 
+                                s.role === 'movement_coordinator' ? '#EDE7F6' : 
+                                s.role === 'club_coordinator' ? '#FBF4DC' : '#EAF2FA',
+                      color: s.role === 'admin' ? '#B3262E' : 
+                             s.role === 'movement_coordinator' ? '#6B46C1' : 
+                             s.role === 'club_coordinator' ? '#8A6A00' : '#174A7E'
                     }}>
                       {s.role === 'tutor' ? '📚 Тьютор' :
                        s.role === 'club_coordinator' ? '🏫 Координатор' :

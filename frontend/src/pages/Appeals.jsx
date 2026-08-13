@@ -8,11 +8,14 @@ import Navigation from '../components/Navigation';
 export default function Appeals() {
   const [profile, setProfile] = useState(null);
   const [appeals, setAppeals] = useState([]);
+  const [allAppeals, setAllAppeals] = useState([]);
+  const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
+  const [selectedClubId, setSelectedClubId] = useState('');
   const [form, setForm] = useState({
     subject: '',
     message: '',
@@ -33,14 +36,64 @@ export default function Appeals() {
       }
       setProfile(userData);
 
-      const appealsData = await api.getAppeals();
-      setAppeals(appealsData || []);
+      const clubsData = await api.getClubs();
+      setClubs(clubsData || []);
+
+      const role = userData.role;
+      let filteredAppeals = [];
+
+      // ============================================================
+      // ЛОГИКА ПО РОЛЯМ
+      // ============================================================
+
+      if (role === 'participant' || role === 'parent' || role === 'tutor') {
+        // УЧАСТНИК, РОДИТЕЛЬ, ТЬЮТОР — не видят обращения
+        filteredAppeals = [];
+      } 
+      else if (role === 'club_coordinator') {
+        // КООРДИНАТОР КЮДА — видит свои обращения
+        const coordinatorClub = clubsData.find(c => 
+          c.coordinator_id === userData.id || 
+          c.leader_id === userData.id
+        );
+        // TODO: добавить API для получения обращений по координатору
+        filteredAppeals = [];
+      } 
+      else if (role === 'movement_coordinator' || 
+               role === 'admin' || 
+               role === 'president' || 
+               role === 'vice_president') {
+        // КООРДИНАТОР, АДМИН, ПРЕЗИДЕНТ, ВИЦЕ — видят все обращения
+        // TODO: добавить API для получения всех обращений
+        filteredAppeals = [];
+      } 
+      else {
+        filteredAppeals = [];
+      }
+
+      setAllAppeals(filteredAppeals);
+      setAppeals(filteredAppeals);
+
     } catch (err) {
       console.error('Ошибка:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  // Фильтр по клубу
+  const canFilterByClub = profile?.role === 'admin' || 
+                          profile?.role === 'movement_coordinator' || 
+                          profile?.role === 'president' ||
+                          profile?.role === 'vice_president';
+
+  useEffect(() => {
+    if (selectedClubId && canFilterByClub) {
+      setAppeals(allAppeals.filter(a => a.club_id === selectedClubId));
+    } else {
+      setAppeals(allAppeals);
+    }
+  }, [selectedClubId, allAppeals, canFilterByClub]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -92,10 +145,35 @@ export default function Appeals() {
     return labels[status] || status;
   };
 
+  // Кто может создавать обращения
+  const canCreate = profile?.role === 'club_coordinator';
+
+  // Кто может просматривать обращения
+  const canView = profile?.role === 'club_coordinator' || 
+                  profile?.role === 'movement_coordinator' || 
+                  profile?.role === 'admin' ||
+                  profile?.role === 'president' ||
+                  profile?.role === 'vice_president';
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
         <div className="spinner" />
+      </div>
+    );
+  }
+
+  if (!canView) {
+    return (
+      <div className="page-background">
+        <Navigation profile={profile} />
+        <div className="container-page">
+          <div className="empty-state">
+            <div className="icon">⛔</div>
+            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Доступ запрещён</p>
+            <p style={{ color: '#667085' }}>Только координаторы и администраторы</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -108,15 +186,21 @@ export default function Appeals() {
           <span style={{ fontSize: '32px' }}>📨</span>
           <div>
             <h1>Обращения</h1>
-            <p>Всего обращений: {appeals.length}</p>
+            <p>
+              {profile?.role === 'club_coordinator' 
+                ? 'Ваши обращения к руководству' 
+                : 'Все обращения от координаторов КЮДов'}
+            </p>
           </div>
-          <button
-            className="btn-primary"
-            style={{ marginLeft: 'auto' }}
-            onClick={() => setShowForm(!showForm)}
-          >
-            {showForm ? '✖ Закрыть' : '➕ Создать'}
-          </button>
+          {canCreate && (
+            <button
+              className="btn-primary"
+              style={{ marginLeft: 'auto' }}
+              onClick={() => setShowForm(!showForm)}
+            >
+              {showForm ? '✖ Закрыть' : '➕ Создать'}
+            </button>
+          )}
         </div>
 
         {message && (
@@ -125,8 +209,63 @@ export default function Appeals() {
           </div>
         )}
 
+        {/* ФИЛЬТР ПО КЮДАМ */}
+        {canFilterByClub && clubs.length > 0 && (
+          <div style={{
+            display: 'flex',
+            gap: '16px',
+            marginBottom: '20px',
+            flexWrap: 'wrap',
+            alignItems: 'center'
+          }}>
+            <div style={{ minWidth: '200px' }}>
+              <select
+                value={selectedClubId}
+                onChange={(e) => setSelectedClubId(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: '1.5px solid #D5DCE7',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  background: 'white'
+                }}
+              >
+                <option value="">Все КЮДы</option>
+                {clubs.map((club) => (
+                  <option key={club.id} value={club.id}>{club.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ fontSize: '14px', color: '#667085' }}>
+              {selectedClubId ? (
+                <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
+              ) : (
+                <span>📋 Все обращения</span>
+              )}
+            </div>
+            {selectedClubId && (
+              <button
+                style={{
+                  padding: '4px 12px',
+                  background: '#FCEBEC',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: '#B3262E'
+                }}
+                onClick={() => setSelectedClubId('')}
+              >
+                ✕ Сбросить
+              </button>
+            )}
+          </div>
+        )}
+
         {/* ФОРМА СОЗДАНИЯ */}
-        {showForm && (
+        {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
               ✍️ Новое обращение
@@ -205,11 +344,7 @@ export default function Appeals() {
                       <h3 style={{ fontSize: '17px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
                         {appeal.subject}
                       </h3>
-                      <span style={{
-                        padding: '2px 12px',
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                        fontWeight: '600',
+                      <span className="tag" style={{
                         background: appeal.priority === 'urgent' ? '#FCEBEC' :
                                   appeal.priority === 'high' ? '#FCEBEC' :
                                   appeal.priority === 'medium' ? '#FBF4DC' : '#F4F6F9',
@@ -219,11 +354,7 @@ export default function Appeals() {
                       }}>
                         {getPriorityLabel(appeal.priority)}
                       </span>
-                      <span style={{
-                        padding: '2px 12px',
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                        fontWeight: '600',
+                      <span className="tag" style={{
                         background: appeal.status === 'resolved' ? '#E8F5EF' :
                                   appeal.status === 'in_progress' ? '#EAF2FA' :
                                   appeal.status === 'closed' ? '#F4F6F9' : '#FBF4DC',

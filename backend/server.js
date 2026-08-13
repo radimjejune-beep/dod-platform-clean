@@ -865,10 +865,9 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       return res.status(404).json({ error: 'Обращение не найдено' });
     }
 
-    const oldStatus = appealCheck.rows[0].status;
     const newStatus = status || 'in_progress';
 
-    // Сохраняем ответ (ТОЛЬКО ОБЯЗАТЕЛЬНЫЕ ПОЛЯ)
+    // Сохраняем ответ
     await pool.query(
       `INSERT INTO appeal_replies (appeal_id, author_id, message, created_at)
        VALUES ($1, $2, $3, NOW())`,

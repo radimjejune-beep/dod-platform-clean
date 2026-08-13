@@ -58,11 +58,9 @@ export default function Events() {
       setClubs(clubsData || []);
       setAllEvents(eventsData || []);
       
-      // Фильтруем мероприятия, ожидающие модерации
       const pending = eventsData.filter(e => e.moderation_status === 'pending');
       setPendingEvents(pending || []);
       
-      // Применяем фильтр
       applyFilter(eventsData || [], 'all');
     } catch (err) {
       console.error('Ошибка:', err);
@@ -76,7 +74,6 @@ export default function Events() {
     let filtered = eventsData;
 
     if (filter === 'club' && role === 'club_coordinator') {
-      // Только мероприятия клуба координатора
       const userClub = clubs.find(c => c.coordinator_id === profile?.id || c.leader_id === profile?.id);
       if (userClub) {
         filtered = eventsData.filter(e => e.club_id === userClub.id);
@@ -84,7 +81,6 @@ export default function Events() {
         filtered = [];
       }
     } else if (filter === 'global') {
-      // Только глобальные мероприятия
       filtered = eventsData.filter(e => e.is_global === true);
     }
 
@@ -94,6 +90,49 @@ export default function Events() {
 
   const handleFilterChange = (filter) => {
     applyFilter(allEvents, filter);
+  };
+
+  // ============================================================
+  // ПРОВЕРКА ПРАВ НА РЕДАКТИРОВАНИЕ
+  // ============================================================
+  const canEdit = (event) => {
+    const role = profile?.role;
+    const userId = profile?.id;
+    
+    // Админ и координатор движения могут редактировать всё
+    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
+      return true;
+    }
+    
+    // Координатор КЮДа может редактировать только мероприятия своего клуба
+    if (role === 'club_coordinator') {
+      const userClub = clubs.find(c => c.coordinator_id === userId || c.leader_id === userId);
+      if (userClub && event.club_id === userClub.id) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
+  const canDelete = (event) => {
+    const role = profile?.role;
+    const userId = profile?.id;
+    
+    // Админ и координатор движения могут удалять всё
+    if (['admin', 'movement_coordinator'].includes(role)) {
+      return true;
+    }
+    
+    // Координатор КЮДа может удалять только свои мероприятия (не глобальные)
+    if (role === 'club_coordinator') {
+      const userClub = clubs.find(c => c.coordinator_id === userId || c.leader_id === userId);
+      if (userClub && event.club_id === userClub.id && !event.is_global) {
+        return true;
+      }
+    }
+    
+    return false;
   };
 
   const handleSubmit = async (e) => {
@@ -119,8 +158,15 @@ export default function Events() {
 
       let result;
       if (form.id) {
+        // ===== РЕДАКТИРОВАНИЕ =====
+        // Проверяем права
+        const eventToEdit = allEvents.find(e => e.id === form.id);
+        if (!canEdit(eventToEdit)) {
+          throw new Error('У вас нет прав для редактирования этого мероприятия');
+        }
         result = await api.updateEvent(form.id, eventData);
       } else {
+        // ===== СОЗДАНИЕ =====
         result = await api.createEvent(eventData);
       }
 
@@ -143,6 +189,32 @@ export default function Events() {
       setMessageType('error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ============================================================
+  // УДАЛЕНИЕ МЕРОПРИЯТИЯ
+  // ============================================================
+  const handleDelete = async (id) => {
+    const eventToDelete = allEvents.find(e => e.id === id);
+    if (!canDelete(eventToDelete)) {
+      setMessage('❌ У вас нет прав для удаления этого мероприятия');
+      setMessageType('error');
+      return;
+    }
+
+    if (!confirm('Удалить это мероприятие?')) return;
+
+    try {
+      const result = await api.deleteEvent(id);
+      if (result.error) throw new Error(result.error);
+      setMessage('✅ Мероприятие удалено');
+      setMessageType('success');
+      loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
     }
   };
 
@@ -197,6 +269,26 @@ export default function Events() {
       is_global: false
     });
     setShowForm(false);
+  };
+
+  const handleEdit = (event) => {
+    setForm({
+      id: event.id,
+      title: event.title || '',
+      description: event.description || '',
+      location: event.location || '',
+      event_date: event.event_date || '',
+      end_date: event.end_date || '',
+      start_time: event.start_time || '',
+      end_time: event.end_time || '',
+      type: event.type || 'internal',
+      capacity: event.capacity || 20,
+      club_id: event.club_id || '',
+      form_url: event.form_url || '',
+      is_global: event.is_global || false
+    });
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const canCreate = profile?.role === 'admin' || 
@@ -325,7 +417,7 @@ export default function Events() {
           </div>
         )}
 
-        {/* ФОРМА СОЗДАНИЯ */}
+        {/* ФОРМА СОЗДАНИЯ/РЕДАКТИРОВАНИЯ */}
         {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#0B1F3A', marginBottom: '20px' }}>
@@ -503,83 +595,79 @@ export default function Events() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {events.map((event) => (
-                <div
-                  key={event.id}
-                  className="list-item"
-                  style={{
-                    borderLeftColor: event.moderation_status === 'pending' ? '#C9A227' :
-                                  event.is_global ? '#6B46C1' :
-                                  event.type === 'internal' ? '#174A7E' :
-                                  event.type === 'outgoing' ? '#C9A227' : '#B3262E'
-                  }}
-                >
-                  <div className="title">
-                    {event.title}
-                    {event.is_global && (
-                      <span className="tag" style={{ 
-                        marginLeft: '8px',
-                        background: '#EDE7F6',
-                        color: '#6B46C1',
-                        fontSize: '10px'
-                      }}>
-                        🌍 Глобальное
-                      </span>
-                    )}
-                    {event.moderation_status === 'pending' && (
-                      <span className="tag" style={{ 
-                        marginLeft: '8px',
-                        background: '#FBF4DC',
-                        color: '#8A6A00',
-                        fontSize: '10px'
-                      }}>
-                        ⏳ На модерации
-                      </span>
-                    )}
-                    {event.moderation_status === 'rejected' && (
-                      <span className="tag" style={{ 
-                        marginLeft: '8px',
-                        background: '#FCEBEC',
-                        color: '#B3262E',
-                        fontSize: '10px'
-                      }}>
-                        ❌ Отклонено
-                      </span>
-                    )}
-                  </div>
-                  <div className="subtitle">
-                    📅 {event.event_date ? new Date(event.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
-                    {event.location && ` 📍 ${event.location}`}
-                    {event.club_name && ` 🏫 ${event.club_name}`}
-                  </div>
-                  {event.description && <div className="meta">{event.description}</div>}
-                  {(canCreate || canModerate) && (
-                    <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
-                      {canCreate && (
+              {events.map((event) => {
+                const userCanEdit = canEdit(event);
+                const userCanDelete = canDelete(event);
+                
+                return (
+                  <div
+                    key={event.id}
+                    className="list-item"
+                    style={{
+                      borderLeftColor: event.moderation_status === 'pending' ? '#C9A227' :
+                                    event.is_global ? '#6B46C1' :
+                                    event.type === 'internal' ? '#174A7E' :
+                                    event.type === 'outgoing' ? '#C9A227' : '#B3262E'
+                    }}
+                  >
+                    <div className="title">
+                      {event.title}
+                      {event.is_global && (
+                        <span className="tag" style={{ 
+                          marginLeft: '8px',
+                          background: '#EDE7F6',
+                          color: '#6B46C1',
+                          fontSize: '10px'
+                        }}>
+                          🌍 Глобальное
+                        </span>
+                      )}
+                      {event.moderation_status === 'pending' && (
+                        <span className="tag" style={{ 
+                          marginLeft: '8px',
+                          background: '#FBF4DC',
+                          color: '#8A6A00',
+                          fontSize: '10px'
+                        }}>
+                          ⏳ На модерации
+                        </span>
+                      )}
+                      {event.moderation_status === 'rejected' && (
+                        <span className="tag" style={{ 
+                          marginLeft: '8px',
+                          background: '#FCEBEC',
+                          color: '#B3262E',
+                          fontSize: '10px'
+                        }}>
+                          ❌ Отклонено
+                        </span>
+                      )}
+                    </div>
+                    <div className="subtitle">
+                      📅 {event.event_date ? new Date(event.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
+                      {event.location && ` 📍 ${event.location}`}
+                      {event.club_name && ` 🏫 ${event.club_name}`}
+                    </div>
+                    {event.description && <div className="meta">{event.description}</div>}
+                    
+                    {/* КНОПКИ ДЕЙСТВИЙ */}
+                    <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {userCanEdit && (
                         <button
                           className="btn-secondary"
                           style={{ padding: '4px 12px', fontSize: '12px' }}
-                          onClick={() => {
-                            setForm({
-                              id: event.id,
-                              title: event.title || '',
-                              description: event.description || '',
-                              location: event.location || '',
-                              event_date: event.event_date || '',
-                              end_date: event.end_date || '',
-                              start_time: event.start_time || '',
-                              end_time: event.end_time || '',
-                              type: event.type || 'internal',
-                              capacity: event.capacity || 20,
-                              club_id: event.club_id || '',
-                              form_url: event.form_url || '',
-                              is_global: event.is_global || false
-                            });
-                            setShowForm(true);
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }}
+                          onClick={() => handleEdit(event)}
                         >
                           ✏️ Редактировать
+                        </button>
+                      )}
+                      {userCanDelete && (
+                        <button
+                          className="btn-danger"
+                          style={{ padding: '4px 12px', fontSize: '12px' }}
+                          onClick={() => handleDelete(event.id)}
+                        >
+                          🗑️ Удалить
                         </button>
                       )}
                       {canModerate && event.moderation_status === 'pending' && (
@@ -607,9 +695,9 @@ export default function Events() {
                         </>
                       )}
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

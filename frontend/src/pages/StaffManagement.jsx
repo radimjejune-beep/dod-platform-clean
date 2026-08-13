@@ -108,15 +108,11 @@ export default function StaffManagement() {
       setClubs(clubsData || []);
       setEvents(eventsData || []);
 
-      // ============================================================
-      // ЛОГИКА ПО РОЛЯМ
-      // ============================================================
-
       const staffRoles = ['tutor', 'club_coordinator', 'movement_coordinator', 'admin'];
       let filteredStaff = [];
 
       if (role === 'club_coordinator') {
-        // КООРДИНАТОР КЮДА — видит сотрудников своего клуба
+        // Координатор видит только сотрудников своего клуба
         const coordinatorClub = clubsData.find(c => 
           c.coordinator_id === userData.id || 
           c.leader_id === userData.id
@@ -127,16 +123,11 @@ export default function StaffManagement() {
         } else {
           filteredStaff = [];
         }
-      } 
-      else if (role === 'tutor') {
-        // ТЬЮТОР — видит только себя
+      } else if (role === 'tutor') {
         filteredStaff = usersData.filter(u => u.id === userData.id);
-      } 
-      else if (role === 'movement_coordinator' || role === 'admin') {
-        // КООРДИНАТОР и АДМИН — видят всех
+      } else if (role === 'movement_coordinator' || role === 'admin') {
         filteredStaff = usersData.filter(u => staffRoles.includes(u.role));
-      } 
-      else {
+      } else {
         filteredStaff = [];
       }
 
@@ -158,12 +149,26 @@ export default function StaffManagement() {
 
   useEffect(() => {
     if (selectedClubId && canFilterByClub) {
-      // TODO: фильтрация по клубу
       setStaff(allStaff);
     } else {
       setStaff(allStaff);
     }
   }, [selectedClubId, allStaff, canFilterByClub]);
+
+  // ===== ПРОВЕРКА ПРАВ =====
+  const canManage = profile?.role === 'admin' || 
+                    profile?.role === 'movement_coordinator';
+  
+  const canCreateStaff = profile?.role === 'admin' || 
+                         profile?.role === 'movement_coordinator';
+  
+  const canAssign = profile?.role === 'admin' || 
+                    profile?.role === 'movement_coordinator' ||
+                    profile?.role === 'club_coordinator';
+
+  const isTutor = profile?.role === 'tutor';
+  const isAdmin = profile?.role === 'admin';
+  const isMovementCoordinator = profile?.role === 'movement_coordinator';
 
   const handleSelectStaff = (staffMember) => {
     setForm({ ...form, staff_id: staffMember.id, staff_name: staffMember.full_name, staff_email: staffMember.email || '' });
@@ -278,15 +283,6 @@ export default function StaffManagement() {
 
   const filteredStaff = getFilteredStaff();
 
-  // Кто может управлять сотрудниками
-  const canManage = profile?.role === 'admin' || 
-                    profile?.role === 'movement_coordinator' || 
-                    profile?.role === 'club_coordinator';
-
-  const isAdmin = profile?.role === 'admin';
-  const isMovementCoordinator = profile?.role === 'movement_coordinator';
-  const isTutor = profile?.role === 'tutor';
-
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
@@ -334,12 +330,15 @@ export default function StaffManagement() {
           </div>
           {canManage && (
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-              <button
-                className="btn-primary"
-                onClick={() => setShowStaffForm(!showStaffForm)}
-              >
-                {showStaffForm ? '✖ Закрыть' : '➕ Добавить сотрудника'}
-              </button>
+              {/* ===== КНОПКА "ДОБАВИТЬ СОТРУДНИКА" — ТОЛЬКО ДЛЯ АДМИНА И КООРДИНАТОРА ДВИЖЕНИЯ ===== */}
+              {canCreateStaff && (
+                <button
+                  className="btn-primary"
+                  onClick={() => setShowStaffForm(!showStaffForm)}
+                >
+                  {showStaffForm ? '✖ Закрыть' : '➕ Добавить сотрудника'}
+                </button>
+              )}
               <button
                 className="btn-primary"
                 style={{ background: '#C9A227', color: '#0B1F3A' }}
@@ -412,8 +411,8 @@ export default function StaffManagement() {
           </div>
         )}
 
-        {/* ФОРМА ДОБАВЛЕНИЯ СОТРУДНИКА */}
-        {showStaffForm && canManage && (
+        {/* ФОРМА ДОБАВЛЕНИЯ СОТРУДНИКА (ТОЛЬКО ДЛЯ АДМИНА И КООРДИНАТОРА ДВИЖЕНИЯ) */}
+        {showStaffForm && canCreateStaff && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
               📝 Добавить сотрудника
@@ -490,10 +489,10 @@ export default function StaffManagement() {
         )}
 
         {/* ФОРМА НАЗНАЧЕНИЯ */}
-        {showAssignmentForm && canManage && (
+        {showAssignmentForm && canAssign && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-              📋 Назначить сотрудника
+              {profile?.role === 'club_coordinator' ? '📝 Запросить тьютора' : '📋 Назначить сотрудника'}
             </h3>
             <form onSubmit={handleAssign}>
               <div className="grid-2">
@@ -763,7 +762,7 @@ export default function StaffManagement() {
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Назначение...' : '📤 Назначить'}
+                  {loading ? '⏳ Отправка...' : profile?.role === 'club_coordinator' ? '📤 Отправить запрос' : '📤 Назначить'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => setShowAssignmentForm(false)}>
                   ❌ Отмена

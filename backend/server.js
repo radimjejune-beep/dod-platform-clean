@@ -135,30 +135,46 @@ app.post('/api/login', async (req, res) => {
 });
 
 // ============================================================
-// 4. ПОЛУЧЕНИЕ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ (ВРЕМЕННО БЕЗ ПРОВЕРКИ)
+// 4. ПОЛУЧЕНИЕ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ (С ПРОВЕРКОЙ ТОКЕНА)
 // ============================================================
 app.get('/api/me', async (req, res) => {
-  console.log('⚠️ ВРЕМЕННО: /api/me без проверки токена');
-  
   try {
-    // Просто берём пользователя newadmin@dod.ru из базы
-    const result = await pool.query(
-      `SELECT id, email, full_name, role, phone, school, class_name,
-              birth_date, is_minor, registration_status, interests, bio, city, created_at
-       FROM users WHERE email = $1`,
-      ['newadmin@dod.ru']
-    );
+    const authHeader = req.headers.authorization;
+    console.log('🔍 /api/me вызван');
     
-    if (result.rows.length === 0) {
-      console.log('❌ Пользователь не найден');
-      return res.status(404).json({ error: 'Пользователь не найден' });
+    if (!authHeader) {
+      console.log('❌ Нет заголовка Authorization');
+      return res.status(401).json({ error: 'Нет токена' });
     }
-    
-    console.log('✅ ВРЕМЕННО: пользователь найден:', result.rows[0].email);
-    res.json(result.rows[0]);
+
+    const token = authHeader.split(' ')[1];
+    console.log('🔍 Токен:', token.substring(0, 30) + '...');
+
+    try {
+      // Проверяем токен
+      const decoded = jwt.verify(token, JWT_SECRET);
+      console.log('✅ Токен валиден для:', decoded.email);
+
+      const result = await pool.query(
+        `SELECT id, email, full_name, role, phone, school, class_name,
+                birth_date, is_minor, registration_status, interests, bio, city, created_at
+         FROM users WHERE id = $1`,
+        [decoded.userId]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Пользователь не найден' });
+      }
+
+      res.json(result.rows[0]);
+    } catch (jwtError) {
+      console.error('❌ Ошибка JWT:', jwtError.message);
+      return res.status(401).json({ error: 'Неверный токен' });
+    }
+
   } catch (error) {
     console.error('❌ Ошибка /api/me:', error);
-    res.status(500).json({ error: error.message });
+    res.status(401).json({ error: 'Неверный токен' });
   }
 });
 
@@ -229,40 +245,83 @@ app.get('/api/users', async (req, res) => {
 });
 
 // ============================================================
-// 9. СОЗДАНИЕ ТЕСТОВОГО ПОЛЬЗОВАТЕЛЯ
+// 9. ОБНОВЛЕНИЕ РОЛИ ПОЛЬЗОВАТЕЛЯ
 // ============================================================
-app.post('/api/create-test-user', async (req, res) => {
+app.patch('/api/users/:id/role', async (req, res) => {
   try {
-    const email = 'newadmin@dod.ru';
-    const password = '123456';
-    const full_name = 'Новый Администратор';
-    const role = 'admin';
+    const { id } = req.params;
+    const { role } = req.body;
 
-    // Удаляем старого пользователя
-    await pool.query('DELETE FROM users WHERE email = $1', [email]);
-    console.log('🗑️ Старый пользователь удалён');
-
-    // Создаём нового
-    const password_hash = await bcrypt.hash(password, 10);
+    if (!role) {
+      return res.status(400).json({ error: 'role обязателен' });
+    }
 
     const result = await pool.query(
-      `INSERT INTO users (email, password_hash, full_name, role, birth_date)
-       VALUES ($1, $2, $3, $4, '2000-01-01')
-       RETURNING id, email, full_name, role`,
-      [email, password_hash, full_name, role]
+      'UPDATE users SET role = $1 WHERE id = $2 RETURNING id, email, full_name, role',
+      [role, id]
     );
 
-    console.log('✅ Тестовый пользователь создан');
-    res.json({ message: 'Пользователь создан!', user: result.rows[0] });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
 
+    res.json(result.rows[0]);
   } catch (error) {
-    console.error('❌ Ошибка:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // ============================================================
-// 10. ПОЛУЧЕНИЕ ДОСТИЖЕНИЙ
+// 10. СОЗДАНИЕ НОВОГО ПОЛЬЗОВАТЕЛЯ (ДЛЯ АДМИНОВ)
+// ============================================================
+app.post('/api/users', async (req, res) => {
+  try {
+    const { email, full_name, role, phone, school, class_name, club_id } = req.body;
+
+    if (!email || !full_name) {
+      return res.status(400).json({ error: 'email и full_name обязательны' });
+    }
+
+    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
+    }
+
+    // Генерируем пароль
+    const generatedPassword = Math.random().toString(36).slice(-8) + '123';
+    const password_hash = await bcrypt.hash(generatedPassword, 10);
+
+    const result = await pool.query(
+      `INSERT INTO users (email, password_hash, full_name, role, phone, school, class_name)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, email, full_name, role`,
+      [email, password_hash, full_name, role || 'participant', phone || '', school || '', class_name || '']
+    );
+
+    const user = result.rows[0];
+
+    // Если указан клуб - добавляем в клуб
+    if (club_id) {
+      await pool.query(
+        `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
+         VALUES ($1, $2, 'active', NOW())`,
+        [user.id, club_id]
+      );
+    }
+
+    res.status(201).json({
+      message: 'Пользователь создан!',
+      user: user,
+      generated_password: generatedPassword
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 11. ПОЛУЧЕНИЕ ДОСТИЖЕНИЙ
 // ============================================================
 app.get('/api/achievements', async (req, res) => {
   try {
@@ -279,7 +338,7 @@ app.get('/api/achievements', async (req, res) => {
 });
 
 // ============================================================
-// 11. ДОБАВЛЕНИЕ ДОСТИЖЕНИЯ
+// 12. ДОБАВЛЕНИЕ ДОСТИЖЕНИЯ
 // ============================================================
 app.post('/api/achievements', async (req, res) => {
   try {
@@ -303,7 +362,7 @@ app.post('/api/achievements', async (req, res) => {
 });
 
 // ============================================================
-// 12. УДАЛЕНИЕ ДОСТИЖЕНИЯ
+// 13. УДАЛЕНИЕ ДОСТИЖЕНИЯ
 // ============================================================
 app.delete('/api/achievements/:id', async (req, res) => {
   try {
@@ -316,7 +375,7 @@ app.delete('/api/achievements/:id', async (req, res) => {
 });
 
 // ============================================================
-// 13. ПОЛУЧЕНИЕ СОБЫТИЙ
+// 14. ПОЛУЧЕНИЕ СОБЫТИЙ
 // ============================================================
 app.get('/api/events', async (req, res) => {
   try {
@@ -333,7 +392,7 @@ app.get('/api/events', async (req, res) => {
 });
 
 // ============================================================
-// 14. СОЗДАНИЕ СОБЫТИЯ
+// 15. СОЗДАНИЕ СОБЫТИЯ
 // ============================================================
 app.post('/api/events', async (req, res) => {
   try {
@@ -357,7 +416,7 @@ app.post('/api/events', async (req, res) => {
 });
 
 // ============================================================
-// 15. ОБНОВЛЕНИЕ СОБЫТИЯ
+// 16. ОБНОВЛЕНИЕ СОБЫТИЯ
 // ============================================================
 app.patch('/api/events/:id', async (req, res) => {
   try {
@@ -393,7 +452,7 @@ app.patch('/api/events/:id', async (req, res) => {
 });
 
 // ============================================================
-// 16. УДАЛЕНИЕ СОБЫТИЯ
+// 17. УДАЛЕНИЕ СОБЫТИЯ
 // ============================================================
 app.delete('/api/events/:id', async (req, res) => {
   try {
@@ -406,11 +465,82 @@ app.delete('/api/events/:id', async (req, res) => {
 });
 
 // ============================================================
-// 17. ЗАПУСК
+// 18. ПОЛУЧЕНИЕ ОБРАЩЕНИЙ
+// ============================================================
+app.get('/api/appeals', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM appeals ORDER BY created_at DESC`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 19. СОЗДАНИЕ ОБРАЩЕНИЯ
+// ============================================================
+app.post('/api/appeals', async (req, res) => {
+  try {
+    const { subject, message, priority } = req.body;
+
+    if (!subject || !message) {
+      return res.status(400).json({ error: 'subject и message обязательны' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO appeals (subject, message, priority, status, created_at)
+       VALUES ($1, $2, $3, 'new', NOW())
+       RETURNING *`,
+      [subject, message, priority || 'medium']
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 20. СОЗДАНИЕ ТЕСТОВОГО ПОЛЬЗОВАТЕЛЯ
+// ============================================================
+app.post('/api/create-test-user', async (req, res) => {
+  try {
+    const email = 'newadmin@dod.ru';
+    const password = '123456';
+    const full_name = 'Новый Администратор';
+    const role = 'admin';
+
+    // Удаляем старого пользователя
+    await pool.query('DELETE FROM users WHERE email = $1', [email]);
+    console.log('🗑️ Старый пользователь удалён');
+
+    // Создаём нового
+    const password_hash = await bcrypt.hash(password, 10);
+
+    const result = await pool.query(
+      `INSERT INTO users (email, password_hash, full_name, role, birth_date)
+       VALUES ($1, $2, $3, $4, '2000-01-01')
+       RETURNING id, email, full_name, role`,
+      [email, password_hash, full_name, role]
+    );
+
+    console.log('✅ Тестовый пользователь создан');
+    res.json({ message: 'Пользователь создан!', user: result.rows[0] });
+
+  } catch (error) {
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 21. ЗАПУСК СЕРВЕРА
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Сервер запущен на порту ${PORT}`);
   console.log(`🔐 JWT_SECRET: установлен`);
-  console.log(`⚠️ ВНИМАНИЕ: /api/me работает БЕЗ проверки токена (временно)`);
-  console.log(`📝 Для создания пользователя: POST /api/create-test-user`);
+  console.log(`👤 Тестовый пользователь: newadmin@dod.ru / 123456`);
+  console.log(`📝 Создать тестового пользователя: POST /api/create-test-user`);
 });

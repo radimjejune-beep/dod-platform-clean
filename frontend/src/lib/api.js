@@ -1,122 +1,310 @@
-// frontend/src/App.jsx
+// frontend/src/lib/api.js
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
-import Participants from './pages/Participants';
-import Clubs from './pages/Clubs';
-import Events from './pages/Events';
-import Achievements from './pages/Achievements';
-import MyAchievements from './pages/MyAchievements';
-import MyReviews from './pages/MyReviews';
-import Reports from './pages/Reports';
-import Appeals from './pages/Appeals';
-import AdminUsers from './pages/AdminUsers';
-import AdminInvite from './pages/AdminInvite';
-import ImportParticipants from './pages/ImportParticipants';
-import ManageAchievements from './pages/ManageAchievements';
-import StaffManagement from './pages/StaffManagement';
-import StaffCalendar from './pages/StaffCalendar';
-import PresidentTasks from './pages/PresidentTasks';
-import CalendarPage from './pages/Calendar';
-import Analytics from './pages/Analytics';
-import ClubAnalytics from './pages/ClubAnalytics';
-import Settings from './pages/Settings';
-import ParticipantDashboard from './pages/ParticipantDashboard';
-import ParentDashboard from './pages/ParentDashboard';
-import ClubCoordinatorDashboard from './pages/ClubCoordinatorDashboard';
-import TutorDashboard from './pages/TutorDashboard';
-import TutorJournal from './pages/TutorJournal';
-import MyJournal from './pages/MyJournal';
-import ClubDetail from './pages/ClubDetail';
-import ParticipantProfile from './pages/ParticipantProfile';
-import DashboardAnalytics from './pages/DashboardAnalytics';
+const API_URL = 'https://dod-backend.relaxdev.ru/api';
 
-import ProtectedRoute from './components/ProtectedRoute';
-import Footer from './components/Footer';
+const getToken = () => {
+  const token = localStorage.getItem('token');
+  return token ? token.trim() : null;
+};
 
-function App() {
-  return (
-    <BrowserRouter>
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <div style={{ flex: 1 }}>
-          <Routes>
-            {/* ===== ПУБЛИЧНЫЕ СТРАНИЦЫ ===== */}
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            
-            {/* ===== ЗАЩИЩЁННЫЕ СТРАНИЦЫ ===== */}
-            
-            {/* Дашборды */}
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/participant-dashboard" element={<ProtectedRoute><ParticipantDashboard /></ProtectedRoute>} />
-            <Route path="/parent-dashboard" element={<ProtectedRoute><ParentDashboard /></ProtectedRoute>} />
-            <Route path="/club-coordinator-dashboard" element={<ProtectedRoute><ClubCoordinatorDashboard /></ProtectedRoute>} />
-            <Route path="/tutor-dashboard" element={<ProtectedRoute><TutorDashboard /></ProtectedRoute>} />
-            
-            {/* Профили */}
-            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/participant/:id" element={<ProtectedRoute><ParticipantProfile /></ProtectedRoute>} />
-            
-            {/* Участники */}
-            <Route path="/participants" element={<ProtectedRoute><Participants /></ProtectedRoute>} />
-            
-            {/* Клубы */}
-            <Route path="/clubs" element={<ProtectedRoute><Clubs /></ProtectedRoute>} />
-            <Route path="/club/:id" element={<ProtectedRoute><ClubDetail /></ProtectedRoute>} />
-            
-            {/* Мероприятия */}
-            <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
-            <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
-            
-            {/* Достижения */}
-            <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
-            <Route path="/my-achievements" element={<ProtectedRoute><MyAchievements /></ProtectedRoute>} />
-            <Route path="/manage-achievements" element={<ProtectedRoute><ManageAchievements /></ProtectedRoute>} />
-            
-            {/* Оценки */}
-            <Route path="/my-reviews" element={<ProtectedRoute><MyReviews /></ProtectedRoute>} />
-            
-            {/* Отчёты */}
-            <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-            
-            {/* Обращения */}
-            <Route path="/appeals" element={<ProtectedRoute><Appeals /></ProtectedRoute>} />
-            
-            {/* Администрирование */}
-            <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
-            <Route path="/admin/invite" element={<ProtectedRoute><AdminInvite /></ProtectedRoute>} />
-            <Route path="/import-participants" element={<ProtectedRoute><ImportParticipants /></ProtectedRoute>} />
-            
-            {/* Сотрудники */}
-            <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
-            <Route path="/staff-calendar" element={<ProtectedRoute><StaffCalendar /></ProtectedRoute>} />
-            
-            {/* Тьюторы */}
-            <Route path="/tutor-journal" element={<ProtectedRoute><TutorJournal /></ProtectedRoute>} />
-            <Route path="/tutor-journal/:eventId" element={<ProtectedRoute><TutorJournal /></ProtectedRoute>} />
-            <Route path="/my-journal" element={<ProtectedRoute><MyJournal /></ProtectedRoute>} />
-            
-            {/* Президент */}
-            <Route path="/president-tasks" element={<ProtectedRoute><PresidentTasks /></ProtectedRoute>} />
-            
-            {/* Аналитика */}
-            <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-            <Route path="/club-analytics" element={<ProtectedRoute><ClubAnalytics /></ProtectedRoute>} />
-            <Route path="/dashboard-analytics" element={<ProtectedRoute><DashboardAnalytics /></ProtectedRoute>} />
-            
-            {/* Настройки */}
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          </Routes>
-        </div>
-        <Footer />
-      </div>
-    </BrowserRouter>
-  );
-}
+const headers = () => ({
+  'Content-Type': 'application/json',
+  ...(getToken() && { Authorization: `Bearer ${getToken()}` })
+});
 
-export default App;
+// ============================================================
+// 1. АУТЕНТИФИКАЦИЯ
+// ============================================================
+export const getMe = async () => {
+  const token = getToken();
+  console.log('🔑 Токен для запроса:', token ? `${token.slice(0, 20)}...` : 'null');
+  
+  let response = await fetch(`${API_URL}/me`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  console.log('📥 Статус /me:', response.status);
+  
+  if (!response.ok) {
+    console.log('🔄 /me не работает, пробуем /api/me2...');
+    response = await fetch(`${API_URL}/me2`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    console.log('📥 Статус /me2:', response.status);
+  }
+  
+  const data = await response.json();
+  console.log('📥 Ответ:', data);
+  return data;
+};
+
+// ============================================================
+// 2. ПРОФИЛЬ
+// ============================================================
+export const updateProfile = async (data) => {
+  const response = await fetch(`${API_URL}/profile`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+// ============================================================
+// 3. ПОЛЬЗОВАТЕЛИ
+// ============================================================
+export const getUsers = async () => {
+  const response = await fetch(`${API_URL}/users`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const getProfiles = async () => {
+  const response = await fetch(`${API_URL}/profiles`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const getParticipants = async () => {
+  const response = await fetch(`${API_URL}/participants`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const createUser = async (data) => {
+  const response = await fetch(`${API_URL}/users`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateUser = async (userId, data) => {
+  const response = await fetch(`${API_URL}/users/${userId}`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteUser = async (userId) => {
+  const response = await fetch(`${API_URL}/users/${userId}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const updateUserRole = async (userId, role) => {
+  const response = await fetch(`${API_URL}/users/${userId}/role`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ role })
+  });
+  return response.json();
+};
+
+// ============================================================
+// 4. КЛУБЫ
+// ============================================================
+export const getClubs = async () => {
+  const response = await fetch(`${API_URL}/clubs`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
+// 5. ДОСТИЖЕНИЯ
+// ============================================================
+export const getAchievements = async () => {
+  const response = await fetch(`${API_URL}/achievements`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const addAchievement = async (data) => {
+  const response = await fetch(`${API_URL}/achievements`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteAchievement = async (id) => {
+  const response = await fetch(`${API_URL}/achievements/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
+// 6. СОБЫТИЯ
+// ============================================================
+export const getEvents = async () => {
+  const response = await fetch(`${API_URL}/events`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const createEvent = async (data) => {
+  const response = await fetch(`${API_URL}/events`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateEvent = async (id, data) => {
+  const response = await fetch(`${API_URL}/events/${id}`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteEvent = async (id) => {
+  const response = await fetch(`${API_URL}/events/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
+// 7. РЕГИСТРАЦИИ
+// ============================================================
+export const getRegistrations = async () => {
+  const response = await fetch(`${API_URL}/registrations`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const addRegistration = async (data) => {
+  const response = await fetch(`${API_URL}/registrations`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+// ============================================================
+// 8. ОБРАЩЕНИЯ
+// ============================================================
+export const getAppeals = async () => {
+  const response = await fetch(`${API_URL}/appeals`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const addAppeal = async (data) => {
+  const response = await fetch(`${API_URL}/appeals`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const replyToAppeal = async (appealId, data) => {
+  const response = await fetch(`${API_URL}/appeals/${appealId}/reply`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const getAppealReplies = async (appealId) => {
+  const response = await fetch(`${API_URL}/appeals/${appealId}/replies`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
+// 9. РЕГИСТРАЦИЯ (ПУБЛИЧНАЯ)
+// ============================================================
+export const registerUser = async (data) => {
+  const response = await fetch(`${API_URL}/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+// ============================================================
+// 10. ИМПОРТ
+// ============================================================
+export const importParticipants = async (data) => {
+  const response = await fetch(`${API_URL}/import-participants`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+// ============================================================
+// 11. ЭКСПОРТ API ОБЪЕКТА
+// ============================================================
+const api = {
+  getMe,
+  updateProfile,
+  getUsers,
+  getProfiles,
+  getParticipants,
+  createUser,
+  updateUser,
+  deleteUser,
+  updateUserRole,
+  getClubs,
+  getAchievements,
+  addAchievement,
+  deleteAchievement,
+  getEvents,
+  createEvent,
+  updateEvent,
+  deleteEvent,
+  getRegistrations,
+  addRegistration,
+  getAppeals,
+  addAppeal,
+  replyToAppeal,
+  getAppealReplies,
+  registerUser,
+  importParticipants
+};
+
+export default api;

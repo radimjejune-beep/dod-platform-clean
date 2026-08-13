@@ -1193,7 +1193,7 @@ app.patch('/api/tutor-requests/:id', async (req, res) => {
 });
 
 // ============================================================
-// 20. АВАТАР
+// ЗАГРУЗКА АВАТАРА
 // ============================================================
 app.post('/api/upload-avatar', async (req, res) => {
   try {
@@ -1234,25 +1234,6 @@ app.post('/api/upload-avatar', async (req, res) => {
     });
   } catch (error) {
     console.error('Ошибка загрузки аватара:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get('/api/avatar/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
-    
-    const result = await pool.query(
-      'SELECT avatar_url FROM users WHERE id = $1',
-      [userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
-    }
-
-    res.json({ avatar_url: result.rows[0].avatar_url });
-  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });

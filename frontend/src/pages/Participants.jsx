@@ -48,7 +48,11 @@ export default function Participants() {
 
       if (role === 'club_coordinator') {
         setIsClubCoordinator(true);
+        
+        // 1. Пробуем получить club_id из профиля
         let clubId = userData.club_id;
+        
+        // 2. Если нет — ищем в club_coordinators
         if (!clubId) {
           try {
             const coordResponse = await fetch(`https://dod-backend.relaxdev.ru/api/club-coordinators?profile_id=${userData.id}`);
@@ -56,8 +60,12 @@ export default function Participants() {
             if (coordData && coordData.length > 0) {
               clubId = coordData[0].club_id;
             }
-          } catch (e) {}
+          } catch (e) {
+            console.log('Ошибка получения координатора:', e);
+          }
         }
+        
+        // 3. Фильтруем ТОЛЬКО участников своего клуба
         if (clubId) {
           filtered = participantsData.filter(p => p.club_id === clubId);
         } else {

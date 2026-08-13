@@ -53,7 +53,6 @@ export default function Dashboard() {
     navigate('/login');
   };
 
-  // Пока загружается
   if (loading) {
     return (
       <div style={{ 
@@ -68,7 +67,6 @@ export default function Dashboard() {
     );
   }
 
-  // Если ошибка
   if (error) {
     return (
       <div style={{ 
@@ -76,16 +74,17 @@ export default function Dashboard() {
         justifyContent: 'center', 
         alignItems: 'center', 
         height: '100vh',
-        color: 'red'
+        color: 'red',
+        fontSize: '18px'
       }}>
         {error}
       </div>
     );
   }
 
-  // Основной интерфейс
   return (
     <div style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
+      {/* Шапка с кнопкой выхода */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -110,6 +109,7 @@ export default function Dashboard() {
         </button>
       </div>
 
+      {/* Карточка с данными пользователя */}
       <div style={{ marginTop: '30px' }}>
         <div style={{ 
           background: '#f8f9fa', 
@@ -118,10 +118,10 @@ export default function Dashboard() {
           boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
         }}>
           <h3 style={{ marginTop: 0, color: '#333' }}>Ваши данные:</h3>
-          <p><strong>Имя:</strong> {user?.full_name}</p>
-          <p><strong>Email:</strong> {user?.email}</p>
-          <p><strong>Роль:</strong> {user?.role}</p>
-          <p><strong>ID:</strong> {user?.id}</p>
+          <p><strong>Имя:</strong> {user?.full_name || 'Не указано'}</p>
+          <p><strong>Email:</strong> {user?.email || 'Не указан'}</p>
+          <p><strong>Роль:</strong> {user?.role || 'Не указана'}</p>
+          <p><strong>ID:</strong> {user?.id || 'Не указан'}</p>
         </div>
       </div>
     </div>

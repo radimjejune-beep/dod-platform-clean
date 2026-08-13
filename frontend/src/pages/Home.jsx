@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
-// import logo from '../assets/Image.png';
-// import logoArd from '../assets/АРДЛОГО.png';
+import Footer from '../components/Footer';
 
 export default function Home() {
   const [profile, setProfile] = useState(null);
@@ -19,8 +18,13 @@ export default function Home() {
     const token = localStorage.getItem('token');
     if (token) {
       try {
-        // Простая проверка — если есть токен, пользователь авторизован
-        setProfile({ token });
+        const response = await fetch('https://dod-backend.relaxdev.ru/api/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const user = await response.json();
+          setProfile(user);
+        }
       } catch (err) {
         console.error('Ошибка:', err);
       }
@@ -40,292 +44,466 @@ export default function Home() {
     navigate('/login');
   };
 
-  // Настройки (статические)
-  const settings = {
-    site_name: 'Дипломаты будущего',
-    hero_title: 'Добро пожаловать в ДОД «Дипломаты будущего»',
-    hero_subtitle: 'Система управления движением',
-    primary_color: '#0B1F3A',
-    accent_color: '#C9A227'
-  };
-
-  const heroStyle = {
-    background: `linear-gradient(135deg, ${settings.primary_color} 0%, #174A7E 100%)`
-  };
-
-  const buttonStyle = {
-    background: settings.accent_color,
-    color: settings.primary_color,
-    border: 'none',
-    borderRadius: '12px',
-    fontSize: '18px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    padding: '16px 48px'
-  };
-
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0B1F3A' }}>
         <div className="spinner" />
       </div>
     );
   }
 
   return (
-    <div style={{ background: '#F4F6F9', minHeight: '100vh' }}>
+    <div className="home-page">
       <Navigation profile={profile} />
-      
-      {/* ===== HERO ===== */}
-      <section style={{
-        ...heroStyle,
-        padding: '80px 24px',
-        textAlign: 'center',
-        color: 'white',
-        position: 'relative',
-        overflow: 'hidden',
-        minHeight: '400px'
-      }}>
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          opacity: 0.06,
-          pointerEvents: 'none',
-          zIndex: 0
-        }}>
-          <div style={{
-            width: '400px',
-            height: '400px',
-            borderRadius: '50%',
-            background: 'white',
-            margin: '0 auto'
-          }} />
-        </div>
 
-        <div style={{ maxWidth: '900px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-          <div style={{
-            width: '80px',
-            height: '80px',
-            margin: '0 auto 24px',
-            background: `rgba(201, 162, 39, 0.15)`,
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '40px',
-            border: `2px solid ${settings.accent_color}4D`
-          }}>
-            🕊️
+      {/* ===== ГЕРОЙ ===== */}
+      <section className="home-hero">
+        <div className="home-hero-bg" />
+        <div className="home-hero-content">
+          <div className="home-hero-emblem">
+            <span>🌍</span>
           </div>
-          
-          <h1 style={{
-            fontSize: '52px',
-            fontWeight: '800',
-            marginBottom: '16px',
-            letterSpacing: '-1px',
-            background: `linear-gradient(135deg, #FFFFFF 0%, ${settings.accent_color} 100%)`,
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}>
-            {settings.hero_title}
+          <h1>
+            Детское общественное движение<br />
+            <span>«Дипломаты будущего»</span>
           </h1>
-          <p style={{
-            fontSize: '22px',
-            opacity: 0.85,
-            marginBottom: '36px',
-            lineHeight: '1.6',
-            maxWidth: '700px',
-            margin: '0 auto 36px',
-            fontWeight: '300',
-            color: 'rgba(255,255,255,0.9)'
-          }}>
-            {settings.hero_subtitle}
+          <p>
+            Воспитываем новое поколение дипломатов,<br />
+            развиваем лидерские качества и формируем гражданскую позицию у молодёжи
           </p>
-          
-          <div style={{
-            display: 'flex',
-            gap: '16px',
-            justifyContent: 'center',
-            flexWrap: 'wrap'
-          }}>
+          <div className="home-hero-buttons">
             {profile ? (
-              <button
-                onClick={handleGetStarted}
-                style={buttonStyle}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'scale(1.05)';
-                  e.target.style.boxShadow = `0 8px 30px ${settings.accent_color}4D`;
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1)';
-                  e.target.style.boxShadow = 'none';
-                }}
-              >
+              <button className="home-hero-btn-primary" onClick={handleGetStarted}>
                 📊 Перейти в кабинет
               </button>
             ) : (
               <>
-                <button
-                  onClick={handleLogin}
-                  style={{
-                    padding: '16px 40px',
-                    fontSize: '18px',
-                    borderRadius: '12px',
-                    background: 'transparent',
-                    color: 'white',
-                    border: '2px solid rgba(255,255,255,0.5)',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = 'rgba(255,255,255,0.1)';
-                    e.target.style.borderColor = 'white';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = 'transparent';
-                    e.target.style.borderColor = 'rgba(255,255,255,0.5)';
-                  }}
-                >
+                <button className="home-hero-btn-secondary" onClick={handleLogin}>
                   🔑 Вход
                 </button>
-                <button
-                  onClick={handleGetStarted}
-                  style={buttonStyle}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'scale(1.05)';
-                    e.target.style.boxShadow = `0 8px 30px ${settings.accent_color}4D`;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'scale(1)';
-                    e.target.style.boxShadow = 'none';
-                  }}
-                >
+                <button className="home-hero-btn-primary" onClick={handleGetStarted}>
                   🚀 Присоединиться
                 </button>
               </>
             )}
           </div>
-
           {!profile && (
-            <p style={{
-              marginTop: '20px',
-              fontSize: '15px',
-              opacity: 0.6,
-              color: 'rgba(255,255,255,0.7)'
-            }}>
-              Уже есть аккаунт? <Link to="/login" style={{ color: settings.accent_color, textDecoration: 'none', fontWeight: '600' }}>Войти</Link>
+            <p className="home-hero-register">
+              Уже есть аккаунт? <Link to="/login">Войти</Link>
             </p>
           )}
         </div>
       </section>
 
       {/* ===== СТАТИСТИКА ===== */}
-      <section style={{ 
-        maxWidth: '1200px', 
-        margin: '-30px auto 0', 
-        padding: '0 24px',
-        position: 'relative',
-        zIndex: 2
-      }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '20px',
-          background: 'white',
-          borderRadius: '20px',
-          padding: '32px 40px',
-          boxShadow: '0 12px 35px rgba(11, 31, 58, 0.10)',
-          border: '1px solid #E2E7EF'
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: '#0B1F3A' }}>10+</div>
-            <div style={{ fontSize: '14px', color: '#667085' }}>КЮДов</div>
+      <section className="home-stats">
+        <div className="home-stats-container">
+          <div className="home-stat-item">
+            <span className="home-stat-number">10+</span>
+            <span className="home-stat-label">КЮДов</span>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: '#0B1F3A' }}>500+</div>
-            <div style={{ fontSize: '14px', color: '#667085' }}>Участников</div>
+          <div className="home-stat-divider" />
+          <div className="home-stat-item">
+            <span className="home-stat-number">500+</span>
+            <span className="home-stat-label">Участников</span>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: '#0B1F3A' }}>50+</div>
-            <div style={{ fontSize: '14px', color: '#667085' }}>Мероприятий</div>
+          <div className="home-stat-divider" />
+          <div className="home-stat-item">
+            <span className="home-stat-number">50+</span>
+            <span className="home-stat-label">Мероприятий</span>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: '#0B1F3A' }}>8</div>
-            <div style={{ fontSize: '14px', color: '#667085' }}>Лет работы</div>
+          <div className="home-stat-divider" />
+          <div className="home-stat-item">
+            <span className="home-stat-number">8</span>
+            <span className="home-stat-label">Лет работы</span>
           </div>
         </div>
       </section>
 
       {/* ===== МИССИЯ ===== */}
-      <section style={{ 
-        background: settings.primary_color,
-        padding: '60px 24px',
-        marginTop: '40px'
-      }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
-          <div style={{
-            width: '60px',
-            height: '60px',
-            margin: '0 auto 20px',
-            background: 'rgba(201, 162, 39, 0.15)',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '28px'
-          }}>
-            🌍
-          </div>
-          <h2 style={{ 
-            fontSize: '32px', 
-            fontWeight: '700', 
-            color: 'white',
-            marginBottom: '16px'
-          }}>
-            Наша миссия
-          </h2>
-          <p style={{ 
-            fontSize: '18px', 
-            color: 'rgba(255,255,255,0.7)',
-            maxWidth: '700px',
-            margin: '0 auto',
-            lineHeight: 1.8
-          }}>
+      <section className="home-mission">
+        <div className="home-mission-container">
+          <div className="home-mission-icon">🕊️</div>
+          <h2>Наша миссия</h2>
+          <p>
             Воспитание нового поколения дипломатов,<br />
             развитие лидерских качеств и формирование<br />
             гражданской позиции у молодёжи
           </p>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '40px',
-            marginTop: '32px',
-            flexWrap: 'wrap'
-          }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '32px', marginBottom: '4px' }}>🤝</div>
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>Дипломатия</div>
+          <div className="home-mission-values">
+            <div className="home-mission-value">
+              <span>🤝</span>
+              <span>Дипломатия</span>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '32px', marginBottom: '4px' }}>🎯</div>
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>Лидерство</div>
+            <div className="home-mission-value">
+              <span>🎯</span>
+              <span>Лидерство</span>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '32px', marginBottom: '4px' }}>🌐</div>
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>Международное общение</div>
+            <div className="home-mission-value">
+              <span>🌐</span>
+              <span>Международное общение</span>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '32px', marginBottom: '4px' }}>⭐</div>
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>Гражданская позиция</div>
+            <div className="home-mission-value">
+              <span>⭐</span>
+              <span>Гражданская позиция</span>
             </div>
           </div>
         </div>
       </section>
+
+      <Footer />
+
+      <style>{`
+        /* ===== ОСНОВНЫЕ СТИЛИ ===== */
+        .home-page {
+          min-height: 100vh;
+          background: #F0EDE8;
+        }
+
+        /* ===== ГЕРОЙ ===== */
+        .home-hero {
+          position: relative;
+          min-height: 500px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          padding: 60px 24px;
+          overflow: hidden;
+          background: linear-gradient(145deg, #0B1F3A 0%, #07152B 100%);
+        }
+
+        .home-hero-bg {
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background-image:
+            radial-gradient(ellipse at 30% 40%, rgba(201, 162, 39, 0.06) 0%, transparent 50%),
+            radial-gradient(ellipse at 70% 60%, rgba(23, 74, 126, 0.06) 0%, transparent 50%);
+          animation: heroFloat 30s ease-in-out infinite alternate;
+        }
+
+        @keyframes heroFloat {
+          0% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(-20px, 20px) scale(1.05); }
+          100% { transform: translate(20px, -20px) scale(0.95); }
+        }
+
+        .home-hero-content {
+          position: relative;
+          z-index: 1;
+          max-width: 800px;
+        }
+
+        .home-hero-emblem {
+          width: 80px;
+          height: 80px;
+          margin: 0 auto 24px;
+          background: rgba(201, 162, 39, 0.15);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 40px;
+          border: 2px solid rgba(201, 162, 39, 0.3);
+          box-shadow: 0 0 60px rgba(201, 162, 39, 0.1);
+        }
+
+        .home-hero h1 {
+          font-family: 'Playfair Display', serif;
+          font-size: 44px;
+          font-weight: 700;
+          color: white;
+          margin-bottom: 16px;
+          line-height: 1.2;
+        }
+
+        .home-hero h1 span {
+          background: linear-gradient(135deg, #C9A227, #E8D9A8);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .home-hero p {
+          font-size: 18px;
+          color: rgba(255, 255, 255, 0.7);
+          line-height: 1.7;
+          margin-bottom: 32px;
+          font-weight: 300;
+        }
+
+        .home-hero-buttons {
+          display: flex;
+          gap: 16px;
+          justify-content: center;
+          flex-wrap: wrap;
+        }
+
+        .home-hero-btn-primary {
+          padding: 14px 40px;
+          background: linear-gradient(135deg, #C9A227, #E8D9A8);
+          color: #0B1F3A;
+          border: none;
+          border-radius: 12px;
+          font-size: 18px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 24px rgba(201, 162, 39, 0.3);
+        }
+
+        .home-hero-btn-primary:hover {
+          transform: translateY(-4px) scale(1.02);
+          box-shadow: 0 8px 40px rgba(201, 162, 39, 0.4);
+        }
+
+        .home-hero-btn-secondary {
+          padding: 14px 36px;
+          background: transparent;
+          color: white;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          border-radius: 12px;
+          font-size: 18px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .home-hero-btn-secondary:hover {
+          border-color: rgba(255, 255, 255, 0.6);
+          background: rgba(255, 255, 255, 0.05);
+          transform: translateY(-4px);
+        }
+
+        .home-hero-register {
+          margin-top: 20px;
+          font-size: 15px;
+          color: rgba(255, 255, 255, 0.5);
+        }
+
+        .home-hero-register a {
+          color: #C9A227;
+          text-decoration: none;
+          font-weight: 600;
+          transition: all 0.2s ease;
+        }
+
+        .home-hero-register a:hover {
+          color: #E8D9A8;
+        }
+
+        /* ===== СТАТИСТИКА ===== */
+        .home-stats {
+          margin-top: -30px;
+          position: relative;
+          z-index: 2;
+          padding: 0 24px;
+        }
+
+        .home-stats-container {
+          max-width: 900px;
+          margin: 0 auto;
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          background: white;
+          border-radius: 20px;
+          padding: 32px 40px;
+          box-shadow: 0 12px 48px rgba(11, 31, 58, 0.08);
+          border: 1px solid #E2E7EF;
+        }
+
+        .home-stat-item {
+          text-align: center;
+        }
+
+        .home-stat-number {
+          display: block;
+          font-family: 'Playfair Display', serif;
+          font-size: 32px;
+          font-weight: 700;
+          color: #0B1F3A;
+        }
+
+        .home-stat-label {
+          display: block;
+          font-size: 14px;
+          color: #667085;
+          margin-top: 4px;
+        }
+
+        .home-stat-divider {
+          width: 1px;
+          background: #E2E7EF;
+        }
+
+        /* ===== МИССИЯ ===== */
+        .home-mission {
+          padding: 60px 24px;
+          background: linear-gradient(145deg, #0B1F3A 0%, #07152B 100%);
+          margin-top: 40px;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .home-mission::before {
+          content: '';
+          position: absolute;
+          top: -30%;
+          right: -10%;
+          width: 300px;
+          height: 300px;
+          background: radial-gradient(circle, rgba(201, 162, 39, 0.03), transparent 70%);
+          border-radius: 50%;
+        }
+
+        .home-mission-container {
+          max-width: 800px;
+          margin: 0 auto;
+          text-align: center;
+          position: relative;
+          z-index: 1;
+        }
+
+        .home-mission-icon {
+          font-size: 48px;
+          margin-bottom: 16px;
+        }
+
+        .home-mission h2 {
+          font-family: 'Playfair Display', serif;
+          font-size: 32px;
+          font-weight: 700;
+          color: white;
+          margin-bottom: 16px;
+        }
+
+        .home-mission p {
+          font-size: 18px;
+          color: rgba(255, 255, 255, 0.7);
+          line-height: 1.8;
+          margin-bottom: 32px;
+          font-weight: 300;
+        }
+
+        .home-mission-values {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 20px;
+          max-width: 700px;
+          margin: 0 auto;
+        }
+
+        .home-mission-value {
+          text-align: center;
+          padding: 16px 12px;
+          background: rgba(255, 255, 255, 0.04);
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          transition: all 0.3s ease;
+        }
+
+        .home-mission-value:hover {
+          background: rgba(255, 255, 255, 0.08);
+          transform: translateY(-4px);
+        }
+
+        .home-mission-value span:first-child {
+          display: block;
+          font-size: 28px;
+          margin-bottom: 6px;
+        }
+
+        .home-mission-value span:last-child {
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.6);
+          font-weight: 400;
+        }
+
+        /* ===== АДАПТИВНОСТЬ ===== */
+        @media (max-width: 768px) {
+          .home-hero {
+            min-height: 400px;
+            padding: 40px 20px;
+          }
+
+          .home-hero h1 {
+            font-size: 28px;
+          }
+
+          .home-hero p {
+            font-size: 16px;
+          }
+
+          .home-hero-btn-primary,
+          .home-hero-btn-secondary {
+            padding: 12px 28px;
+            font-size: 15px;
+          }
+
+          .home-stats-container {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            padding: 24px;
+          }
+
+          .home-stat-divider:nth-child(2) {
+            display: none;
+          }
+
+          .home-mission-values {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        @media (max-width: 480px) {
+          .home-hero h1 {
+            font-size: 22px;
+          }
+
+          .home-hero p {
+            font-size: 14px;
+          }
+
+          .home-hero-buttons {
+            flex-direction: column;
+            align-items: center;
+          }
+
+          .home-hero-btn-primary,
+          .home-hero-btn-secondary {
+            width: 100%;
+            text-align: center;
+            padding: 12px 20px;
+            font-size: 14px;
+          }
+
+          .home-stats-container {
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding: 20px;
+          }
+
+          .home-stat-number {
+            font-size: 24px;
+          }
+
+          .home-mission h2 {
+            font-size: 24px;
+          }
+
+          .home-mission p {
+            font-size: 15px;
+          }
+
+          .home-mission-values {
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+          }
+        }
+      `}</style>
     </div>
   );
 }

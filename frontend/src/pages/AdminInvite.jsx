@@ -8,9 +8,17 @@ import Navigation from '../components/Navigation';
 export default function AdminInvite() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
   const [message, setMessage] = useState('');
-  const [form, setForm] = useState({ invited_name: '', invited_email: '', invited_password: '', role: 'club_coordinator', club_id: '' });
+  const [messageType, setMessageType] = useState('success');
   const [clubs, setClubs] = useState([]);
+  const [form, setForm] = useState({
+    full_name: '',
+    email: '',
+    role: 'club_coordinator',
+    club_id: '',
+    password: ''
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,30 +32,109 @@ export default function AdminInvite() {
         navigate('/login');
         return;
       }
+
+      if (userData.role !== 'admin' && userData.role !== 'movement_coordinator') {
+        navigate('/dashboard');
+        return;
+      }
+
       setProfile(userData);
 
       const clubsData = await api.getClubs();
       setClubs(clubsData || []);
-
     } catch (err) {
       console.error('Ошибка:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  };
+
+  const generatePassword = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 10; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
-    setLoading(true);
+    setSending(true);
 
     try {
-      setMessage('✅ Приглашение создано!');
-      setForm({ invited_name: '', invited_email: '', invited_password: '', role: 'club_coordinator', club_id: '' });
-      setTimeout(() => setMessage(''), 3000);
+      const password = form.password || generatePassword();
+
+      const result = await api.createUser({
+        full_name: form.full_name,
+        email: form.email,
+        role: form.role,
+        club_id: form.club_id || '',
+        phone: '',
+        school: '',
+        class_name: ''
+      });
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      // Копируем данные в буфер обмена
+      const inviteText = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🏛️ ДОД «Дипломаты будущего»
+  Приглашение в систему
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Уважаемый(ая) ${form.full_name}!
+
+Вас приглашают присоединиться к платформе 
+Детского общественного движения «Дипломаты будущего».
+
+Ваши данные для входа:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  📧 Email: ${form.email}
+  🔒 Пароль: ${password}
+  👤 Роль: ${form.role}
+  ${form.club_id ? `🏫 Клуб: ${clubs.find(c => c.id === form.club_id)?.name || '—'}` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Для входа перейдите по ссылке:
+https://dod-frontend.relaxdev.ru/login
+
+С уважением,
+Команда ДОД «Дипломаты будущего»
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      `;
+
+      await navigator.clipboard.writeText(inviteText);
+      setMessage(`✅ Приглашение для "${form.full_name}" создано! Данные скопированы в буфер обмена.`);
+      setMessageType('success');
+      setForm({
+        full_name: '',
+        email: '',
+        role: 'club_coordinator',
+        club_id: '',
+        password: ''
+      });
+      setTimeout(() => setMessage(''), 5000);
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setSending(false);
     }
-    setLoading(false);
+  };
+
+  const getRoleLabel = (role) => {
+    const labels = {
+      'club_coordinator': '🏫 Координатор КЮДа',
+      'tutor': '📚 Тьютор',
+      'movement_coordinator': '⭐ Координатор движения',
+      'admin': '🔧 Администратор'
+    };
+    return labels[role] || role;
   };
 
   if (loading) {
@@ -59,29 +146,99 @@ export default function AdminInvite() {
   }
 
   return (
-    <div style={{ background: '#F4F6F9', minHeight: '100vh' }}>
+    <div className="page-background">
       <Navigation profile={profile} />
-      <div style={{ maxWidth: '600px', margin: '0 auto', padding: '30px 24px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0B1F3A' }}>🎫 Приглашения</h1>
-        {message && <div style={{ padding: '12px', borderRadius: '10px', margin: '16px 0', background: '#E8F5EF', color: '#16845B' }}>{message}</div>}
-        <div style={{ background: 'white', borderRadius: '16px', padding: '24px', border: '1px solid #E2E7EF' }}>
+      <div className="container-page">
+        <div className="page-header">
+          <span style={{ fontSize: '32px' }}>🎫</span>
+          <div>
+            <h1>Приглашения</h1>
+            <p>Создавайте приглашения для сотрудников</p>
+          </div>
+        </div>
+
+        {message && (
+          <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
+            {message}
+          </div>
+        )}
+
+        <div className="card">
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            📝 Создать приглашение
+          </h3>
           <form onSubmit={handleSubmit}>
-            <input type="text" placeholder="ФИО приглашаемого" value={form.invited_name} onChange={(e) => setForm({ ...form, invited_name: e.target.value })} required style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-            <input type="email" placeholder="Email" value={form.invited_email} onChange={(e) => setForm({ ...form, invited_email: e.target.value })} required style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-            <input type="text" placeholder="Пароль" value={form.invited_password} onChange={(e) => setForm({ ...form, invited_password: e.target.value })} required style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd' }}>
-              <option value="club_coordinator">🏫 Координатор КЮДа</option>
-              <option value="tutor">📚 Тьютор</option>
-              <option value="movement_coordinator">⭐ Координатор движения</option>
-              <option value="admin">🔧 Администратор</option>
-            </select>
-            {form.role === 'club_coordinator' && (
-              <select value={form.club_id} onChange={(e) => setForm({ ...form, club_id: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd' }}>
-                <option value="">Без клуба</option>
-                {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            )}
-            <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px', background: '#0B1F3A', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Создать приглашение</button>
+            <div className="grid-2">
+              <div className="form-group">
+                <label>ФИО приглашаемого *</label>
+                <input
+                  type="text"
+                  value={form.full_name}
+                  onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                  required
+                  placeholder="Иванов Иван Иванович"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Email *</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  required
+                  placeholder="ivan@example.com"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Роль *</label>
+                <select
+                  value={form.role}
+                  onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  required
+                >
+                  <option value="club_coordinator">🏫 Координатор КЮДа</option>
+                  <option value="tutor">📚 Тьютор</option>
+                  <option value="movement_coordinator">⭐ Координатор движения</option>
+                  <option value="admin">🔧 Администратор</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Пароль</label>
+                <input
+                  type="text"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="Оставьте пустым для генерации"
+                />
+              </div>
+
+              {form.role === 'club_coordinator' && (
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>Клуб</label>
+                  <select
+                    value={form.club_id}
+                    onChange={(e) => setForm({ ...form, club_id: e.target.value })}
+                  >
+                    <option value="">Без клуба</option>
+                    {clubs.map((club) => (
+                      <option key={club.id} value={club.id}>{club.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={sending}
+              style={{ width: '100%', marginTop: '8px' }}
+            >
+              {sending ? '⏳ Создание...' : '🎫 Создать приглашение'}
+            </button>
           </form>
         </div>
       </div>

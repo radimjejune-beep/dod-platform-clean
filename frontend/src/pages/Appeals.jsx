@@ -83,7 +83,7 @@ export default function Appeals() {
   };
 
   // ============================================================
-  // ОТВЕТ НА ОБРАЩЕНИЕ (ПРАВИЛЬНЫЙ ЭНДПОИНТ)
+  // ОТВЕТ НА ОБРАЩЕНИЕ
   // ============================================================
   const handleReply = async (e) => {
     e.preventDefault();
@@ -116,7 +116,6 @@ export default function Appeals() {
       setReplyMessage('');
       setShowReplyModal(false);
       
-      // Обновляем список обращений
       await loadData();
       
       setTimeout(() => setMessage(''), 3000);
@@ -126,6 +125,49 @@ export default function Appeals() {
       setMessageType('error');
     } finally {
       setSending(false);
+    }
+  };
+
+  // ============================================================
+  // УДАЛЕНИЕ ОБРАЩЕНИЯ (ТОЛЬКО ДЛЯ АДМИНА)
+  // ============================================================
+  const handleDelete = async (id) => {
+    const role = profile?.role;
+    
+    // Проверяем права — только админ может удалять
+    if (role !== 'admin') {
+      setMessage('❌ У вас нет прав для удаления обращений');
+      setMessageType('error');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+
+    if (!confirm('Удалить это обращение?')) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/appeals/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Ошибка удаления');
+      }
+
+      setMessage('✅ Обращение удалено');
+      setMessageType('success');
+      await loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      console.error('❌ Ошибка удаления:', err);
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
     }
   };
 
@@ -184,6 +226,9 @@ export default function Appeals() {
     return colors[status] || '#F4F6F9';
   };
 
+  // ============================================================
+  // ПРОВЕРКА ПРАВ
+  // ============================================================
   const canReply = profile?.role === 'admin' || 
                    profile?.role === 'movement_coordinator' || 
                    profile?.role === 'president' || 
@@ -196,6 +241,9 @@ export default function Appeals() {
                   profile?.role === 'vice_president';
 
   const canCreate = profile?.role === 'club_coordinator';
+  
+  // ===== ТОЛЬКО АДМИН МОЖЕТ УДАЛЯТЬ =====
+  const canDelete = profile?.role === 'admin';
 
   if (loading) {
     return (
@@ -316,7 +364,8 @@ export default function Appeals() {
                 key={appeal.id}
                 className="card"
                 style={{
-                  borderLeft: `4px solid ${getStatusColor(appeal.status)}`
+                  borderLeft: `4px solid ${getStatusColor(appeal.status)}`,
+                  position: 'relative'
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
@@ -391,6 +440,16 @@ export default function Appeals() {
                         }}
                       >
                         📝 Ответить
+                      </button>
+                    )}
+                    {/* ===== КНОПКА УДАЛЕНИЯ (ТОЛЬКО ДЛЯ АДМИНА) ===== */}
+                    {canDelete && (
+                      <button
+                        className="btn-danger"
+                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                        onClick={() => handleDelete(appeal.id)}
+                      >
+                        🗑️ Удалить
                       </button>
                     )}
                   </div>

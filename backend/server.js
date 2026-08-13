@@ -1005,6 +1005,46 @@ app.get('/api/appeals/:id/replies', async (req, res) => {
 });
 
 // ============================================================
+// УДАЛЕНИЕ ОБРАЩЕНИЯ (ТОЛЬКО ДЛЯ АДМИНА)
+// ============================================================
+app.delete('/api/appeals/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    // Только админ может удалять
+    if (userRole !== 'admin') {
+      return res.status(403).json({ error: 'У вас нет прав для удаления обращений' });
+    }
+
+    // Проверяем, существует ли обращение
+    const check = await pool.query('SELECT id FROM appeals WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Обращение не найдено' });
+    }
+
+    // Удаляем ответы на обращение (если есть)
+    await pool.query('DELETE FROM appeal_replies WHERE appeal_id = $1', [id]);
+
+    // Удаляем само обращение
+    await pool.query('DELETE FROM appeals WHERE id = $1', [id]);
+
+    res.json({ message: 'Обращение удалено' });
+  } catch (error) {
+    console.error('Ошибка удаления обращения:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
 // 19. ЗАПРОСЫ НА ТЬЮТОРОВ
 // ============================================================
 app.get('/api/tutor-requests', async (req, res) => {

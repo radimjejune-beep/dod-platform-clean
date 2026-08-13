@@ -1,128 +1,55 @@
-// src/pages/Dashboard.jsx
+// frontend/src/pages/Dashboard.jsx
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-const API_URL = 'https://dod-backend.relaxdev.ru/api';
+import api from '../lib/api';
+import Navigation from '../components/Navigation';
 
 export default function Dashboard() {
-  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUser = async () => {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
       try {
-        const response = await fetch(`${API_URL}/me`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Не авторизован');
+        const data = await api.getMe();
+        if (data && data.id) {
+          setUser(data);
+        } else {
+          navigate('/login');
         }
-
-        const data = await response.json();
-        setUser(data);
       } catch (err) {
-        setError(err.message);
-        localStorage.removeItem('token');
+        console.error('Ошибка:', err);
         navigate('/login');
       } finally {
         setLoading(false);
       }
     };
-
     fetchUser();
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
-  };
-
   if (loading) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        fontSize: '20px'
-      }}>
-        Загрузка...
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        color: 'red',
-        fontSize: '18px'
-      }}>
-        {error}
-      </div>
-    );
+    return <div style={{ textAlign: 'center', padding: '50px' }}>Загрузка...</div>;
   }
 
   return (
-    <div style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
-      {/* Шапка с кнопкой выхода */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        borderBottom: '1px solid #e0e0e0',
-        paddingBottom: '20px'
-      }}>
-        <h1 style={{ margin: 0 }}>👋 Добро пожаловать!</h1>
-        <button 
-          onClick={handleLogout}
-          style={{
-            padding: '10px 25px',
-            background: '#dc3545',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            fontSize: '16px'
+    <div>
+      <Navigation profile={user} />
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px' }}>
+        <h1>👋 Добро пожаловать, {user?.full_name}!</h1>
+        <p>Email: {user?.email}</p>
+        <p>Роль: {user?.role}</p>
+        <button
+          onClick={() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
           }}
+          style={{ padding: '10px 20px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
         >
           Выйти
         </button>
-      </div>
-
-      {/* Карточка с данными пользователя */}
-      <div style={{ marginTop: '30px' }}>
-        <div style={{ 
-          background: '#f8f9fa', 
-          padding: '25px', 
-          borderRadius: '10px',
-          boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-        }}>
-          <h3 style={{ marginTop: 0, color: '#333' }}>Ваши данные:</h3>
-          <p><strong>Имя:</strong> {user?.full_name || 'Не указано'}</p>
-          <p><strong>Email:</strong> {user?.email || 'Не указан'}</p>
-          <p><strong>Роль:</strong> {user?.role || 'Не указана'}</p>
-          <p><strong>ID:</strong> {user?.id || 'Не указан'}</p>
-        </div>
       </div>
     </div>
   );

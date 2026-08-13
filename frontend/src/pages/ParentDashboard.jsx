@@ -11,15 +11,20 @@ export default function ParentDashboard() {
   const [selectedChild, setSelectedChild] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
-  const [availableEvents, setAvailableEvents] = useState([]);
-  const [childStatistics, setChildStatistics] = useState({
-    total_events: 0,
-    attended_events: 0,
-    achievements_count: 0,
+  const [messageType, setMessageType] = useState('success');
+  const [childStats, setChildStats] = useState({
+    events: 0,
+    achievements: 0,
     level: 1,
     progress: 0
   });
-  const [showEvents, setShowEvents] = useState(false);
+  const [showConsentStatus, setShowConsentStatus] = useState(false);
+  
+  // ===== ДЛЯ ПРИВЯЗКИ РЕБЁНКА =====
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkForm, setLinkForm] = useState({ child_email: '', child_password: '' });
+  const [linking, setLinking] = useState(false);
+  
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,9 +39,6 @@ export default function ParentDashboard() {
         return;
       }
 
-      // ============================================================
-      // ТОЛЬКО РОДИТЕЛЬ
-      // ============================================================
       if (userData.role !== 'parent') {
         navigate('/dashboard');
         return;
@@ -44,11 +46,13 @@ export default function ParentDashboard() {
 
       setProfile(userData);
 
-      // TODO: добавить API для получения детей родителя
-      setChildren([]);
-      setSelectedChild(null);
-      await loadAvailableEvents();
-
+      const childrenData = await api.getParentChildren();
+      setChildren(childrenData || []);
+      
+      if (childrenData && childrenData.length > 0) {
+        setSelectedChild(childrenData[0]);
+        loadChildStats(childrenData[0].id);
+      }
     } catch (err) {
       console.error('Ошибка:', err);
     } finally {
@@ -56,27 +60,15 @@ export default function ParentDashboard() {
     }
   };
 
-  const loadChildStatistics = async (childId) => {
+  const loadChildStats = async (childId) => {
     try {
-      // TODO: добавить API для получения статистики ребёнка
-      setChildStatistics({
-        total_events: 0,
-        attended_events: 0,
-        achievements_count: 0,
-        level: 1,
-        progress: 0
+      const stats = await api.getParticipantStats(childId);
+      setChildStats({
+        events: stats?.total_events || 0,
+        achievements: stats?.achievements_count || 0,
+        level: stats?.level || 1,
+        progress: stats?.progress || 0
       });
-    } catch (err) {
-      console.error('Ошибка:', err);
-    }
-  };
-
-  const loadAvailableEvents = async () => {
-    try {
-      const eventsData = await api.getEvents();
-      const now = new Date();
-      const futureEvents = eventsData.filter(e => new Date(e.event_date) >= now);
-      setAvailableEvents(futureEvents.slice(0, 10));
     } catch (err) {
       console.error('Ошибка:', err);
     }
@@ -84,50 +76,50 @@ export default function ParentDashboard() {
 
   const handleChildSelect = (child) => {
     setSelectedChild(child);
-    loadChildStatistics(child.id);
+    loadChildStats(child.id);
   };
 
-  const handleRegisterChild = async (childId, eventId) => {
+  const getConsentStatus = (child) => {
+    const consents = ['consent_personal_data', 'consent_photo_publication', 'consent_event_participation'];
+    const total = consents.length;
+    const given = consents.filter(c => child[c]).length;
+    return { total, given, percentage: Math.round((given / total) * 100) };
+  };
+
+  // ===== ПРИВЯЗКА РЕБЁНКА =====
+  const handleLinkChild = async (e) => {
+    e.preventDefault();
+    setLinking(true);
     setMessage('');
-    setLoading(true);
 
     try {
-      // TODO: добавить API для записи ребёнка на мероприятие
-      setMessage('✅ Ребёнок записан на мероприятие!');
+      const result = await api.parentLinkChild({
+        child_email: linkForm.child_email.trim(),
+        child_password: linkForm.child_password
+      });
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      setMessage(`✅ Ребёнок "${result.child.full_name}" успешно привязан!`);
+      setMessageType('success');
+      setLinkForm({ child_email: '', child_password: '' });
+      setShowLinkModal(false);
+      await loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setLinking(false);
     }
-    setLoading(false);
   };
 
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
         <div className="spinner" />
-      </div>
-    );
-  }
-
-  if (children.length === 0) {
-    return (
-      <div className="page-background">
-        <Navigation profile={profile} />
-        <div className="container-page">
-          <div className="empty-state">
-            <div className="icon">👨‍👩‍👦</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>У вас пока нет привязанных детей</p>
-            <p style={{ color: '#667085', marginBottom: '16px' }}>
-              Обратитесь к администратору для привязки ребёнка к вашему аккаунту.
-            </p>
-            <button
-              className="btn-primary"
-              onClick={() => navigate('/profile')}
-            >
-              Перейти в профиль
-            </button>
-          </div>
-        </div>
       </div>
     );
   }
@@ -140,35 +132,73 @@ export default function ParentDashboard() {
           <span style={{ fontSize: '32px' }}>👨‍👩‍👦</span>
           <div>
             <h1>Родительский кабинет</h1>
-            <p>Управление профилями детей</p>
+            <p>Управление профилями детей и контроль их участия в движении</p>
           </div>
+          <button
+            className="btn-primary"
+            style={{ marginLeft: 'auto' }}
+            onClick={() => setShowLinkModal(true)}
+          >
+            ➕ Привязать ребёнка
+          </button>
         </div>
 
         {message && (
-          <div className="message-success">{message}</div>
+          <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
+            {message}
+          </div>
         )}
 
         {/* ВЫБОР РЕБЁНКА */}
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          flexWrap: 'wrap',
-          marginBottom: '24px'
-        }}>
-          {children.map((child) => (
-            <button
-              key={child.id}
-              className={selectedChild?.id === child.id ? 'btn-primary' : 'btn-secondary'}
-              onClick={() => handleChildSelect(child)}
-              style={{ padding: '8px 20px' }}
-            >
-              {child.full_name}
-              {child.class_name && ` (${child.class_name})`}
-            </button>
-          ))}
-        </div>
+        {children.length > 0 && (
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            flexWrap: 'wrap',
+            marginBottom: '24px'
+          }}>
+            {children.map((child) => {
+              const status = getConsentStatus(child);
+              const allConsents = status.percentage === 100;
+              return (
+                <button
+                  key={child.id}
+                  className={selectedChild?.id === child.id ? 'btn-primary' : 'btn-secondary'}
+                  onClick={() => handleChildSelect(child)}
+                  style={{
+                    padding: '10px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    position: 'relative'
+                  }}
+                >
+                  {child.full_name}
+                  {child.class_name && ` (${child.class_name})`}
+                  {allConsents ? (
+                    <span style={{ color: '#16845B', fontSize: '14px' }}>✅</span>
+                  ) : (
+                    <span style={{ color: '#C9A227', fontSize: '14px' }}>⚠️</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-        {selectedChild && (
+        {children.length === 0 ? (
+          <div className="empty-state">
+            <div className="icon">👨‍👩‍👦</div>
+            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>У вас пока нет привязанных детей</p>
+            <p style={{ color: '#667085', marginBottom: '16px' }}>
+              Нажмите кнопку <strong>"Привязать ребёнка"</strong> и введите логин и пароль ребёнка.
+              <br />
+              <span style={{ fontSize: '13px', color: '#98A2B3' }}>
+                Для привязки нужны email и пароль, которые ребёнок использует для входа в систему.
+              </span>
+            </p>
+          </div>
+        ) : selectedChild && (
           <>
             {/* ПРОФИЛЬ РЕБЁНКА */}
             <div className="card" style={{ marginBottom: '20px' }}>
@@ -181,6 +211,11 @@ export default function ParentDashboard() {
                     {selectedChild.school || 'Школа не указана'} • {selectedChild.class_name || 'Класс не указан'}
                     {selectedChild.club_name && ` • 🏫 ${selectedChild.club_name}`}
                   </p>
+                  <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <span className={selectedChild.status === 'active' ? 'status-active' : 'status-inactive'}>
+                      {selectedChild.status === 'active' ? '🟢 Активен' : '🔴 Неактивен'}
+                    </span>
+                  </div>
                 </div>
                 <button
                   className="btn-secondary"
@@ -192,72 +227,202 @@ export default function ParentDashboard() {
               </div>
             </div>
 
-            {/* СТАТИСТИКА */}
+            {/* СТАТИСТИКА РЕБЁНКА */}
             <div className="grid-4" style={{ marginBottom: '20px' }}>
               <div className="stat-card">
-                <div className="number">{childStatistics.total_events || 0}</div>
-                <div className="label">Мероприятий</div>
+                <div className="number">{childStats.events}</div>
+                <div className="label">📅 Мероприятий</div>
               </div>
               <div className="stat-card">
-                <div className="number" style={{ color: '#16845B' }}>{childStatistics.attended_events || 0}</div>
-                <div className="label">Посещено</div>
-              </div>
-              <div className="stat-card">
-                <div className="number" style={{ color: '#C9A227' }}>{childStatistics.achievements_count || 0}</div>
-                <div className="label">Достижений</div>
+                <div className="number" style={{ color: '#C9A227' }}>{childStats.achievements}</div>
+                <div className="label">🏆 Достижений</div>
               </div>
               <div className="stat-card" style={{ borderTop: '3px solid #C9A227' }}>
-                <div className="number">{childStatistics.level || 1}</div>
-                <div className="label">Уровень</div>
+                <div className="number">{childStats.level}</div>
+                <div className="label">📊 Уровень</div>
+              </div>
+              <div className="stat-card">
+                <div className="number" style={{ fontSize: '14px', color: '#667085' }}>
+                  {getConsentStatus(selectedChild).percentage}%
+                </div>
+                <div className="label">📝 Согласия</div>
+                <div style={{
+                  width: '100%',
+                  height: '4px',
+                  background: '#F4F6F9',
+                  borderRadius: '2px',
+                  marginTop: '4px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: `${getConsentStatus(selectedChild).percentage}%`,
+                    height: '100%',
+                    background: getConsentStatus(selectedChild).percentage === 100 ? '#16845B' : '#C9A227',
+                    borderRadius: '2px'
+                  }} />
+                </div>
               </div>
             </div>
 
-            {/* ЗАПИСЬ НА МЕРОПРИЯТИЯ */}
+            {/* ИНФОРМАЦИЯ О СОГЛАСИЯХ */}
             <div className="card" style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
-                  📅 Доступные мероприятия
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A' }}>
+                  📝 Статус согласий
                 </h3>
                 <button
                   className="btn-secondary"
-                  style={{ padding: '6px 16px', fontSize: '12px' }}
-                  onClick={() => setShowEvents(!showEvents)}
+                  style={{ padding: '4px 12px', fontSize: '12px' }}
+                  onClick={() => setShowConsentStatus(!showConsentStatus)}
                 >
-                  {showEvents ? '✖ Скрыть' : '📋 Показать'}
+                  {showConsentStatus ? 'Скрыть' : 'Подробнее'}
                 </button>
               </div>
 
-              {showEvents && (
-                <>
-                  {availableEvents.length === 0 ? (
-                    <p style={{ color: '#667085' }}>Нет доступных мероприятий</p>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {availableEvents.map((event) => (
-                        <div key={event.id} className="list-item" style={{ borderLeftColor: '#174A7E' }}>
-                          <div className="title">{event.title}</div>
-                          <div className="subtitle">
-                            📅 {new Date(event.event_date).toLocaleDateString('ru-RU')}
-                            {event.location && ` • 📍 ${event.location}`}
-                          </div>
-                          <button
-                            className="btn-primary"
-                            style={{ padding: '4px 12px', fontSize: '12px', marginTop: '8px' }}
-                            onClick={() => handleRegisterChild(selectedChild.id, event.id)}
-                            disabled={loading}
-                          >
-                            Записать ребёнка
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ color: selectedChild.consent_personal_data ? '#16845B' : '#B3262E' }}>
+                    {selectedChild.consent_personal_data ? '✅' : '❌'}
+                  </span>
+                  <span style={{ fontSize: '13px', color: '#667085' }}>Персональные данные</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ color: selectedChild.consent_photo_publication ? '#16845B' : '#B3262E' }}>
+                    {selectedChild.consent_photo_publication ? '✅' : '❌'}
+                  </span>
+                  <span style={{ fontSize: '13px', color: '#667085' }}>Публикация фото</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ color: selectedChild.consent_event_participation ? '#16845B' : '#B3262E' }}>
+                    {selectedChild.consent_event_participation ? '✅' : '❌'}
+                  </span>
+                  <span style={{ fontSize: '13px', color: '#667085' }}>Участие в мероприятиях</span>
+                </div>
+                {selectedChild.consent_agreement_date && (
+                  <span style={{ fontSize: '12px', color: '#98A2B3' }}>
+                    📅 Подписаны: {new Date(selectedChild.consent_agreement_date).toLocaleDateString('ru-RU')}
+                  </span>
+                )}
+              </div>
+
+              {showConsentStatus && (
+                <div style={{ marginTop: '12px', padding: '12px 16px', background: '#F8FAFC', borderRadius: '8px', fontSize: '13px', color: '#667085' }}>
+                  <p style={{ margin: 0 }}>
+                    <strong>Для участия в мероприятиях необходимы все три согласия.</strong>
+                    {getConsentStatus(selectedChild).percentage < 100 && (
+                      <span style={{ color: '#B3262E' }}>
+                        {' '}Недостающие согласия можно оформить в профиле участника.
+                      </span>
+                    )}
+                    {getConsentStatus(selectedChild).percentage === 100 && (
+                      <span style={{ color: '#16845B' }}>
+                        {' '}Все согласия оформлены. Ребёнок может участвовать в мероприятиях.
+                      </span>
+                    )}
+                  </p>
+                </div>
               )}
             </div>
           </>
         )}
       </div>
+
+      {/* ============================================================
+          МОДАЛЬНОЕ ОКНО: ПРИВЯЗКА РЕБЁНКА
+          ============================================================ */}
+      {showLinkModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(11, 31, 58, 0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setShowLinkModal(false)}
+        >
+          <div
+            className="card"
+            style={{
+              maxWidth: '420px',
+              width: '100%',
+              padding: '32px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0B1F3A', marginBottom: '4px' }}>
+              👨‍👩‍👦 Привязать ребёнка
+            </h3>
+            <p style={{ color: '#667085', marginBottom: '20px', fontSize: '14px' }}>
+              Введите email и пароль ребёнка для привязки.
+              <br />
+              <span style={{ fontSize: '12px', color: '#98A2B3' }}>
+                Данные ребёнка должны соответствовать его учётной записи в системе.
+              </span>
+            </p>
+
+            <form onSubmit={handleLinkChild}>
+              <div className="form-group">
+                <label>Email ребёнка *</label>
+                <input
+                  type="email"
+                  value={linkForm.child_email}
+                  onChange={(e) => setLinkForm({ ...linkForm, child_email: e.target.value })}
+                  required
+                  placeholder="child@example.com"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Пароль ребёнка *</label>
+                <input
+                  type="password"
+                  value={linkForm.child_password}
+                  onChange={(e) => setLinkForm({ ...linkForm, child_password: e.target.value })}
+                  required
+                  placeholder="Введите пароль ребёнка"
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                <button
+                  type="submit"
+                  className="btn-success"
+                  disabled={linking}
+                  style={{ flex: 1 }}
+                >
+                  {linking ? '⏳ Проверка...' : '✅ Привязать'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowLinkModal(false)}
+                >
+                  ❌ Отмена
+                </button>
+              </div>
+            </form>
+
+            <div style={{
+              marginTop: '16px',
+              padding: '12px 16px',
+              background: '#FBF4DC',
+              borderRadius: '8px',
+              fontSize: '12px',
+              color: '#8A6A00'
+            }}>
+              💡 Если ребёнок забыл пароль — обратитесь к администратору для сброса.
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

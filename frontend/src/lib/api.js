@@ -494,6 +494,24 @@ export const getClubRating = async (clubId, limit = 20) => {
 };
 
 // ============================================================
+// ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ (ПО ЛОГИНУ И ПАРОЛЮ)
+// ============================================================
+export const parentLinkChild = async (data) => {
+  const response = await fetch(`${API_URL}/parent-link-child`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+const api = {
+  // ... все существующие методы ...
+  parentLinkChild,
+};
+
+
+// ============================================================
 // 20. ЭКСПОРТ API ОБЪЕКТА
 // ============================================================
 const api = {

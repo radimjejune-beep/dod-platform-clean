@@ -1,4 +1,4 @@
-// backend/server.js
+// backend/server.js — РАБОЧАЯ ВЕРСИЯ (ВСЁ РАБОТАЕТ)
 
 import express from 'express';
 import cors from 'cors';
@@ -15,9 +15,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dod-platform-
 
 console.log('🚀 ЗАПУСК БЭКЕНДА');
 
-// ============================================================
-// CORS
-// ============================================================
 app.use(cors({
   origin: '*',
   credentials: true,
@@ -28,9 +25,6 @@ app.options('*', cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ============================================================
-// БАЗА ДАННЫХ
-// ============================================================
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
@@ -681,18 +675,14 @@ app.delete('/api/achievements/:id', async (req, res) => {
 });
 
 // ============================================================
-// 16. СОБЫТИЯ — РАБОЧАЯ ВЕРСИЯ (КАК БЫЛО)
+// 16. СОБЫТИЯ — РАБОЧАЯ ВЕРСИЯ
 // ============================================================
 app.get('/api/events', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT e.*, c.name as club_name,
-              u.full_name as created_by_name,
-              u2.full_name as moderated_by_name
+      `SELECT e.*, c.name as club_name
        FROM events e
        LEFT JOIN clubs c ON e.club_id = c.id
-       LEFT JOIN users u ON e.created_by = u.id
-       LEFT JOIN users u2 ON e.moderated_by = u2.id
        ORDER BY e.event_date DESC`
     );
     res.json(result.rows);

@@ -42,63 +42,84 @@ export default function Profile() {
     setTimeout(() => setMessage(''), 3000);
   };
 
-const handleSave = async (e) => {
-  e.preventDefault();
-  setSaving(true);
-  setMessage('');
-  setMessageType('success');
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setMessage('');
+    setMessageType('success');
 
-  try {
-    let phone = profile.phone || '';
-    phone = phone.replace(/[^0-9+]/g, '');
+    try {
+      let phone = profile.phone || '';
+      phone = phone.replace(/[^0-9+]/g, '');
 
-    // ===== ОБРАБОТКА ДАТЫ =====
-    let birthDate = profile.birth_date || '';
-    // Если дата пустая или невалидная — отправляем null
-    if (birthDate === '' || birthDate === 'Invalid Date') {
-      birthDate = null;
+      // Обработка даты
+      let birthDate = profile.birth_date || '';
+      if (birthDate === '' || birthDate === 'Invalid Date') {
+        birthDate = null;
+      }
+
+      const updateData = {
+        // ===== ОСНОВНОЕ =====
+        full_name: profile.full_name.trim(),
+        phone: phone,
+        school: profile.school || '',
+        class_name: profile.class_name || '',
+        city: profile.city || '',
+        birth_date: birthDate,
+        
+        // ===== ИНТЕРЕСЫ =====
+        interests: profile.interests || '',
+        bio: profile.bio || '',
+        skills: profile.skills || '',
+        
+        // ===== КОНТАКТЫ =====
+        social_links: profile.social_links || '',
+        telegram: profile.telegram || '',
+        vk: profile.vk || '',
+        
+        // ===== РОДИТЕЛИ (ДЛЯ НЕСОВЕРШЕННОЛЕТНИХ) =====
+        parent_full_name: profile.parent_full_name || '',
+        parent_phone: profile.parent_phone || '',
+        parent_email: profile.parent_email || '',
+        
+        // ===== СОГЛАСИЯ =====
+        consent_personal_data: profile.consent_personal_data || false,
+        consent_photo_publication: profile.consent_photo_publication || false,
+        consent_event_participation: profile.consent_event_participation || false,
+        consent_agreement_date: profile.consent_agreement_date || null,
+        charter_acceptance_date: profile.charter_acceptance_date || null,
+        
+        // ===== ДОПОЛНИТЕЛЬНО =====
+        education: profile.education || '',
+        achievements: profile.achievements || ''
+      };
+
+      console.log('📤 Отправка данных:', updateData);
+
+      const result = await api.updateProfile(updateData);
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      setMessage('✅ Профиль успешно обновлён!');
+      setProfile(result);
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      console.error('❌ Ошибка:', err);
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setSaving(false);
     }
-
-    const updateData = {
-  full_name: profile.full_name.trim(),
-  phone: phone,
-  school: profile.school || '',
-  class_name: profile.class_name || '',
-  interests: profile.interests || '',
-  bio: profile.bio || '',
-  city: profile.city || '',
-  birth_date: birthDate,
-  social_links: profile.social_links || '',
-  skills: profile.skills || '',          // ← Навыки
-  education: profile.education || '',     // ← Дополнительное образование
-  achievements: profile.achievements || '', // ← Достижения
-  telegram: profile.telegram || '',
-  vk: profile.vk || ''
-};
-
-    console.log('📤 Отправка данных:', updateData);
-
-    const result = await api.updateProfile(updateData);
-
-    if (result.error) {
-      throw new Error(result.error);
-    }
-
-    setMessage('✅ Профиль успешно обновлён!');
-    setProfile(result);
-    setTimeout(() => setMessage(''), 3000);
-  } catch (err) {
-    console.error('❌ Ошибка:', err);
-    setMessage('❌ Ошибка: ' + err.message);
-    setMessageType('error');
-  } finally {
-    setSaving(false);
-  }
-};
+  };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProfile({ ...profile, [name]: value });
+    const { name, value, type, checked } = e.target;
+    setProfile({ 
+      ...profile, 
+      [name]: type === 'checkbox' ? checked : value 
+    });
   };
 
   if (loading) {
@@ -108,6 +129,15 @@ const handleSave = async (e) => {
       </div>
     );
   }
+
+  const tabs = [
+    { id: 'main', label: '📋 Основное' },
+    { id: 'contacts', label: '📞 Контакты' },
+    { id: 'interests', label: '🎯 Интересы' },
+    { id: 'parents', label: '👨‍👩‍👦 Родители' },
+    { id: 'consents', label: '📝 Согласия' },
+    { id: 'extra', label: '🌟 Дополнительно' },
+  ];
 
   return (
     <div className="page-background">
@@ -128,6 +158,7 @@ const handleSave = async (e) => {
         )}
 
         <div className="card">
+          {/* АВАТАР */}
           <div style={{ 
             display: 'flex', 
             justifyContent: 'center', 
@@ -142,6 +173,7 @@ const handleSave = async (e) => {
             />
           </div>
 
+          {/* ВКЛАДКИ */}
           <div style={{
             display: 'flex',
             gap: '4px',
@@ -150,69 +182,31 @@ const handleSave = async (e) => {
             paddingBottom: '4px',
             flexWrap: 'wrap'
           }}>
-            <button
-              onClick={() => setActiveTab('main')}
-              style={{
-                padding: '8px 20px',
-                border: 'none',
-                background: activeTab === 'main' ? '#0B1F3A' : 'transparent',
-                color: activeTab === 'main' ? 'white' : '#667085',
-                borderRadius: '8px 8px 0 0',
-                cursor: 'pointer',
-                fontWeight: activeTab === 'main' ? '600' : '500',
-                fontSize: '14px'
-              }}
-            >
-              📋 Основное
-            </button>
-            <button
-              onClick={() => setActiveTab('contacts')}
-              style={{
-                padding: '8px 20px',
-                border: 'none',
-                background: activeTab === 'contacts' ? '#0B1F3A' : 'transparent',
-                color: activeTab === 'contacts' ? 'white' : '#667085',
-                borderRadius: '8px 8px 0 0',
-                cursor: 'pointer',
-                fontWeight: activeTab === 'contacts' ? '600' : '500',
-                fontSize: '14px'
-              }}
-            >
-              📞 Контакты
-            </button>
-            <button
-              onClick={() => setActiveTab('interests')}
-              style={{
-                padding: '8px 20px',
-                border: 'none',
-                background: activeTab === 'interests' ? '#0B1F3A' : 'transparent',
-                color: activeTab === 'interests' ? 'white' : '#667085',
-                borderRadius: '8px 8px 0 0',
-                cursor: 'pointer',
-                fontWeight: activeTab === 'interests' ? '600' : '500',
-                fontSize: '14px'
-              }}
-            >
-              🎯 Интересы
-            </button>
-            <button
-              onClick={() => setActiveTab('extra')}
-              style={{
-                padding: '8px 20px',
-                border: 'none',
-                background: activeTab === 'extra' ? '#0B1F3A' : 'transparent',
-                color: activeTab === 'extra' ? 'white' : '#667085',
-                borderRadius: '8px 8px 0 0',
-                cursor: 'pointer',
-                fontWeight: activeTab === 'extra' ? '600' : '500',
-                fontSize: '14px'
-              }}
-            >
-              🌟 Дополнительно
-            </button>
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  background: activeTab === tab.id ? '#0B1F3A' : 'transparent',
+                  color: activeTab === tab.id ? 'white' : '#667085',
+                  borderRadius: '8px 8px 0 0',
+                  cursor: 'pointer',
+                  fontWeight: activeTab === tab.id ? '600' : '500',
+                  fontSize: '13px',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
           <form onSubmit={handleSave}>
+            {/* ============================================================
+                ВКЛАДКА: ОСНОВНОЕ
+                ============================================================ */}
             {activeTab === 'main' && (
               <div>
                 <div className="grid-2">
@@ -278,6 +272,9 @@ const handleSave = async (e) => {
               </div>
             )}
 
+            {/* ============================================================
+                ВКЛАДКА: КОНТАКТЫ
+                ============================================================ */}
             {activeTab === 'contacts' && (
               <div>
                 <div className="grid-2">
@@ -325,6 +322,9 @@ const handleSave = async (e) => {
               </div>
             )}
 
+            {/* ============================================================
+                ВКЛАДКА: ИНТЕРЕСЫ
+                ============================================================ */}
             {activeTab === 'interests' && (
               <div>
                 <div className="form-group">
@@ -336,7 +336,11 @@ const handleSave = async (e) => {
                     onChange={handleChange}
                     placeholder="Дипломатия, история, иностранные языки, спорт"
                   />
+                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                    Перечислите интересы через запятую
+                  </div>
                 </div>
+
                 <div className="form-group">
                   <label>Навыки</label>
                   <input
@@ -346,22 +350,174 @@ const handleSave = async (e) => {
                     onChange={handleChange}
                     placeholder="Публичные выступления, переговоры, английский язык"
                   />
+                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                    Перечислите навыки через запятую
+                  </div>
                 </div>
-              </div>
-            )}
 
-            {activeTab === 'extra' && (
-              <div>
                 <div className="form-group">
                   <label>О себе</label>
                   <textarea
                     name="bio"
-                    rows="4"
+                    rows="3"
                     value={profile?.bio || ''}
                     onChange={handleChange}
-                    placeholder="Расскажите о себе, своих целях и увлечениях..."
+                    placeholder="Расскажите о себе..."
                   />
                 </div>
+              </div>
+            )}
+
+            {/* ============================================================
+                ВКЛАДКА: РОДИТЕЛИ
+                ============================================================ */}
+            {activeTab === 'parents' && (
+              <div>
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label>ФИО родителя/законного представителя</label>
+                    <input
+                      type="text"
+                      name="parent_full_name"
+                      value={profile?.parent_full_name || ''}
+                      onChange={handleChange}
+                      placeholder="Иванова Мария Петровна"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Телефон родителя</label>
+                    <input
+                      type="tel"
+                      name="parent_phone"
+                      value={profile?.parent_phone || ''}
+                      onChange={handleChange}
+                      placeholder="+7 999 123 45 67"
+                    />
+                  </div>
+                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <label>Email родителя</label>
+                    <input
+                      type="email"
+                      name="parent_email"
+                      value={profile?.parent_email || ''}
+                      onChange={handleChange}
+                      placeholder="parent@example.com"
+                    />
+                  </div>
+                </div>
+                <div style={{
+                  padding: '12px 16px',
+                  background: '#FBF4DC',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  color: '#8A6A00',
+                  marginTop: '8px'
+                }}>
+                  ⚠️ Для участников младше 18 лет обязательно указание родителя или законного представителя
+                </div>
+              </div>
+            )}
+
+            {/* ============================================================
+                ВКЛАДКА: СОГЛАСИЯ
+                ============================================================ */}
+            {activeTab === 'consents' && (
+              <div>
+                <div className="form-group">
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      name="consent_personal_data"
+                      checked={profile?.consent_personal_data || false}
+                      onChange={handleChange}
+                      style={{ marginTop: '3px', width: '18px', height: '18px' }}
+                    />
+                    <span>
+                      <strong>Согласие на обработку персональных данных</strong>
+                      <br />
+                      <span style={{ fontSize: '12px', color: '#667085' }}>
+                        В соответствии с Федеральным законом № 152-ФЗ «О персональных данных»
+                      </span>
+                    </span>
+                  </label>
+                </div>
+
+                <div className="form-group">
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      name="consent_photo_publication"
+                      checked={profile?.consent_photo_publication || false}
+                      onChange={handleChange}
+                      style={{ marginTop: '3px', width: '18px', height: '18px' }}
+                    />
+                    <span>
+                      <strong>Согласие на публикацию фото и видео</strong>
+                      <br />
+                      <span style={{ fontSize: '12px', color: '#667085' }}>
+                        В официальных источниках ДОД «Дипломаты будущего»
+                      </span>
+                    </span>
+                  </label>
+                </div>
+
+                <div className="form-group">
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      name="consent_event_participation"
+                      checked={profile?.consent_event_participation || false}
+                      onChange={handleChange}
+                      style={{ marginTop: '3px', width: '18px', height: '18px' }}
+                    />
+                    <span>
+                      <strong>Согласие на участие в мероприятиях</strong>
+                      <br />
+                      <span style={{ fontSize: '12px', color: '#667085' }}>
+                        Я ознакомлен(а) с правилами участия в мероприятиях ДОД
+                      </span>
+                    </span>
+                  </label>
+                </div>
+
+                <div className="form-group">
+                  <label>Дата подписания согласий</label>
+                  <input
+                    type="date"
+                    name="consent_agreement_date"
+                    value={profile?.consent_agreement_date || ''}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Дата принятия Устава ДОД</label>
+                  <input
+                    type="date"
+                    name="charter_acceptance_date"
+                    value={profile?.charter_acceptance_date || ''}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div style={{
+                  padding: '12px 16px',
+                  background: '#E8F5EF',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  color: '#16845B',
+                  marginTop: '8px'
+                }}>
+                  ✅ Все согласия являются обязательными для участия в деятельности ДОД
+                </div>
+              </div>
+            )}
+
+            {/* ============================================================
+                ВКЛАДКА: ДОПОЛНИТЕЛЬНО
+                ============================================================ */}
+            {activeTab === 'extra' && (
+              <div>
                 <div className="form-group">
                   <label>Дополнительное образование</label>
                   <textarea

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import AvatarUpload from '../components/AvatarUpload'; // 👈 ДОБАВИТЬ
 
 export default function Profile() {
   const [profile, setProfile] = useState(null);
@@ -33,6 +34,14 @@ export default function Profile() {
     }
   };
 
+  // 👈 ДОБАВИТЬ: обработчик обновления аватара
+  const handleAvatarUpdated = (newAvatarUrl) => {
+    setProfile({ ...profile, avatar_url: newAvatarUrl });
+    setMessage('✅ Аватар обновлён!');
+    setMessageType('success');
+    setTimeout(() => setMessage(''), 3000);
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -40,9 +49,8 @@ export default function Profile() {
     setMessageType('success');
 
     try {
-      // ===== ОЧИЩАЕМ ТЕЛЕФОН ОТ ЛИШНИХ СИМВОЛОВ =====
       let phone = profile.phone || '';
-      phone = phone.replace(/[^0-9+]/g, ''); // Оставляем только цифры и +
+      phone = phone.replace(/[^0-9+]/g, '');
 
       const updateData = {
         full_name: profile.full_name.trim(),
@@ -54,11 +62,7 @@ export default function Profile() {
         city: profile.city || ''
       };
 
-      console.log('📤 Отправка данных:', updateData);
-
       const result = await api.updateProfile(updateData);
-
-      console.log('📥 Ответ:', result);
 
       if (result.error) {
         throw new Error(result.error);
@@ -108,6 +112,21 @@ export default function Profile() {
         )}
 
         <div className="card">
+          {/* 👇 АВАТАР */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            marginBottom: '24px',
+            paddingBottom: '20px',
+            borderBottom: '1px solid #E2E7EF'
+          }}>
+            <AvatarUpload
+              currentAvatar={profile?.avatar_url}
+              onAvatarUpdated={handleAvatarUpdated}
+              userId={profile?.id}
+            />
+          </div>
+
           <form onSubmit={handleSave}>
             <div className="grid-2">
               <div className="form-group">
@@ -138,9 +157,6 @@ export default function Profile() {
                   onChange={handleChange}
                   placeholder="+7 999 123 45 67"
                 />
-                <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                  Введите номер без скобок, например: +7 999 123 45 67
-                </div>
               </div>
               <div className="form-group">
                 <label>Город</label>

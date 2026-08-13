@@ -306,7 +306,172 @@ export const importParticipants = async (data) => {
 };
 
 // ============================================================
-// 12. ЭКСПОРТ API ОБЪЕКТА
+// 12. АВАТАР
+// ============================================================
+export const uploadAvatar = async (avatarBase64) => {
+  const response = await fetch(`${API_URL}/upload-avatar`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ avatar_base64: avatarBase64 })
+  });
+  return response.json();
+};
+
+export const getAvatar = async (userId) => {
+  const response = await fetch(`${API_URL}/avatar/${userId}`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
+// 13. ИСТОРИЯ УЧАСТНИКА
+// ============================================================
+export const getParticipantEvents = async (userId) => {
+  const response = await fetch(`${API_URL}/participant-events/${userId}`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const getParticipantStats = async (userId) => {
+  const response = await fetch(`${API_URL}/participant-stats/${userId}`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
+// 14. ДЕТИ РОДИТЕЛЯ
+// ============================================================
+export const getParentChildren = async () => {
+  const response = await fetch(`${API_URL}/parent-children`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const addParentChild = async (data) => {
+  const response = await fetch(`${API_URL}/parent-children`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const removeParentChild = async (childId) => {
+  const response = await fetch(`${API_URL}/parent-children/${childId}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
+// 15. TIMELINE РЕБЁНКА
+// ============================================================
+export const getChildTimeline = async (childId, limit = 20) => {
+  const response = await fetch(`${API_URL}/child-timeline/${childId}?limit=${limit}`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
+// 16. ОБЪЯВЛЕНИЯ
+// ============================================================
+export const getAnnouncements = async (clubId, limit = 20) => {
+  const response = await fetch(`${API_URL}/announcements/${clubId}?limit=${limit}`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const createAnnouncement = async (data) => {
+  const response = await fetch(`${API_URL}/announcements`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteAnnouncement = async (id) => {
+  const response = await fetch(`${API_URL}/announcements/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
+// 17. ШАБЛОНЫ ОТЧЁТОВ
+// ============================================================
+export const getReportTemplates = async () => {
+  const response = await fetch(`${API_URL}/report-templates`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const createReportTemplate = async (data) => {
+  const response = await fetch(`${API_URL}/report-templates`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteReportTemplate = async (id) => {
+  const response = await fetch(`${API_URL}/report-templates/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
+// 18. ПРЕЗИДЕНТ КЛУБА
+// ============================================================
+export const setClubPresident = async (clubId, presidentId) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/president`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ president_id: presidentId })
+  });
+  return response.json();
+};
+
+export const getClubPresident = async (clubId) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/president`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
+// 19. РЕЙТИНГ КЛУБА
+// ============================================================
+export const getClubRating = async (clubId, limit = 20) => {
+  const response = await fetch(`${API_URL}/club-rating/${clubId}?limit=${limit}`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
+// 20. ЭКСПОРТ API ОБЪЕКТА
 // ============================================================
 const api = {
   getMe,
@@ -336,7 +501,24 @@ const api = {
   createTutorRequest,
   updateTutorRequest,
   registerUser,
-  importParticipants
+  importParticipants,
+  uploadAvatar,
+  getAvatar,
+  getParticipantEvents,
+  getParticipantStats,
+  getParentChildren,
+  addParentChild,
+  removeParentChild,
+  getChildTimeline,
+  getAnnouncements,
+  createAnnouncement,
+  deleteAnnouncement,
+  getReportTemplates,
+  createReportTemplate,
+  deleteReportTemplate,
+  setClubPresident,
+  getClubPresident,
+  getClubRating
 };
 
 export default api;

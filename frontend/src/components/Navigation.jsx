@@ -10,7 +10,8 @@ export default function Navigation({ profile }) {
   const [isEventsOpen, setIsEventsOpen] = useState(false);
   const [isClubsOpen, setIsClubsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [isJournalOpen, setIsJournalOpen] = useState(false);
+  const [isStaffOpen, setIsStaffOpen] = useState(false);
   
   const isActive = (path) => location.pathname === path;
   const role = profile?.role || 'participant';
@@ -18,155 +19,187 @@ export default function Navigation({ profile }) {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    sessionStorage.removeItem('sessionId');
+    sessionStorage.removeItem('userId');
+    sessionStorage.removeItem('userRole');
     navigate('/login');
   };
 
-  // ===== МЕНЮ =====
+  // ============================================================
+  // АВАТАР
+  // ============================================================
+  const getAvatar = () => {
+    if (profile?.avatar_url) {
+      return <img src={profile.avatar_url} alt="Аватар" className="nav-avatar" />;
+    }
+    // Буква-аватар
+    const initial = profile?.full_name?.charAt(0) || '?';
+    return (
+      <div className="nav-avatar-letter" style={{
+        width: '32px',
+        height: '32px',
+        borderRadius: '50%',
+        background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
+        color: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '14px',
+        fontWeight: 'bold'
+      }}>
+        {initial.toUpperCase()}
+      </div>
+    );
+  };
+
+  // ============================================================
+  // МЕНЮ ПО РОЛЯМ
+  // ============================================================
   const getMenuItems = () => {
+    // Базовые пункты для всех
     const baseItems = [
-      { path: '/', label: '🏠 Главная', roles: ['all'] },
-      { path: '/profile', label: '👤 Профиль', roles: ['all'] },
+      { path: '/', label: '🏠 Главная', category: 'main' },
     ];
 
     const roleItems = {
       // ===== УЧАСТНИК =====
       'participant': [
-        { path: '/participant-dashboard', label: '📊 Мой кабинет', roles: ['participant'] },
-        { path: '/events', label: '📅 Мероприятия', roles: ['participant'] },
-        { path: '/my-achievements', label: '🏆 Мои достижения', roles: ['participant'] },
-        { path: '/my-reviews', label: '📊 Мои оценки', roles: ['participant'] },
-        { path: '/president-tasks', label: '👑 Задания президента', roles: ['participant'] },
-        { path: '/calendar', label: '📅 Календарь', roles: ['participant'] },
+        { path: '/participant-dashboard', label: '📊 Мой кабинет', category: 'main' },
+        { path: '/events', label: '📅 Мероприятия', category: 'events' },
+        { path: '/my-achievements', label: '🏆 Мои достижения', category: 'achievements' },
+        { path: '/my-reviews', label: '📊 Мои оценки', category: 'reviews' },
+        { path: '/president-tasks', label: '👑 Задания президента', category: 'tasks' },
+        { path: '/calendar', label: '📅 Календарь', category: 'events' },
+        { path: '/profile', label: '👤 Профиль', category: 'profile' },
       ],
 
       // ===== РОДИТЕЛЬ =====
       'parent': [
-        { path: '/parent-dashboard', label: '📊 Кабинет родителя', roles: ['parent'] },
-        { path: '/events', label: '📅 Мероприятия', roles: ['parent'] },
-        { path: '/my-achievements', label: '🏆 Достижения ребенка', roles: ['parent'] },
-        { path: '/my-reviews', label: '📊 Оценки ребенка', roles: ['parent'] },
-        { path: '/calendar', label: '📅 Календарь', roles: ['parent'] },
+        { path: '/parent-dashboard', label: '📊 Кабинет родителя', category: 'main' },
+        { path: '/events', label: '📅 Мероприятия', category: 'events' },
+        { path: '/my-achievements', label: '🏆 Достижения ребёнка', category: 'achievements' },
+        { path: '/my-reviews', label: '📊 Оценки ребёнка', category: 'reviews' },
+        { path: '/calendar', label: '📅 Календарь', category: 'events' },
+        { path: '/profile', label: '👤 Профиль', category: 'profile' },
       ],
 
       // ===== КООРДИНАТОР КЛУБА =====
       'club_coordinator': [
-        { path: '/club-coordinator-dashboard', label: '📊 Управление клубом', roles: ['club_coordinator'] },
-        { path: '/clubs', label: '🏫 Мой КЮД', roles: ['club_coordinator'] },
-        { path: '/club-analytics', label: '📊 Аналитика клуба', roles: ['club_coordinator'] },
-        { path: '/president-tasks', label: '👑 Задания президента', roles: ['club_coordinator'] },
-        { path: '/events', label: '📅 Мероприятия', roles: ['club_coordinator'] },
-        { path: '/participants', label: '👥 Участники клуба', roles: ['club_coordinator'] },
-        { path: '/manage-achievements', label: '🏆 Достижения клуба', roles: ['club_coordinator'] },
-        { path: '/my-reviews', label: '📊 Оценки клуба', roles: ['club_coordinator'] },
-        { path: '/reports', label: '📋 Отчёты', roles: ['club_coordinator'] },
-        { path: '/appeals', label: '📨 Обращения', roles: ['club_coordinator'] },
-        { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', roles: ['club_coordinator'] },
-        { path: '/tutor-invitations', label: '📨 Приглашения тьюторов', roles: ['club_coordinator'] },
-        { path: '/staff-calendar', label: '📅 Календарь', roles: ['club_coordinator'] },
-        { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['club_coordinator'] },
+        { path: '/club-coordinator-dashboard', label: '📊 Управление клубом', category: 'main' },
+        { path: '/clubs', label: '🏫 Мой КЮД', category: 'clubs' },
+        { path: '/club-analytics', label: '📊 Аналитика клуба', category: 'clubs' },
+        { path: '/president-tasks', label: '👑 Задания президента', category: 'tasks' },
+        { path: '/events', label: '📅 Мероприятия', category: 'events' },
+        { path: '/participants', label: '👥 Участники', category: 'clubs' },
+        { path: '/manage-achievements', label: '🏆 Достижения клуба', category: 'achievements' },
+        { path: '/my-reviews', label: '📊 Оценки клуба', category: 'reviews' },
+        { path: '/reports', label: '📋 Отчёты', category: 'settings' },
+        { path: '/appeals', label: '📨 Обращения', category: 'settings' },
+        { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', category: 'staff' },
+        { path: '/staff-calendar', label: '📅 Календарь сотрудников', category: 'staff' },
+        { path: '/calendar', label: '📅 Календарь мероприятий', category: 'events' },
+        { path: '/profile', label: '👤 Профиль', category: 'profile' },
       ],
 
       // ===== ТЬЮТОР =====
       'tutor': [
-        { path: '/tutor-dashboard', label: '📊 Кабинет тьютора', roles: ['tutor'] },
-        { path: '/my-journal', label: '📓 Мой журнал', roles: ['tutor'] },
-        { path: '/tutor-journal', label: '📋 Журнал тьютора', roles: ['tutor'] },
-        { path: '/tutor-invitations', label: '📨 Приглашения', roles: ['tutor'] },
-        { path: '/clubs', label: '🏫 КЮДы', roles: ['tutor'] },
-        { path: '/events', label: '📅 Мероприятия', roles: ['tutor'] },
-        { path: '/participants', label: '👥 Участники', roles: ['tutor'] },
-        { path: '/achievements', label: '🏆 Достижения', roles: ['tutor'] },
-        { path: '/my-reviews', label: '📊 Оценки участников', roles: ['tutor'] },
-        { path: '/staff-calendar', label: '📅 Мой календарь', roles: ['tutor'] },
-        { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['tutor'] },
+        { path: '/tutor-dashboard', label: '📊 Кабинет тьютора', category: 'main' },
+        { path: '/my-journal', label: '📓 Мой журнал', category: 'journal' },
+        { path: '/tutor-invitations', label: '📨 Приглашения', category: 'staff' },
+        { path: '/clubs', label: '🏫 КЮДы', category: 'clubs' },
+        { path: '/events', label: '📅 Мероприятия', category: 'events' },
+        { path: '/participants', label: '👥 Участники', category: 'clubs' },
+        { path: '/achievements', label: '🏆 Достижения', category: 'achievements' },
+        { path: '/my-reviews', label: '📊 Оценки', category: 'reviews' },
+        { path: '/staff-calendar', label: '📅 Мой календарь', category: 'staff' },
+        { path: '/calendar', label: '📅 Календарь мероприятий', category: 'events' },
+        { path: '/profile', label: '👤 Профиль', category: 'profile' },
       ],
 
       // ===== КООРДИНАТОР ДВИЖЕНИЯ =====
       'movement_coordinator': [
-        { path: '/dashboard', label: '📊 Дашборд', roles: ['movement_coordinator'] },
-        { path: '/analytics', label: '📊 Аналитика', roles: ['movement_coordinator'] },
-        { path: '/club-analytics', label: '📊 Аналитика клубов', roles: ['movement_coordinator'] },
-        { path: '/president-tasks', label: '👑 Задания президента', roles: ['movement_coordinator'] },
-        { path: '/clubs', label: '🏫 КЮДы', roles: ['movement_coordinator'] },
-        { path: '/events', label: '📅 Мероприятия', roles: ['movement_coordinator'] },
-        { path: '/participants', label: '👥 Участники', roles: ['movement_coordinator'] },
-        { path: '/achievements', label: '🏆 Достижения', roles: ['movement_coordinator'] },
-        { path: '/manage-achievements', label: '🏆 Управление достижениями', roles: ['movement_coordinator'] },
-        { path: '/my-reviews', label: '📊 Оценки участников', roles: ['movement_coordinator'] },
-        { path: '/reports', label: '📋 Отчёты', roles: ['movement_coordinator'] },
-        { path: '/settings', label: '⚙️ Настройки', roles: ['movement_coordinator'] },
-        { path: '/admin/invite', label: '🎫 Пригласить', roles: ['movement_coordinator'] },
-        { path: '/admin/users', label: '👥 Управление пользователями', roles: ['movement_coordinator'] },
-        { path: '/import-participants', label: '📥 Импорт участников', roles: ['movement_coordinator'] },
-        { path: '/appeals', label: '📨 Обращения координаторов', roles: ['movement_coordinator'] },
-        { path: '/staff', label: '👥 Сотрудники', roles: ['movement_coordinator'] },
-        { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', roles: ['movement_coordinator'] },
-        { path: '/tutor-invitations', label: '📨 Приглашения тьюторов', roles: ['movement_coordinator'] },
-        { path: '/staff-calendar', label: '📅 Календарь сотрудников', roles: ['movement_coordinator'] },
-        { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['movement_coordinator'] },
+        { path: '/dashboard', label: '📊 Дашборд', category: 'main' },
+        { path: '/analytics', label: '📊 Аналитика', category: 'main' },
+        { path: '/club-analytics', label: '📊 Аналитика клубов', category: 'clubs' },
+        { path: '/president-tasks', label: '👑 Задания президента', category: 'tasks' },
+        { path: '/clubs', label: '🏫 КЮДы', category: 'clubs' },
+        { path: '/events', label: '📅 Мероприятия', category: 'events' },
+        { path: '/participants', label: '👥 Участники', category: 'clubs' },
+        { path: '/achievements', label: '🏆 Достижения', category: 'achievements' },
+        { path: '/manage-achievements', label: '🏆 Управление достижениями', category: 'achievements' },
+        { path: '/my-reviews', label: '📊 Оценки', category: 'reviews' },
+        { path: '/reports', label: '📋 Отчёты', category: 'settings' },
+        { path: '/settings', label: '⚙️ Настройки', category: 'settings' },
+        { path: '/admin/invite', label: '🎫 Пригласить', category: 'settings' },
+        { path: '/admin/users', label: '👥 Пользователи', category: 'settings' },
+        { path: '/import-participants', label: '📥 Импорт', category: 'settings' },
+        { path: '/appeals', label: '📨 Обращения', category: 'settings' },
+        { path: '/staff', label: '👥 Сотрудники', category: 'staff' },
+        { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', category: 'staff' },
+        { path: '/tutor-invitations', label: '📨 Приглашения тьюторов', category: 'staff' },
+        { path: '/staff-calendar', label: '📅 Календарь сотрудников', category: 'staff' },
+        { path: '/calendar', label: '📅 Календарь мероприятий', category: 'events' },
+        { path: '/profile', label: '👤 Профиль', category: 'profile' },
       ],
 
       // ===== АДМИНИСТРАТОР =====
       'admin': [
-        { path: '/dashboard', label: '📊 Дашборд', roles: ['admin'] },
-        { path: '/analytics', label: '📊 Аналитика', roles: ['admin'] },
-        { path: '/club-analytics', label: '📊 Аналитика клубов', roles: ['admin'] },
-        { path: '/president-tasks', label: '👑 Задания президента', roles: ['admin'] },
-        { path: '/clubs', label: '🏫 КЮДы', roles: ['admin'] },
-        { path: '/events', label: '📅 Мероприятия', roles: ['admin'] },
-        { path: '/participants', label: '👥 Участники', roles: ['admin'] },
-        { path: '/achievements', label: '🏆 Достижения', roles: ['admin'] },
-        { path: '/manage-achievements', label: '🏆 Управление достижениями', roles: ['admin'] },
-        { path: '/my-reviews', label: '📊 Оценки участников', roles: ['admin'] },
-        { path: '/reports', label: '📋 Отчёты', roles: ['admin'] },
-        { path: '/settings', label: '⚙️ Настройки', roles: ['admin'] },
-        { path: '/admin/invite', label: '🎫 Пригласить', roles: ['admin'] },
-        { path: '/admin/users', label: '👥 Управление пользователями', roles: ['admin'] },
-        { path: '/import-participants', label: '📥 Импорт участников', roles: ['admin'] },
-        { path: '/appeals', label: '📨 Обращения координаторов', roles: ['admin'] },
-        { path: '/staff', label: '👥 Сотрудники', roles: ['admin'] },
-        { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', roles: ['admin'] },
-        { path: '/tutor-invitations', label: '📨 Приглашения тьюторов', roles: ['admin'] },
-        { path: '/staff-calendar', label: '📅 Календарь сотрудников', roles: ['admin'] },
-        { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['admin'] },
+        { path: '/dashboard', label: '📊 Дашборд', category: 'main' },
+        { path: '/analytics', label: '📊 Аналитика', category: 'main' },
+        { path: '/club-analytics', label: '📊 Аналитика клубов', category: 'clubs' },
+        { path: '/president-tasks', label: '👑 Задания президента', category: 'tasks' },
+        { path: '/clubs', label: '🏫 КЮДы', category: 'clubs' },
+        { path: '/events', label: '📅 Мероприятия', category: 'events' },
+        { path: '/participants', label: '👥 Участники', category: 'clubs' },
+        { path: '/achievements', label: '🏆 Достижения', category: 'achievements' },
+        { path: '/manage-achievements', label: '🏆 Управление достижениями', category: 'achievements' },
+        { path: '/my-reviews', label: '📊 Оценки', category: 'reviews' },
+        { path: '/reports', label: '📋 Отчёты', category: 'settings' },
+        { path: '/settings', label: '⚙️ Настройки', category: 'settings' },
+        { path: '/admin/invite', label: '🎫 Пригласить', category: 'settings' },
+        { path: '/admin/users', label: '👥 Пользователи', category: 'settings' },
+        { path: '/import-participants', label: '📥 Импорт', category: 'settings' },
+        { path: '/appeals', label: '📨 Обращения', category: 'settings' },
+        { path: '/staff', label: '👥 Сотрудники', category: 'staff' },
+        { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', category: 'staff' },
+        { path: '/tutor-invitations', label: '📨 Приглашения тьюторов', category: 'staff' },
+        { path: '/staff-calendar', label: '📅 Календарь сотрудников', category: 'staff' },
+        { path: '/calendar', label: '📅 Календарь мероприятий', category: 'events' },
+        { path: '/profile', label: '👤 Профиль', category: 'profile' },
       ],
 
       // ===== ПРЕЗИДЕНТ =====
       'president': [
-        { path: '/dashboard', label: '📊 Дашборд президента', roles: ['president'] },
-        { path: '/analytics', label: '📊 Аналитика', roles: ['president'] },
-        { path: '/club-analytics', label: '📊 Аналитика клубов', roles: ['president'] },
-        { path: '/clubs', label: '🏫 КЮДы', roles: ['president'] },
-        { path: '/events', label: '📅 Мероприятия', roles: ['president'] },
-        { path: '/participants', label: '👥 Участники', roles: ['president'] },
-        { path: '/achievements', label: '🏆 Достижения', roles: ['president'] },
-        { path: '/my-reviews', label: '📊 Оценки участников', roles: ['president'] },
-        { path: '/reports', label: '📋 Отчёты', roles: ['president'] },
-        { path: '/appeals', label: '📨 Обращения', roles: ['president'] },
-        { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', roles: ['president'] },
-        { path: '/tutor-invitations', label: '📨 Приглашения тьюторов', roles: ['president'] },
-        { path: '/admin/users', label: '👥 Пользователи', roles: ['president'] },
-        { path: '/profile', label: '👤 Профиль', roles: ['president'] },
-        { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['president'] },
+        { path: '/dashboard', label: '📊 Дашборд президента', category: 'main' },
+        { path: '/analytics', label: '📊 Аналитика', category: 'main' },
+        { path: '/club-analytics', label: '📊 Аналитика клубов', category: 'clubs' },
+        { path: '/clubs', label: '🏫 КЮДы', category: 'clubs' },
+        { path: '/events', label: '📅 Мероприятия', category: 'events' },
+        { path: '/participants', label: '👥 Участники', category: 'clubs' },
+        { path: '/achievements', label: '🏆 Достижения', category: 'achievements' },
+        { path: '/my-reviews', label: '📊 Оценки', category: 'reviews' },
+        { path: '/reports', label: '📋 Отчёты', category: 'settings' },
+        { path: '/appeals', label: '📨 Обращения', category: 'settings' },
+        { path: '/admin/users', label: '👥 Пользователи', category: 'settings' },
+        { path: '/calendar', label: '📅 Календарь мероприятий', category: 'events' },
+        { path: '/profile', label: '👤 Профиль', category: 'profile' },
       ],
 
       // ===== ВИЦЕ-ПРЕЗИДЕНТ =====
       'vice_president': [
-        { path: '/dashboard', label: '📊 Дашборд', roles: ['vice_president'] },
-        { path: '/analytics', label: '📊 Аналитика', roles: ['vice_president'] },
-        { path: '/club-analytics', label: '📊 Аналитика клубов', roles: ['vice_president'] },
-        { path: '/clubs', label: '🏫 КЮДы', roles: ['vice_president'] },
-        { path: '/events', label: '📅 Мероприятия', roles: ['vice_president'] },
-        { path: '/participants', label: '👥 Участники', roles: ['vice_president'] },
-        { path: '/achievements', label: '🏆 Достижения', roles: ['vice_president'] },
-        { path: '/my-reviews', label: '📊 Оценки участников', roles: ['vice_president'] },
-        { path: '/reports', label: '📋 Отчёты', roles: ['vice_president'] },
-        { path: '/appeals', label: '📨 Обращения', roles: ['vice_president'] },
-        { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', roles: ['vice_president'] },
-        { path: '/tutor-invitations', label: '📨 Приглашения тьюторов', roles: ['vice_president'] },
-        { path: '/admin/users', label: '👥 Пользователи', roles: ['vice_president'] },
-        { path: '/profile', label: '👤 Профиль', roles: ['vice_president'] },
-        { path: '/calendar', label: '📅 Календарь мероприятий', roles: ['vice_president'] },
+        { path: '/dashboard', label: '📊 Дашборд', category: 'main' },
+        { path: '/analytics', label: '📊 Аналитика', category: 'main' },
+        { path: '/club-analytics', label: '📊 Аналитика клубов', category: 'clubs' },
+        { path: '/clubs', label: '🏫 КЮДы', category: 'clubs' },
+        { path: '/events', label: '📅 Мероприятия', category: 'events' },
+        { path: '/participants', label: '👥 Участники', category: 'clubs' },
+        { path: '/achievements', label: '🏆 Достижения', category: 'achievements' },
+        { path: '/my-reviews', label: '📊 Оценки', category: 'reviews' },
+        { path: '/reports', label: '📋 Отчёты', category: 'settings' },
+        { path: '/appeals', label: '📨 Обращения', category: 'settings' },
+        { path: '/admin/users', label: '👥 Пользователи', category: 'settings' },
+        { path: '/calendar', label: '📅 Календарь мероприятий', category: 'events' },
+        { path: '/profile', label: '👤 Профиль', category: 'profile' },
       ],
     };
 
@@ -175,51 +208,28 @@ export default function Navigation({ profile }) {
       allItems = [...allItems, ...roleItems[role]];
     }
 
-    return allItems.filter(item => 
-      item.roles.includes('all') || item.roles.includes(role)
-    );
+    return allItems;
   };
 
   const menuItems = getMenuItems();
 
-  const groupedItems = {
-    main: menuItems.filter(item => 
-      ['/', '/profile', '/dashboard', '/participant-dashboard', '/parent-dashboard', '/club-coordinator-dashboard', '/tutor-dashboard'].includes(item.path)
-    ),
-    events: menuItems.filter(item => 
-      ['/events', '/calendar', '/participants'].includes(item.path)
-    ),
-    clubs: menuItems.filter(item => 
-      ['/clubs', '/club-analytics', '/my-reviews', '/achievements', '/manage-achievements'].includes(item.path)
-    ),
-    journal: menuItems.filter(item => 
-      ['/my-journal', '/tutor-journal'].includes(item.path)
-    ),
-    settings: menuItems.filter(item => 
-      ['/settings', '/admin/invite', '/admin/users', '/import-participants', '/appeals', '/staff', '/tutor-requests', '/tutor-invitations', '/staff-calendar', '/reports', '/analytics'].includes(item.path)
-    ),
-    other: menuItems.filter(item => 
-      !['/', '/profile', '/dashboard', '/participant-dashboard', '/parent-dashboard', '/club-coordinator-dashboard', '/tutor-dashboard', '/events', '/calendar', '/participants', '/clubs', '/club-analytics', '/my-reviews', '/achievements', '/manage-achievements', '/my-journal', '/tutor-journal', '/settings', '/admin/invite', '/admin/users', '/import-participants', '/appeals', '/staff', '/tutor-requests', '/tutor-invitations', '/staff-calendar', '/reports', '/analytics'].includes(item.path)
-    )
-  };
+  // ============================================================
+  // ГРУППИРОВКА ПО КАТЕГОРИЯМ
+  // ============================================================
+  const mainItems = menuItems.filter(item => item.category === 'main');
+  const eventsItems = menuItems.filter(item => item.category === 'events');
+  const clubsItems = menuItems.filter(item => item.category === 'clubs');
+  const achievementsItems = menuItems.filter(item => item.category === 'achievements');
+  const reviewsItems = menuItems.filter(item => item.category === 'reviews');
+  const tasksItems = menuItems.filter(item => item.category === 'tasks');
+  const journalItems = menuItems.filter(item => item.category === 'journal');
+  const staffItems = menuItems.filter(item => item.category === 'staff');
+  const settingsItems = menuItems.filter(item => item.category === 'settings');
+  const profileItems = menuItems.filter(item => item.category === 'profile');
 
-  const categories = [];
-  if (groupedItems.events.length > 0) {
-    categories.push({ title: '📅 Мероприятия', items: groupedItems.events, key: 'events' });
-  }
-  if (groupedItems.clubs.length > 0) {
-    categories.push({ title: '🏫 Клубы', items: groupedItems.clubs, key: 'clubs' });
-  }
-  if (groupedItems.journal.length > 0) {
-    categories.push({ title: '📓 Журнал', items: groupedItems.journal, key: 'journal' });
-  }
-  if (groupedItems.settings.length > 0) {
-    categories.push({ title: '⚙️ Настройки', items: groupedItems.settings, key: 'settings' });
-  }
-  if (groupedItems.other.length > 0) {
-    categories.push({ title: '📌 Другое', items: groupedItems.other, key: 'other' });
-  }
-
+  // ============================================================
+  // ОТРИСОВКА
+  // ============================================================
   return (
     <nav style={{
       background: '#FFFFFF',
@@ -240,27 +250,56 @@ export default function Navigation({ profile }) {
         gap: '4px',
         minHeight: '48px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Link to="/" style={{ fontSize: '18px', fontWeight: '700', color: '#0B1F3A', textDecoration: 'none' }}>
-            🌍 ДОД «Дипломаты будущего»
-          </Link>
-        </div>
+        {/* ЛОГОТИП */}
+        <Link to="/" style={{
+          fontSize: '18px',
+          fontWeight: '700',
+          color: '#0B1F3A',
+          textDecoration: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '24px' }}>🌍</span>
+          <span style={{ display: 'inline-block' }}>
+            ДОД «Дипломаты будущего»
+          </span>
+        </Link>
 
+        {/* КНОПКА БУРГЕРА (МОБИЛЬНАЯ) */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          style={{ display: 'none', background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#0B1F3A' }}
+          style={{
+            display: 'none',
+            background: 'none',
+            border: 'none',
+            fontSize: '24px',
+            cursor: 'pointer',
+            color: '#0B1F3A',
+            padding: '4px 8px'
+          }}
           className="burger-button"
         >
-          ☰
+          {isMobileMenuOpen ? '✕' : '☰'}
         </button>
 
-        <div style={{ display: 'flex', gap: '2px', alignItems: 'center', flexWrap: 'wrap', flex: 1, justifyContent: 'center' }} className="desktop-menu">
-          {groupedItems.main.map((item) => (
+        {/* ДЕСКТОПНОЕ МЕНЮ */}
+        <div style={{
+          display: 'flex',
+          gap: '2px',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          flex: 1,
+          justifyContent: 'center'
+        }} className="desktop-menu">
+          
+          {/* ГЛАВНЫЕ ПУНКТЫ */}
+          {mainItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
               style={{
-                padding: '6px 16px',
+                padding: '6px 14px',
                 borderRadius: '6px',
                 textDecoration: 'none',
                 fontSize: '13px',
@@ -270,47 +309,44 @@ export default function Navigation({ profile }) {
                 transition: 'all 0.2s ease',
                 whiteSpace: 'nowrap'
               }}
+              onMouseEnter={(e) => {
+                if (!isActive(item.path)) {
+                  e.target.style.background = '#F4F6F9';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive(item.path)) {
+                  e.target.style.background = 'transparent';
+                }
+              }}
             >
               {item.label}
             </Link>
           ))}
 
-          {categories.map((category) => (
-            <div key={category.key} style={{ position: 'relative' }}
-              onMouseEnter={() => {
-                if (category.key === 'events') setIsEventsOpen(true);
-                if (category.key === 'clubs') setIsClubsOpen(true);
-                if (category.key === 'journal') setIsDashboardOpen(true);
-                if (category.key === 'settings') setIsSettingsOpen(true);
-              }}
-              onMouseLeave={() => {
-                if (category.key === 'events') setIsEventsOpen(false);
-                if (category.key === 'clubs') setIsClubsOpen(false);
-                if (category.key === 'journal') setIsDashboardOpen(false);
-                if (category.key === 'settings') setIsSettingsOpen(false);
-              }}
+          {/* ВЫПАДАЮЩЕЕ МЕНЮ: МЕРОПРИЯТИЯ */}
+          {eventsItems.length > 0 && (
+            <div style={{ position: 'relative' }}
+              onMouseEnter={() => setIsEventsOpen(true)}
+              onMouseLeave={() => setIsEventsOpen(false)}
             >
               <button style={{
-                padding: '6px 16px',
+                padding: '6px 14px',
                 borderRadius: '6px',
                 border: 'none',
                 background: 'transparent',
                 fontSize: '13px',
-                fontWeight: category.items.some(item => isActive(item.path)) ? '600' : '400',
-                color: category.items.some(item => isActive(item.path)) ? '#0B1F3A' : '#667085',
+                fontWeight: eventsItems.some(item => isActive(item.path)) ? '600' : '400',
+                color: eventsItems.some(item => isActive(item.path)) ? '#0B1F3A' : '#667085',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px'
               }}>
-                {category.title} ▼
+                📅 Мероприятия ▼
               </button>
-              
-              {(category.key === 'events' && isEventsOpen) ||
-               (category.key === 'clubs' && isClubsOpen) ||
-               (category.key === 'journal' && isDashboardOpen) ||
-               (category.key === 'settings' && isSettingsOpen) ? (
+              {isEventsOpen && (
                 <div style={{
                   position: 'absolute',
                   top: '100%',
@@ -323,7 +359,7 @@ export default function Navigation({ profile }) {
                   padding: '8px',
                   zIndex: 100
                 }}>
-                  {category.items.map((item) => (
+                  {eventsItems.map((item) => (
                     <Link
                       key={item.path}
                       to={item.path}
@@ -337,42 +373,579 @@ export default function Navigation({ profile }) {
                         color: isActive(item.path) ? '#0B1F3A' : '#667085',
                         background: isActive(item.path) ? '#F4F6F9' : 'transparent'
                       }}
+                      onMouseEnter={(e) => {
+                        if (!isActive(item.path)) {
+                          e.target.style.background = '#F4F6F9';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive(item.path)) {
+                          e.target.style.background = 'transparent';
+                        }
+                      }}
                     >
                       {item.label}
                     </Link>
                   ))}
                 </div>
-              ) : null}
+              )}
             </div>
-          ))}
+          )}
+
+          {/* ВЫПАДАЮЩЕЕ МЕНЮ: КЛУБЫ */}
+          {clubsItems.length > 0 && (
+            <div style={{ position: 'relative' }}
+              onMouseEnter={() => setIsClubsOpen(true)}
+              onMouseLeave={() => setIsClubsOpen(false)}
+            >
+              <button style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                border: 'none',
+                background: 'transparent',
+                fontSize: '13px',
+                fontWeight: clubsItems.some(item => isActive(item.path)) ? '600' : '400',
+                color: clubsItems.some(item => isActive(item.path)) ? '#0B1F3A' : '#667085',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                🏫 Клубы ▼
+              </button>
+              {isClubsOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  background: 'white',
+                  borderRadius: '12px',
+                  boxShadow: '0 12px 35px rgba(11, 31, 58, 0.12)',
+                  border: '1px solid #E2E7EF',
+                  minWidth: '200px',
+                  padding: '8px',
+                  zIndex: 100
+                }}>
+                  {clubsItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      style={{
+                        display: 'block',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                        fontSize: '13px',
+                        fontWeight: isActive(item.path) ? '600' : '400',
+                        color: isActive(item.path) ? '#0B1F3A' : '#667085',
+                        background: isActive(item.path) ? '#F4F6F9' : 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive(item.path)) {
+                          e.target.style.background = '#F4F6F9';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive(item.path)) {
+                          e.target.style.background = 'transparent';
+                        }
+                      }}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ВЫПАДАЮЩЕЕ МЕНЮ: ДОСТИЖЕНИЯ */}
+          {achievementsItems.length > 0 && (
+            <div style={{ position: 'relative' }}
+              onMouseEnter={() => setIsEventsOpen(true)}
+              onMouseLeave={() => setIsEventsOpen(false)}
+            >
+              <button style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                border: 'none',
+                background: 'transparent',
+                fontSize: '13px',
+                fontWeight: achievementsItems.some(item => isActive(item.path)) ? '600' : '400',
+                color: achievementsItems.some(item => isActive(item.path)) ? '#0B1F3A' : '#667085',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                🏆 Достижения ▼
+              </button>
+              {isEventsOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  background: 'white',
+                  borderRadius: '12px',
+                  boxShadow: '0 12px 35px rgba(11, 31, 58, 0.12)',
+                  border: '1px solid #E2E7EF',
+                  minWidth: '200px',
+                  padding: '8px',
+                  zIndex: 100
+                }}>
+                  {achievementsItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      style={{
+                        display: 'block',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                        fontSize: '13px',
+                        fontWeight: isActive(item.path) ? '600' : '400',
+                        color: isActive(item.path) ? '#0B1F3A' : '#667085',
+                        background: isActive(item.path) ? '#F4F6F9' : 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive(item.path)) {
+                          e.target.style.background = '#F4F6F9';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive(item.path)) {
+                          e.target.style.background = 'transparent';
+                        }
+                      }}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ВЫПАДАЮЩЕЕ МЕНЮ: ОЦЕНКИ */}
+          {reviewsItems.length > 0 && (
+            <div style={{ position: 'relative' }}
+              onMouseEnter={() => setIsEventsOpen(true)}
+              onMouseLeave={() => setIsEventsOpen(false)}
+            >
+              <button style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                border: 'none',
+                background: 'transparent',
+                fontSize: '13px',
+                fontWeight: reviewsItems.some(item => isActive(item.path)) ? '600' : '400',
+                color: reviewsItems.some(item => isActive(item.path)) ? '#0B1F3A' : '#667085',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                📊 Оценки ▼
+              </button>
+              {isEventsOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  background: 'white',
+                  borderRadius: '12px',
+                  boxShadow: '0 12px 35px rgba(11, 31, 58, 0.12)',
+                  border: '1px solid #E2E7EF',
+                  minWidth: '200px',
+                  padding: '8px',
+                  zIndex: 100
+                }}>
+                  {reviewsItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      style={{
+                        display: 'block',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                        fontSize: '13px',
+                        fontWeight: isActive(item.path) ? '600' : '400',
+                        color: isActive(item.path) ? '#0B1F3A' : '#667085',
+                        background: isActive(item.path) ? '#F4F6F9' : 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive(item.path)) {
+                          e.target.style.background = '#F4F6F9';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive(item.path)) {
+                          e.target.style.background = 'transparent';
+                        }
+                      }}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ВЫПАДАЮЩЕЕ МЕНЮ: ЗАДАНИЯ */}
+          {tasksItems.length > 0 && (
+            <div style={{ position: 'relative' }}
+              onMouseEnter={() => setIsEventsOpen(true)}
+              onMouseLeave={() => setIsEventsOpen(false)}
+            >
+              <button style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                border: 'none',
+                background: 'transparent',
+                fontSize: '13px',
+                fontWeight: tasksItems.some(item => isActive(item.path)) ? '600' : '400',
+                color: tasksItems.some(item => isActive(item.path)) ? '#0B1F3A' : '#667085',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                👑 Задания ▼
+              </button>
+              {isEventsOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  background: 'white',
+                  borderRadius: '12px',
+                  boxShadow: '0 12px 35px rgba(11, 31, 58, 0.12)',
+                  border: '1px solid #E2E7EF',
+                  minWidth: '200px',
+                  padding: '8px',
+                  zIndex: 100
+                }}>
+                  {tasksItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      style={{
+                        display: 'block',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                        fontSize: '13px',
+                        fontWeight: isActive(item.path) ? '600' : '400',
+                        color: isActive(item.path) ? '#0B1F3A' : '#667085',
+                        background: isActive(item.path) ? '#F4F6F9' : 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive(item.path)) {
+                          e.target.style.background = '#F4F6F9';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive(item.path)) {
+                          e.target.style.background = 'transparent';
+                        }
+                      }}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ВЫПАДАЮЩЕЕ МЕНЮ: ЖУРНАЛ (ТЬЮТОР) */}
+          {journalItems.length > 0 && (
+            <div style={{ position: 'relative' }}
+              onMouseEnter={() => setIsJournalOpen(true)}
+              onMouseLeave={() => setIsJournalOpen(false)}
+            >
+              <button style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                border: 'none',
+                background: 'transparent',
+                fontSize: '13px',
+                fontWeight: journalItems.some(item => isActive(item.path)) ? '600' : '400',
+                color: journalItems.some(item => isActive(item.path)) ? '#0B1F3A' : '#667085',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                📓 Журнал ▼
+              </button>
+              {isJournalOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  background: 'white',
+                  borderRadius: '12px',
+                  boxShadow: '0 12px 35px rgba(11, 31, 58, 0.12)',
+                  border: '1px solid #E2E7EF',
+                  minWidth: '200px',
+                  padding: '8px',
+                  zIndex: 100
+                }}>
+                  {journalItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      style={{
+                        display: 'block',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                        fontSize: '13px',
+                        fontWeight: isActive(item.path) ? '600' : '400',
+                        color: isActive(item.path) ? '#0B1F3A' : '#667085',
+                        background: isActive(item.path) ? '#F4F6F9' : 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive(item.path)) {
+                          e.target.style.background = '#F4F6F9';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive(item.path)) {
+                          e.target.style.background = 'transparent';
+                        }
+                      }}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ВЫПАДАЮЩЕЕ МЕНЮ: СОТРУДНИКИ */}
+          {staffItems.length > 0 && (
+            <div style={{ position: 'relative' }}
+              onMouseEnter={() => setIsStaffOpen(true)}
+              onMouseLeave={() => setIsStaffOpen(false)}
+            >
+              <button style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                border: 'none',
+                background: 'transparent',
+                fontSize: '13px',
+                fontWeight: staffItems.some(item => isActive(item.path)) ? '600' : '400',
+                color: staffItems.some(item => isActive(item.path)) ? '#0B1F3A' : '#667085',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                👥 Сотрудники ▼
+              </button>
+              {isStaffOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  background: 'white',
+                  borderRadius: '12px',
+                  boxShadow: '0 12px 35px rgba(11, 31, 58, 0.12)',
+                  border: '1px solid #E2E7EF',
+                  minWidth: '200px',
+                  padding: '8px',
+                  zIndex: 100
+                }}>
+                  {staffItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      style={{
+                        display: 'block',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                        fontSize: '13px',
+                        fontWeight: isActive(item.path) ? '600' : '400',
+                        color: isActive(item.path) ? '#0B1F3A' : '#667085',
+                        background: isActive(item.path) ? '#F4F6F9' : 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive(item.path)) {
+                          e.target.style.background = '#F4F6F9';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive(item.path)) {
+                          e.target.style.background = 'transparent';
+                        }
+                      }}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ВЫПАДАЮЩЕЕ МЕНЮ: НАСТРОЙКИ */}
+          {settingsItems.length > 0 && (
+            <div style={{ position: 'relative' }}
+              onMouseEnter={() => setIsSettingsOpen(true)}
+              onMouseLeave={() => setIsSettingsOpen(false)}
+            >
+              <button style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                border: 'none',
+                background: 'transparent',
+                fontSize: '13px',
+                fontWeight: settingsItems.some(item => isActive(item.path)) ? '600' : '400',
+                color: settingsItems.some(item => isActive(item.path)) ? '#0B1F3A' : '#667085',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                ⚙️ Настройки ▼
+              </button>
+              {isSettingsOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  background: 'white',
+                  borderRadius: '12px',
+                  boxShadow: '0 12px 35px rgba(11, 31, 58, 0.12)',
+                  border: '1px solid #E2E7EF',
+                  minWidth: '200px',
+                  padding: '8px',
+                  zIndex: 100
+                }}>
+                  {settingsItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      style={{
+                        display: 'block',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                        fontSize: '13px',
+                        fontWeight: isActive(item.path) ? '600' : '400',
+                        color: isActive(item.path) ? '#0B1F3A' : '#667085',
+                        background: isActive(item.path) ? '#F4F6F9' : 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive(item.path)) {
+                          e.target.style.background = '#F4F6F9';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive(item.path)) {
+                          e.target.style.background = 'transparent';
+                        }
+                      }}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        <button
-          onClick={handleLogout}
-          style={{
-            padding: '6px 16px',
-            borderRadius: '6px',
-            border: 'none',
-            background: 'transparent',
-            color: '#667085',
-            fontSize: '13px',
-            fontWeight: '400',
-            cursor: 'pointer',
-            whiteSpace: 'nowrap'
+        {/* ПРАВАЯ ЧАСТЬ: АВАТАР + ВЫХОД */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          {/* АВАТАР С ССЫЛКОЙ НА ПРОФИЛЬ */}
+          <Link to="/profile" style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            textDecoration: 'none',
+            padding: '4px 8px',
+            borderRadius: '8px',
+            transition: 'all 0.2s ease'
           }}
-        >
-          Выйти
-        </button>
+          onMouseEnter={(e) => e.currentTarget.style.background = '#F4F6F9'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          >
+            {getAvatar()}
+            <span style={{
+              fontSize: '13px',
+              color: '#0B1F3A',
+              fontWeight: '500',
+              maxWidth: '100px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
+              {profile?.full_name || 'Профиль'}
+            </span>
+          </Link>
+
+          {/* КНОПКА ВЫХОДА */}
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '6px',
+              border: 'none',
+              background: 'transparent',
+              color: '#667085',
+              fontSize: '13px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = '#FCEBEC';
+              e.target.style.color = '#B3262E';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'transparent';
+              e.target.style.color = '#667085';
+            }}
+          >
+            Выйти
+          </button>
+        </div>
       </div>
 
+      {/* МОБИЛЬНОЕ МЕНЮ */}
       {isMobileMenuOpen && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '12px 0', borderTop: '1px solid #E2E7EF', marginTop: '8px' }} className="mobile-menu">
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '2px',
+          padding: '12px 0',
+          borderTop: '1px solid #E2E7EF',
+          marginTop: '8px'
+        }} className="mobile-menu">
           {menuItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
               style={{
-                padding: '8px 16px',
+                padding: '10px 16px',
                 borderRadius: '6px',
                 textDecoration: 'none',
                 fontSize: '14px',
@@ -388,6 +961,7 @@ export default function Navigation({ profile }) {
         </div>
       )}
 
+      {/* СТИЛИ */}
       <style>{`
         @media (max-width: 768px) {
           .desktop-menu { display: none !important; }
@@ -397,6 +971,26 @@ export default function Navigation({ profile }) {
         @media (min-width: 769px) {
           .burger-button { display: none !important; }
           .mobile-menu { display: none !important; }
+        }
+        .nav-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 2px solid #E2E7EF;
+        }
+        .nav-avatar-letter {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+          font-weight: bold;
+          background: linear-gradient(135deg, #0B1F3A, #174A7E);
+          color: white;
+          border: 2px solid #E2E7EF;
         }
       `}</style>
     </nav>

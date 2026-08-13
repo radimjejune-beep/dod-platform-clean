@@ -52,7 +52,9 @@ export default function Clubs() {
     );
   }
 
-  const isCoordinator = profile?.role === 'club_coordinator';
+  const role = profile?.role;
+  const isCoordinator = role === 'club_coordinator';
+  const canEdit = role === 'admin' || role === 'movement_coordinator';
 
   return (
     <div className="page-background">
@@ -61,10 +63,10 @@ export default function Clubs() {
         <div className="page-header">
           <span style={{ fontSize: '32px' }}>🏫</span>
           <div>
-            <h1>{isCoordinator ? 'Мой КЮД' : 'Клубы юных дипломатов'}</h1>
+            <h1>{isCoordinator ? 'Все КЮДы' : 'Клубы юных дипломатов'}</h1>
             <p>
               {isCoordinator 
-                ? 'Клуб, в котором вы являетесь координатором' 
+                ? 'Просмотр всех клубов движения (ваш клуб — с пометкой)' 
                 : `Всего клубов: ${clubs.length}`}
             </p>
           </div>
@@ -74,13 +76,8 @@ export default function Clubs() {
           <div className="empty-state">
             <div className="icon">🏫</div>
             <p style={{ fontSize: '18px', color: '#0B1F3A' }}>
-              {isCoordinator ? 'Клуб не найден' : 'КЮДов пока нет'}
+              КЮДов пока нет
             </p>
-            {isCoordinator && (
-              <p style={{ color: '#667085' }}>
-                Вы не привязаны ни к одному клубу. Обратитесь к администратору для назначения.
-              </p>
-            )}
           </div>
         ) : (
           <div style={{ 
@@ -88,97 +85,142 @@ export default function Clubs() {
             gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
             gap: '20px' 
           }}>
-            {clubs.map((club) => (
-              <div 
-                key={club.id} 
-                className="card"
-                style={{
-                  cursor: 'pointer',
-                  border: isCoordinator ? '2px solid #C9A227' : '1px solid #E2E7EF',
-                  position: 'relative',
-                  transition: 'all 0.3s ease'
-                }}
-                onClick={() => navigate(`/club/${club.id}`)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 8px 30px rgba(11, 31, 58, 0.12)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                {isCoordinator && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    right: '-8px',
-                    background: '#C9A227',
-                    color: '#0B1F3A',
-                    padding: '4px 14px',
-                    borderRadius: '20px',
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    boxShadow: '0 2px 8px rgba(201, 162, 39, 0.3)'
-                  }}>
-                    ⭐ Ваш КЮД
+            {clubs.map((club) => {
+              // Проверяем, является ли этот клуб клубом координатора
+              const isMyClub = isCoordinator && club.id === profile?.club_id;
+              
+              return (
+                <div 
+                  key={club.id} 
+                  className="card"
+                  style={{
+                    cursor: isCoordinator ? 'pointer' : 'pointer',
+                    border: isMyClub ? '2px solid #C9A227' : '1px solid #E2E7EF',
+                    position: 'relative',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onClick={() => navigate(`/club/${club.id}`)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.boxShadow = '0 8px 30px rgba(11, 31, 58, 0.12)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  {isMyClub && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-8px',
+                      right: '-8px',
+                      background: '#C9A227',
+                      color: '#0B1F3A',
+                      padding: '4px 14px',
+                      borderRadius: '20px',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      boxShadow: '0 2px 8px rgba(201, 162, 39, 0.3)'
+                    }}>
+                      ⭐ Ваш КЮД
+                    </div>
+                  )}
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                    <div style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '12px',
+                      background: isMyClub ? 'linear-gradient(135deg, #C9A227, #E8D9A8)' : 'linear-gradient(135deg, #0B1F3A, #174A7E)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '24px',
+                      flexShrink: 0
+                    }}>
+                      🏛️
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
+                        {club.name}
+                      </h3>
+                      <div style={{ fontSize: '13px', color: '#667085' }}>
+                        👥 {participantsCount[club.id] || 0} участников
+                      </div>
+                    </div>
                   </div>
-                )}
-                
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+
+                  {/* ИНФОРМАЦИЯ О КЛУБЕ (контакты) */}
                   <div style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '12px',
-                    background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '4px 12px',
+                    fontSize: '13px',
+                    color: '#667085',
+                    marginBottom: '12px'
+                  }}>
+                    {club.city && (
+                      <div>📍 {club.city}</div>
+                    )}
+                    {club.school && (
+                      <div>🏫 {club.school}</div>
+                    )}
+                    {club.leader_name && (
+                      <div style={{ gridColumn: '1 / -1' }}>👤 {club.leader_name}</div>
+                    )}
+                    {club.contact_email && (
+                      <div style={{ gridColumn: '1 / -1' }}>📧 {club.contact_email}</div>
+                    )}
+                    {club.contact_phone && (
+                      <div style={{ gridColumn: '1 / -1' }}>📞 {club.contact_phone}</div>
+                    )}
+                  </div>
+
+                  {club.description && (
+                    <p style={{ 
+                      color: '#667085', 
+                      fontSize: '14px', 
+                      margin: '8px 0 16px 0',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}>
+                      {club.description}
+                    </p>
+                  )}
+
+                  <div style={{
                     display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '24px',
-                    flexShrink: 0
+                    paddingTop: '16px',
+                    borderTop: '1px solid #F4F6F9'
                   }}>
-                    🏛️
-                  </div>
-                  <div>
-                    <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
-                      {club.name}
-                    </h3>
-                    <div style={{ fontSize: '13px', color: '#667085' }}>
-                      👥 {participantsCount[club.id] || 0} участников
+                    <span style={{ fontSize: '13px', color: '#98A2B3' }}>
+                      {club.created_at && `Создан: ${new Date(club.created_at).toLocaleDateString('ru-RU')}`}
+                    </span>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      {canEdit && (
+                        <button
+                          className="btn-secondary"
+                          style={{ padding: '4px 12px', fontSize: '12px' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/club/${club.id}/edit`);
+                          }}
+                        >
+                          ✏️ Редактировать
+                        </button>
+                      )}
+                      <span style={{ color: '#C9A227', fontWeight: '600', fontSize: '14px' }}>
+                        Подробнее →
+                      </span>
                     </div>
                   </div>
                 </div>
-
-                {club.description && (
-                  <p style={{ 
-                    color: '#667085', 
-                    fontSize: '14px', 
-                    margin: '8px 0 16px 0',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                  }}>
-                    {club.description}
-                  </p>
-                )}
-
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  paddingTop: '16px',
-                  borderTop: '1px solid #F4F6F9'
-                }}>
-                  <span style={{ fontSize: '13px', color: '#98A2B3' }}>
-                    {club.created_at && `Создан: ${new Date(club.created_at).toLocaleDateString('ru-RU')}`}
-                  </span>
-                  <span style={{ color: '#C9A227', fontWeight: '600', fontSize: '14px' }}>
-                    Подробнее →
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

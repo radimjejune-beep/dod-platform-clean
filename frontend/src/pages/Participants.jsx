@@ -14,6 +14,8 @@ export default function Participants() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClub, setSelectedClub] = useState('');
   const [viewMode, setViewMode] = useState('table');
+  const [isClubCoordinator, setIsClubCoordinator] = useState(false);
+  const [coordinatorClubId, setCoordinatorClubId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -50,12 +52,27 @@ export default function Participants() {
       } 
       else if (role === 'club_coordinator') {
         // КООРДИНАТОР КЮДА — видит только свой клуб
-        const coordinatorClub = clubsData.find(c => 
-          c.coordinator_id === userData.id || 
-          c.leader_id === userData.id
-        );
-        if (coordinatorClub) {
-          filtered = participantsData.filter(p => p.club_id === coordinatorClub.id);
+        setIsClubCoordinator(true);
+        
+        // Находим клуб координатора через club_coordinators или club_id в users
+        let clubId = userData.club_id;
+        
+        // Если club_id не заполнен, ищем в club_coordinators
+        if (!clubId) {
+          try {
+            const coordResponse = await fetch(`https://dod-backend.relaxdev.ru/api/club-coordinators?profile_id=${userData.id}`);
+            const coordData = await coordResponse.json();
+            if (coordData && coordData.length > 0) {
+              clubId = coordData[0].club_id;
+            }
+          } catch (e) {
+            console.log('Ошибка получения координатора:', e);
+          }
+        }
+        
+        if (clubId) {
+          setCoordinatorClubId(clubId);
+          filtered = participantsData.filter(p => p.club_id === clubId);
         } else {
           filtered = [];
         }
@@ -80,21 +97,6 @@ export default function Participants() {
       setLoading(false);
     }
   };
-
-  // Фильтр по клубу (только для тех, кто видит всех)
-  const canFilterByClub = profile?.role === 'admin' || 
-                          profile?.role === 'movement_coordinator' || 
-                          profile?.role === 'tutor' ||
-                          profile?.role === 'president' ||
-                          profile?.role === 'vice_president';
-
-  useEffect(() => {
-    if (selectedClub && canFilterByClub) {
-      setParticipants(allParticipants.filter(p => p.club_id === selectedClub));
-    } else {
-      setParticipants(allParticipants);
-    }
-  }, [selectedClub, allParticipants, canFilterByClub]);
 
   const getFilteredParticipants = () => {
     let filtered = participants;
@@ -124,7 +126,7 @@ export default function Participants() {
                          role === 'president' ||
                          role === 'vice_president';
 
-  // Проверка, может ли пользователь видеть страницу
+  // Координатор видит только свой клуб, поэтому фильтр ему не нужен
   const canView = role === 'club_coordinator' || 
                   role === 'tutor' || 
                   role === 'movement_coordinator' || 
@@ -155,6 +157,17 @@ export default function Participants() {
     );
   }
 
+  // ============================================================
+  // ПОЛУЧЕНИЕ НАЗВАНИЯ КЛУБА КООРДИНАТОРА
+  // ============================================================
+  const getCoordinatorClubName = () => {
+    if (isClubCoordinator && coordinatorClubId) {
+      const club = clubs.find(c => c.id === coordinatorClubId);
+      return club?.name || 'Ваш клуб';
+    }
+    return '';
+  };
+
   return (
     <div className="page-background">
       <Navigation profile={profile} />
@@ -164,8 +177,8 @@ export default function Participants() {
           <div>
             <h1>Участники</h1>
             <p>
-              {role === 'club_coordinator' 
-                ? `Участники вашего клуба (${filtered.length})` 
+              {isClubCoordinator 
+                ? `Участники клуба "${getCoordinatorClubName()}" (${filtered.length})` 
                 : `Все участники движения (${filtered.length})`}
             </p>
           </div>
@@ -180,41 +193,65 @@ export default function Participants() {
           )}
         </div>
 
-        {/* ФИЛЬТРЫ И ПОИСК */}
-        <div style={{
-          display: 'flex',
-          gap: '16px',
-          marginBottom: '20px',
-          flexWrap: 'wrap',
-          alignItems: 'center'
-        }}>
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="🔍 Поиск по ФИО, email, школе..."
-            />
-          </div>
-
-          {showClubFilter && (
-            <div style={{ minWidth: '200px' }}>
-              <select
-                value={selectedClub}
-                onChange={(e) => setSelectedClub(e.target.value)}
-              >
-                <option value="">Все КЮДы</option>
-                {clubs.map((club) => (
-                  <option key={club.id} value={club.id}>{club.name}</option>
-                ))}
-              </select>
+        {/* ФИЛЬТРЫ И ПОИСК (только для тех, кто видит всех) */}
+        {!isClubCoordinator && (
+          <div style={{
+            display: 'flex',
+            gap: '16px',
+            marginBottom: '20px',
+            flexWrap: 'wrap',
+            alignItems: 'center'
+          }}>
+            <div style={{ flex: 1, minWidth: '200px' }}>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="🔍 Поиск по ФИО, email, школе..."
+              />
             </div>
-          )}
 
-          <div style={{ fontSize: '14px', color: '#667085', padding: '6px 16px', background: 'white', borderRadius: '8px', border: '1px solid #E2E7EF' }}>
-            Найдено: <strong>{filtered.length}</strong> участников
+            {showClubFilter && (
+              <div style={{ minWidth: '200px' }}>
+                <select
+                  value={selectedClub}
+                  onChange={(e) => setSelectedClub(e.target.value)}
+                >
+                  <option value="">Все КЮДы</option>
+                  {clubs.map((club) => (
+                    <option key={club.id} value={club.id}>{club.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div style={{ fontSize: '14px', color: '#667085', padding: '6px 16px', background: 'white', borderRadius: '8px', border: '1px solid #E2E7EF' }}>
+              Найдено: <strong>{filtered.length}</strong> участников
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* ДЛЯ КООРДИНАТОРА — показываем название его клуба и инфо */}
+        {isClubCoordinator && (
+          <div style={{
+            display: 'flex',
+            gap: '16px',
+            marginBottom: '20px',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            padding: '12px 16px',
+            background: '#FBF4DC',
+            borderRadius: '10px',
+            border: '1px solid #E8D9A8'
+          }}>
+            <span style={{ fontSize: '14px', color: '#8A6A00' }}>
+              🏫 Вы видите участников только вашего клуба: <strong>{getCoordinatorClubName()}</strong>
+            </span>
+            <span style={{ fontSize: '13px', color: '#8A6A00', marginLeft: 'auto' }}>
+              👥 {filtered.length} участников
+            </span>
+          </div>
+        )}
 
         {/* ТАБЛИЧНЫЙ ВИД */}
         {viewMode === 'table' && (
@@ -235,7 +272,7 @@ export default function Participants() {
                   <tr>
                     <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#667085' }}>
                       <div style={{ fontSize: '32px', marginBottom: '8px' }}>👀</div>
-                      Участников не найдено
+                      {isClubCoordinator ? 'В вашем клубе пока нет участников' : 'Участников не найдено'}
                     </td>
                   </tr>
                 ) : (
@@ -297,8 +334,8 @@ export default function Participants() {
           </div>
         )}
 
-        {/* КАРТОЧНЫЙ ВИД */}
-        {viewMode === 'cards' && showClubFilter && (
+        {/* КАРТОЧНЫЙ ВИД (только для тех, у кого есть фильтр) */}
+        {viewMode === 'cards' && showClubFilter && !isClubCoordinator && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
             {filtered.map((p) => (
               <div

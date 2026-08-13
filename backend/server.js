@@ -44,7 +44,123 @@ app.get('/test', (req, res) => {
 });
 
 // ============================================================
-// 2. ВХОД
+// 2. РЕГИСТРАЦИЯ
+// ============================================================
+app.post('/api/register', async (req, res) => {
+  try {
+    const {
+      email,
+      password,
+      full_name,
+      role,
+      phone,
+      school,
+      class_name,
+      birth_date,
+      club_id,
+      child_id,
+      is_minor,
+      parent_full_name,
+      parent_phone,
+      parent_email,
+      consents
+    } = req.body;
+
+    if (!email || !password || !full_name || !birth_date) {
+      return res.status(400).json({ error: 'Email, пароль, ФИО и дата рождения обязательны' });
+    }
+
+    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
+    }
+
+    const saltRounds = 10;
+    const password_hash = await bcrypt.hash(password, saltRounds);
+
+    const result = await pool.query(
+      `INSERT INTO users (
+        email, password_hash, full_name, role, phone, school, class_name,
+        birth_date, is_minor
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING id, email, full_name, role, created_at`,
+      [
+        email,
+        password_hash,
+        full_name,
+        role || 'participant',
+        phone || '',
+        school || '',
+        class_name || '',
+        birth_date,
+        is_minor || false
+      ]
+    );
+
+    const user = result.rows[0];
+
+    if (role === 'participant' && club_id) {
+      await pool.query(
+        `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
+         VALUES ($1, $2, 'active', NOW())`,
+        [user.id, club_id]
+      );
+    }
+
+    if (role === 'parent' && child_id) {
+      await pool.query(
+        `INSERT INTO parent_child_relations (parent_id, child_id, status, created_at)
+         VALUES ($1, $2, 'active', NOW())`,
+        [user.id, child_id]
+      );
+    }
+
+    if (consents) {
+      const consentTypes = [
+        { type: 'agree_to_terms', value: consents.agree_to_terms },
+        { type: 'agree_personal_data', value: consents.agree_personal_data },
+        { type: 'agree_minor_data', value: consents.agree_minor_data || false },
+        { type: 'agree_image_use', value: consents.agree_image_use || false },
+        { type: 'agree_photo_publication', value: consents.agree_photo_publication || false }
+      ];
+
+      for (const c of consentTypes) {
+        if (c.value) {
+          await pool.query(
+            `INSERT INTO user_consents (user_id, consent_type, given_at, version)
+             VALUES ($1, $2, NOW(), '1.0')`,
+            [user.id, c.type]
+          );
+        }
+      }
+    }
+
+    if (is_minor && parent_full_name) {
+      await pool.query(
+        `INSERT INTO parent_data (user_id, full_name, phone, email, created_at)
+         VALUES ($1, $2, $3, $4, NOW())`,
+        [user.id, parent_full_name, parent_phone || '', parent_email || '']
+      );
+    }
+
+    res.status(201).json({
+      message: 'Регистрация успешна!',
+      user: {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error('Ошибка регистрации:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 3. ВХОД (БЕЗ ПРОВЕРКИ СТАТУСА)
 // ============================================================
 app.post('/api/login', async (req, res) => {
   try {
@@ -103,7 +219,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // ============================================================
-// 3. ПОЛУЧЕНИЕ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ
+// 4. ПОЛУЧЕНИЕ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ
 // ============================================================
 app.get('/api/me', async (req, res) => {
   try {
@@ -134,7 +250,7 @@ app.get('/api/me', async (req, res) => {
 });
 
 // ============================================================
-// 4. ПОЛУЧЕНИЕ ВСЕХ ПРОФИЛЕЙ
+// 5. ПОЛУЧЕНИЕ ВСЕХ ПРОФИЛЕЙ
 // ============================================================
 app.get('/api/profiles', async (req, res) => {
   try {
@@ -150,7 +266,7 @@ app.get('/api/profiles', async (req, res) => {
 });
 
 // ============================================================
-// 5. ПОЛУЧЕНИЕ УЧАСТНИКОВ
+// 6. ПОЛУЧЕНИЕ УЧАСТНИКОВ
 // ============================================================
 app.get('/api/participants', async (req, res) => {
   try {
@@ -171,7 +287,7 @@ app.get('/api/participants', async (req, res) => {
 });
 
 // ============================================================
-// 6. ПОЛУЧЕНИЕ КЛУБОВ
+// 7. ПОЛУЧЕНИЕ КЛУБОВ
 // ============================================================
 app.get('/api/clubs', async (req, res) => {
   try {
@@ -185,7 +301,7 @@ app.get('/api/clubs', async (req, res) => {
 });
 
 // ============================================================
-// 7. ПОЛУЧЕНИЕ РЕГИСТРАЦИЙ
+// 8. ПОЛУЧЕНИЕ РЕГИСТРАЦИЙ
 // ============================================================
 app.get('/api/registrations', async (req, res) => {
   try {
@@ -199,7 +315,39 @@ app.get('/api/registrations', async (req, res) => {
 });
 
 // ============================================================
-// 8. ЗАПУСК СЕРВЕРА
+// 9. ВРЕМЕННЫЙ ЭНДПОИНТ ДЛЯ СОЗДАНИЯ ПОЛЬЗОВАТЕЛЯ
+// ============================================================
+app.post('/api/create-user', async (req, res) => {
+  try {
+    const { email, password, full_name, role } = req.body;
+    
+    if (!email || !password || !full_name) {
+      return res.status(400).json({ error: 'Email, пароль и ФИО обязательны' });
+    }
+
+    const saltRounds = 10;
+    const password_hash = await bcrypt.hash(password, saltRounds);
+    
+    const result = await pool.query(
+      `INSERT INTO users (id, email, password_hash, full_name, role, registration_status, created_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, 'approved', NOW())
+       RETURNING id, email, full_name, role`,
+      [email, password_hash, full_name, role || 'admin']
+    );
+    
+    res.json({ 
+      message: '✅ Пользователь создан!', 
+      user: result.rows[0],
+      password: password 
+    });
+  } catch (error) {
+    console.error('Ошибка создания пользователя:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 10. ЗАПУСК СЕРВЕРА
 // ============================================================
 app.listen(PORT, () => {
   console.log(`✅ Сервер запущен на порту ${PORT}`);

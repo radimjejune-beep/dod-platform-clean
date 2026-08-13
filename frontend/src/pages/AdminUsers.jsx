@@ -41,7 +41,6 @@ export default function AdminUsers() {
         return;
       }
 
-      // Проверка прав — только админ или координатор движения
       if (userData.role !== 'admin' && userData.role !== 'movement_coordinator') {
         navigate('/dashboard');
         return;
@@ -49,18 +48,17 @@ export default function AdminUsers() {
 
       setProfile(userData);
 
-      // Загружаем клубы
-      const clubsData = await api.getClubs();
-      setClubs(clubsData || []);
-
-      // Загружаем всех пользователей
-      const usersData = await api.getUsers();
+      const [usersData, clubsData] = await Promise.all([
+        api.getUsers(),
+        api.getClubs()
+      ]);
       setUsers(usersData || []);
-
+      setClubs(clubsData || []);
     } catch (err) {
       console.error('Ошибка:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const generatePassword = () => {
@@ -106,7 +104,6 @@ export default function AdminUsers() {
       setMessageType('success');
       setShowPasswordList(true);
       
-      // Сбрасываем форму
       setForm({
         full_name: '',
         email: '',
@@ -117,7 +114,6 @@ export default function AdminUsers() {
         club_id: ''
       });
 
-      // Обновляем список пользователей
       const usersData = await api.getUsers();
       setUsers(usersData || []);
 
@@ -125,8 +121,9 @@ export default function AdminUsers() {
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleRoleChange = async (userId, newRole) => {
@@ -141,7 +138,6 @@ export default function AdminUsers() {
       setMessage('✅ Роль изменена');
       setMessageType('success');
       
-      // Обновляем список
       const usersData = await api.getUsers();
       setUsers(usersData || []);
       
@@ -212,53 +208,30 @@ export default function AdminUsers() {
   }
 
   return (
-    <div className="fade-in" style={{ background: '#F4F6F9', minHeight: '100vh' }}>
+    <div className="page-background">
       <Navigation profile={profile} />
-      
-      <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '30px 24px 40px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+      <div className="container-page">
+        <div className="page-header">
+          <span style={{ fontSize: '32px' }}>👥</span>
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0B1F3A' }}>
-              👥 Управление пользователями
-            </h1>
-            <p style={{ color: '#667085', fontSize: '16px' }}>
-              Всего пользователей: {users.length}
-            </p>
+            <h1>Управление пользователями</h1>
+            <p>Всего пользователей: {users.length}</p>
           </div>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                setShowCreateUser(!showCreateUser);
-                setShowPasswordList(false);
-                setCreatedUsers([]);
-              }}
-              style={{
-                padding: '10px 24px',
-                background: '#0B1F3A',
-                color: 'white',
-                border: 'none',
-                borderRadius: '10px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '600'
-              }}
-            >
-              {showCreateUser ? '✖ Закрыть' : '➕ Создать пользователя'}
-            </button>
-          </div>
+          <button
+            className="btn-primary"
+            style={{ marginLeft: 'auto' }}
+            onClick={() => {
+              setShowCreateUser(!showCreateUser);
+              setShowPasswordList(false);
+              setCreatedUsers([]);
+            }}
+          >
+            {showCreateUser ? '✖ Закрыть' : '➕ Создать'}
+          </button>
         </div>
 
         {message && (
-          <div style={{
-            padding: '12px 16px',
-            borderRadius: '10px',
-            marginBottom: '16px',
-            background: messageType === 'success' ? '#E8F5EF' : '#FCEBEC',
-            color: messageType === 'success' ? '#16845B' : '#B3262E',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}>
+          <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
             {message}
           </div>
         )}
@@ -266,49 +239,22 @@ export default function AdminUsers() {
         {/* СПИСОК ПАРОЛЕЙ */}
         {showPasswordList && createdUsers.length > 0 && (
           <div className="card" style={{ 
-            padding: '24px', 
-            marginBottom: '24px',
             background: '#FBF4DC',
-            border: '2px solid #C9A227'
+            border: '2px solid #C9A227',
+            marginBottom: '16px'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0B1F3A' }}>
                 🔑 Данные для входа
               </h3>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  className="btn btn-primary"
-                  onClick={copyPasswords}
-                  style={{
-                    padding: '6px 16px',
-                    background: '#0B1F3A',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: '600'
-                  }}
-                >
+                <button className="btn-primary" onClick={copyPasswords}>
                   📋 Скопировать все
                 </button>
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowPasswordList(false);
-                    setCreatedUsers([]);
-                  }}
-                  style={{
-                    padding: '6px 16px',
-                    background: 'transparent',
-                    color: '#0B1F3A',
-                    border: '1.5px solid #D5DCE7',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: '500'
-                  }}
-                >
+                <button className="btn-secondary" onClick={() => {
+                  setShowPasswordList(false);
+                  setCreatedUsers([]);
+                }}>
                   ✖ Закрыть
                 </button>
               </div>
@@ -352,52 +298,40 @@ export default function AdminUsers() {
 
         {/* ФОРМА СОЗДАНИЯ ПОЛЬЗОВАТЕЛЯ */}
         {showCreateUser && (
-          <div className="card" style={{ padding: '24px', marginBottom: '24px', background: 'white', borderRadius: '16px', border: '1px solid #E2E7EF' }}>
+          <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
               📝 Создать пользователя
             </h3>
             <form onSubmit={handleCreateUser}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+              <div className="grid-2">
                 <div className="form-group">
-                  <label className="form-label" style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-                    ФИО *
-                  </label>
+                  <label>ФИО *</label>
                   <input
                     type="text"
-                    className="form-input"
                     value={form.full_name}
                     onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                     required
                     placeholder="Иванов Иван Иванович"
-                    style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #D5DCE7', borderRadius: '10px', fontSize: '14px' }}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-                    Email *
-                  </label>
+                  <label>Email *</label>
                   <input
                     type="email"
-                    className="form-input"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                     required
                     placeholder="ivan@example.com"
-                    style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #D5DCE7', borderRadius: '10px', fontSize: '14px' }}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-                    Роль *
-                  </label>
+                  <label>Роль *</label>
                   <select
-                    className="form-select"
                     value={form.role}
                     onChange={(e) => setForm({ ...form, role: e.target.value })}
                     required
-                    style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #D5DCE7', borderRadius: '10px', fontSize: '14px', background: 'white' }}
                   >
                     <option value="participant">👤 Участник</option>
                     <option value="parent">👨‍👩‍👦 Родитель</option>
@@ -409,56 +343,40 @@ export default function AdminUsers() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-                    Телефон
-                  </label>
+                  <label>Телефон</label>
                   <input
                     type="tel"
-                    className="form-input"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     placeholder="+7 (XXX) XXX-XX-XX"
-                    style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #D5DCE7', borderRadius: '10px', fontSize: '14px' }}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-                    Школа
-                  </label>
+                  <label>Школа</label>
                   <input
                     type="text"
-                    className="form-input"
                     value={form.school}
                     onChange={(e) => setForm({ ...form, school: e.target.value })}
                     placeholder="Школа №1"
-                    style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #D5DCE7', borderRadius: '10px', fontSize: '14px' }}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-                    Класс
-                  </label>
+                  <label>Класс</label>
                   <input
                     type="text"
-                    className="form-input"
                     value={form.class_name}
                     onChange={(e) => setForm({ ...form, class_name: e.target.value })}
                     placeholder="8А"
-                    style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #D5DCE7', borderRadius: '10px', fontSize: '14px' }}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ display: 'block', fontWeight: '500', fontSize: '13px', color: '#475467', marginBottom: '4px' }}>
-                    Клуб
-                  </label>
+                  <label>Клуб</label>
                   <select
-                    className="form-select"
                     value={form.club_id}
                     onChange={(e) => setForm({ ...form, club_id: e.target.value })}
-                    style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #D5DCE7', borderRadius: '10px', fontSize: '14px', background: 'white' }}
                   >
                     <option value="">Без клуба</option>
                     {clubs.map((club) => (
@@ -475,40 +393,16 @@ export default function AdminUsers() {
               </div>
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-                <button
-                  type="submit"
-                  className="btn btn-success"
-                  disabled={loading}
-                  style={{
-                    padding: '10px 28px',
-                    background: '#16845B',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '10px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
+                <button type="submit" className="btn-success" disabled={loading}>
                   {loading ? '⏳ Создание...' : '✅ Создать пользователя'}
                 </button>
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="btn-secondary"
                   onClick={() => {
                     setShowCreateUser(false);
                     setShowPasswordList(false);
                     setCreatedUsers([]);
-                  }}
-                  style={{
-                    padding: '10px 28px',
-                    background: 'transparent',
-                    color: '#0B1F3A',
-                    border: '1.5px solid #D5DCE7',
-                    borderRadius: '10px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
                   }}
                 >
                   ❌ Отмена
@@ -529,20 +423,16 @@ export default function AdminUsers() {
           <div style={{ flex: 1, minWidth: '200px' }}>
             <input
               type="text"
-              className="form-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="🔍 Поиск по ФИО, email..."
-              style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #D5DCE7', borderRadius: '10px', fontSize: '14px', outline: 'none' }}
             />
           </div>
 
           <div style={{ minWidth: '150px' }}>
             <select
-              className="form-select"
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
-              style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #D5DCE7', borderRadius: '10px', fontSize: '14px', outline: 'none', background: 'white' }}
             >
               <option value="">Все роли</option>
               <option value="participant">Участник</option>
@@ -556,10 +446,8 @@ export default function AdminUsers() {
 
           <div style={{ minWidth: '180px' }}>
             <select
-              className="form-select"
               value={selectedClub}
               onChange={(e) => setSelectedClub(e.target.value)}
-              style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #D5DCE7', borderRadius: '10px', fontSize: '14px', outline: 'none', background: 'white' }}
             >
               <option value="">Все КЮДы</option>
               {clubs.map((club) => (
@@ -574,21 +462,15 @@ export default function AdminUsers() {
         </div>
 
         {/* ТАБЛИЦА ПОЛЬЗОВАТЕЛЕЙ */}
-        <div style={{
-          background: 'white',
-          borderRadius: '16px',
-          overflow: 'auto',
-          border: '1px solid #E2E7EF',
-          boxShadow: '0 4px 16px rgba(11, 31, 58, 0.06)'
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+        <div className="table-wrapper">
+          <table>
             <thead>
-              <tr style={{ background: '#F4F6F9', borderBottom: '2px solid #E2E7EF' }}>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#475467' }}>ФИО</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#475467' }}>Email</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#475467' }}>Роль</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#475467' }}>Клуб</th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '600', color: '#475467' }}>Действия</th>
+              <tr>
+                <th>ФИО</th>
+                <th>Email</th>
+                <th>Роль</th>
+                <th>Клуб</th>
+                <th style={{ textAlign: 'center' }}>Действия</th>
               </tr>
             </thead>
             <tbody>
@@ -600,15 +482,10 @@ export default function AdminUsers() {
                 </tr>
               ) : (
                 filteredUsers.map((u) => (
-                  <tr key={u.id} style={{ borderBottom: '1px solid #F4F6F9', transition: 'background 0.15s' }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#F8FAFC'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
-                  >
-                    <td style={{ padding: '12px 16px', fontWeight: '500', color: '#0B1F3A' }}>
-                      {u.full_name}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: '#667085' }}>{u.email}</td>
-                    <td style={{ padding: '12px 16px' }}>
+                  <tr key={u.id}>
+                    <td style={{ fontWeight: '500', color: '#0B1F3A' }}>{u.full_name}</td>
+                    <td style={{ color: '#667085' }}>{u.email}</td>
+                    <td>
                       <select
                         value={u.role}
                         onChange={(e) => handleRoleChange(u.id, e.target.value)}
@@ -629,10 +506,8 @@ export default function AdminUsers() {
                         <option value="admin">Администратор</option>
                       </select>
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#667085' }}>
-                      {u.club_name || '—'}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                    <td style={{ color: '#667085' }}>{u.club_name || '—'}</td>
+                    <td style={{ textAlign: 'center' }}>
                       <button
                         style={{
                           padding: '4px 12px',

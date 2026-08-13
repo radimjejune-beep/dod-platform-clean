@@ -9,9 +9,15 @@ export default function Appeals() {
   const [profile, setProfile] = useState(null);
   const [appeals, setAppeals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState('');
-  const [form, setForm] = useState({ subject: '', message: '', priority: 'medium' });
+  const [messageType, setMessageType] = useState('success');
+  const [form, setForm] = useState({
+    subject: '',
+    message: '',
+    priority: 'medium'
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,17 +35,17 @@ export default function Appeals() {
 
       const appealsData = await api.getAppeals();
       setAppeals(appealsData || []);
-
     } catch (err) {
       console.error('Ошибка:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSending(true);
     setMessage('');
-    setLoading(true);
 
     try {
       const result = await api.addAppeal({
@@ -53,17 +59,37 @@ export default function Appeals() {
       }
 
       setMessage('✅ Обращение отправлено!');
+      setMessageType('success');
       setForm({ subject: '', message: '', priority: 'medium' });
       setShowForm(false);
-      
-      const appealsData = await api.getAppeals();
-      setAppeals(appealsData || []);
-      
+      loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setSending(false);
     }
-    setLoading(false);
+  };
+
+  const getPriorityLabel = (priority) => {
+    const labels = {
+      'low': '🟢 Низкий',
+      'medium': '🟡 Средний',
+      'high': '🔴 Высокий',
+      'urgent': '🔥 Срочный'
+    };
+    return labels[priority] || priority;
+  };
+
+  const getStatusLabel = (status) => {
+    const labels = {
+      'pending': '⏳ Ожидает',
+      'in_progress': '🔄 В работе',
+      'resolved': '✅ Решено',
+      'closed': '📌 Закрыто'
+    };
+    return labels[status] || status;
   };
 
   if (loading) {
@@ -75,51 +101,150 @@ export default function Appeals() {
   }
 
   return (
-    <div style={{ background: '#F4F6F9', minHeight: '100vh' }}>
+    <div className="page-background">
       <Navigation profile={profile} />
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '30px 24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0B1F3A' }}>📨 Обращения</h1>
-          <button onClick={() => setShowForm(!showForm)} style={{ padding: '10px 24px', background: '#0B1F3A', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>
+      <div className="container-page">
+        <div className="page-header">
+          <span style={{ fontSize: '32px' }}>📨</span>
+          <div>
+            <h1>Обращения</h1>
+            <p>Всего обращений: {appeals.length}</p>
+          </div>
+          <button
+            className="btn-primary"
+            style={{ marginLeft: 'auto' }}
+            onClick={() => setShowForm(!showForm)}
+          >
             {showForm ? '✖ Закрыть' : '➕ Создать'}
           </button>
         </div>
 
         {message && (
-          <div style={{ padding: '12px', borderRadius: '10px', marginBottom: '16px', background: message.includes('✅') ? '#E8F5EF' : '#FCEBEC', color: message.includes('✅') ? '#16845B' : '#B3262E' }}>
+          <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
             {message}
           </div>
         )}
 
+        {/* ФОРМА СОЗДАНИЯ */}
         {showForm && (
-          <div style={{ background: 'white', borderRadius: '16px', padding: '24px', border: '1px solid #E2E7EF', marginBottom: '20px' }}>
-            <h3 style={{ marginBottom: '16px' }}>✍️ Новое обращение</h3>
+          <div className="card" style={{ marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+              ✍️ Новое обращение
+            </h3>
             <form onSubmit={handleSubmit}>
-              <input type="text" placeholder="Тема" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} required style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-              <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd' }}>
-                <option value="low">🟢 Низкий</option>
-                <option value="medium">🟡 Средний</option>
-                <option value="high">🔴 Высокий</option>
-                <option value="urgent">🔥 Срочно</option>
-              </select>
-              <textarea placeholder="Текст обращения" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} rows="4" required style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd', resize: 'vertical' }} />
-              <button type="submit" disabled={loading} style={{ padding: '10px 24px', background: '#16845B', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>{loading ? '⏳ Отправка...' : '📤 Отправить'}</button>
+              <div className="form-group">
+                <label>Тема *</label>
+                <input
+                  type="text"
+                  value={form.subject}
+                  onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                  required
+                  placeholder="Кратко опишите вопрос"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Приоритет</label>
+                <select
+                  value={form.priority}
+                  onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                >
+                  <option value="low">🟢 Низкий</option>
+                  <option value="medium">🟡 Средний</option>
+                  <option value="high">🔴 Высокий</option>
+                  <option value="urgent">🔥 Срочный</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Текст обращения *</label>
+                <textarea
+                  rows="5"
+                  value={form.message}
+                  onChange={(e) => setForm({ ...form, message: e.target.value })}
+                  required
+                  placeholder="Опишите ваше обращение подробно..."
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button type="submit" className="btn-success" disabled={sending}>
+                  {sending ? '⏳ Отправка...' : '📤 Отправить'}
+                </button>
+                <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
+                  ❌ Отмена
+                </button>
+              </div>
             </form>
           </div>
         )}
 
+        {/* СПИСОК ОБРАЩЕНИЙ */}
         {appeals.length === 0 ? (
-          <div style={{ background: 'white', borderRadius: '16px', padding: '40px', textAlign: 'center', border: '1px solid #E2E7EF' }}>
-            <p style={{ color: '#667085' }}>Обращений пока нет</p>
+          <div className="empty-state">
+            <div className="icon">📭</div>
+            <p>Обращений пока нет</p>
           </div>
         ) : (
-          appeals.map(a => (
-            <div key={a.id} style={{ background: 'white', borderRadius: '16px', padding: '20px', marginBottom: '12px', border: '1px solid #E2E7EF' }}>
-              <h3 style={{ margin: 0 }}>{a.subject}</h3>
-              <p style={{ color: '#667085' }}>{a.message}</p>
-              <span style={{ fontSize: '13px', color: '#98A2B3' }}>{new Date(a.created_at).toLocaleDateString('ru-RU')}</span>
-            </div>
-          ))
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {appeals.map((appeal) => (
+              <div
+                key={appeal.id}
+                className="card"
+                style={{
+                  borderLeft: `4px solid ${
+                    appeal.priority === 'urgent' ? '#B3262E' :
+                    appeal.priority === 'high' ? '#B3262E' :
+                    appeal.priority === 'medium' ? '#C9A227' : '#667085'
+                  }`
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      <h3 style={{ fontSize: '17px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
+                        {appeal.subject}
+                      </h3>
+                      <span style={{
+                        padding: '2px 12px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        background: appeal.priority === 'urgent' ? '#FCEBEC' :
+                                  appeal.priority === 'high' ? '#FCEBEC' :
+                                  appeal.priority === 'medium' ? '#FBF4DC' : '#F4F6F9',
+                        color: appeal.priority === 'urgent' ? '#B3262E' :
+                               appeal.priority === 'high' ? '#B3262E' :
+                               appeal.priority === 'medium' ? '#8A6A00' : '#667085'
+                      }}>
+                        {getPriorityLabel(appeal.priority)}
+                      </span>
+                      <span style={{
+                        padding: '2px 12px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        background: appeal.status === 'resolved' ? '#E8F5EF' :
+                                  appeal.status === 'in_progress' ? '#EAF2FA' :
+                                  appeal.status === 'closed' ? '#F4F6F9' : '#FBF4DC',
+                        color: appeal.status === 'resolved' ? '#16845B' :
+                               appeal.status === 'in_progress' ? '#174A7E' :
+                               appeal.status === 'closed' ? '#667085' : '#8A6A00'
+                      }}>
+                        {getStatusLabel(appeal.status)}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#475467', marginTop: '8px' }}>
+                      {appeal.message}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#98A2B3', marginTop: '4px' }}>
+                      📅 {new Date(appeal.created_at).toLocaleString('ru-RU')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

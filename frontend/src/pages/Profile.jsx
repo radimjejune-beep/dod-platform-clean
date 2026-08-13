@@ -69,6 +69,20 @@ export default function Profile() {
     setProfile({ ...profile, [name]: value });
   };
 
+  const getRoleLabel = (role) => {
+    const roles = {
+      admin: '🔧 Администратор',
+      participant: '👤 Участник',
+      parent: '👨‍👩‍👦 Родитель',
+      club_coordinator: '🏫 Координатор КЮДа',
+      movement_coordinator: '⭐ Координатор движения',
+      tutor: '📚 Тьютор',
+      president: '👑 Президент ДОД',
+      vice_president: '⭐ Вице-президент ДОД'
+    };
+    return roles[role] || role;
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
@@ -87,6 +101,9 @@ export default function Profile() {
             <h1>Мой профиль</h1>
             <p>Управление личными данными</p>
           </div>
+          <span className="status-active" style={{ marginLeft: 'auto' }}>
+            {getRoleLabel(profile?.role)}
+          </span>
         </div>
 
         {message && (

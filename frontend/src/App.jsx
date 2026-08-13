@@ -50,6 +50,7 @@ import TutorJournal from './pages/TutorJournal';
 
 // Другие
 import ParticipantProfile from './pages/ParticipantProfile';
+import ParticipantEdit from './pages/ParticipantEdit';
 import NewsDetail from './pages/NewsDetail';
 import Achievements from './pages/Achievements';
 import Participants from './pages/Participants';
@@ -222,9 +223,10 @@ function App() {
           </ProtectedRoute>
         } />
 
+        {/* ===== РЕДАКТИРОВАНИЕ УЧАСТНИКА ===== */}
         <Route path="/participant/:id/edit" element={
           <ProtectedRoute>
-            <Profile />
+            <ParticipantEdit />
           </ProtectedRoute>
         } />
 

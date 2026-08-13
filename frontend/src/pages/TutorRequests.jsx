@@ -38,7 +38,14 @@ export default function TutorRequests() {
       }
       setProfile(userData);
 
-      const data = await api.getTutorRequests();
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://dod-backend.relaxdev.ru/api/tutor-requests', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      console.log('📥 Запросы:', data);
       setRequests(data || []);
     } catch (err) {
       console.error('Ошибка:', err);
@@ -47,7 +54,6 @@ export default function TutorRequests() {
     }
   };
 
-  // ===== ОЧИСТКА ТЕЛЕФОНА =====
   const cleanPhone = (phone) => {
     if (!phone) return '';
     return phone.replace(/[^0-9+]/g, '');
@@ -73,6 +79,7 @@ export default function TutorRequests() {
       });
 
       const result = await response.json();
+      console.log('📥 Результат:', result);
       
       if (result.error) {
         throw new Error(result.error);
@@ -107,7 +114,17 @@ export default function TutorRequests() {
     if (!confirm(`Подтвердить ${status === 'approved' ? 'одобрение' : 'отклонение'} запроса?`)) return;
 
     try {
-      const result = await api.updateTutorRequest(id, { status });
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/tutor-requests/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+
+      const result = await response.json();
       if (result.error) {
         throw new Error(result.error);
       }

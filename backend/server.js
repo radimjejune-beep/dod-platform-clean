@@ -101,9 +101,9 @@ const checkDatabasePort = async () => {
 // ===== ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ =====
 console.log('🔌 Подключение к базе данных...');
 
+// ✅ SSL ОТКЛЮЧЕН - для внутренних подключений на RelaxDev
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  connectionString: process.env.DATABASE_URL
 });
 
 // Проверка подключения к БД

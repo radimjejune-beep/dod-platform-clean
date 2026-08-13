@@ -14,6 +14,7 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,6 +23,7 @@ export default function CalendarPage() {
 
   const loadData = async () => {
     try {
+      setError('');
       const userData = await api.getMe();
       if (!userData || !userData.id) {
         navigate('/login');
@@ -30,9 +32,17 @@ export default function CalendarPage() {
       setProfile(userData);
 
       const eventsData = await api.getEvents();
-      setEvents(eventsData || []);
+      console.log('📅 Загружено мероприятий:', eventsData?.length || 0);
+      console.log('📅 Данные:', eventsData);
+      
+      // Фильтруем только одобренные мероприятия
+      const approvedEvents = (eventsData || []).filter(e => 
+        e.moderation_status === 'approved' || e.moderation_status === null
+      );
+      setEvents(approvedEvents);
     } catch (err) {
-      console.error('Ошибка:', err);
+      console.error('Ошибка загрузки календаря:', err);
+      setError('❌ Ошибка загрузки данных: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -45,10 +55,22 @@ export default function CalendarPage() {
   const tileContent = ({ date, view }) => {
     if (view === 'month') {
       const dayEvents = events.filter(event => {
-        const start = new Date(event.event_date);
-        const end = event.end_date ? new Date(event.end_date) : start;
-        return date >= start && date <= end;
+        if (!event || !event.event_date) return false;
+        try {
+          const start = new Date(event.event_date);
+          const end = event.end_date ? new Date(event.end_date) : start;
+          const compareDate = new Date(date);
+          compareDate.setHours(0, 0, 0, 0);
+          const startDate = new Date(start);
+          startDate.setHours(0, 0, 0, 0);
+          const endDate = new Date(end);
+          endDate.setHours(0, 0, 0, 0);
+          return compareDate >= startDate && compareDate <= endDate;
+        } catch (e) {
+          return false;
+        }
       });
+      
       if (dayEvents.length > 0) {
         return (
           <div style={{
@@ -83,9 +105,20 @@ export default function CalendarPage() {
   const tileClassName = ({ date, view }) => {
     if (view === 'month') {
       const dayEvents = events.filter(event => {
-        const start = new Date(event.event_date);
-        const end = event.end_date ? new Date(event.end_date) : start;
-        return date >= start && date <= end;
+        if (!event || !event.event_date) return false;
+        try {
+          const start = new Date(event.event_date);
+          const end = event.end_date ? new Date(event.end_date) : start;
+          const compareDate = new Date(date);
+          compareDate.setHours(0, 0, 0, 0);
+          const startDate = new Date(start);
+          startDate.setHours(0, 0, 0, 0);
+          const endDate = new Date(end);
+          endDate.setHours(0, 0, 0, 0);
+          return compareDate >= startDate && compareDate <= endDate;
+        } catch (e) {
+          return false;
+        }
       });
       if (dayEvents.length > 0) {
         return 'event-day';
@@ -96,9 +129,20 @@ export default function CalendarPage() {
 
   const getEventsForDate = (date) => {
     return events.filter(event => {
-      const start = new Date(event.event_date);
-      const end = event.end_date ? new Date(event.end_date) : start;
-      return date >= start && date <= end;
+      if (!event || !event.event_date) return false;
+      try {
+        const start = new Date(event.event_date);
+        const end = event.end_date ? new Date(event.end_date) : start;
+        const compareDate = new Date(date);
+        compareDate.setHours(0, 0, 0, 0);
+        const startDate = new Date(start);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(end);
+        endDate.setHours(0, 0, 0, 0);
+        return compareDate >= startDate && compareDate <= endDate;
+      } catch (e) {
+        return false;
+      }
     });
   };
 
@@ -106,6 +150,23 @@ export default function CalendarPage() {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
         <div className="spinner" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="page-background">
+        <Navigation profile={profile} />
+        <div className="container-page">
+          <div className="empty-state">
+            <div className="icon">❌</div>
+            <p style={{ fontSize: '18px', color: '#B3262E' }}>{error}</p>
+            <button className="btn-primary" onClick={() => { setError(''); loadData(); }}>
+              🔄 Попробовать снова
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

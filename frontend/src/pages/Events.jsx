@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import FilterBar from '../components/FilterBar';
 
 export default function Events() {
   const [profile, setProfile] = useState(null);
@@ -14,11 +15,14 @@ export default function Events() {
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
-  const [filterType, setFilterType] = useState('all'); // 'all', 'club', 'global'
   const [pendingEvents, setPendingEvents] = useState([]);
   const [showModerationModal, setShowModerationModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [moderationComment, setModerationComment] = useState('');
+  
+  // ===== ФИЛЬТРЫ =====
+  const [filters, setFilters] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
   
   const [form, setForm] = useState({
     id: null,
@@ -60,8 +64,6 @@ export default function Events() {
       
       const pending = eventsData.filter(e => e.moderation_status === 'pending');
       setPendingEvents(pending || []);
-      
-      applyFilter(eventsData || [], 'all');
     } catch (err) {
       console.error('Ошибка:', err);
     } finally {
@@ -69,71 +71,91 @@ export default function Events() {
     }
   };
 
-  const applyFilter = (eventsData, filter) => {
-    const role = profile?.role;
-    let filtered = eventsData;
+  // ===== ФИЛЬТРАЦИЯ =====
+  const filterConfig = [
+    {
+      key: 'type',
+      type: 'select',
+      label: 'Тип',
+      placeholder: 'Все типы',
+      options: [
+        { value: 'internal', label: '📌 Внутреннее' },
+        { value: 'outgoing', label: '🌍 Выездное' },
+        { value: 'global_forum', label: '🏛️ Форум' }
+      ]
+    },
+    {
+      key: 'moderation_status',
+      type: 'select',
+      label: 'Статус',
+      placeholder: 'Все статусы',
+      options: [
+        { value: 'approved', label: '✅ Одобрено' },
+        { value: 'pending', label: '⏳ На модерации' },
+        { value: 'rejected', label: '❌ Отклонено' }
+      ]
+    },
+    {
+      key: 'is_global',
+      type: 'checkbox',
+      label: '🌍 Глобальные'
+    }
+  ];
 
-    if (filter === 'club' && role === 'club_coordinator') {
-      const userClub = clubs.find(c => c.coordinator_id === profile?.id || c.leader_id === profile?.id);
-      if (userClub) {
-        filtered = eventsData.filter(e => e.club_id === userClub.id);
-      } else {
-        filtered = [];
-      }
-    } else if (filter === 'global') {
-      filtered = eventsData.filter(e => e.is_global === true);
+  const getFilteredEvents = () => {
+    let filtered = allEvents;
+
+    if (searchQuery) {
+      filtered = filtered.filter(e =>
+        e.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.location?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
 
-    setEvents(filtered);
-    setFilterType(filter);
+    if (filters.type) {
+      filtered = filtered.filter(e => e.type === filters.type);
+    }
+
+    if (filters.moderation_status) {
+      filtered = filtered.filter(e => e.moderation_status === filters.moderation_status);
+    }
+
+    if (filters.is_global) {
+      filtered = filtered.filter(e => e.is_global === true);
+    }
+
+    return filtered;
   };
 
-  const handleFilterChange = (filter) => {
-    applyFilter(allEvents, filter);
-  };
+  const filteredEvents = getFilteredEvents();
 
-  // ============================================================
-  // ПРОВЕРКА ПРАВ НА РЕДАКТИРОВАНИЕ
-  // ============================================================
+  // ===== ОСТАЛЬНЫЕ ФУНКЦИИ =====
   const canEdit = (event) => {
     const role = profile?.role;
     const userId = profile?.id;
-    
-    // Админ и координатор движения могут редактировать всё
     if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
       return true;
     }
-    
-    // Координатор КЮДа может редактировать только мероприятия своего клуба
     if (role === 'club_coordinator') {
       const userClub = clubs.find(c => c.coordinator_id === userId || c.leader_id === userId);
       if (userClub && event.club_id === userClub.id) {
         return true;
       }
     }
-    
     return false;
   };
 
   const canDelete = (event) => {
     const role = profile?.role;
-    const userId = profile?.id;
-    
-    // Админ и координатор движения могут удалять всё
     if (['admin', 'movement_coordinator'].includes(role)) {
       return true;
     }
-    
-    // Координатор КЮДа может удалять только свои мероприятия (не глобальные)
-    if (role === 'club_coordinator') {
-      const userClub = clubs.find(c => c.coordinator_id === userId || c.leader_id === userId);
-      if (userClub && event.club_id === userClub.id && !event.is_global) {
-        return true;
-      }
-    }
-    
     return false;
   };
+
+  const canCreate = ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(profile?.role);
+  const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -158,15 +180,12 @@ export default function Events() {
 
       let result;
       if (form.id) {
-        // ===== РЕДАКТИРОВАНИЕ =====
-        // Проверяем права
         const eventToEdit = allEvents.find(e => e.id === form.id);
         if (!canEdit(eventToEdit)) {
           throw new Error('У вас нет прав для редактирования этого мероприятия');
         }
         result = await api.updateEvent(form.id, eventData);
       } else {
-        // ===== СОЗДАНИЕ =====
         result = await api.createEvent(eventData);
       }
 
@@ -174,12 +193,7 @@ export default function Events() {
         throw new Error(result.error);
       }
 
-      if (result.moderation_status === 'pending') {
-        setMessage('✅ Мероприятие отправлено на модерацию!');
-      } else {
-        setMessage(form.id ? '✅ Мероприятие обновлено!' : '✅ Мероприятие создано!');
-      }
-      
+      setMessage(form.id ? '✅ Мероприятие обновлено!' : '✅ Мероприятие создано!');
       setMessageType('success');
       resetForm();
       loadData();
@@ -189,66 +203,6 @@ export default function Events() {
       setMessageType('error');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // ============================================================
-  // УДАЛЕНИЕ МЕРОПРИЯТИЯ
-  // ============================================================
-  const handleDelete = async (id) => {
-    const eventToDelete = allEvents.find(e => e.id === id);
-    if (!canDelete(eventToDelete)) {
-      setMessage('❌ У вас нет прав для удаления этого мероприятия');
-      setMessageType('error');
-      return;
-    }
-
-    if (!confirm('Удалить это мероприятие?')) return;
-
-    try {
-      const result = await api.deleteEvent(id);
-      if (result.error) throw new Error(result.error);
-      setMessage('✅ Мероприятие удалено');
-      setMessageType('success');
-      loadData();
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
-      setMessageType('error');
-    }
-  };
-
-  const handleModerate = async (id, status) => {
-    if (!confirm(`Подтвердить ${status === 'approved' ? 'одобрение' : 'отклонение'} мероприятия?`)) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`https://dod-backend.relaxdev.ru/api/events/${id}/moderate`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          status: status,
-          comment: moderationComment
-        })
-      });
-
-      const result = await response.json();
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      setMessage(status === 'approved' ? '✅ Мероприятие одобрено!' : '❌ Мероприятие отклонено');
-      setMessageType(status === 'approved' ? 'success' : 'error');
-      setShowModerationModal(false);
-      setModerationComment('');
-      loadData();
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
-      setMessageType('error');
     }
   };
 
@@ -291,14 +245,49 @@ export default function Events() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const canCreate = profile?.role === 'admin' || 
-                    profile?.role === 'movement_coordinator' || 
-                    profile?.role === 'club_coordinator' ||
-                    profile?.role === 'president' ||
-                    profile?.role === 'vice_president';
+  const handleDelete = async (id) => {
+    if (!confirm('Удалить это мероприятие?')) return;
+    try {
+      const result = await api.deleteEvent(id);
+      if (result.error) throw new Error(result.error);
+      setMessage('✅ Мероприятие удалено');
+      setMessageType('success');
+      loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
 
-  const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
-  const isClubCoordinator = profile?.role === 'club_coordinator';
+  const handleModerate = async (id, status) => {
+    if (!confirm(`Подтвердить ${status === 'approved' ? 'одобрение' : 'отклонение'}?`)) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/events/${id}/moderate`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          status: status,
+          comment: moderationComment
+        })
+      });
+      const result = await response.json();
+      if (result.error) throw new Error(result.error);
+      setMessage(status === 'approved' ? '✅ Мероприятие одобрено!' : '❌ Мероприятие отклонено');
+      setMessageType(status === 'approved' ? 'success' : 'error');
+      setShowModerationModal(false);
+      setModerationComment('');
+      loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
 
   if (loading) {
     return (
@@ -316,21 +305,10 @@ export default function Events() {
           <span style={{ fontSize: '32px' }}>📅</span>
           <div>
             <h1>Мероприятия</h1>
-            <p>
-              {isClubCoordinator 
-                ? `Всего мероприятий: ${events.length}` 
-                : `Всего мероприятий: ${events.length}`}
-            </p>
+            <p>Всего: {filteredEvents.length}</p>
           </div>
           {canCreate && (
-            <button
-              className="btn-primary"
-              style={{ marginLeft: 'auto' }}
-              onClick={() => {
-                resetForm();
-                setShowForm(!showForm);
-              }}
-            >
+            <button className="btn-primary" style={{ marginLeft: 'auto' }} onClick={() => { resetForm(); setShowForm(!showForm); }}>
               {showForm ? '✖ Закрыть' : '➕ Создать'}
             </button>
           )}
@@ -342,41 +320,19 @@ export default function Events() {
           </div>
         )}
 
-        {/* Ожидающие модерации */}
         {canModerate && pendingEvents.length > 0 && (
-          <div className="card" style={{ 
-            marginBottom: '20px', 
-            background: '#FBF4DC',
-            border: '2px solid #C9A227'
-          }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#8A6A00', marginBottom: '8px' }}>
+          <div className="card" style={{ marginBottom: '20px', background: '#FBF4DC', border: '2px solid #C9A227' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#8A6A00' }}>
               ⏳ Ожидают модерации ({pendingEvents.length})
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
               {pendingEvents.map((e) => (
-                <div key={e.id} style={{
-                  padding: '12px 16px',
-                  background: 'white',
-                  borderRadius: '8px',
-                  border: '1px solid #E2E7EF',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
+                <div key={e.id} style={{ padding: '12px 16px', background: 'white', borderRadius: '8px', border: '1px solid #E2E7EF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontWeight: '600', color: '#0B1F3A' }}>{e.title}</div>
-                    <div style={{ fontSize: '13px', color: '#667085' }}>
-                      🏫 {e.club_name || 'Без клуба'} • 📅 {new Date(e.event_date).toLocaleDateString('ru-RU')}
-                    </div>
+                    <div style={{ fontWeight: '600' }}>{e.title}</div>
+                    <div style={{ fontSize: '13px', color: '#667085' }}>🏫 {e.club_name || 'Без клуба'}</div>
                   </div>
-                  <button
-                    className="btn-primary"
-                    style={{ padding: '6px 16px', fontSize: '12px' }}
-                    onClick={() => {
-                      setSelectedEvent(e);
-                      setShowModerationModal(true);
-                    }}
-                  >
+                  <button className="btn-primary" style={{ padding: '6px 16px', fontSize: '12px' }} onClick={() => { setSelectedEvent(e); setShowModerationModal(true); }}>
                     📋 Рассмотреть
                   </button>
                 </div>
@@ -385,406 +341,92 @@ export default function Events() {
           </div>
         )}
 
-        {/* ФИЛЬТРЫ */}
-        {isClubCoordinator && (
-          <div style={{
-            display: 'flex',
-            gap: '12px',
-            marginBottom: '20px',
-            flexWrap: 'wrap'
-          }}>
-            <button
-              className={filterType === 'all' ? 'btn-primary' : 'btn-secondary'}
-              style={{ padding: '8px 20px', fontSize: '13px' }}
-              onClick={() => handleFilterChange('all')}
-            >
-              📋 Все мероприятия
-            </button>
-            <button
-              className={filterType === 'club' ? 'btn-primary' : 'btn-secondary'}
-              style={{ padding: '8px 20px', fontSize: '13px' }}
-              onClick={() => handleFilterChange('club')}
-            >
-              🏫 Наши мероприятия
-            </button>
-            <button
-              className={filterType === 'global' ? 'btn-primary' : 'btn-secondary'}
-              style={{ padding: '8px 20px', fontSize: '13px' }}
-              onClick={() => handleFilterChange('global')}
-            >
-              🌍 Мероприятия ДОД
-            </button>
+        <FilterBar
+          filters={filterConfig}
+          onFilterChange={setFilters}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="🔍 Поиск по названию, описанию, месту..."
+        >
+          <div style={{ fontSize: '14px', color: '#667085', padding: '6px 12px', background: '#F8FAFC', borderRadius: '8px' }}>
+            Найдено: <strong>{filteredEvents.length}</strong>
           </div>
-        )}
+        </FilterBar>
 
-        {/* ФОРМА СОЗДАНИЯ/РЕДАКТИРОВАНИЯ */}
         {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#0B1F3A', marginBottom: '20px' }}>
-              {form.id ? '✏️ Редактировать мероприятие' : '📝 Создать мероприятие'}
-            </h3>
+            <h3>{form.id ? '✏️ Редактировать' : '📝 Создать'}</h3>
             <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Название *</label>
-                <input
-                  type="text"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  required
-                  placeholder="Введите название"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Описание</label>
-                <textarea
-                  rows="3"
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="Описание мероприятия"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Место</label>
-                <input
-                  type="text"
-                  value={form.location}
-                  onChange={(e) => setForm({ ...form, location: e.target.value })}
-                  placeholder="Адрес или место проведения"
-                />
-              </div>
-
+              <div className="form-group"><label>Название *</label><input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
+              <div className="form-group"><label>Описание</label><textarea rows="3" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+              <div className="form-group"><label>Место</label><input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></div>
               <div className="grid-2">
-                <div className="form-group">
-                  <label>Дата начала *</label>
-                  <input
-                    type="date"
-                    value={form.event_date}
-                    onChange={(e) => setForm({ ...form, event_date: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Дата окончания</label>
-                  <input
-                    type="date"
-                    value={form.end_date}
-                    onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-                  />
-                </div>
+                <div className="form-group"><label>Дата начала *</label><input type="date" value={form.event_date} onChange={(e) => setForm({ ...form, event_date: e.target.value })} required /></div>
+                <div className="form-group"><label>Дата окончания</label><input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} /></div>
               </div>
-
               <div className="grid-2">
-                <div className="form-group">
-                  <label>Время начала</label>
-                  <input
-                    type="time"
-                    value={form.start_time}
-                    onChange={(e) => setForm({ ...form, start_time: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Время окончания</label>
-                  <input
-                    type="time"
-                    value={form.end_time}
-                    onChange={(e) => setForm({ ...form, end_time: e.target.value })}
-                  />
-                </div>
+                <div className="form-group"><label>Время начала</label><input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} /></div>
+                <div className="form-group"><label>Время окончания</label><input type="time" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} /></div>
               </div>
-
               <div className="grid-3">
-                <div className="form-group">
-                  <label>Тип</label>
-                  <select
-                    value={form.type}
-                    onChange={(e) => setForm({ ...form, type: e.target.value })}
-                  >
-                    <option value="internal">Внутреннее</option>
-                    <option value="outgoing">Выездное</option>
-                    <option value="global_forum">Глобальный форум</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Лимит мест</label>
-                  <input
-                    type="number"
-                    value={form.capacity}
-                    onChange={(e) => setForm({ ...form, capacity: e.target.value })}
-                    min="1"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Клуб</label>
-                  <select
-                    value={form.club_id}
-                    onChange={(e) => setForm({ ...form, club_id: e.target.value })}
-                  >
-                    <option value="">Без клуба</option>
-                    {clubs.map((club) => (
-                      <option key={club.id} value={club.id}>{club.name}</option>
-                    ))}
-                  </select>
-                </div>
+                <div className="form-group"><label>Тип</label><select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}><option value="internal">Внутреннее</option><option value="outgoing">Выездное</option><option value="global_forum">Глобальный форум</option></select></div>
+                <div className="form-group"><label>Лимит мест</label><input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} min="1" /></div>
+                <div className="form-group"><label>Клуб</label><select value={form.club_id} onChange={(e) => setForm({ ...form, club_id: e.target.value })}><option value="">Без клуба</option>{clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
               </div>
-
-              <div className="form-group">
-                <label>Ссылка на форму сбора данных</label>
-                <input
-                  type="url"
-                  value={form.form_url}
-                  onChange={(e) => setForm({ ...form, form_url: e.target.value })}
-                  placeholder="https://docs.google.com/forms/..."
-                />
-              </div>
-
-              {/* ЧЕКБОКС ДЛЯ ГЛОБАЛЬНОГО МЕРОПРИЯТИЯ */}
-              {isClubCoordinator && (
-                <div className="form-group">
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={form.is_global}
-                      onChange={(e) => setForm({ ...form, is_global: e.target.checked })}
-                      style={{ width: '18px', height: '18px' }}
-                    />
-                    <span style={{ fontWeight: '500', color: '#0B1F3A' }}>
-                      🌍 Глобальное мероприятие ДОД
-                    </span>
-                  </label>
-                  {form.is_global && (
-                    <div style={{
-                      marginTop: '8px',
-                      padding: '12px',
-                      background: '#FBF4DC',
-                      borderRadius: '8px',
-                      fontSize: '13px',
-                      color: '#8A6A00'
-                    }}>
-                      ⚠️ Глобальное мероприятие будет отправлено на модерацию координатору движения
-                    </div>
-                  )}
-                </div>
+              <div className="form-group"><label>Ссылка на форму</label><input type="url" value={form.form_url} onChange={(e) => setForm({ ...form, form_url: e.target.value })} /></div>
+              {profile?.role === 'club_coordinator' && (
+                <div className="form-group"><label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><input type="checkbox" checked={form.is_global} onChange={(e) => setForm({ ...form, is_global: e.target.checked })} /> 🌍 Глобальное мероприятие</label></div>
               )}
-
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Сохранение...' : form.id ? '💾 Обновить' : '✅ Создать'}
-                </button>
-                <button type="button" className="btn-secondary" onClick={resetForm}>
-                  ❌ Отмена
-                </button>
+                <button type="submit" className="btn-success" disabled={loading}>{loading ? '⏳' : form.id ? '💾 Обновить' : '✅ Создать'}</button>
+                <button type="button" className="btn-secondary" onClick={resetForm}>❌ Отмена</button>
               </div>
             </form>
           </div>
         )}
 
-        {/* СПИСОК МЕРОПРИЯТИЙ */}
         <div className="card">
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
-            {filterType === 'club' ? '🏫 Наши мероприятия' : 
-             filterType === 'global' ? '🌍 Мероприятия ДОД' : 
-             'Все мероприятия'}
-          </h3>
-
-          {events.length === 0 ? (
-            <div className="empty-state">
-              <div className="icon">📭</div>
-              <p>Мероприятий пока нет</p>
-            </div>
+          <h3 style={{ marginBottom: '16px' }}>Все мероприятия</h3>
+          {filteredEvents.length === 0 ? (
+            <div className="empty-state"><div className="icon">📭</div><p>Мероприятий не найдено</p></div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {events.map((event) => {
-                const userCanEdit = canEdit(event);
-                const userCanDelete = canDelete(event);
-                
-                return (
-                  <div
-                    key={event.id}
-                    className="list-item"
-                    style={{
-                      borderLeftColor: event.moderation_status === 'pending' ? '#C9A227' :
-                                    event.is_global ? '#6B46C1' :
-                                    event.type === 'internal' ? '#174A7E' :
-                                    event.type === 'outgoing' ? '#C9A227' : '#B3262E'
-                    }}
-                  >
-                    <div className="title">
-                      {event.title}
-                      {event.is_global && (
-                        <span className="tag" style={{ 
-                          marginLeft: '8px',
-                          background: '#EDE7F6',
-                          color: '#6B46C1',
-                          fontSize: '10px'
-                        }}>
-                          🌍 Глобальное
-                        </span>
-                      )}
-                      {event.moderation_status === 'pending' && (
-                        <span className="tag" style={{ 
-                          marginLeft: '8px',
-                          background: '#FBF4DC',
-                          color: '#8A6A00',
-                          fontSize: '10px'
-                        }}>
-                          ⏳ На модерации
-                        </span>
-                      )}
-                      {event.moderation_status === 'rejected' && (
-                        <span className="tag" style={{ 
-                          marginLeft: '8px',
-                          background: '#FCEBEC',
-                          color: '#B3262E',
-                          fontSize: '10px'
-                        }}>
-                          ❌ Отклонено
-                        </span>
-                      )}
-                    </div>
-                    <div className="subtitle">
-                      📅 {event.event_date ? new Date(event.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
-                      {event.location && ` 📍 ${event.location}`}
-                      {event.club_name && ` 🏫 ${event.club_name}`}
-                    </div>
-                    {event.description && <div className="meta">{event.description}</div>}
-                    
-                    {/* КНОПКИ ДЕЙСТВИЙ */}
-                    <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      {userCanEdit && (
-                        <button
-                          className="btn-secondary"
-                          style={{ padding: '4px 12px', fontSize: '12px' }}
-                          onClick={() => handleEdit(event)}
-                        >
-                          ✏️ Редактировать
-                        </button>
-                      )}
-                      {userCanDelete && (
-                        <button
-                          className="btn-danger"
-                          style={{ padding: '4px 12px', fontSize: '12px' }}
-                          onClick={() => handleDelete(event.id)}
-                        >
-                          🗑️ Удалить
-                        </button>
-                      )}
-                      {canModerate && event.moderation_status === 'pending' && (
-                        <>
-                          <button
-                            className="btn-success"
-                            style={{ padding: '4px 12px', fontSize: '12px' }}
-                            onClick={() => {
-                              setSelectedEvent(event);
-                              setShowModerationModal(true);
-                            }}
-                          >
-                            ✅ Одобрить
-                          </button>
-                          <button
-                            className="btn-danger"
-                            style={{ padding: '4px 12px', fontSize: '12px' }}
-                            onClick={() => {
-                              setSelectedEvent(event);
-                              setShowModerationModal(true);
-                            }}
-                          >
-                            ❌ Отклонить
-                          </button>
-                        </>
-                      )}
-                    </div>
+              {filteredEvents.map((event) => (
+                <div key={event.id} className="list-item" style={{ borderLeftColor: event.moderation_status === 'pending' ? '#C9A227' : event.is_global ? '#6B46C1' : '#174A7E' }}>
+                  <div className="title">
+                    {event.title}
+                    {event.is_global && <span className="tag" style={{ marginLeft: '8px', background: '#EDE7F6', color: '#6B46C1', fontSize: '10px' }}>🌍 Глобальное</span>}
+                    {event.moderation_status === 'pending' && <span className="tag" style={{ marginLeft: '8px', background: '#FBF4DC', color: '#8A6A00', fontSize: '10px' }}>⏳ На модерации</span>}
+                    {event.moderation_status === 'rejected' && <span className="tag" style={{ marginLeft: '8px', background: '#FCEBEC', color: '#B3262E', fontSize: '10px' }}>❌ Отклонено</span>}
                   </div>
-                );
-              })}
+                  <div className="subtitle">📅 {event.event_date ? new Date(event.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'} {event.location && `📍 ${event.location}`} {event.club_name && `🏫 ${event.club_name}`}</div>
+                  <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {canEdit(event) && <button className="btn-secondary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => handleEdit(event)}>✏️ Редактировать</button>}
+                    {canDelete(event) && <button className="btn-danger" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => handleDelete(event.id)}>🗑️ Удалить</button>}
+                    {canModerate && event.moderation_status === 'pending' && (
+                      <>
+                        <button className="btn-success" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => { setSelectedEvent(event); setShowModerationModal(true); }}>✅ Одобрить</button>
+                        <button className="btn-danger" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => { setSelectedEvent(event); setShowModerationModal(true); }}>❌ Отклонить</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
       </div>
 
-      {/* МОДАЛЬНОЕ ОКНО ДЛЯ МОДЕРАЦИИ */}
       {showModerationModal && selectedEvent && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(11, 31, 58, 0.5)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '20px'
-          }}
-          onClick={() => setShowModerationModal(false)}
-        >
-          <div
-            className="card"
-            style={{
-              maxWidth: '500px',
-              width: '100%',
-              padding: '32px',
-              maxHeight: '80vh',
-              overflow: 'auto'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#0B1F3A', marginBottom: '4px' }}>
-              📋 Модерация мероприятия
-            </h3>
-            <p style={{ color: '#667085', marginBottom: '16px' }}>
-              <strong>{selectedEvent.title}</strong>
-              <br />
-              🏫 {selectedEvent.club_name || 'Без клуба'}
-              <br />
-              📅 {new Date(selectedEvent.event_date).toLocaleDateString('ru-RU')}
-            </p>
-
-            <div className="form-group">
-              <label>Комментарий (необязательно)</label>
-              <textarea
-                rows="3"
-                value={moderationComment}
-                onChange={(e) => setModerationComment(e.target.value)}
-                placeholder="Причина одобрения или отклонения..."
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '1.5px solid #D5DCE7',
-                  borderRadius: '10px',
-                  fontSize: '14px',
-                  resize: 'vertical'
-                }}
-              />
-            </div>
-
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(11, 31, 58, 0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={() => setShowModerationModal(false)}>
+          <div className="card" style={{ maxWidth: '500px', width: '100%', padding: '32px' }} onClick={(e) => e.stopPropagation()}>
+            <h3>📋 Модерация</h3>
+            <p><strong>{selectedEvent.title}</strong><br />🏫 {selectedEvent.club_name || 'Без клуба'}</p>
+            <div className="form-group"><label>Комментарий</label><textarea rows="3" value={moderationComment} onChange={(e) => setModerationComment(e.target.value)} placeholder="Причина..." /></div>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                className="btn-success"
-                style={{ flex: 1 }}
-                onClick={() => handleModerate(selectedEvent.id, 'approved')}
-              >
-                ✅ Одобрить
-              </button>
-              <button
-                className="btn-danger"
-                style={{ flex: 1 }}
-                onClick={() => handleModerate(selectedEvent.id, 'rejected')}
-              >
-                ❌ Отклонить
-              </button>
+              <button className="btn-success" style={{ flex: 1 }} onClick={() => handleModerate(selectedEvent.id, 'approved')}>✅ Одобрить</button>
+              <button className="btn-danger" style={{ flex: 1 }} onClick={() => handleModerate(selectedEvent.id, 'rejected')}>❌ Отклонить</button>
             </div>
-            <button
-              className="btn-secondary"
-              style={{ width: '100%', marginTop: '12px' }}
-              onClick={() => setShowModerationModal(false)}
-            >
-              Отмена
-            </button>
+            <button className="btn-secondary" style={{ width: '100%', marginTop: '12px' }} onClick={() => setShowModerationModal(false)}>Отмена</button>
           </div>
         </div>
       )}

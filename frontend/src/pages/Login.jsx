@@ -16,8 +16,6 @@ export default function Login() {
     setError('');
 
     try {
-      console.log('🔐 Попытка входа:', email);
-
       const response = await fetch('https://dod-backend.relaxdev.ru/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -25,7 +23,6 @@ export default function Login() {
       });
 
       const data = await response.json();
-      console.log('📦 Ответ сервера:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Ошибка входа');
@@ -34,9 +31,8 @@ export default function Login() {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
-      navigate('/dashboard');
+      window.location.href = '/dashboard';
     } catch (err) {
-      console.error('❌ Ошибка:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -44,84 +40,32 @@ export default function Login() {
   };
 
   return (
-    <div style={{ 
-      maxWidth: '400px', 
-      margin: '50px auto', 
-      padding: '30px', 
-      background: 'white', 
-      borderRadius: '12px', 
-      boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
-    }}>
+    <div style={{ maxWidth: '400px', margin: '50px auto', padding: '30px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
       <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>🔐 Вход</h2>
-      
-      {error && (
-        <div style={{ 
-          padding: '12px', 
-          background: '#fee', 
-          color: '#c00', 
-          borderRadius: '8px', 
-          marginBottom: '16px', 
-          textAlign: 'center' 
-        }}>
-          ❌ {error}
-        </div>
-      )}
-      
+      {error && <p style={{ color: 'red', textAlign: 'center' }}>❌ {error}</p>}
       <form onSubmit={handleLogin}>
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '14px' }}>
-            Email
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{ 
-              width: '100%', 
-              padding: '10px', 
-              borderRadius: '8px', 
-              border: '1px solid #ddd', 
-              fontSize: '16px' 
-            }}
-            required
-          />
-        </div>
-        
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '14px' }}>
-            Пароль
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{ 
-              width: '100%', 
-              padding: '10px', 
-              borderRadius: '8px', 
-              border: '1px solid #ddd', 
-              fontSize: '16px' 
-            }}
-            required
-          />
-        </div>
-        
-        <button
-          type="submit"
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+          style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+          required
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Пароль"
+          style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+          required
+        />
+        <button 
+          type="submit" 
           disabled={loading}
-          style={{
-            width: '100%',
-            padding: '12px',
-            background: loading ? '#999' : '#0B1F3A',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            cursor: loading ? 'not-allowed' : 'pointer'
-          }}
+          style={{ width: '100%', padding: '12px', background: loading ? '#999' : '#0B1F3A', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', cursor: 'pointer' }}
         >
-          {loading ? '⏳ Вход...' : '🔑 Войти'}
+          {loading ? 'Загрузка...' : 'Войти'}
         </button>
       </form>
     </div>

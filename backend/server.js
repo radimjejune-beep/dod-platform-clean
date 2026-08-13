@@ -2320,6 +2320,332 @@ app.post('/api/club-events/:id/register', async (req, res) => {
 });
 
 // ============================================================
+// ЗАДАНИЯ ДЛЯ ПРЕЗИДЕНТОВ
+// ============================================================
+
+// ПОЛУЧЕНИЕ ЗАДАНИЙ
+app.get('/api/president-tasks', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    let query = `
+      SELECT pt.*, 
+             u.full_name as created_by_name,
+             u2.full_name as assigned_to_name,
+             c.name as club_name,
+             (SELECT COUNT(*) FROM president_task_responses WHERE task_id = pt.id) as response_count
+      FROM president_tasks pt
+      LEFT JOIN users u ON pt.created_by = u.id
+      LEFT JOIN users u2 ON pt.assigned_to = u2.id
+      LEFT JOIN clubs c ON pt.club_id = c.id
+    `;
+    const params = [];
+    const conditions = [];
+
+    // ===== ФИЛЬТРАЦИЯ ПО РОЛЯМ =====
+    if (userRole === 'club_coordinator') {
+      // Координатор КЮДа — видит задания своего клуба
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      if (clubResult.rows.length > 0) {
+        conditions.push(`(pt.club_id = $${params.length + 1} OR pt.is_global = true)`);
+        params.push(clubResult.rows[0].club_id);
+      } else {
+        conditions.push('1 = 0');
+      }
+    } else if (userRole === 'president') {
+      // Президент — видит только свои задания
+      conditions.push(`(pt.assigned_to = $${params.length + 1} OR pt.assigned_to IS NULL)`);
+      params.push(userId);
+    } else if (userRole === 'vice_president') {
+      // Вице-президент — видит все задания (как наблюдатель)
+      conditions.push('1 = 1');
+    } else if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      conditions.push('1 = 0');
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    query += ' GROUP BY pt.id, u.full_name, u2.full_name, c.name ORDER BY pt.created_at DESC';
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Ошибка получения заданий:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// СОЗДАНИЕ ЗАДАНИЯ
+app.post('/api/president-tasks', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    const { title, description, priority, club_id, assigned_to, is_global, deadline } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ error: 'Название задания обязательно' });
+    }
+
+    // Проверка прав
+    if (userRole === 'club_coordinator') {
+      // Координатор КЮДа может создавать задания только для своего клуба
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      if (clubResult.rows.length === 0) {
+        return res.status(403).json({ error: 'Вы не привязаны к КЮДу' });
+      }
+      const clubId = clubResult.rows[0].club_id;
+      
+      // Если указан другой клуб — запрещаем
+      if (club_id && club_id !== clubId) {
+        return res.status(403).json({ error: 'Вы можете создавать задания только для своего клуба' });
+      }
+      
+      // Координатор не может создавать глобальные задания
+      if (is_global) {
+        return res.status(403).json({ error: 'Координатор КЮДа не может создавать глобальные задания' });
+      }
+    } else if (!['admin', 'movement_coordinator', 'vice_president'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для создания заданий' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO president_tasks 
+       (id, title, description, priority, club_id, assigned_to, is_global, deadline, created_by, created_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, NOW())
+       RETURNING *`,
+      [title, description || '', priority || 'medium', club_id || null, assigned_to || null, is_global || false, deadline || null, userId]
+    );
+
+    const newTask = result.rows[0];
+
+    // ===== УВЕДОМЛЕНИЯ =====
+    // Если назначен конкретный президент
+    if (assigned_to) {
+      await createNotification(
+        assigned_to,
+        'president',
+        '👑 Новое задание',
+        `Вам назначено новое задание: "${title}"`,
+        '/president-tasks',
+        'high'
+      );
+    }
+
+    // Если глобальное — уведомляем всех президентов
+    if (is_global) {
+      const presidents = await pool.query(
+        `SELECT id FROM users WHERE role = 'president' AND status = 'active'`
+      );
+      for (const p of presidents.rows) {
+        await createNotification(
+          p.id,
+          'president',
+          '👑 Новое глобальное задание',
+          `Новое задание для всех президентов: "${title}"`,
+          '/president-tasks',
+          'high'
+        );
+      }
+    }
+
+    res.status(201).json(newTask);
+  } catch (error) {
+    console.error('Ошибка создания задания:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ОБНОВЛЕНИЕ СТАТУСА ЗАДАНИЯ
+app.patch('/api/president-tasks/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    const taskCheck = await pool.query(
+      'SELECT assigned_to, created_by, club_id FROM president_tasks WHERE id = $1',
+      [id]
+    );
+    if (taskCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Задание не найдено' });
+    }
+
+    const task = taskCheck.rows[0];
+
+    // Проверка прав на изменение статуса
+    const isAdmin = ['admin', 'movement_coordinator', 'vice_president'].includes(userRole);
+    const isCreator = task.created_by === userId;
+    const isAssigned = task.assigned_to === userId || task.assigned_to === null;
+
+    if (!isAdmin && !isCreator && !isAssigned) {
+      return res.status(403).json({ error: 'У вас нет прав для изменения статуса' });
+    }
+
+    const result = await pool.query(
+      `UPDATE president_tasks 
+       SET status = $1, 
+           updated_at = NOW(),
+           completed_at = CASE WHEN $1 = 'completed' THEN NOW() ELSE completed_at END
+       WHERE id = $2
+       RETURNING *`,
+      [status, id]
+    );
+
+    // Уведомление создателю о смене статуса
+    if (task.created_by && task.created_by !== userId) {
+      await createNotification(
+        task.created_by,
+        'president',
+        '📋 Статус задания изменён',
+        `Задание "${result.rows[0].title}" изменено на "${status}"`,
+        '/president-tasks',
+        'normal'
+      );
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Ошибка обновления задания:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ОТВЕТ НА ЗАДАНИЕ (ДЛЯ ПРЕЗИДЕНТА)
+app.post('/api/president-tasks/:id/respond', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { response } = req.body;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (userRole !== 'president' && userRole !== 'vice_president') {
+      return res.status(403).json({ error: 'Только президенты могут отвечать на задания' });
+    }
+
+    if (!response) {
+      return res.status(400).json({ error: 'Текст ответа обязателен' });
+    }
+
+    // Проверяем, что задание существует и назначено этому президенту
+    const taskCheck = await pool.query(
+      'SELECT id, assigned_to, created_by, title FROM president_tasks WHERE id = $1',
+      [id]
+    );
+    if (taskCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Задание не найдено' });
+    }
+
+    const task = taskCheck.rows[0];
+    if (task.assigned_to && task.assigned_to !== userId) {
+      return res.status(403).json({ error: 'Это задание не назначено вам' });
+    }
+
+    // Сохраняем ответ
+    const result = await pool.query(
+      `INSERT INTO president_task_responses (id, task_id, president_id, response, status, created_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, 'pending', NOW())
+       RETURNING *`,
+      [id, userId, response]
+    );
+
+    // Уведомление создателю
+    if (task.created_by) {
+      await createNotification(
+        task.created_by,
+        'president',
+        '📨 Ответ на задание',
+        `Президент ответил на задание "${task.title}"`,
+        '/president-tasks',
+        'normal'
+      );
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Ошибка ответа на задание:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// УДАЛЕНИЕ ЗАДАНИЯ
+app.delete('/api/president-tasks/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    const taskCheck = await pool.query(
+      'SELECT created_by FROM president_tasks WHERE id = $1',
+      [id]
+    );
+    if (taskCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Задание не найдено' });
+    }
+
+    // Только создатель или админ/координатор движения может удалить
+    const isAdmin = ['admin', 'movement_coordinator', 'vice_president'].includes(userRole);
+    if (taskCheck.rows[0].created_by !== userId && !isAdmin) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления' });
+    }
+
+    await pool.query('DELETE FROM president_tasks WHERE id = $1', [id]);
+    res.json({ message: 'Задание удалено' });
+  } catch (error) {
+    console.error('Ошибка удаления задания:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
 // ЗАПУСК СЕРВЕРА
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {

@@ -9,15 +9,26 @@ export default function PresidentTasks() {
   const [profile, setProfile] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showResponseModal, setShowResponseModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [responseText, setResponseText] = useState('');
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
+  const [clubs, setClubs] = useState([]);
+  const [presidents, setPresidents] = useState([]);
   const [form, setForm] = useState({
     title: '',
     description: '',
-    deadline: ''
+    priority: 'medium',
+    deadline: '',
+    club_id: '',
+    assigned_to: '',
+    is_global: false
   });
   const navigate = useNavigate();
+
+  const role = profile?.role;
 
   useEffect(() => {
     loadData();
@@ -32,26 +43,64 @@ export default function PresidentTasks() {
       }
       setProfile(userData);
 
-      // TODO: добавить API для получения заданий президента
-      setTasks([]);
+      // Загружаем задания
+      const token = localStorage.getItem('token');
+      const tasksResponse = await fetch('https://dod-backend.relaxdev.ru/api/president-tasks', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const tasksData = await tasksResponse.json();
+      setTasks(tasksData || []);
+
+      // Загружаем клубы
+      const clubsData = await api.getClubs();
+      setClubs(clubsData || []);
+
+      // Загружаем президентов
+      const usersData = await api.getUsers();
+      const presidentsData = usersData.filter(u => u.is_president === true);
+      setPresidents(presidentsData || []);
+
     } catch (err) {
       console.error('Ошибка:', err);
+      setMessage('❌ Ошибка загрузки: ' + err.message);
+      setMessageType('error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e) => {
+  const canCreate = role === 'admin' || 
+                    role === 'movement_coordinator' || 
+                    role === 'vice_president' ||
+                    role === 'club_coordinator';
+
+  const isPresident = role === 'president' || role === 'vice_president';
+
+  const handleCreateTask = async (e) => {
     e.preventDefault();
     setMessage('');
     setLoading(true);
 
     try {
-      // TODO: добавить API для создания задания
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://dod-backend.relaxdev.ru/api/president-tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(form)
+      });
+
+      const result = await response.json();
+      if (result.error) throw new Error(result.error);
+
       setMessage('✅ Задание создано!');
       setMessageType('success');
-      setForm({ title: '', description: '', deadline: '' });
-      setShowTaskForm(false);
+      setShowCreateForm(false);
+      resetForm();
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
@@ -62,19 +111,97 @@ export default function PresidentTasks() {
     }
   };
 
-  const getStatusLabel = (status) => {
-    const labels = {
-      'pending': { text: 'Ожидает', color: '#8A6A00', bg: '#FBF4DC' },
-      'in_progress': { text: 'В работе', color: '#174A7E', bg: '#EAF2FA' },
-      'completed': { text: 'Выполнено', color: '#16845B', bg: '#E8F5EF' },
-      'rejected': { text: 'Отклонено', color: '#B3262E', bg: '#FCEBEC' }
-    };
-    return labels[status] || labels['pending'];
+  const resetForm = () => {
+    setForm({
+      title: '',
+      description: '',
+      priority: 'medium',
+      deadline: '',
+      club_id: '',
+      assigned_to: '',
+      is_global: false
+    });
   };
 
-  const canCreate = profile?.role === 'admin' || 
-                    profile?.role === 'movement_coordinator' ||
-                    profile?.role === 'club_coordinator';
+  const handleSubmitResponse = async (e) => {
+    e.preventDefault();
+    setMessage('');
+    setLoading(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/president-tasks/${selectedTask.id}/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ response: responseText })
+      });
+
+      const result = await response.json();
+      if (result.error) throw new Error(result.error);
+
+      setMessage('✅ Ответ отправлен!');
+      setMessageType('success');
+      setShowResponseModal(false);
+      setResponseText('');
+      loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateStatus = async (taskId, status) => {
+    if (!confirm(`Подтвердить изменение статуса на "${status}"?`)) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/president-tasks/${taskId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+
+      const result = await response.json();
+      if (result.error) throw new Error(result.error);
+
+      setMessage(`✅ Статус изменён на "${status}"`);
+      setMessageType('success');
+      loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const badges = {
+      'pending': { label: '⏳ Ожидает', color: '#C9A227', bg: '#FBF4DC' },
+      'in_progress': { label: '🔄 В работе', color: '#174A7E', bg: '#EAF2FA' },
+      'completed': { label: '✅ Выполнено', color: '#16845B', bg: '#E8F5EF' },
+      'rejected': { label: '❌ Отклонено', color: '#B3262E', bg: '#FCEBEC' }
+    };
+    return badges[status] || badges['pending'];
+  };
+
+  const getPriorityLabel = (priority) => {
+    const labels = {
+      'low': '🟢 Низкий',
+      'medium': '🟡 Средний',
+      'high': '🔴 Высокий',
+      'urgent': '🔥 Срочный'
+    };
+    return labels[priority] || priority;
+  };
 
   if (loading) {
     return (
@@ -92,15 +219,19 @@ export default function PresidentTasks() {
           <span style={{ fontSize: '32px' }}>👑</span>
           <div>
             <h1>Задания президента</h1>
-            <p>Управление заданиями для президентов КЮДов</p>
+            <p>
+              {isPresident 
+                ? 'Ваши задания и поручения' 
+                : `Управление заданиями для президентов (${tasks.length})`}
+            </p>
           </div>
           {canCreate && (
             <button
               className="btn-primary"
               style={{ marginLeft: 'auto' }}
-              onClick={() => setShowTaskForm(!showTaskForm)}
+              onClick={() => setShowCreateForm(!showCreateForm)}
             >
-              {showTaskForm ? '✖ Закрыть' : '➕ Создать задание'}
+              {showCreateForm ? '✖ Закрыть' : '➕ Создать задание'}
             </button>
           )}
         </div>
@@ -111,21 +242,21 @@ export default function PresidentTasks() {
           </div>
         )}
 
-        {/* ФОРМА СОЗДАНИЯ ЗАДАНИЯ */}
-        {showTaskForm && canCreate && (
+        {/* ФОРМА СОЗДАНИЯ */}
+        {showCreateForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
-              📝 Создать задание для президента
+            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+              📝 Создать задание
             </h3>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleCreateTask}>
               <div className="form-group">
-                <label>Название задания *</label>
+                <label>Заголовок *</label>
                 <input
                   type="text"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   required
-                  placeholder="Например: Подготовить отчет о деятельности клуба"
+                  placeholder="Например: Подготовить отчёт о деятельности"
                 />
               </div>
 
@@ -139,20 +270,75 @@ export default function PresidentTasks() {
                 />
               </div>
 
+              <div className="grid-3">
+                <div className="form-group">
+                  <label>Приоритет</label>
+                  <select
+                    value={form.priority}
+                    onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                  >
+                    <option value="low">🟢 Низкий</option>
+                    <option value="medium">🟡 Средний</option>
+                    <option value="high">🔴 Высокий</option>
+                    <option value="urgent">🔥 Срочный</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Срок выполнения</label>
+                  <input
+                    type="date"
+                    value={form.deadline}
+                    onChange={(e) => setForm({ ...form, deadline: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Клуб (если для конкретного)</label>
+                  <select
+                    value={form.club_id}
+                    onChange={(e) => setForm({ ...form, club_id: e.target.value })}
+                  >
+                    <option value="">Все клубы</option>
+                    {clubs.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="form-group">
-                <label>Срок выполнения</label>
-                <input
-                  type="date"
-                  value={form.deadline}
-                  onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-                />
+                <label>Назначить президенту (если конкретному)</label>
+                <select
+                  value={form.assigned_to}
+                  onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
+                >
+                  <option value="">Всем президентам</option>
+                  {presidents.map(p => (
+                    <option key={p.id} value={p.id}>{p.full_name} ({p.club_name || 'Без клуба'})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={form.is_global}
+                    onChange={(e) => setForm({ ...form, is_global: e.target.checked })}
+                    style={{ width: '18px', height: '18px' }}
+                  />
+                  <span style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                    🌍 Глобальное задание (для всех президентов)
+                  </span>
+                </label>
               </div>
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
                   {loading ? '⏳ Создание...' : '✅ Создать'}
                 </button>
-                <button type="button" className="btn-secondary" onClick={() => setShowTaskForm(false)}>
+                <button type="button" className="btn-secondary" onClick={() => setShowCreateForm(false)}>
                   ❌ Отмена
                 </button>
               </div>
@@ -164,39 +350,142 @@ export default function PresidentTasks() {
         {tasks.length === 0 ? (
           <div className="empty-state">
             <div className="icon">📋</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Заданий пока нет</p>
-            {canCreate && <p style={{ color: '#667085' }}>Создайте первое задание для президента КЮДа</p>}
+            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>
+              {isPresident ? 'У вас пока нет заданий' : 'Заданий пока нет'}
+            </p>
+            {canCreate && <p style={{ color: '#667085' }}>Создайте первое задание для президентов</p>}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {tasks.map((task) => {
-              const status = getStatusLabel(task.status);
+              const status = getStatusBadge(task.status);
+              const isAssignedToMe = task.assigned_to === profile?.id || task.assigned_to === null;
+              const canRespond = isPresident && isAssignedToMe && task.status !== 'completed';
+              const canManageStatus = ['admin', 'movement_coordinator', 'vice_president'].includes(role) || 
+                                     task.created_by === profile?.id;
+
               return (
                 <div key={task.id} className="card" style={{ borderLeft: `4px solid ${status.color}` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
-                    <div>
-                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
-                        {task.title}
-                      </h3>
-                      <div style={{ fontSize: '13px', color: '#667085', marginTop: '4px' }}>
-                        <span>🏫 {task.club_name || 'КЮД'}</span>
-                        {task.deadline && (
-                          <>
-                            <span style={{ margin: '0 8px' }}>•</span>
-                            <span>📅 Срок: {new Date(task.deadline).toLocaleDateString('ru-RU')}</span>
-                          </>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        <h3 style={{ fontSize: '17px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
+                          {task.title}
+                        </h3>
+                        <span className="tag" style={{ background: status.bg, color: status.color }}>
+                          {status.label}
+                        </span>
+                        <span className="tag" style={{
+                          background: task.priority === 'urgent' ? '#FCEBEC' :
+                                    task.priority === 'high' ? '#FCEBEC' :
+                                    task.priority === 'medium' ? '#FBF4DC' : '#F4F6F9',
+                          color: task.priority === 'urgent' ? '#B3262E' :
+                                 task.priority === 'high' ? '#B3262E' :
+                                 task.priority === 'medium' ? '#8A6A00' : '#667085'
+                        }}>
+                          {getPriorityLabel(task.priority)}
+                        </span>
+                        {task.is_global && (
+                          <span className="tag" style={{ background: '#EDE7F6', color: '#6B46C1' }}>
+                            🌍 Глобальное
+                          </span>
+                        )}
+                        {task.club_name && (
+                          <span className="tag tag-blue">🏫 {task.club_name}</span>
                         )}
                       </div>
+
                       {task.description && (
                         <p style={{ color: '#475467', marginTop: '8px', fontSize: '14px' }}>
                           {task.description}
                         </p>
                       )}
+
+                      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13px', color: '#667085', marginTop: '4px' }}>
+                        {task.assigned_to_name && (
+                          <span>👤 Назначено: {task.assigned_to_name}</span>
+                        )}
+                        {task.created_by_name && (
+                          <span>📝 Создал: {task.created_by_name}</span>
+                        )}
+                        {task.deadline && (
+                          <span>📅 Срок: {new Date(task.deadline).toLocaleDateString('ru-RU')}</span>
+                        )}
+                        {task.completed_at && (
+                          <span>✅ Завершено: {new Date(task.completed_at).toLocaleDateString('ru-RU')}</span>
+                        )}
+                        <span>💬 Ответов: {task.response_count || 0}</span>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span className="tag" style={{ background: status.bg, color: status.color }}>
-                        {status.text}
-                      </span>
+
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {canRespond && (
+                        <button
+                          className="btn-primary"
+                          style={{ padding: '6px 12px', fontSize: '12px' }}
+                          onClick={() => {
+                            setSelectedTask(task);
+                            setShowResponseModal(true);
+                          }}
+                        >
+                          📝 Ответить
+                        </button>
+                      )}
+
+                      {canManageStatus && task.status !== 'completed' && task.status !== 'rejected' && (
+                        <>
+                          <button
+                            className="btn-success"
+                            style={{ padding: '6px 12px', fontSize: '12px' }}
+                            onClick={() => handleUpdateStatus(task.id, 'in_progress')}
+                          >
+                            🔄 В работу
+                          </button>
+                          <button
+                            className="btn-success"
+                            style={{ padding: '6px 12px', fontSize: '12px', background: '#16845B' }}
+                            onClick={() => handleUpdateStatus(task.id, 'completed')}
+                          >
+                            ✅ Завершить
+                          </button>
+                          <button
+                            className="btn-danger"
+                            style={{ padding: '6px 12px', fontSize: '12px' }}
+                            onClick={() => handleUpdateStatus(task.id, 'rejected')}
+                          >
+                            ❌ Отклонить
+                          </button>
+                        </>
+                      )}
+
+                      {(role === 'admin' || role === 'movement_coordinator' || task.created_by === profile?.id) && (
+                        <button
+                          className="btn-danger"
+                          style={{ padding: '6px 12px', fontSize: '12px' }}
+                          onClick={async () => {
+                            if (confirm('Удалить задание?')) {
+                              try {
+                                const token = localStorage.getItem('token');
+                                await fetch(`https://dod-backend.relaxdev.ru/api/president-tasks/${task.id}`, {
+                                  method: 'DELETE',
+                                  headers: {
+                                    'Authorization': `Bearer ${token}`
+                                  }
+                                });
+                                setMessage('✅ Задание удалено');
+                                setMessageType('success');
+                                loadData();
+                                setTimeout(() => setMessage(''), 3000);
+                              } catch (err) {
+                                setMessage('❌ Ошибка: ' + err.message);
+                                setMessageType('error');
+                              }
+                            }
+                          }}
+                        >
+                          🗑️
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -205,6 +494,63 @@ export default function PresidentTasks() {
           </div>
         )}
       </div>
+
+      {/* МОДАЛЬНОЕ ОКНО ОТВЕТА */}
+      {showResponseModal && selectedTask && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(11, 31, 58, 0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setShowResponseModal(false)}
+        >
+          <div
+            className="card"
+            style={{ maxWidth: '500px', width: '100%', padding: '32px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0B1F3A', marginBottom: '4px' }}>
+              📝 Ответ на задание
+            </h3>
+            <p style={{ color: '#667085', marginBottom: '16px' }}>
+              Задание: <strong>{selectedTask.title}</strong>
+            </p>
+
+            <form onSubmit={handleSubmitResponse}>
+              <div className="form-group">
+                <label>Ваш ответ *</label>
+                <textarea
+                  rows="5"
+                  value={responseText}
+                  onChange={(e) => setResponseText(e.target.value)}
+                  required
+                  placeholder="Напишите ваш ответ..."
+                  style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #D5DCE7', borderRadius: '10px', fontSize: '14px', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button type="submit" className="btn-success" disabled={loading}>
+                  {loading ? '⏳ Отправка...' : '📤 Отправить ответ'}
+                </button>
+                <button type="button" className="btn-secondary" onClick={() => setShowResponseModal(false)}>
+                  ❌ Отмена
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

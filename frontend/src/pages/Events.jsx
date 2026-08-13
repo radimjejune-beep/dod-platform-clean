@@ -8,11 +8,13 @@ import Navigation from '../components/Navigation';
 export default function Events() {
   const [profile, setProfile] = useState(null);
   const [events, setEvents] = useState([]);
+  const [allEvents, setAllEvents] = useState([]);
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
+  const [selectedClubId, setSelectedClubId] = useState('');
   const [form, setForm] = useState({
     id: null,
     title: '',
@@ -46,14 +48,69 @@ export default function Events() {
         api.getClubs(),
         api.getEvents()
       ]);
+
       setClubs(clubsData || []);
-      setEvents(eventsData || []);
+      setAllEvents(eventsData || []);
+
+      const role = userData.role;
+      let filtered = [];
+
+      // ============================================================
+      // ЛОГИКА ПО РОЛЯМ
+      // ============================================================
+
+      if (role === 'participant' || role === 'parent') {
+        // УЧАСТНИК и РОДИТЕЛЬ — видят все мероприятия
+        filtered = eventsData;
+      } 
+      else if (role === 'club_coordinator') {
+        // КООРДИНАТОР КЮДА — видит мероприятия своего клуба
+        const coordinatorClub = clubsData.find(c => 
+          c.coordinator_id === userData.id || 
+          c.leader_id === userData.id
+        );
+        if (coordinatorClub) {
+          filtered = eventsData.filter(e => e.club_id === coordinatorClub.id || !e.club_id);
+        } else {
+          filtered = eventsData;
+        }
+      } 
+      else if (role === 'tutor' || 
+               role === 'movement_coordinator' || 
+               role === 'admin' || 
+               role === 'president' || 
+               role === 'vice_president') {
+        // ТЬЮТОР, КООРДИНАТОР, АДМИН, ПРЕЗИДЕНТ, ВИЦЕ — видят все
+        filtered = eventsData;
+      } 
+      else {
+        filtered = eventsData;
+      }
+
+      setEvents(filtered);
+
     } catch (err) {
       console.error('Ошибка:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  // Фильтр по клубу
+  const canFilterByClub = profile?.role === 'admin' || 
+                          profile?.role === 'movement_coordinator' || 
+                          profile?.role === 'tutor' ||
+                          profile?.role === 'president' ||
+                          profile?.role === 'vice_president' ||
+                          profile?.role === 'club_coordinator';
+
+  useEffect(() => {
+    if (selectedClubId && canFilterByClub) {
+      setEvents(allEvents.filter(e => e.club_id === selectedClubId));
+    } else {
+      setEvents(allEvents);
+    }
+  }, [selectedClubId, allEvents, canFilterByClub]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -151,7 +208,13 @@ export default function Events() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const canCreate = profile?.role === 'admin' || profile?.role === 'movement_coordinator';
+  // Кто может создавать/редактировать мероприятия
+  const canCreate = profile?.role === 'admin' || 
+                    profile?.role === 'movement_coordinator' ||
+                    profile?.role === 'club_coordinator';
+
+  // Кто может удалять мероприятия
+  const canDelete = profile?.role === 'admin' || profile?.role === 'movement_coordinator';
 
   if (loading) {
     return (
@@ -169,7 +232,11 @@ export default function Events() {
           <span style={{ fontSize: '32px' }}>📅</span>
           <div>
             <h1>Мероприятия</h1>
-            <p>Всего мероприятий: {events.length}</p>
+            <p>
+              {profile?.role === 'club_coordinator' 
+                ? `Мероприятия вашего клуба (${events.length})` 
+                : `Всего мероприятий: ${events.length}`}
+            </p>
           </div>
           {canCreate && (
             <button
@@ -188,6 +255,61 @@ export default function Events() {
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
             {message}
+          </div>
+        )}
+
+        {/* ФИЛЬТР ПО КЮДАМ */}
+        {canFilterByClub && clubs.length > 0 && (
+          <div style={{
+            display: 'flex',
+            gap: '16px',
+            marginBottom: '20px',
+            flexWrap: 'wrap',
+            alignItems: 'center'
+          }}>
+            <div style={{ minWidth: '200px' }}>
+              <select
+                value={selectedClubId}
+                onChange={(e) => setSelectedClubId(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: '1.5px solid #D5DCE7',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  background: 'white'
+                }}
+              >
+                <option value="">Все КЮДы</option>
+                {clubs.map((club) => (
+                  <option key={club.id} value={club.id}>{club.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ fontSize: '14px', color: '#667085' }}>
+              {selectedClubId ? (
+                <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
+              ) : (
+                <span>📋 Все мероприятия</span>
+              )}
+            </div>
+            {selectedClubId && (
+              <button
+                style={{
+                  padding: '4px 12px',
+                  background: '#FCEBEC',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: '#B3262E'
+                }}
+                onClick={() => setSelectedClubId('')}
+              >
+                ✕ Сбросить
+              </button>
+            )}
           </div>
         )}
 
@@ -354,22 +476,26 @@ export default function Events() {
                     {event.club_name && ` 🏫 ${event.club_name}`}
                   </div>
                   {event.description && <div className="meta">{event.description}</div>}
-                  {canCreate && (
+                  {(canCreate || canDelete) && (
                     <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
-                      <button
-                        className="btn-secondary"
-                        style={{ padding: '4px 12px', fontSize: '12px' }}
-                        onClick={() => handleEdit(event)}
-                      >
-                        ✏️ Редактировать
-                      </button>
-                      <button
-                        className="btn-danger"
-                        style={{ padding: '4px 12px', fontSize: '12px' }}
-                        onClick={() => handleDelete(event.id)}
-                      >
-                        🗑️ Удалить
-                      </button>
+                      {canCreate && (
+                        <button
+                          className="btn-secondary"
+                          style={{ padding: '4px 12px', fontSize: '12px' }}
+                          onClick={() => handleEdit(event)}
+                        >
+                          ✏️ Редактировать
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          className="btn-danger"
+                          style={{ padding: '4px 12px', fontSize: '12px' }}
+                          onClick={() => handleDelete(event.id)}
+                        >
+                          🗑️ Удалить
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

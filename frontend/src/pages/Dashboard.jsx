@@ -58,6 +58,110 @@ export default function Dashboard() {
     );
   }
 
+  const role = user?.role;
+
+  // Получение названия роли
+  const getRoleLabel = () => {
+    const labels = {
+      'participant': '👤 Участник',
+      'parent': '👨‍👩‍👦 Родитель',
+      'club_coordinator': '🏫 Координатор КЮДа',
+      'tutor': '📚 Тьютор',
+      'movement_coordinator': '⭐ Координатор движения',
+      'admin': '🔧 Администратор',
+      'president': '👑 Президент',
+      'vice_president': '⭐ Вице-президент'
+    };
+    return labels[role] || role;
+  };
+
+  // ============================================================
+  // КНОПКИ В ЗАВИСИМОСТИ ОТ РОЛИ
+  // ============================================================
+  const getButtons = () => {
+    const buttons = [];
+
+    // Базовые кнопки для всех
+    buttons.push(
+      { path: '/profile', label: '👤 Профиль', color: 'btn-secondary' }
+    );
+
+    if (role === 'participant' || role === 'parent') {
+      buttons.push(
+        { path: '/events', label: '📅 Мероприятия', color: 'btn-primary' },
+        { path: '/my-achievements', label: '🏆 Мои достижения', color: 'btn-primary' },
+        { path: '/my-reviews', label: '📊 Мои оценки', color: 'btn-primary' },
+        { path: '/calendar', label: '📅 Календарь', color: 'btn-secondary' }
+      );
+      if (role === 'participant') {
+        buttons.push(
+          { path: '/president-tasks', label: '👑 Задания президента', color: 'btn-primary' }
+        );
+      }
+    }
+
+    if (role === 'club_coordinator') {
+      buttons.push(
+        { path: '/clubs', label: '🏫 Мой КЮД', color: 'btn-primary' },
+        { path: '/events', label: '📅 Мероприятия', color: 'btn-primary' },
+        { path: '/participants', label: '👥 Участники', color: 'btn-primary' },
+        { path: '/manage-achievements', label: '🏆 Достижения клуба', color: 'btn-primary' },
+        { path: '/reports', label: '📋 Отчёты', color: 'btn-primary' },
+        { path: '/appeals', label: '📨 Обращения', color: 'btn-primary' },
+        { path: '/staff', label: '👥 Сотрудники', color: 'btn-secondary' },
+        { path: '/calendar', label: '📅 Календарь', color: 'btn-secondary' }
+      );
+    }
+
+    if (role === 'tutor') {
+      buttons.push(
+        { path: '/clubs', label: '🏫 КЮДы', color: 'btn-primary' },
+        { path: '/events', label: '📅 Мероприятия', color: 'btn-primary' },
+        { path: '/participants', label: '👥 Участники', color: 'btn-primary' },
+        { path: '/achievements', label: '🏆 Достижения', color: 'btn-primary' },
+        { path: '/my-reviews', label: '📊 Оценки', color: 'btn-primary' },
+        { path: '/staff-calendar', label: '📅 Мой календарь', color: 'btn-secondary' },
+        { path: '/my-journal', label: '📓 Мой журнал', color: 'btn-primary' }
+      );
+    }
+
+    if (role === 'movement_coordinator' || role === 'admin') {
+      buttons.push(
+        { path: '/clubs', label: '🏫 КЮДы', color: 'btn-primary' },
+        { path: '/events', label: '📅 Мероприятия', color: 'btn-primary' },
+        { path: '/participants', label: '👥 Участники', color: 'btn-primary' },
+        { path: '/achievements', label: '🏆 Достижения', color: 'btn-primary' },
+        { path: '/reports', label: '📋 Отчёты', color: 'btn-primary' },
+        { path: '/analytics', label: '📊 Аналитика', color: 'btn-primary' },
+        { path: '/appeals', label: '📨 Обращения', color: 'btn-primary' },
+        { path: '/admin/users', label: '👥 Пользователи', color: 'btn-primary' }
+      );
+      if (role === 'admin') {
+        buttons.push(
+          { path: '/settings', label: '⚙️ Настройки', color: 'btn-primary' },
+          { path: '/admin/invite', label: '🎫 Пригласить', color: 'btn-primary' },
+          { path: '/import-participants', label: '📥 Импорт', color: 'btn-primary' }
+        );
+      }
+    }
+
+    if (role === 'president' || role === 'vice_president') {
+      buttons.push(
+        { path: '/clubs', label: '🏫 КЮДы', color: 'btn-primary' },
+        { path: '/events', label: '📅 Мероприятия', color: 'btn-primary' },
+        { path: '/participants', label: '👥 Участники', color: 'btn-primary' },
+        { path: '/achievements', label: '🏆 Достижения', color: 'btn-primary' },
+        { path: '/reports', label: '📋 Отчёты', color: 'btn-primary' },
+        { path: '/analytics', label: '📊 Аналитика', color: 'btn-primary' },
+        { path: '/appeals', label: '📨 Обращения', color: 'btn-primary' }
+      );
+    }
+
+    return buttons;
+  };
+
+  const buttons = getButtons();
+
   return (
     <div className="page-background">
       <Navigation profile={user} />
@@ -66,7 +170,9 @@ export default function Dashboard() {
           <span style={{ fontSize: '32px' }}>📊</span>
           <div>
             <h1>👋 Привет, {user?.full_name || 'Гость'}!</h1>
-            <p>Добро пожаловать в систему управления ДОД «Дипломаты будущего»</p>
+            <p>
+              {getRoleLabel()} • Добро пожаловать в систему управления ДОД «Дипломаты будущего»
+            </p>
           </div>
         </div>
 
@@ -91,25 +197,25 @@ export default function Dashboard() {
         </div>
 
         {/* БЫСТРЫЕ ДЕЙСТВИЯ */}
-        <div className="card" style={{ marginTop: '20px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
-            🚀 Быстрые действия
-          </h3>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <Link to="/clubs" className="btn-primary" style={{ textDecoration: 'none' }}>
-              🏫 Клубы
-            </Link>
-            <Link to="/events" className="btn-primary" style={{ textDecoration: 'none' }}>
-              📅 Мероприятия
-            </Link>
-            <Link to="/participants" className="btn-primary" style={{ textDecoration: 'none' }}>
-              👥 Участники
-            </Link>
-            <Link to="/profile" className="btn-secondary" style={{ textDecoration: 'none' }}>
-              👤 Профиль
-            </Link>
+        {buttons.length > 0 && (
+          <div className="card" style={{ marginTop: '20px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+              🚀 Быстрые действия
+            </h3>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              {buttons.map((btn, index) => (
+                <Link
+                  key={index}
+                  to={btn.path}
+                  className={btn.color}
+                  style={{ textDecoration: 'none' }}
+                >
+                  {btn.label}
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ */}
         <div className="card" style={{ marginTop: '20px' }}>
@@ -120,7 +226,7 @@ export default function Dashboard() {
             </div>
             <div>
               <div style={{ fontSize: '13px', color: '#667085' }}>Роль</div>
-              <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{user?.role}</div>
+              <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{getRoleLabel()}</div>
             </div>
             <div>
               <div style={{ fontSize: '13px', color: '#667085' }}>Статус</div>

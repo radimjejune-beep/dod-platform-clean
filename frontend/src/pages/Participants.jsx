@@ -8,6 +8,7 @@ import Navigation from '../components/Navigation';
 export default function Participants() {
   const [profile, setProfile] = useState(null);
   const [participants, setParticipants] = useState([]);
+  const [allParticipants, setAllParticipants] = useState([]);
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,15 +33,68 @@ export default function Participants() {
         api.getParticipants(),
         api.getClubs()
       ]);
-      
-      setParticipants(participantsData || []);
+
       setClubs(clubsData || []);
+      setAllParticipants(participantsData || []);
+
+      const role = userData.role;
+      let filtered = [];
+
+      // ============================================================
+      // ЛОГИКА ПО РОЛЯМ
+      // ============================================================
+
+      if (role === 'participant' || role === 'parent') {
+        // УЧАСТНИК и РОДИТЕЛЬ — не видят список участников
+        filtered = [];
+      } 
+      else if (role === 'club_coordinator') {
+        // КООРДИНАТОР КЮДА — видит только свой клуб
+        const coordinatorClub = clubsData.find(c => 
+          c.coordinator_id === userData.id || 
+          c.leader_id === userData.id
+        );
+        if (coordinatorClub) {
+          filtered = participantsData.filter(p => p.club_id === coordinatorClub.id);
+        } else {
+          filtered = [];
+        }
+      } 
+      else if (role === 'tutor' || 
+               role === 'movement_coordinator' || 
+               role === 'admin' || 
+               role === 'president' || 
+               role === 'vice_president') {
+        // ТЬЮТОР, КООРДИНАТОР, АДМИН, ПРЕЗИДЕНТ, ВИЦЕ — видят всех
+        filtered = participantsData;
+      } 
+      else {
+        filtered = [];
+      }
+
+      setParticipants(filtered);
+
     } catch (err) {
       console.error('Ошибка:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  // Фильтр по клубу (только для тех, кто видит всех)
+  const canFilterByClub = profile?.role === 'admin' || 
+                          profile?.role === 'movement_coordinator' || 
+                          profile?.role === 'tutor' ||
+                          profile?.role === 'president' ||
+                          profile?.role === 'vice_president';
+
+  useEffect(() => {
+    if (selectedClub && canFilterByClub) {
+      setParticipants(allParticipants.filter(p => p.club_id === selectedClub));
+    } else {
+      setParticipants(allParticipants);
+    }
+  }, [selectedClub, allParticipants, canFilterByClub]);
 
   const getFilteredParticipants = () => {
     let filtered = participants;
@@ -53,23 +107,50 @@ export default function Participants() {
       );
     }
 
-    if (selectedClub) {
-      filtered = filtered.filter(p => p.club_id === selectedClub);
-    }
-
     return filtered;
   };
 
   const filtered = getFilteredParticipants();
 
   const role = profile?.role;
-  const canManage = role === 'admin' || role === 'movement_coordinator' || role === 'club_coordinator';
-  const showClubFilter = role === 'admin' || role === 'movement_coordinator';
+  const canManage = role === 'admin' || 
+                    role === 'movement_coordinator' || 
+                    role === 'club_coordinator' ||
+                    role === 'tutor';
+
+  const showClubFilter = role === 'admin' || 
+                         role === 'movement_coordinator' || 
+                         role === 'tutor' ||
+                         role === 'president' ||
+                         role === 'vice_president';
+
+  // Проверка, может ли пользователь видеть страницу
+  const canView = role === 'club_coordinator' || 
+                  role === 'tutor' || 
+                  role === 'movement_coordinator' || 
+                  role === 'admin' || 
+                  role === 'president' || 
+                  role === 'vice_president';
 
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
         <div className="spinner" />
+      </div>
+    );
+  }
+
+  if (!canView) {
+    return (
+      <div className="page-background">
+        <Navigation profile={profile} />
+        <div className="container-page">
+          <div className="empty-state">
+            <div className="icon">⛔</div>
+            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Доступ запрещён</p>
+            <p style={{ color: '#667085' }}>Только координаторы, тьюторы и администраторы</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -82,7 +163,11 @@ export default function Participants() {
           <span style={{ fontSize: '32px' }}>👥</span>
           <div>
             <h1>Участники</h1>
-            <p>Всего участников: {filtered.length}</p>
+            <p>
+              {role === 'club_coordinator' 
+                ? `Участники вашего клуба (${filtered.length})` 
+                : `Все участники движения (${filtered.length})`}
+            </p>
           </div>
           {showClubFilter && (
             <button
@@ -186,6 +271,23 @@ export default function Participants() {
                         >
                           👁️
                         </button>
+                        {canManage && (
+                          <button
+                            style={{
+                              padding: '4px 12px',
+                              background: '#EAF2FA',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '13px',
+                              color: '#174A7E',
+                              marginLeft: '4px'
+                            }}
+                            onClick={() => navigate(`/participant/${p.id}/edit`)}
+                          >
+                            ✏️
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))

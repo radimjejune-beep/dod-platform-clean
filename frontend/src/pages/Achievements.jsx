@@ -8,7 +8,9 @@ import Navigation from '../components/Navigation';
 export default function Achievements() {
   const [profile, setProfile] = useState(null);
   const [achievements, setAchievements] = useState([]);
+  const [allAchievements, setAllAchievements] = useState([]);
   const [participants, setParticipants] = useState([]);
+  const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState('');
@@ -16,6 +18,7 @@ export default function Achievements() {
   const [selectedParticipant, setSelectedParticipant] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedClubId, setSelectedClubId] = useState('');
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -50,18 +53,92 @@ export default function Achievements() {
       }
       setProfile(userData);
 
-      const [participantsData, achievementsData] = await Promise.all([
+      const [participantsData, clubsData, achievementsData] = await Promise.all([
         api.getParticipants(),
+        api.getClubs(),
         api.getAchievements()
       ]);
-      setParticipants(participantsData || []);
-      setAchievements(achievementsData || []);
+
+      setClubs(clubsData || []);
+      setAllAchievements(achievementsData || []);
+
+      const role = userData.role;
+      let filteredAchievements = [];
+      let filteredParticipants = [];
+
+      // ============================================================
+      // ЛОГИКА ПО РОЛЯМ
+      // ============================================================
+
+      if (role === 'participant') {
+        // УЧАСТНИК — видит только свои достижения
+        filteredAchievements = achievementsData.filter(a => a.participant_id === userData.id);
+        filteredParticipants = participantsData.filter(p => p.id === userData.id);
+      } 
+      else if (role === 'parent') {
+        // РОДИТЕЛЬ — видит достижения своего ребёнка
+        // TODO: нужна связь родитель-ребёнок в БД
+        filteredAchievements = achievementsData;
+        filteredParticipants = participantsData;
+      } 
+      else if (role === 'club_coordinator') {
+        // КООРДИНАТОР КЮДА — видит только участников своего клуба
+        const coordinatorClub = clubsData.find(c => 
+          c.coordinator_id === userData.id || 
+          c.leader_id === userData.id
+        );
+        if (coordinatorClub) {
+          const clubParticipantIds = participantsData
+            .filter(p => p.club_id === coordinatorClub.id)
+            .map(p => p.id);
+          filteredAchievements = achievementsData.filter(a => clubParticipantIds.includes(a.participant_id));
+          filteredParticipants = participantsData.filter(p => p.club_id === coordinatorClub.id);
+        } else {
+          filteredAchievements = [];
+          filteredParticipants = [];
+        }
+      } 
+      else if (role === 'tutor' || 
+               role === 'movement_coordinator' || 
+               role === 'admin' || 
+               role === 'president' || 
+               role === 'vice_president') {
+        // ТЬЮТОР, КООРДИНАТОР, АДМИН, ПРЕЗИДЕНТ, ВИЦЕ — видят всех
+        filteredAchievements = achievementsData;
+        filteredParticipants = participantsData;
+      } 
+      else {
+        filteredAchievements = [];
+        filteredParticipants = [];
+      }
+
+      setAchievements(filteredAchievements);
+      setParticipants(filteredParticipants);
+
     } catch (err) {
       console.error('Ошибка:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  // Фильтр по клубу (только для тех, кто видит всех)
+  const canFilterByClub = profile?.role === 'admin' || 
+                          profile?.role === 'movement_coordinator' || 
+                          profile?.role === 'tutor' ||
+                          profile?.role === 'president' ||
+                          profile?.role === 'vice_president';
+
+  useEffect(() => {
+    if (selectedClubId && canFilterByClub) {
+      const clubParticipantIds = participants
+        .filter(p => p.club_id === selectedClubId)
+        .map(p => p.id);
+      setAchievements(allAchievements.filter(a => clubParticipantIds.includes(a.participant_id)));
+    } else {
+      setAchievements(allAchievements);
+    }
+  }, [selectedClubId, allAchievements, participants, canFilterByClub]);
 
   const handleSearchChange = (e) => {
     const query = e.target.value;
@@ -141,12 +218,44 @@ export default function Achievements() {
     }
   };
 
+  // Кто может добавлять достижения
   const canAdd = profile?.role === 'admin' ||
                  profile?.role === 'movement_coordinator' ||
                  profile?.role === 'club_coordinator' ||
                  profile?.role === 'tutor';
 
+  // Кто может удалять достижения
   const canDelete = profile?.role === 'admin' || profile?.role === 'movement_coordinator';
+
+  const getRoleSpecificTitle = () => {
+    const role = profile?.role;
+    const titles = {
+      'participant': '🏆 Мои достижения',
+      'parent': '🏆 Достижения моего ребёнка',
+      'club_coordinator': '🏆 Достижения участников клуба',
+      'tutor': '🏆 Достижения участников',
+      'movement_coordinator': '🏆 Достижения участников движения',
+      'admin': '🏆 Достижения участников движения',
+      'president': '🏆 Достижения участников движения',
+      'vice_president': '🏆 Достижения участников движения'
+    };
+    return titles[role] || '🏆 Достижения';
+  };
+
+  const getRoleSpecificSubtitle = () => {
+    const role = profile?.role;
+    const subtitles = {
+      'participant': 'Ваши успехи и награды',
+      'parent': 'Успехи вашего ребенка',
+      'club_coordinator': 'Участники вашего КЮДа',
+      'tutor': 'Все участники движения',
+      'movement_coordinator': 'Все участники движения',
+      'admin': 'Все участники движения',
+      'president': 'Все участники движения',
+      'vice_president': 'Все участники движения'
+    };
+    return subtitles[role] || 'Достижения';
+  };
 
   if (loading) {
     return (
@@ -163,13 +272,13 @@ export default function Achievements() {
         <div className="page-header">
           <span style={{ fontSize: '32px' }}>🏆</span>
           <div>
-            <h1>Достижения и награды</h1>
-            <p>
-              {profile?.role === 'participant' && 'Ваши успехи и награды'}
-              {profile?.role === 'parent' && 'Достижения вашего ребенка'}
-              {profile?.role === 'club_coordinator' && 'Достижения участников вашего клуба'}
-              {(profile?.role === 'admin' || profile?.role === 'movement_coordinator') && 'Все достижения участников'}
-            </p>
+            <h1>{getRoleSpecificTitle()}</h1>
+            <p>{getRoleSpecificSubtitle()}</p>
+            {achievements.length > 0 && (
+              <span style={{ fontSize: '13px', color: '#98A2B3' }}>
+                Всего достижений: {achievements.length}
+              </span>
+            )}
           </div>
           {canAdd && (
             <button
@@ -193,6 +302,61 @@ export default function Achievements() {
           </div>
         )}
 
+        {/* ФИЛЬТР ПО КЮДАМ (только для тех, кто видит всех) */}
+        {canFilterByClub && clubs.length > 0 && (
+          <div style={{
+            display: 'flex',
+            gap: '16px',
+            marginBottom: '20px',
+            flexWrap: 'wrap',
+            alignItems: 'center'
+          }}>
+            <div style={{ minWidth: '200px' }}>
+              <select
+                value={selectedClubId}
+                onChange={(e) => setSelectedClubId(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: '1.5px solid #D5DCE7',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  background: 'white'
+                }}
+              >
+                <option value="">Все КЮДы</option>
+                {clubs.map((club) => (
+                  <option key={club.id} value={club.id}>{club.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ fontSize: '14px', color: '#667085' }}>
+              {selectedClubId ? (
+                <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
+              ) : (
+                <span>📋 Все достижения</span>
+              )}
+            </div>
+            {selectedClubId && (
+              <button
+                style={{
+                  padding: '4px 12px',
+                  background: '#FCEBEC',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: '#B3262E'
+                }}
+                onClick={() => setSelectedClubId('')}
+              >
+                ✕ Сбросить
+              </button>
+            )}
+          </div>
+        )}
+
         {/* ФОРМА ДОБАВЛЕНИЯ */}
         {showForm && canAdd && (
           <div className="card" style={{ marginBottom: '24px' }}>
@@ -201,7 +365,7 @@ export default function Achievements() {
             </h3>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>Участник</label>
+                <label>Участник *</label>
                 <div style={{ position: 'relative' }}>
                   <input
                     ref={inputRef}
@@ -270,6 +434,7 @@ export default function Achievements() {
                       onClick={() => {
                         setSelectedParticipant(null);
                         setSearchQuery('');
+                        setForm({ ...form, participant_id: '' });
                       }}
                     >
                       ✕
@@ -332,7 +497,16 @@ export default function Achievements() {
         {achievements.length === 0 ? (
           <div className="empty-state">
             <div className="icon">🏆</div>
-            <p style={{ fontSize: '18px', color: '#667085' }}>Достижений пока нет</p>
+            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>
+              {profile?.role === 'participant' && 'У вас пока нет достижений'}
+              {profile?.role === 'parent' && 'У вашего ребёнка пока нет достижений'}
+              {profile?.role === 'club_coordinator' && 'У участников вашего клуба пока нет достижений'}
+              {(profile?.role === 'tutor' || 
+                profile?.role === 'movement_coordinator' || 
+                profile?.role === 'admin' || 
+                profile?.role === 'president' || 
+                profile?.role === 'vice_president') && 'Достижений пока нет'}
+            </p>
             {canAdd && <p style={{ color: '#98A2B3' }}>Добавьте первое достижение!</p>}
           </div>
         ) : (
@@ -342,16 +516,28 @@ export default function Achievements() {
                 key={a.id}
                 className="card"
                 style={{
-                  borderLeft: '4px solid #C9A227',
+                  borderLeft: `4px solid ${a.is_club_award ? '#C9A227' : a.is_tutor_award ? '#174A7E' : '#0B1F3A'}`,
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'flex-start'
                 }}
               >
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '24px' }}>🏅</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '24px' }}>
+                      {a.is_club_award ? '🏫' : a.is_tutor_award ? '📚' : '🏅'}
+                    </span>
                     <h3 style={{ margin: 0, fontSize: '18px', color: '#0B1F3A' }}>{a.title}</h3>
+                    {a.is_club_award && (
+                      <span className="tag tag-gold" style={{ fontSize: '10px' }}>
+                        Клубная награда
+                      </span>
+                    )}
+                    {a.is_tutor_award && (
+                      <span className="tag tag-blue" style={{ fontSize: '10px' }}>
+                        Награда тьютора
+                      </span>
+                    )}
                   </div>
                   {a.description && <p style={{ color: '#667085', marginTop: '4px' }}>{a.description}</p>}
                   <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '13px', color: '#667085' }}>

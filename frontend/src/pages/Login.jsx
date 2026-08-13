@@ -1,19 +1,16 @@
 // frontend/src/pages/Login.jsx
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
   const [email, setEmail] = useState('admin@dod.ru');
   const [password, setPassword] = useState('123456');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const [result, setResult] = useState('');
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
+
+    console.log('📤 Отправляем:', { email, password });
 
     try {
       const response = await fetch('https://dod-backend.relaxdev.ru/api/login', {
@@ -23,51 +20,46 @@ export default function Login() {
       });
 
       const data = await response.json();
+      console.log('📥 Ответ:', data);
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Ошибка входа');
+      setResult(JSON.stringify(data, null, 2));
+
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        window.location.href = '/dashboard';
       }
-
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-
-      window.location.href = '/dashboard';
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      console.error('❌ Ошибка:', err);
+      setResult('Ошибка: ' + err.message);
     }
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '50px auto', padding: '30px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
-      <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>🔐 Вход</h2>
-      {error && <p style={{ color: 'red', textAlign: 'center' }}>❌ {error}</p>}
+    <div style={{ maxWidth: '400px', margin: '50px auto', padding: '30px', background: 'white', borderRadius: '12px' }}>
+      <h2>🔐 Вход</h2>
       <form onSubmit={handleLogin}>
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email"
-          style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
-          required
+          style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
         />
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Пароль"
-          style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
-          required
+          style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
         />
-        <button 
-          type="submit" 
-          disabled={loading}
-          style={{ width: '100%', padding: '12px', background: loading ? '#999' : '#0B1F3A', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', cursor: 'pointer' }}
-        >
-          {loading ? 'Загрузка...' : 'Войти'}
+        <button type="submit" style={{ width: '100%', padding: '12px', background: '#0B1F3A', color: 'white', border: 'none', borderRadius: '8px' }}>
+          Войти
         </button>
       </form>
+      <pre style={{ background: '#f4f4f4', padding: '10px', borderRadius: '8px', marginTop: '10px', fontSize: '12px', overflow: 'auto' }}>
+        {result || 'Результат появится здесь...'}
+      </pre>
     </div>
   );
 }

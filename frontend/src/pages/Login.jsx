@@ -3,40 +3,30 @@
 import { useState } from 'react';
 
 export default function Login() {
-  const [email, setEmail] = useState('admin@dod.ru');
+  const [email, setEmail] = useState('newadmin@dod.ru');
   const [password, setPassword] = useState('123456');
-  const [status, setStatus] = useState('');
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setStatus('⏳ Отправка...');
 
     try {
       const response = await fetch('https://dod-backend.relaxdev.ru/api/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          email: email.trim(), 
-          password: password.trim() 
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
-      console.log('📦 Ответ сервера:', data);
 
       if (data.token) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        setStatus('✅ Успешно!');
         window.location.href = '/dashboard';
       } else {
-        setStatus('❌ ' + (data.error || 'Ошибка входа'));
+        alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
       }
     } catch (err) {
-      console.error('❌ Ошибка:', err);
-      setStatus('❌ Ошибка: ' + err.message);
+      alert('Ошибка: ' + err.message);
     }
   };
 
@@ -44,7 +34,7 @@ export default function Login() {
     <div style={{ maxWidth: '400px', margin: '50px auto', padding: '30px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
       <h2 style={{ textAlign: 'center' }}>🔐 Вход</h2>
       <p style={{ textAlign: 'center', color: '#666', fontSize: '13px' }}>
-        admin@dod.ru / 123456
+        newadmin@dod.ru / 123456
       </p>
       <form onSubmit={handleLogin}>
         <input
@@ -77,9 +67,6 @@ export default function Login() {
           Войти
         </button>
       </form>
-      <p style={{ textAlign: 'center', marginTop: '10px', color: status.includes('✅') ? 'green' : 'red' }}>
-        {status}
-      </p>
     </div>
   );
 }

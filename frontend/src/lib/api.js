@@ -4,16 +4,6 @@ const API_URL = 'https://dod-backend.relaxdev.ru/api';
 
 const getToken = () => {
   const token = localStorage.getItem('token');
-  return token ? token.trim() : null;
-};
-
-const headers = () => ({
-  'Content-Type': 'application/json',
-  ...(getToken() && { Authorization: `Bearer ${getToken()}` })
-});
-
-const getToken = () => {
-  const token = localStorage.getItem('token');
   const sessionId = sessionStorage.getItem('sessionId');
   
   // Если есть токен, но нет сессии — выходим
@@ -27,6 +17,11 @@ const getToken = () => {
   
   return token ? token.trim() : null;
 };
+
+const headers = () => ({
+  'Content-Type': 'application/json',
+  ...(getToken() && { Authorization: `Bearer ${getToken()}` })
+});
 
 // ============================================================
 // 1. АУТЕНТИФИКАЦИЯ
@@ -177,8 +172,6 @@ export const deleteAchievement = async (id) => {
 // ============================================================
 // 6. СОБЫТИЯ
 // ============================================================
-// frontend/src/lib/api.js
-
 export const getEvents = async () => {
   try {
     const response = await fetch(`${API_URL}/events`, {
@@ -188,7 +181,7 @@ export const getEvents = async () => {
     
     if (!response.ok) {
       console.error('❌ Ошибка получения событий:', response.status);
-      return []; // Возвращаем пустой массив при ошибке
+      return [];
     }
     
     const data = await response.json();

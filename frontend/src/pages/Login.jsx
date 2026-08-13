@@ -25,35 +25,83 @@ export default function Login() {
       });
 
       const data = await response.json();
-      console.log('📥 Ответ:', data);
+      console.log('📥 Ответ сервера (полный):', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
         throw new Error(data.error || 'Ошибка входа');
       }
 
-      // ===== ИСПРАВЛЕНИЕ ПРОБЛЕМЫ С ТОКЕНОМ =====
-      let cleanToken = data.token;
-
-      // Если есть запятая - заменяем на точку
-      if (cleanToken && cleanToken.includes(',')) {
-        console.log('⚠️ Нашли запятую! Исправляем...');
-        cleanToken = cleanToken.replace(/,/g, '.');
-        console.log('✅ Исправленный токен:', cleanToken);
+      // ===== ЖЁСТКОЕ ИСПРАВЛЕНИЕ ТОКЕНА =====
+      let rawToken = data.token;
+      console.log('🔴 Сырой токен:', rawToken);
+      console.log('🔴 Длина сырого токена:', rawToken?.length);
+      
+      // Убираем всё лишнее (если там есть запятые или кавычки)
+      let cleanToken = rawToken;
+      
+      // Заменяем все запятые на точки
+      cleanToken = cleanToken.replace(/,/g, '.');
+      
+      // Если есть лишние кавычки - убираем
+      cleanToken = cleanToken.replace(/^"|"$/g, '');
+      
+      // Если есть пробелы - убираем
+      cleanToken = cleanToken.trim();
+      
+      console.log('🟢 Очищенный токен:', cleanToken);
+      console.log('🟢 Длина очищенного токена:', cleanToken?.length);
+      
+      // Проверяем, что токен содержит точки (должен быть JWT)
+      if (!cleanToken.includes('.')) {
+        console.error('❌ Токен не содержит точек! Это не JWT!');
+        throw new Error('Неверный формат токена');
       }
 
-      // Сохраняем ИСПРАВЛЕННЫЙ токен
+      // Сохраняем в localStorage
       localStorage.setItem('token', cleanToken);
       localStorage.setItem('user', JSON.stringify(data.user));
-
+      
+      // ПРОВЕРЯЕМ, ЧТО СОХРАНИЛОСЬ
       const savedToken = localStorage.getItem('token');
-      console.log('🔑 Токен сохранён:', savedToken);
-      // ===== КОНЕЦ ИСПРАВЛЕНИЯ =====
+      console.log('💾 Сохранённый токен:', savedToken);
+      console.log('💾 Длина сохранённого:', savedToken?.length);
+      
+      // Проверяем, что в сохранённом нет запятых
+      if (savedToken && savedToken.includes(',')) {
+        console.error('❌ В сохранённом токене ЕСТЬ запятая! Исправляем снова...');
+        const fixedToken = savedToken.replace(/,/g, '.');
+        localStorage.setItem('token', fixedToken);
+        console.log('✅ Токен исправлен повторно:', fixedToken);
+      }
 
+      // Дополнительная проверка - пытаемся сразу запросить /me
+      console.log('🔄 Проверяем /me...');
+      try {
+        const meResponse = await fetch('https://dod-backend.relaxdev.ru/api/me', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        const meData = await meResponse.json();
+        console.log('📥 Ответ /me:', meData);
+        
+        if (meData.id) {
+          console.log('✅ Авторизация подтверждена!');
+          navigate('/dashboard');
+          return;
+        } else {
+          console.warn('⚠️ /me не вернул пользователя');
+        }
+      } catch (meErr) {
+        console.error('❌ Ошибка при проверке /me:', meErr);
+      }
+
+      // Если /me не сработал, но у нас есть токен - всё равно идём на дашборд
       navigate('/dashboard');
+      
     } catch (err) {
       console.error('❌ Ошибка:', err);
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };

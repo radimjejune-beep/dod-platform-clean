@@ -160,7 +160,7 @@ app.post('/api/register', async (req, res) => {
 });
 
 // ============================================================
-// 3. ВХОД (БЕЗ ПРОВЕРКИ СТАТУСА)
+// 3. ВХОД
 // ============================================================
 app.post('/api/login', async (req, res) => {
   try {
@@ -315,39 +315,7 @@ app.get('/api/registrations', async (req, res) => {
 });
 
 // ============================================================
-// 9. ВРЕМЕННЫЙ ЭНДПОИНТ ДЛЯ СОЗДАНИЯ ПОЛЬЗОВАТЕЛЯ
-// ============================================================
-app.post('/api/create-user', async (req, res) => {
-  try {
-    const { email, password, full_name, role } = req.body;
-    
-    if (!email || !password || !full_name) {
-      return res.status(400).json({ error: 'Email, пароль и ФИО обязательны' });
-    }
-
-    const saltRounds = 10;
-    const password_hash = await bcrypt.hash(password, saltRounds);
-    
-    const result = await pool.query(
-      `INSERT INTO users (id, email, password_hash, full_name, role, registration_status, created_at)
-       VALUES (gen_random_uuid(), $1, $2, $3, $4, 'approved', NOW())
-       RETURNING id, email, full_name, role`,
-      [email, password_hash, full_name, role || 'admin']
-    );
-    
-    res.json({ 
-      message: '✅ Пользователь создан!', 
-      user: result.rows[0],
-      password: password 
-    });
-  } catch (error) {
-    console.error('Ошибка создания пользователя:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 10. ЗАПУСК СЕРВЕРА
+// 9. ЗАПУСК СЕРВЕРА
 // ============================================================
 app.listen(PORT, () => {
   console.log(`✅ Сервер запущен на порту ${PORT}`);

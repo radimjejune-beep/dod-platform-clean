@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
+import NewsSection from '../components/NewsSection';
 import logo from '../assets/Image.png';
 import ardLogo from '../assets/АРДЛОГО.png';
 
@@ -58,6 +59,7 @@ export default function Home() {
     <div className="home-page">
       <Navigation profile={profile} />
 
+      {/* ===== ГЕРОЙ ===== */}
       <section className="home-hero">
         <div className="home-hero-bg" />
         <div className="home-hero-content">
@@ -108,6 +110,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ===== СТАТИСТИКА ===== */}
       <section className="home-stats">
         <div className="home-stats-container">
           <div className="home-stat-item">
@@ -132,6 +135,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ===== МИССИЯ ===== */}
       <section className="home-mission">
         <div className="home-mission-container">
           <div className="home-mission-icon">🕊️</div>
@@ -161,6 +165,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ===== НОВОСТИ ===== */}
+      <NewsSection limit={3} />
 
       <Footer />
 

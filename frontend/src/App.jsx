@@ -22,6 +22,7 @@ import DashboardAnalytics from './pages/DashboardAnalytics';
 import Settings from './pages/Settings';
 import AdminInvite from './pages/AdminInvite';
 import AdminUsers from './pages/AdminUsers';
+import AdminNews from './pages/AdminNews';
 import ImportParticipants from './pages/ImportParticipants';
 
 // Участник
@@ -223,7 +224,6 @@ function App() {
           </ProtectedRoute>
         } />
 
-        {/* ===== РЕДАКТИРОВАНИЕ УЧАСТНИКА ===== */}
         <Route path="/participant/:id/edit" element={
           <ProtectedRoute>
             <ParticipantEdit />
@@ -264,6 +264,12 @@ function App() {
         <Route path="/admin/users" element={
           <ProtectedRoute>
             <AdminUsers />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin/news" element={
+          <ProtectedRoute>
+            <AdminNews />
           </ProtectedRoute>
         } />
 

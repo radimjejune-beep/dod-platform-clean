@@ -84,12 +84,13 @@ export default function Navigation({ profile }) {
       appeals: [
         { path: '/appeals', label: '📨 Обращения', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
       ],
-      settings: [
-        { path: '/settings', label: '⚙️ Настройки', roles: ['admin', 'movement_coordinator'] },
-        { path: '/admin/invite', label: '🎫 Пригласить', roles: ['admin', 'movement_coordinator'] },
-        { path: '/admin/users', label: '👥 Пользователи', roles: ['admin', 'movement_coordinator', 'president', 'vice_president'] },
-        { path: '/import-participants', label: '📥 Импорт', roles: ['admin', 'movement_coordinator'] },
-      ],
+      ssettings: [
+  { path: '/settings', label: '⚙️ Настройки', roles: ['admin', 'movement_coordinator'] },
+  { path: '/admin/news', label: '📰 Новости', roles: ['admin', 'movement_coordinator'] },
+  { path: '/admin/invite', label: '🎫 Пригласить', roles: ['admin', 'movement_coordinator'] },
+  { path: '/admin/users', label: '👥 Пользователи', roles: ['admin', 'movement_coordinator', 'president', 'vice_president'] },
+  { path: '/import-participants', label: '📥 Импорт', roles: ['admin', 'movement_coordinator'] },
+],
     };
 
     const result = {};

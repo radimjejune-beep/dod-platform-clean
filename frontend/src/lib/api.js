@@ -282,44 +282,7 @@ export const updateTutorRequest = async (id, data) => {
 };
 
 // ============================================================
-// 10. ПРИГЛАШЕНИЯ ДЛЯ ТЬЮТОРОВ
-// ============================================================
-export const getTutorInvitations = async () => {
-  const response = await fetch(`${API_URL}/tutor-invitations`, {
-    method: 'GET',
-    headers: headers()
-  });
-  return response.json();
-};
-
-export const createTutorInvitation = async (data) => {
-  const response = await fetch(`${API_URL}/tutor-invitations`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify(data)
-  });
-  return response.json();
-};
-
-export const respondToTutorInvitation = async (id, status) => {
-  const response = await fetch(`${API_URL}/tutor-invitations/${id}/respond`, {
-    method: 'PATCH',
-    headers: headers(),
-    body: JSON.stringify({ status })
-  });
-  return response.json();
-};
-
-export const cancelTutorInvitation = async (id) => {
-  const response = await fetch(`${API_URL}/tutor-invitations/${id}`, {
-    method: 'DELETE',
-    headers: headers()
-  });
-  return response.json();
-};
-
-// ============================================================
-// 11. РЕГИСТРАЦИЯ (ПУБЛИЧНАЯ)
+// 10. РЕГИСТРАЦИЯ (ПУБЛИЧНАЯ)
 // ============================================================
 export const registerUser = async (data) => {
   const response = await fetch(`${API_URL}/register`, {
@@ -331,7 +294,7 @@ export const registerUser = async (data) => {
 };
 
 // ============================================================
-// 12. ИМПОРТ
+// 11. ИМПОРТ
 // ============================================================
 export const importParticipants = async (data) => {
   const response = await fetch(`${API_URL}/import-participants`, {
@@ -343,7 +306,7 @@ export const importParticipants = async (data) => {
 };
 
 // ============================================================
-// 13. ЭКСПОРТ API ОБЪЕКТА
+// 12. ЭКСПОРТ API ОБЪЕКТА
 // ============================================================
 const api = {
   getMe,
@@ -372,10 +335,6 @@ const api = {
   getTutorRequests,
   createTutorRequest,
   updateTutorRequest,
-  getTutorInvitations,
-  createTutorInvitation,
-  respondToTutorInvitation,
-  cancelTutorInvitation,
   registerUser,
   importParticipants
 };

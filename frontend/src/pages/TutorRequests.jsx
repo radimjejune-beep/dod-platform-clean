@@ -47,13 +47,33 @@ export default function TutorRequests() {
     }
   };
 
+  // ===== ОЧИСТКА ТЕЛЕФОНА =====
+  const cleanPhone = (phone) => {
+    if (!phone) return '';
+    return phone.replace(/[^0-9+]/g, '');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
     setLoading(true);
 
     try {
-      const result = await api.createTutorRequest(form);
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://dod-backend.relaxdev.ru/api/tutor-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...form,
+          tutor_phone: cleanPhone(form.tutor_phone)
+        })
+      });
+
+      const result = await response.json();
+      
       if (result.error) {
         throw new Error(result.error);
       }
@@ -75,6 +95,7 @@ export default function TutorRequests() {
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
+      console.error('❌ Ошибка:', err);
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
@@ -201,8 +222,11 @@ export default function TutorRequests() {
                     type="tel"
                     value={form.tutor_phone}
                     onChange={(e) => setForm({ ...form, tutor_phone: e.target.value })}
-                    placeholder="+7 (XXX) XXX-XX-XX"
+                    placeholder="+7 999 123 45 67"
                   />
+                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                    Введите номер без скобок, например: +7 999 123 45 67
+                  </div>
                 </div>
                 <div className="form-group">
                   <label>Дата мероприятия *</label>

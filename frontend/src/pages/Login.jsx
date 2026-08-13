@@ -1,12 +1,13 @@
 // src/pages/Login.jsx
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
+// ===== АДРЕС БЭКЕНДА =====
 const API_URL = 'https://dod-backend.relaxdev.ru/api';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('admin@dod.ru');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -18,6 +19,8 @@ export default function Login() {
     setError('');
 
     try {
+      console.log('🔐 Вход:', { email, password });
+      
       const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -30,94 +33,171 @@ export default function Login() {
         throw new Error(data.error || 'Ошибка входа');
       }
 
+      console.log('✅ Успешный вход:', data);
+
       // Сохраняем токен и данные пользователя
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      
-      // Переход на дашборд
+
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message);
+      console.error('❌ Ошибка входа:', err);
+      setError(err.message || 'Неверный email или пароль');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ 
-      maxWidth: '400px', 
-      margin: '0 auto', 
-      padding: '40px',
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center'
-    }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '30px' }}>Вход в систему</h1>
-      <form onSubmit={handleLogin}>
-        <div style={{ marginBottom: '15px' }}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: '1px solid #ccc',
-              borderRadius: '5px',
-              fontSize: '16px',
-              boxSizing: 'border-box'
-            }}
-          />
+    <div className="auth-bg">
+      <div className="card" style={{
+        maxWidth: '420px',
+        width: '100%',
+        padding: '32px',
+        animation: 'fadeIn 0.5s ease',
+        position: 'relative',
+        zIndex: 1
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <div style={{
+            width: '56px',
+            height: '56px',
+            background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 10px',
+            fontSize: '24px',
+            boxShadow: '0 4px 16px rgba(11, 31, 58, 0.3)'
+          }}>
+            🌍
+          </div>
+          <h1 style={{ fontSize: '20px', color: '#172033', marginBottom: '2px' }}>
+            Детское общественное движение
+          </h1>
+          <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#0B1F3A', marginBottom: '4px' }}>
+            «Дипломаты будущего»
+          </h2>
+          <p style={{
+            fontSize: '10px',
+            color: '#C9A227',
+            fontWeight: '600',
+            letterSpacing: '0.8px',
+            textTransform: 'uppercase'
+          }}>
+            Ассоциация российских дипломатов
+          </p>
+          <div style={{
+            marginTop: '8px',
+            fontSize: '13px',
+            color: '#667085'
+          }}>
+            Вход в систему
+          </div>
         </div>
-        <div style={{ marginBottom: '20px' }}>
-          <input
-            type="password"
-            placeholder="Пароль"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: '1px solid #ccc',
-              borderRadius: '5px',
-              fontSize: '16px',
-              boxSizing: 'border-box'
-            }}
-          />
-        </div>
-        <button 
-          type="submit" 
-          disabled={loading}
-          style={{
-            width: '100%',
-            padding: '12px',
-            background: loading ? '#6c757d' : '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            fontSize: '16px',
-            cursor: loading ? 'not-allowed' : 'pointer'
-          }}
-        >
-          {loading ? 'Загрузка...' : 'Войти'}
-        </button>
+
         {error && (
-          <p style={{ 
-            color: 'white', 
-            background: '#dc3545', 
-            padding: '10px', 
-            borderRadius: '5px',
-            marginTop: '15px',
+          <div style={{
+            padding: '12px',
+            background: '#FCEBEC',
+            color: '#B3262E',
+            borderRadius: '10px',
+            marginBottom: '16px',
+            fontSize: '14px',
             textAlign: 'center'
           }}>
-            {error}
-          </p>
+            ❌ {error}
+          </div>
         )}
-      </form>
+
+        <form onSubmit={handleLogin}>
+          <div className="form-group">
+            <label className="form-label">Email или логин</label>
+            <input
+              type="text"
+              className="form-input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="example@mail.com"
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                border: '1.5px solid #D5DCE7',
+                borderRadius: '10px',
+                fontSize: '14px',
+                outline: 'none'
+              }}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Пароль</label>
+            <input
+              type="password"
+              className="form-input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              placeholder="Введите пароль"
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                border: '1.5px solid #D5DCE7',
+                borderRadius: '10px',
+                fontSize: '14px',
+                outline: 'none'
+              }}
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '14px',
+              fontSize: '16px',
+              marginTop: '8px',
+              background: loading ? '#6c757d' : '#0B1F3A',
+              color: 'white',
+              border: 'none',
+              borderRadius: '10px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontWeight: '600'
+            }}
+          >
+            {loading ? '⏳ Вход...' : '🔑 Войти'}
+          </button>
+        </form>
+
+        <p style={{
+          marginTop: '20px',
+          textAlign: 'center',
+          fontSize: '14px',
+          color: '#667085'
+        }}>
+          Нет аккаунта?{' '}
+          <Link to="/register" style={{
+            color: '#0B1F3A',
+            fontWeight: '600',
+            textDecoration: 'none',
+            borderBottom: '2px solid #C9A227',
+            paddingBottom: '2px'
+          }}>
+            Зарегистрироваться
+          </Link>
+        </p>
+
+        <div style={{
+          marginTop: '20px',
+          height: '2px',
+          background: 'linear-gradient(90deg, transparent, #C9A227, transparent)',
+          borderRadius: '2px'
+        }} />
+      </div>
     </div>
   );
 }

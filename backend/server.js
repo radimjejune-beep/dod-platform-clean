@@ -1344,10 +1344,29 @@ app.get('/api/parent-children', async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     const userId = decoded.userId;
 
+    console.log('👨‍👩‍👦 Запрос детей для родителя:', userId);
+
     const result = await pool.query(
-      `SELECT c.*, 
-              u.full_name, u.phone, u.school, u.class_name, u.birth_date, u.avatar_url,
-              cl.name as club_name
+      `SELECT 
+        u.id, 
+        u.full_name, 
+        u.phone, 
+        u.school, 
+        u.class_name, 
+        u.birth_date, 
+        u.avatar_url,
+        u.status,
+        u.consent_personal_data,
+        u.consent_photo_publication,
+        u.consent_event_participation,
+        u.consent_agreement_date,
+        u.interests,
+        u.bio,
+        u.city,
+        cl.name as club_name,
+        cp.parent_id,
+        cp.child_id,
+        cp.status as link_status
        FROM child_parent cp
        LEFT JOIN users u ON cp.child_id = u.id
        LEFT JOIN clubs cl ON u.club_id = cl.id
@@ -1356,89 +1375,10 @@ app.get('/api/parent-children', async (req, res) => {
       [userId]
     );
 
+    console.log('✅ Найдено детей:', result.rows.length);
     res.json(result.rows);
   } catch (error) {
-    console.error('Ошибка получения детей:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/parent-children', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    if (userRole !== 'admin' && userRole !== 'movement_coordinator') {
-      return res.status(403).json({ error: 'У вас нет прав' });
-    }
-
-    const { parent_id, child_id } = req.body;
-
-    if (!parent_id || !child_id) {
-      return res.status(400).json({ error: 'parent_id и child_id обязательны' });
-    }
-
-    const parentCheck = await pool.query(
-      'SELECT role FROM users WHERE id = $1',
-      [parent_id]
-    );
-    if (parentCheck.rows.length === 0 || parentCheck.rows[0].role !== 'parent') {
-      return res.status(400).json({ error: 'Родитель не найден' });
-    }
-
-    const childCheck = await pool.query(
-      'SELECT role FROM users WHERE id = $1',
-      [child_id]
-    );
-    if (childCheck.rows.length === 0 || childCheck.rows[0].role !== 'participant') {
-      return res.status(400).json({ error: 'Ребёнок не найден' });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO child_parent (parent_id, child_id, status, created_at)
-       VALUES ($1, $2, 'active', NOW())
-       ON CONFLICT (parent_id, child_id) DO UPDATE SET status = 'active', updated_at = NOW()
-       RETURNING *`,
-      [parent_id, child_id]
-    );
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Ошибка привязки ребёнка:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.delete('/api/parent-children/:childId', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const { childId } = req.params;
-
-    const result = await pool.query(
-      'DELETE FROM child_parent WHERE parent_id = $1 AND child_id = $2 RETURNING *',
-      [userId, childId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Связь не найдена' });
-    }
-
-    res.json({ message: 'Связь удалена' });
-  } catch (error) {
-    console.error('Ошибка удаления связи:', error);
+    console.error('❌ Ошибка получения детей:', error);
     res.status(500).json({ error: error.message });
   }
 });

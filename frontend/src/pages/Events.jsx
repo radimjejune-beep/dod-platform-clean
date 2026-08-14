@@ -206,6 +206,14 @@ export default function Events() {
         is_club_event: !!form.club_id
       };
 
+      // ============================================================
+      // ДЛЯ КООРДИНАТОРА ДВИЖЕНИЯ — ЕСЛИ НЕТ CLUB_ID, ТО ГЛОБАЛЬНОЕ
+      // ============================================================
+      if (profile?.role === 'movement_coordinator' && !form.club_id) {
+        eventData.is_global = true;
+        eventData.is_club_event = false;
+      }
+
       let result;
       if (form.id) {
         const eventToEdit = allEvents.find(e => e.id === form.id);
@@ -435,21 +443,58 @@ export default function Events() {
             )}
             
             <form onSubmit={handleSubmit}>
-              <div className="form-group"><label>Название *</label><input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
-              <div className="form-group"><label>Описание</label><textarea rows="3" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-              <div className="form-group"><label>Место</label><input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></div>
-              <div className="grid-2">
-                <div className="form-group"><label>Дата начала *</label><input type="date" value={form.event_date} onChange={(e) => setForm({ ...form, event_date: e.target.value })} required /></div>
-                <div className="form-group"><label>Дата окончания</label><input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} /></div>
+              <div className="form-group">
+                <label>Название *</label>
+                <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
               </div>
-              <div className="grid-2">
-                <div className="form-group"><label>Время начала</label><input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} /></div>
-                <div className="form-group"><label>Время окончания</label><input type="time" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} /></div>
+              
+              <div className="form-group">
+                <label>Описание</label>
+                <textarea rows="3" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </div>
+              
+              <div className="form-group">
+                <label>Место</label>
+                <input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+              </div>
+              
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Дата начала *</label>
+                  <input type="date" value={form.event_date} onChange={(e) => setForm({ ...form, event_date: e.target.value })} required />
+                </div>
+                <div className="form-group">
+                  <label>Дата окончания</label>
+                  <input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
+                </div>
+              </div>
+              
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Время начала</label>
+                  <input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Время окончания</label>
+                  <input type="time" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} />
+                </div>
+              </div>
+              
               <div className="grid-3">
-                <div className="form-group"><label>Тип</label><select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}><option value="internal">Внутреннее</option><option value="outgoing">Выездное</option><option value="global_forum">Глобальный форум</option></select></div>
-                <div className="form-group"><label>Лимит мест</label><input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} min="1" /></div>
-                <div className="form-group"><label>Клуб</label>
+                <div className="form-group">
+                  <label>Тип</label>
+                  <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+                    <option value="internal">Внутреннее</option>
+                    <option value="outgoing">Выездное</option>
+                    <option value="global_forum">Глобальный форум</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Лимит мест</label>
+                  <input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} min="1" />
+                </div>
+                <div className="form-group">
+                  <label>Клуб</label>
                   <select value={form.club_id} onChange={(e) => setForm({ ...form, club_id: e.target.value })}>
                     <option value="">Без клуба (глобальное)</option>
                     {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -459,12 +504,25 @@ export default function Events() {
                   </div>
                 </div>
               </div>
-              <div className="form-group"><label>Ссылка на форму</label><input type="url" value={form.form_url} onChange={(e) => setForm({ ...form, form_url: e.target.value })} /></div>
+              
+              <div className="form-group">
+                <label>Ссылка на форму</label>
+                <input type="url" value={form.form_url} onChange={(e) => setForm({ ...form, form_url: e.target.value })} />
+              </div>
+              
               {isClubCoordinator && (
-                <div className="form-group"><label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><input type="checkbox" checked={form.is_global} onChange={(e) => setForm({ ...form, is_global: e.target.checked })} /> 🌍 Глобальное мероприятие</label></div>
+                <div className="form-group">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input type="checkbox" checked={form.is_global} onChange={(e) => setForm({ ...form, is_global: e.target.checked })} />
+                    🌍 Глобальное мероприятие
+                  </label>
+                </div>
               )}
+              
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button type="submit" className="btn-success" disabled={loading}>{loading ? '⏳' : form.id ? '💾 Обновить' : '✅ Создать'}</button>
+                <button type="submit" className="btn-success" disabled={loading}>
+                  {loading ? '⏳' : form.id ? '💾 Обновить' : '✅ Создать'}
+                </button>
                 <button type="button" className="btn-secondary" onClick={resetForm}>❌ Отмена</button>
               </div>
             </form>
@@ -474,7 +532,10 @@ export default function Events() {
         <div className="card">
           <h3 style={{ marginBottom: '16px' }}>Все мероприятия</h3>
           {filteredEvents.length === 0 ? (
-            <div className="empty-state"><div className="icon">📭</div><p>Мероприятий не найдено</p></div>
+            <div className="empty-state">
+              <div className="icon">📭</div>
+              <p>Мероприятий не найдено</p>
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {filteredEvents.map((event) => {

@@ -46,9 +46,11 @@ import TutorInvitations from './pages/TutorInvitations';
 import StaffManagement from './pages/StaffManagement';
 import StaffCalendar from './pages/StaffCalendar';
 
-// ===== НОВЫЕ СТРАНИЦЫ ДЛЯ ВНУТРЕННИХ МЕРОПРИЯТИЙ КЛУБА =====
+// ===== НОВЫЕ СТРАНИЦЫ =====
 import MyClubEvents from './pages/MyClubEvents';
 import ClubCalendar from './pages/ClubCalendar';
+import ClubRating from './pages/ClubRating';
+import ClubPresident from './pages/ClubPresident';
 
 // Тьютор
 import TutorDashboard from './pages/TutorDashboard';
@@ -68,7 +70,6 @@ import './styles/global.css';
 function AppRoutes() {
   const navigate = useNavigate();
 
-  // ===== ПРОВЕРКА СЕССИИ =====
   useEffect(() => {
     const token = localStorage.getItem('token');
     const sessionId = sessionStorage.getItem('sessionId');
@@ -176,6 +177,19 @@ function AppRoutes() {
       <Route path="/tutor-invitations" element={
         <ProtectedRoute>
           <TutorInvitations />
+        </ProtectedRoute>
+      } />
+
+      {/* ===== НОВЫЕ МАРШРУТЫ ДЛЯ КООРДИНАТОРА ===== */}
+      <Route path="/club-rating" element={
+        <ProtectedRoute>
+          <ClubRating />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/club/:id/president" element={
+        <ProtectedRoute>
+          <ClubPresident />
         </ProtectedRoute>
       } />
 
@@ -314,9 +328,7 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* ============================================================
-          НОВЫЕ МАРШРУТЫ: ВНУТРЕННИЕ МЕРОПРИЯТИЯ КЛУБА
-          ============================================================ */}
+      {/* ===== ВНУТРЕННИЕ МЕРОПРИЯТИЯ КЛУБА ===== */}
       <Route path="/my-club-events" element={
         <ProtectedRoute>
           <MyClubEvents />

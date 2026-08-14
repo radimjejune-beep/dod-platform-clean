@@ -163,12 +163,7 @@ export default function Navigation({ profile }) {
 
   const getAvatar = () => {
     if (profile?.avatar_url) {
-      const isBase64 = profile.avatar_url.startsWith('data:image/');
-      const isUrl = profile.avatar_url.startsWith('http');
-      if (isBase64 || isUrl) {
-        return <img src={profile.avatar_url} alt="Аватар" className="nav-avatar" />;
-      }
-      return <img src={`/uploads/${profile.avatar_url}`} alt="Аватар" className="nav-avatar" />;
+      return <img src={profile.avatar_url} alt="Аватар" className="nav-avatar" />;
     }
     const initial = profile?.full_name?.charAt(0) || '?';
     return (
@@ -200,7 +195,6 @@ export default function Navigation({ profile }) {
         { path: '/clubs', label: 'КЮДы', icon: Icons.club, roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'] },
         { path: '/club-analytics', label: 'Аналитика КЮДов', icon: Icons.barChart, roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
       ],
-      // ===== НОВАЯ ГРУППА: УПРАВЛЕНИЕ КЛУБОМ =====
       clubManagement: [
         { path: '/club-rating', label: '🏆 Рейтинг клуба', icon: Icons.award, roles: ['club_coordinator'] },
       ],
@@ -228,12 +222,10 @@ export default function Navigation({ profile }) {
       staffCalendar: [
         { path: '/staff-calendar', label: 'Календарь сотрудников', icon: Icons.calendar, roles: ['admin', 'movement_coordinator'] },
       ],
-      // ===== ВНУТРЕННИЕ МЕРОПРИЯТИЯ КЛУБА =====
       clubEvents: [
         { path: '/my-club-events', label: 'Мои мероприятия', icon: Icons.calendar, roles: ['club_coordinator', 'participant', 'tutor'] },
         { path: '/club-calendar', label: 'Календарь клуба', icon: Icons.calendar, roles: ['club_coordinator', 'participant', 'tutor'] },
       ],
-      // ===== НАСТРОЙКИ (только для админа и координатора движения) =====
       settings: [
         { path: '/settings', label: 'Настройки', icon: Icons.settings, roles: ['admin', 'movement_coordinator'] },
         { path: '/admin/news', label: 'Новости', icon: Icons.mail, roles: ['admin', 'movement_coordinator'] },
@@ -272,7 +264,7 @@ export default function Navigation({ profile }) {
 
   const groupOrder = ['main', 'events', 'people', 'clubs', 'clubManagement', 'achievements', 'reviews', 'reports', 'tasks', 'communication', 'staffCalendar', 'clubEvents', 'settings'];
 
-  // ===== ВАЖНО: menuGroups вычисляется ЗДЕСЬ =====
+  // ===== ВЫЧИСЛЯЕМ MENU GROUPS =====
   const menuGroups = getMenuGroups();
 
   const sortedGroups = Object.entries(menuGroups).sort((a, b) => {
@@ -366,7 +358,7 @@ export default function Navigation({ profile }) {
         </div>
       </div>
 
-      {/* ===== ВЫПАДАЮЩЕЕ МЕНЮ-СПИСОК ===== */}
+      {/* ===== ВЫПАДАЮЩЕЕ МЕНЮ ===== */}
       <div 
         ref={menuRef}
         className={`nav-menu-overlay ${isMenuOpen ? 'open' : ''}`}
@@ -455,7 +447,6 @@ export default function Navigation({ profile }) {
       </div>
 
       <style>{`
-        /* ===== ОСНОВНАЯ НАВИГАЦИЯ ===== */
         .nav-new {
           background: #FFFFFF;
           border-bottom: 1px solid #E2E7EF;
@@ -507,6 +498,20 @@ export default function Navigation({ profile }) {
           align-items: center;
           gap: 2px;
           flex-shrink: 0;
+        }
+
+        .nav-new-link {
+          padding: 6px 16px;
+          color: #0B1F3A;
+          text-decoration: none;
+          font-weight: 500;
+          font-size: 14px;
+          border-radius: 8px;
+          transition: all 0.2s ease;
+        }
+
+        .nav-new-link:hover {
+          background: #F4F6F9;
         }
 
         .nav-new-profile {

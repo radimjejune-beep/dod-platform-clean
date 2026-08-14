@@ -24,12 +24,16 @@ export default function ClubPresident() {
 
   const loadData = async () => {
     try {
+      setLoading(true);
       const userData = await api.getMe();
       if (!userData || !userData.id) {
         navigate('/login');
         return;
       }
 
+      // ============================================================
+      // ПРОВЕРКА ПРАВ: КООРДИНАТОР ИЛИ АДМИН
+      // ============================================================
       if (userData.role !== 'club_coordinator' && userData.role !== 'admin') {
         navigate('/dashboard');
         return;
@@ -37,33 +41,85 @@ export default function ClubPresident() {
 
       setProfile(userData);
 
-      // Загружаем клуб
+      // ============================================================
+      // ЗАГРУЗКА КЛУБА
+      // ============================================================
       const clubsData = await api.getClubs();
+      
+      // Ищем клуб по ID
       const foundClub = clubsData.find(c => c.id === clubId);
+      
+      // Если координатор — проверяем, что это его клуб
+      if (userData.role === 'club_coordinator') {
+        const isMyClub = foundClub && (
+          foundClub.coordinator_id === userData.id || 
+          foundClub.leader_id === userData.id
+        );
+        
+        // Дополнительная проверка через club_coordinators
+        let isCoordinator = isMyClub;
+        if (!isCoordinator) {
+          try {
+            const coordResponse = await fetch(
+              `https://dod-backend.relaxdev.ru/api/club-coordinators?profile_id=${userData.id}`
+            );
+            const coordData = await coordResponse.json();
+            if (coordData && coordData.length > 0) {
+              const userClubId = coordData[0].club_id;
+              isCoordinator = userClubId === clubId;
+            }
+          } catch (e) {
+            console.log('Ошибка проверки координатора:', e);
+          }
+        }
+        
+        if (!isCoordinator) {
+          setMessage('❌ У вас нет прав для этого клуба');
+          setMessageType('error');
+          setLoading(false);
+          return;
+        }
+      }
+
       setClub(foundClub);
 
-      // Загружаем участников клуба
+      // ============================================================
+      // ЗАГРУЗКА УЧАСТНИКОВ КЛУБА
+      // ============================================================
       const participantsData = await api.getParticipants();
+      console.log('📥 Все участники:', participantsData?.length || 0);
+      
+      // ФИЛЬТРУЕМ ТОЛЬКО УЧАСТНИКОВ ЭТОГО КЛУБА
       const clubParticipants = participantsData.filter(p => p.club_id === clubId);
+      console.log(`📥 Участники клуба ${clubId}:`, clubParticipants?.length || 0);
+      
       setParticipants(clubParticipants);
 
-      // Загружаем текущего президента
+      // ============================================================
+      // ЗАГРУЗКА ТЕКУЩЕГО ПРЕЗИДЕНТА
+      // ============================================================
       const token = localStorage.getItem('token');
-      const response = await fetch(
-        `https://dod-backend.relaxdev.ru/api/clubs/${clubId}/president`,
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
+      try {
+        const response = await fetch(
+          `https://dod-backend.relaxdev.ru/api/clubs/${clubId}/president`,
+          {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }
+        );
+        const data = await response.json();
+        console.log('👑 Текущий президент:', data);
+        setCurrentPresident(data);
+        if (data) {
+          setSelectedParticipant(data.id);
         }
-      );
-      const data = await response.json();
-      setCurrentPresident(data);
-
-      if (data) {
-        setSelectedParticipant(data.id);
+      } catch (err) {
+        console.error('Ошибка загрузки президента:', err);
       }
 
     } catch (err) {
       console.error('Ошибка:', err);
+      setMessage('❌ Ошибка загрузки данных: ' + err.message);
+      setMessageType('error');
     } finally {
       setLoading(false);
     }
@@ -103,6 +159,9 @@ export default function ClubPresident() {
       setMessageType('success');
       setCurrentPresident(result.president);
       
+      // Обновляем список участников, чтобы показать нового президента
+      await loadData();
+      
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
@@ -120,6 +179,9 @@ export default function ClubPresident() {
     );
   }
 
+  // Если нет участников — показываем сообщение
+  const hasParticipants = participants && participants.length > 0;
+
   return (
     <div className="page-background">
       <Navigation profile={profile} />
@@ -136,7 +198,7 @@ export default function ClubPresident() {
           <span style={{ fontSize: '32px' }}>👑</span>
           <div>
             <h1>Назначение президента клуба</h1>
-            <p>{club?.name}</p>
+            <p>{club?.name || 'Клуб'}</p>
           </div>
         </div>
 
@@ -193,64 +255,90 @@ export default function ClubPresident() {
             👤 Выберите нового президента
           </h3>
 
-          {participants.length === 0 ? (
-            <p style={{ color: '#667085' }}>В клубе нет участников</p>
+          {!hasParticipants ? (
+            <div className="empty-state">
+              <div className="icon">👀</div>
+              <p style={{ fontSize: '16px', color: '#0B1F3A' }}>
+                В вашем клубе пока нет участников
+              </p>
+              <p style={{ color: '#667085', fontSize: '13px' }}>
+                Добавьте участников в клуб, чтобы назначить президента
+              </p>
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {participants.map((p) => (
-                <div
-                  key={p.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '10px 14px',
-                    background: selectedParticipant === p.id ? '#FBF4DC' : '#F8FAFC',
-                    borderRadius: '8px',
-                    border: selectedParticipant === p.id ? '2px solid #C9A227' : '1px solid #E2E7EF',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onClick={() => setSelectedParticipant(p.id)}
-                >
-                  <div style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}>
-                    {p.full_name?.charAt(0) || '?'}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '500', color: '#0B1F3A' }}>
-                      {p.full_name}
+              {participants.map((p) => {
+                const isCurrentPresident = currentPresident?.id === p.id;
+                return (
+                  <div
+                    key={p.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '10px 14px',
+                      background: selectedParticipant === p.id ? '#FBF4DC' : '#F8FAFC',
+                      borderRadius: '8px',
+                      border: selectedParticipant === p.id ? '2px solid #C9A227' : '1px solid #E2E7EF',
+                      cursor: isCurrentPresident ? 'default' : 'pointer',
+                      transition: 'all 0.2s ease',
+                      opacity: isCurrentPresident ? 0.6 : 1
+                    }}
+                    onClick={() => {
+                      if (!isCurrentPresident) {
+                        setSelectedParticipant(p.id);
+                      }
+                    }}
+                  >
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}>
+                      {p.full_name?.charAt(0) || '?'}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#98A2B3' }}>
-                      {p.school || 'Школа не указана'} • {p.class_name || 'Класс не указан'}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                        {p.full_name}
+                        {isCurrentPresident && (
+                          <span style={{ marginLeft: '8px', fontSize: '12px', color: '#C9A227' }}>
+                            👑 Текущий президент
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#98A2B3' }}>
+                        {p.school || 'Школа не указана'} • {p.class_name || 'Класс не указан'}
+                      </div>
                     </div>
+                    {selectedParticipant === p.id && !isCurrentPresident && (
+                      <span style={{ color: '#C9A227', fontSize: '20px' }}>✓</span>
+                    )}
+                    {isCurrentPresident && (
+                      <span style={{ color: '#C9A227', fontSize: '20px' }}>👑</span>
+                    )}
                   </div>
-                  {selectedParticipant === p.id && (
-                    <span style={{ color: '#C9A227', fontSize: '20px' }}>✓</span>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
-          <button
-            className="btn-success"
-            onClick={handleAssignPresident}
-            disabled={saving || !selectedParticipant}
-            style={{ marginTop: '16px', width: '100%' }}
-          >
-            {saving ? '⏳ Назначение...' : '👑 Назначить президентом'}
-          </button>
+          {hasParticipants && (
+            <button
+              className="btn-success"
+              onClick={handleAssignPresident}
+              disabled={saving || !selectedParticipant}
+              style={{ marginTop: '16px', width: '100%' }}
+            >
+              {saving ? '⏳ Назначение...' : '👑 Назначить президентом'}
+            </button>
+          )}
         </div>
       </div>
     </div>

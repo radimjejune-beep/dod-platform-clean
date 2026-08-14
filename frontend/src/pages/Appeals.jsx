@@ -20,6 +20,7 @@ export default function Appeals() {
   const [replyStatus, setReplyStatus] = useState('in_progress');
   const [replies, setReplies] = useState([]);
   const [showReplies, setShowReplies] = useState(false);
+  const [loadingReplies, setLoadingReplies] = useState(false);
   
   const [form, setForm] = useState({
     subject: '',
@@ -34,6 +35,7 @@ export default function Appeals() {
 
   const loadData = async () => {
     try {
+      setLoading(true);
       const userData = await api.getMe();
       if (!userData || !userData.id) {
         navigate('/login');
@@ -42,15 +44,18 @@ export default function Appeals() {
       setProfile(userData);
 
       const appealsData = await api.getAppeals();
-      console.log('📥 Загружено обращений:', appealsData);
+      console.log('📥 Загружено обращений:', appealsData?.length || 0);
       setAppeals(appealsData || []);
     } catch (err) {
-      console.error('Ошибка:', err);
+      console.error('❌ Ошибка загрузки:', err);
+      setMessage('❌ Ошибка загрузки данных');
+      setMessageType('error');
     } finally {
       setLoading(false);
     }
   };
 
+  // ===== СОЗДАНИЕ ОБРАЩЕНИЯ =====
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSending(true);
@@ -81,9 +86,7 @@ export default function Appeals() {
     }
   };
 
-  // ============================================================
-  // ОТВЕТ НА ОБРАЩЕНИЕ - ИСПРАВЛЕННЫЙ
-  // ============================================================
+  // ===== ОТВЕТ НА ОБРАЩЕНИЕ =====
   const handleReply = async (e) => {
     e.preventDefault();
     setSending(true);
@@ -105,11 +108,11 @@ export default function Appeals() {
         return;
       }
 
-      console.log('📤 Отправка ответа на обращение:', selectedAppeal.id);
+      console.log('📤 Отправка ответа на обращение:', selectedAppeal?.id);
       console.log('📤 Текст ответа:', replyMessage);
       console.log('📤 Статус:', replyStatus);
 
-      const response = await fetch(`${api.API_URL || 'https://dod-backend.relaxdev.ru/api'}/appeals/${selectedAppeal.id}/reply`, {
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/appeals/${selectedAppeal.id}/reply`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -148,6 +151,7 @@ export default function Appeals() {
     }
   };
 
+  // ===== УДАЛЕНИЕ ОБРАЩЕНИЯ =====
   const handleDelete = async (id) => {
     const role = profile?.role;
     
@@ -187,8 +191,10 @@ export default function Appeals() {
     }
   };
 
+  // ===== ЗАГРУЗКА ОТВЕТОВ =====
   const loadReplies = async (appealId) => {
     try {
+      setLoadingReplies(true);
       const token = localStorage.getItem('token');
       const response = await fetch(`https://dod-backend.relaxdev.ru/api/appeals/${appealId}/replies`, {
         headers: {
@@ -196,13 +202,19 @@ export default function Appeals() {
         }
       });
       const data = await response.json();
+      console.log('📥 Загружены ответы:', data);
       setReplies(data || []);
       setShowReplies(true);
     } catch (err) {
-      console.error('Ошибка загрузки ответов:', err);
+      console.error('❌ Ошибка загрузки ответов:', err);
+      setMessage('❌ Ошибка загрузки ответов');
+      setMessageType('error');
+    } finally {
+      setLoadingReplies(false);
     }
   };
 
+  // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
   const getPriorityLabel = (priority) => {
     const labels = {
       'low': '🟢 Низкий',
@@ -243,6 +255,7 @@ export default function Appeals() {
     return colors[status] || '#F4F6F9';
   };
 
+  // ===== ПРОВЕРКА ПРАВ =====
   const canReply = profile?.role === 'admin' || 
                    profile?.role === 'movement_coordinator' || 
                    profile?.role === 'president' || 
@@ -311,6 +324,7 @@ export default function Appeals() {
           </div>
         )}
 
+        {/* ФОРМА СОЗДАНИЯ ОБРАЩЕНИЯ */}
         {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
@@ -364,6 +378,7 @@ export default function Appeals() {
           </div>
         )}
 
+        {/* СПИСОК ОБРАЩЕНИЙ */}
         {appeals.length === 0 ? (
           <div className="empty-state">
             <div className="icon">📭</div>
@@ -371,163 +386,222 @@ export default function Appeals() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {appeals.map((appeal) => (
-              <div
-                key={appeal.id}
-                className="card"
-                style={{
-                  borderLeft: `4px solid ${getStatusColor(appeal.status)}`,
-                  position: 'relative'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                      <h3 style={{ fontSize: '17px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
-                        {appeal.subject}
-                      </h3>
-                      <span className="tag" style={{
-                        background: getStatusBg(appeal.status),
-                        color: getStatusColor(appeal.status)
+            {appeals.map((appeal) => {
+              const status = getStatusLabel(appeal.status);
+              const statusColor = getStatusColor(appeal.status);
+              const statusBg = getStatusBg(appeal.status);
+              
+              return (
+                <div
+                  key={appeal.id}
+                  className="card"
+                  style={{
+                    borderLeft: `4px solid ${statusColor}`,
+                    position: 'relative'
+                  }}
+                >
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'flex-start', 
+                    flexWrap: 'wrap', 
+                    gap: '8px' 
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '12px', 
+                        flexWrap: 'wrap' 
                       }}>
-                        {getStatusLabel(appeal.status)}
-                      </span>
-                      <span className="tag" style={{
-                        background: appeal.priority === 'urgent' ? '#FCEBEC' :
-                                  appeal.priority === 'high' ? '#FCEBEC' :
-                                  appeal.priority === 'medium' ? '#FBF4DC' : '#F4F6F9',
-                        color: appeal.priority === 'urgent' ? '#B3262E' :
-                               appeal.priority === 'high' ? '#B3262E' :
-                               appeal.priority === 'medium' ? '#8A6A00' : '#667085'
+                        <h3 style={{ 
+                          fontSize: '17px', 
+                          fontWeight: '600', 
+                          color: '#0B1F3A', 
+                          margin: 0 
+                        }}>
+                          {appeal.subject}
+                        </h3>
+                        <span className="tag" style={{
+                          background: statusBg,
+                          color: statusColor
+                        }}>
+                          {status}
+                        </span>
+                        <span className="tag" style={{
+                          background: appeal.priority === 'urgent' ? '#FCEBEC' :
+                                    appeal.priority === 'high' ? '#FCEBEC' :
+                                    appeal.priority === 'medium' ? '#FBF4DC' : '#F4F6F9',
+                          color: appeal.priority === 'urgent' ? '#B3262E' :
+                                 appeal.priority === 'high' ? '#B3262E' :
+                                 appeal.priority === 'medium' ? '#8A6A00' : '#667085'
+                        }}>
+                          {getPriorityLabel(appeal.priority)}
+                        </span>
+                        {appeal.club_name && (
+                          <span className="tag tag-blue">🏫 {appeal.club_name}</span>
+                        )}
+                        {appeal.coordinator_name && (
+                          <span className="tag" style={{ background: '#F4F6F9', color: '#667085' }}>
+                            👤 {appeal.coordinator_name}
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ fontSize: '14px', color: '#475467', marginTop: '8px' }}>
+                        {appeal.message}
+                      </div>
+
+                      <div style={{ 
+                        fontSize: '12px', 
+                        color: '#98A2B3', 
+                        marginTop: '4px',
+                        display: 'flex',
+                        gap: '16px',
+                        flexWrap: 'wrap'
                       }}>
-                        {getPriorityLabel(appeal.priority)}
-                      </span>
-                      {appeal.club_name && (
-                        <span className="tag tag-blue">🏫 {appeal.club_name}</span>
-                      )}
-                      {appeal.coordinator_name && (
-                        <span className="tag" style={{ background: '#F4F6F9', color: '#667085' }}>
-                          👤 {appeal.coordinator_name}
-                        </span>
-                      )}
-                      {appeal.resolved_by_name && appeal.status === 'resolved' && (
-                        <span className="tag" style={{ background: '#E8F5EF', color: '#16845B' }}>
-                          ✅ Рассмотрел: {appeal.resolved_by_name}
-                        </span>
-                      )}
-                      {appeal.resolved_by_name && appeal.status === 'rejected' && (
-                        <span className="tag" style={{ background: '#FCEBEC', color: '#B3262E' }}>
-                          ❌ Отклонил: {appeal.resolved_by_name}
-                        </span>
-                      )}
+                        <span>📅 {new Date(appeal.created_at).toLocaleString('ru-RU')}</span>
+                        {appeal.resolved_at && (
+                          <span>✅ Рассмотрено: {new Date(appeal.resolved_at).toLocaleString('ru-RU')}</span>
+                        )}
+                        {appeal.reply_count > 0 && (
+                          <span>💬 Ответов: {appeal.reply_count}</span>
+                        )}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '14px', color: '#475467', marginTop: '8px' }}>
-                      {appeal.message}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#98A2B3', marginTop: '4px' }}>
-                      📅 {new Date(appeal.created_at).toLocaleString('ru-RU')}
-                      {appeal.resolved_at && ` • ✅ Рассмотрено: ${new Date(appeal.resolved_at).toLocaleString('ru-RU')}`}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <button
-                      className="btn-secondary"
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
-                      onClick={() => {
-                        setSelectedAppeal(appeal);
-                        loadReplies(appeal.id);
-                      }}
-                    >
-                      💬 Ответы ({appeal.reply_count || 0})
-                    </button>
-                    {canReply && appeal.status !== 'resolved' && appeal.status !== 'rejected' && (
+
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <button
-                        className="btn-primary"
+                        className="btn-secondary"
                         style={{ padding: '6px 12px', fontSize: '12px' }}
-                        onClick={() => {
+                        onClick={async () => {
                           setSelectedAppeal(appeal);
-                          setShowReplyModal(true);
-                          setReplyStatus('in_progress');
-                          setReplyMessage('');
+                          await loadReplies(appeal.id);
                         }}
                       >
-                        📝 Ответить
+                        💬 Ответы ({appeal.reply_count || 0})
                       </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        className="btn-danger"
-                        style={{ padding: '6px 12px', fontSize: '12px' }}
-                        onClick={() => handleDelete(appeal.id)}
-                      >
-                        🗑️ Удалить
-                      </button>
-                    )}
+                      
+                      {canReply && appeal.status !== 'resolved' && appeal.status !== 'rejected' && (
+                        <button
+                          className="btn-primary"
+                          style={{ padding: '6px 12px', fontSize: '12px' }}
+                          onClick={() => {
+                            setSelectedAppeal(appeal);
+                            setShowReplyModal(true);
+                            setReplyStatus('in_progress');
+                            setReplyMessage('');
+                          }}
+                        >
+                          📝 Ответить
+                        </button>
+                      )}
+                      
+                      {canDelete && (
+                        <button
+                          className="btn-danger"
+                          style={{ padding: '6px 12px', fontSize: '12px' }}
+                          onClick={() => handleDelete(appeal.id)}
+                        >
+                          🗑️ Удалить
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {showReplies && selectedAppeal?.id === appeal.id && (
-                  <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E7EF' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
-                      💬 История ответов
-                    </h4>
-                    {replies.length === 0 ? (
-                      <p style={{ color: '#98A2B3', fontSize: '13px' }}>Ответов пока нет</p>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {replies.map((reply) => (
-                          <div
-                            key={reply.id}
-                            style={{
-                              padding: '12px 16px',
-                              background: '#F8FAFC',
-                              borderRadius: '8px',
-                              borderLeft: '3px solid #174A7E'
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                              <div>
-                                <div style={{ fontSize: '14px', color: '#0B1F3A' }}>
-                                  {reply.message}
+                  {/* ОТВЕТЫ */}
+                  {showReplies && selectedAppeal?.id === appeal.id && (
+                    <div style={{ 
+                      marginTop: '16px', 
+                      paddingTop: '16px', 
+                      borderTop: '1px solid #E2E7EF' 
+                    }}>
+                      <h4 style={{ 
+                        fontSize: '14px', 
+                        fontWeight: '600', 
+                        color: '#0B1F3A', 
+                        marginBottom: '12px' 
+                      }}>
+                        💬 История ответов
+                      </h4>
+                      
+                      {loadingReplies ? (
+                        <div style={{ textAlign: 'center', padding: '20px' }}>
+                          <div className="spinner" style={{ width: '24px', height: '24px' }} />
+                        </div>
+                      ) : replies.length === 0 ? (
+                        <p style={{ color: '#98A2B3', fontSize: '13px' }}>Ответов пока нет</p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {replies.map((reply) => (
+                            <div
+                              key={reply.id}
+                              style={{
+                                padding: '12px 16px',
+                                background: '#F8FAFC',
+                                borderRadius: '8px',
+                                borderLeft: '3px solid #174A7E'
+                              }}
+                            >
+                              <div style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'flex-start' 
+                              }}>
+                                <div>
+                                  <div style={{ fontSize: '14px', color: '#0B1F3A' }}>
+                                    {reply.message}
+                                  </div>
+                                  <div style={{ 
+                                    fontSize: '12px', 
+                                    color: '#98A2B3', 
+                                    marginTop: '4px' 
+                                  }}>
+                                    👤 {reply.author_name || 'Неизвестно'} 
+                                    {reply.author_role && ` (${reply.author_role})`}
+                                    {' • '}
+                                    📅 {new Date(reply.created_at).toLocaleString('ru-RU')}
+                                  </div>
                                 </div>
-                                <div style={{ fontSize: '12px', color: '#98A2B3', marginTop: '4px' }}>
-                                  👤 {reply.author_name || 'Неизвестно'} 
-                                  {reply.author_role && ` (${reply.author_role})`}
-                                  {' • '}
-                                  📅 {new Date(reply.created_at).toLocaleString('ru-RU')}
-                                </div>
+                                {reply.appeal_status && (
+                                  <span style={{
+                                    fontSize: '11px',
+                                    padding: '2px 10px',
+                                    borderRadius: '12px',
+                                    background: '#EAF2FA',
+                                    color: '#174A7E'
+                                  }}>
+                                    Статус: {getStatusLabel(reply.appeal_status)}
+                                  </span>
+                                )}
                               </div>
-                              {reply.status_before !== reply.status_after && (
-                                <span style={{
-                                  fontSize: '11px',
-                                  padding: '2px 10px',
-                                  borderRadius: '12px',
-                                  background: '#EAF2FA',
-                                  color: '#174A7E'
-                                }}>
-                                  Статус: {getStatusLabel(reply.status_before)} → {getStatusLabel(reply.status_after)}
-                                </span>
-                              )}
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <button
-                      className="btn-secondary"
-                      style={{ padding: '4px 12px', fontSize: '12px', marginTop: '8px' }}
-                      onClick={() => setShowReplies(false)}
-                    >
-                      ✖ Скрыть
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+                          ))}
+                        </div>
+                      )}
+                      
+                      <button
+                        className="btn-secondary"
+                        style={{ padding: '4px 12px', fontSize: '12px', marginTop: '8px' }}
+                        onClick={() => {
+                          setShowReplies(false);
+                          setReplies([]);
+                        }}
+                      >
+                        ✖ Скрыть
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
+      {/* ============================================================
+          МОДАЛЬНОЕ ОКНО: ОТВЕТ НА ОБРАЩЕНИЕ
+          ============================================================ */}
       {showReplyModal && selectedAppeal && (
         <div
           style={{
@@ -557,7 +631,12 @@ export default function Appeals() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#0B1F3A', marginBottom: '4px' }}>
+            <h3 style={{ 
+              fontSize: '20px', 
+              fontWeight: '600', 
+              color: '#0B1F3A', 
+              marginBottom: '4px' 
+            }}>
               📝 Ответ на обращение
             </h3>
             <p style={{ color: '#667085', marginBottom: '16px' }}>
@@ -608,7 +687,11 @@ export default function Appeals() {
               </div>
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                <button type="submit" className="btn-success" disabled={sending}>
+                <button 
+                  type="submit" 
+                  className="btn-success" 
+                  disabled={sending}
+                >
                   {sending ? '⏳ Отправка...' : '📤 Отправить ответ'}
                 </button>
                 <button

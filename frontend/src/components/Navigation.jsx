@@ -200,6 +200,10 @@ export default function Navigation({ profile }) {
         { path: '/clubs', label: 'КЮДы', icon: Icons.club, roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'] },
         { path: '/club-analytics', label: 'Аналитика КЮДов', icon: Icons.barChart, roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
       ],
+      // ===== НОВАЯ ГРУППА: УПРАВЛЕНИЕ КЛУБОМ =====
+      clubManagement: [
+        { path: '/club-rating', label: '🏆 Рейтинг клуба', icon: Icons.award, roles: ['club_coordinator'] },
+      ],
       achievements: [
         { path: '/achievements', label: 'Достижения', icon: Icons.award, roles: ['admin', 'movement_coordinator', 'tutor', 'president', 'vice_president'] },
         { path: '/manage-achievements', label: 'Управление', icon: Icons.settings, roles: ['admin', 'movement_coordinator', 'club_coordinator'] },
@@ -250,13 +254,12 @@ export default function Navigation({ profile }) {
     return result;
   };
 
-  const menuGroups = getMenuGroups();
-
   const groupLabels = {
     main: 'Главная',
     events: 'Мероприятия',
     people: 'Люди',
     clubs: 'КЮДы',
+    clubManagement: 'Управление клубом',  // ← НОВАЯ ГРУППА
     achievements: 'Достижения',
     reviews: 'Оценки',
     reports: 'Отчёты',
@@ -267,7 +270,7 @@ export default function Navigation({ profile }) {
     settings: 'Настройки',
   };
 
-  const groupOrder = ['main', 'events', 'people', 'clubs', 'achievements', 'reviews', 'reports', 'tasks', 'communication', 'staffCalendar', 'clubEvents', 'settings'];
+  const groupOrder = ['main', 'events', 'people', 'clubs', 'clubManagement', 'achievements', 'reviews', 'reports', 'tasks', 'communication', 'staffCalendar', 'clubEvents', 'settings'];
 
   const sortedGroups = Object.entries(menuGroups).sort((a, b) => {
     const indexA = groupOrder.indexOf(a[0]);

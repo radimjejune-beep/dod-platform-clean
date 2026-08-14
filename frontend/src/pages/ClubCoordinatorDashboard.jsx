@@ -481,6 +481,76 @@ export default function ClubCoordinatorDashboard() {
         </div>
 
         {/* ============================================================
+            БЫСТРЫЕ ДЕЙСТВИЯ
+            ============================================================ */}
+        <div className="card" style={{ marginBottom: '20px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
+            ⚡ Быстрые действия
+          </h3>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {/* ===== КНОПКА ДЛЯ ВНУТРЕННЕГО МЕРОПРИЯТИЯ ===== */}
+            <button
+              className="btn-primary"
+              style={{ padding: '8px 16px', fontSize: '13px' }}
+              onClick={() => {
+                localStorage.setItem('clubEventTarget', club.id);
+                navigate('/events');
+              }}
+            >
+              📅 Создать мероприятие для клуба
+            </button>
+            
+            <button
+              className="btn-primary"
+              style={{ padding: '8px 16px', fontSize: '13px', background: '#C9A227', color: '#0B1F3A' }}
+              onClick={() => navigate('/manage-achievements')}
+            >
+              🏆 Добавить достижение
+            </button>
+
+            {/* ===== НОВАЯ КНОПКА: НАЗНАЧИТЬ ПРЕЗИДЕНТА ===== */}
+            <button
+              className="btn-primary"
+              style={{ padding: '8px 16px', fontSize: '13px', background: '#6B46C1', color: 'white', border: 'none' }}
+              onClick={() => navigate(`/club/${club.id}/president`)}
+            >
+              👑 Назначить президента
+            </button>
+
+            {/* ===== НОВАЯ КНОПКА: РЕЙТИНГ КЛУБА ===== */}
+            <button
+              className="btn-primary"
+              style={{ padding: '8px 16px', fontSize: '13px', background: '#C9A227', color: '#0B1F3A', border: 'none' }}
+              onClick={() => navigate('/club-rating')}
+            >
+              🏆 Рейтинг участников
+            </button>
+
+            <button
+              className="btn-secondary"
+              style={{ padding: '8px 16px', fontSize: '13px', background: '#174A7E', color: 'white', border: 'none' }}
+              onClick={() => navigate('/tutor-requests')}
+            >
+              🤝 Запросить тьютора
+            </button>
+            <button
+              className="btn-secondary"
+              style={{ padding: '8px 16px', fontSize: '13px', background: '#B3262E', color: 'white', border: 'none' }}
+              onClick={() => navigate('/appeals')}
+            >
+              📨 Обратиться к руководству
+            </button>
+            <button
+              className="btn-secondary"
+              style={{ padding: '8px 16px', fontSize: '13px', background: '#16845B', color: 'white', border: 'none' }}
+              onClick={() => navigate('/reports')}
+            >
+              📋 Создать отчёт
+            </button>
+          </div>
+        </div>
+
+        {/* ============================================================
             ВКЛАДКИ
             ============================================================ */}
         <div style={{
@@ -574,55 +644,6 @@ export default function ClubCoordinatorDashboard() {
             ============================================================ */}
         {selectedTab === 'overview' && (
           <div>
-            {/* ===== БЫСТРЫЕ ДЕЙСТВИЯ ===== */}
-            <div className="card" style={{ marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
-                ⚡ Быстрые действия
-              </h3>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                {/* ===== КНОПКА ДЛЯ ВНУТРЕННЕГО МЕРОПРИЯТИЯ ===== */}
-                <button
-                  className="btn-primary"
-                  style={{ padding: '8px 16px', fontSize: '13px' }}
-                  onClick={() => {
-                    localStorage.setItem('clubEventTarget', club.id);
-                    navigate('/events');
-                  }}
-                >
-                  📅 Создать мероприятие для клуба
-                </button>
-                
-                <button
-                  className="btn-primary"
-                  style={{ padding: '8px 16px', fontSize: '13px', background: '#C9A227', color: '#0B1F3A' }}
-                  onClick={() => navigate('/manage-achievements')}
-                >
-                  🏆 Добавить достижение
-                </button>
-                <button
-                  className="btn-secondary"
-                  style={{ padding: '8px 16px', fontSize: '13px', background: '#174A7E', color: 'white', border: 'none' }}
-                  onClick={() => navigate('/tutor-requests')}
-                >
-                  🤝 Запросить тьютора
-                </button>
-                <button
-                  className="btn-secondary"
-                  style={{ padding: '8px 16px', fontSize: '13px', background: '#6B46C1', color: 'white', border: 'none' }}
-                  onClick={() => navigate('/appeals')}
-                >
-                  📨 Обратиться к руководству
-                </button>
-                <button
-                  className="btn-secondary"
-                  style={{ padding: '8px 16px', fontSize: '13px', background: '#16845B', color: 'white', border: 'none' }}
-                  onClick={() => navigate('/reports')}
-                >
-                  📋 Создать отчёт
-                </button>
-              </div>
-            </div>
-
             {/* ДВЕ КОЛОНКИ */}
             <div className="grid-2">
               {/* ПОСЛЕДНИЕ УЧАСТНИКИ */}

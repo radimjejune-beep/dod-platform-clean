@@ -1095,7 +1095,6 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
     }
 
     // ===== 1. ПРОВЕРЯЕМ СУЩЕСТВОВАНИЕ ОБРАЩЕНИЯ =====
-    // ВАЖНО: используем $1::UUID для явного приведения типа
     const appealCheck = await pool.query(
       'SELECT id, coordinator_id FROM appeals WHERE id = $1::UUID',
       [id]

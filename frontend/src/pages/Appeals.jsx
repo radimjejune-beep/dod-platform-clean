@@ -82,7 +82,7 @@ export default function Appeals() {
   };
 
   // ============================================================
-  // ОТВЕТ НА ОБРАЩЕНИЕ (ФРОНТЕНД)
+  // ОТВЕТ НА ОБРАЩЕНИЕ - ИСПРАВЛЕННЫЙ
   // ============================================================
   const handleReply = async (e) => {
     e.preventDefault();
@@ -105,7 +105,11 @@ export default function Appeals() {
         return;
       }
 
-      const response = await fetch(`https://dod-backend.relaxdev.ru/api/appeals/${selectedAppeal.id}/reply`, {
+      console.log('📤 Отправка ответа на обращение:', selectedAppeal.id);
+      console.log('📤 Текст ответа:', replyMessage);
+      console.log('📤 Статус:', replyStatus);
+
+      const response = await fetch(`${api.API_URL || 'https://dod-backend.relaxdev.ru/api'}/appeals/${selectedAppeal.id}/reply`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +121,10 @@ export default function Appeals() {
         })
       });
 
+      console.log('📥 Статус ответа:', response.status);
+
       const data = await response.json();
+      console.log('📥 Данные ответа:', data);
       
       if (!response.ok) {
         throw new Error(data.error || data.detail || 'Ошибка отправки ответа');

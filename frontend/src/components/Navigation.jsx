@@ -6,7 +6,7 @@ import Notifications from './Notifications';
 import logo from '../assets/Image.png';
 
 // ============================================================
-// ИКОНКИ (SVG)
+// ИКОНКИ (SVG) — ОСТАВЛЯЕМ БЕЗ ИЗМЕНЕНИЙ
 // ============================================================
 const Icons = {
   dashboard: (
@@ -151,9 +151,6 @@ export default function Navigation({ profile }) {
   
   const isActive = (path) => location.pathname === path;
   const role = profile?.role || 'participant';
-
-  console.log('👤 Navigation role:', role);
-  console.log('👤 Navigation profile:', profile);
 
   const handleLogout = () => {
     localStorage.removeItem('token');

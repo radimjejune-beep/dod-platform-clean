@@ -62,6 +62,7 @@ async function createNotification(userId, type, title, message, link = null, pri
     return null;
   }
 }
+
 // ============================================================
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================================
@@ -730,16 +731,83 @@ app.delete('/api/achievements/:id', async (req, res) => {
 });
 
 // ============================================================
-// 16. СОБЫТИЯ
+// 16. СОБЫТИЯ (ОБНОВЛЁННЫЙ МАРШРУТ)
 // ============================================================
 app.get('/api/events', async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT e.*, c.name as club_name
-       FROM events e
-       LEFT JOIN clubs c ON e.club_id = c.id
-       ORDER BY e.event_date DESC`
-    );
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    let query = `
+      SELECT e.*, 
+             c.name as club_name,
+             u.full_name as created_by_name,
+             (SELECT COUNT(*) FROM registrations r WHERE r.event_id = e.id AND r.status = 'confirmed') as participants_count
+      FROM events e
+      LEFT JOIN clubs c ON e.club_id = c.id
+      LEFT JOIN users u ON e.created_by = u.id
+      WHERE e.moderation_status = 'approved' OR e.moderation_status IS NULL
+    `;
+    const params = [];
+    const conditions = [];
+
+    // ===== ГЛОБАЛЬНЫЕ МЕРОПРИЯТИЯ (видят все) =====
+    conditions.push('(e.is_global = true OR e.is_global IS NULL)');
+
+    // ===== ВНУТРЕННИЕ МЕРОПРИЯТИЯ КЛУБА =====
+    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
+      conditions.push('e.is_club_event = true');
+    }
+    
+    if (userRole === 'club_coordinator') {
+      const clubIds = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      const ids = clubIds.rows.map(r => r.club_id);
+      if (ids.length > 0) {
+        conditions.push(`(e.club_id = ANY($${params.length + 1}::uuid[]))`);
+        params.push(ids);
+      }
+    }
+    
+    if (userRole === 'participant') {
+      const user = await pool.query(
+        'SELECT club_id FROM users WHERE id = $1',
+        [userId]
+      );
+      if (user.rows.length > 0 && user.rows[0].club_id) {
+        conditions.push(`(e.club_id = $${params.length + 1})`);
+        params.push(user.rows[0].club_id);
+      }
+    }
+    
+    if (userRole === 'tutor') {
+      const clubs = await pool.query(
+        'SELECT DISTINCT club_id FROM event_tutors WHERE tutor_id = $1',
+        [userId]
+      );
+      const ids = clubs.rows.map(r => r.club_id);
+      if (ids.length > 0) {
+        conditions.push(`(e.club_id = ANY($${params.length + 1}::uuid[]))`);
+        params.push(ids);
+      }
+    }
+
+    if (conditions.length > 0) {
+      query += ' AND (' + conditions.join(' OR ') + ')';
+    }
+
+    query += ' ORDER BY e.event_date ASC';
+
+    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (error) {
     console.error('Ошибка получения событий:', error);
@@ -1301,8 +1369,6 @@ app.post('/api/upload-news-image', async (req, res) => {
       return res.status(400).json({ error: 'Неверный формат изображения' });
     }
 
-    // Сохраняем изображение как base64 (или можно сохранять на диск)
-    // Для простоты возвращаем тот же base64
     res.json({ 
       message: 'Изображение загружено', 
       image_url: image_base64 
@@ -2060,7 +2126,6 @@ app.post('/api/parent-link-child', async (req, res) => {
     const parentId = decoded.userId;
     const parentRole = decoded.role;
 
-    // Проверяем, что это родитель
     if (parentRole !== 'parent') {
       return res.status(403).json({ error: 'Только родители могут привязывать детей' });
     }
@@ -2071,7 +2136,6 @@ app.post('/api/parent-link-child', async (req, res) => {
       return res.status(400).json({ error: 'Email и пароль ребёнка обязательны' });
     }
 
-    // Ищем ребёнка по email
     const childResult = await pool.query(
       'SELECT id, full_name, role, password_hash FROM users WHERE email = $1',
       [child_email]
@@ -2083,25 +2147,21 @@ app.post('/api/parent-link-child', async (req, res) => {
 
     const child = childResult.rows[0];
 
-    // Проверяем, что это участник
     if (child.role !== 'participant') {
       return res.status(400).json({ error: 'Указанный пользователь не является участником' });
     }
 
-    // Проверяем пароль
     const validPassword = await bcrypt.compare(child_password, child.password_hash);
     if (!validPassword) {
       return res.status(401).json({ error: 'Неверный пароль' });
     }
 
-    // Проверяем, не привязан ли уже этот ребёнок к другому родителю
     const existingLink = await pool.query(
       'SELECT id FROM child_parent WHERE child_id = $1 AND status = \'active\'',
       [child.id]
     );
 
     if (existingLink.rows.length > 0) {
-      // Проверяем, не к этому ли родителю уже привязан
       const sameParent = await pool.query(
         'SELECT id FROM child_parent WHERE child_id = $1 AND parent_id = $2 AND status = \'active\'',
         [child.id, parentId]
@@ -2112,15 +2172,13 @@ app.post('/api/parent-link-child', async (req, res) => {
       return res.status(400).json({ error: 'Этот ребёнок уже привязан к другому родителю' });
     }
 
-    // Создаём привязку
-    const result = await pool.query(
+    await pool.query(
       `INSERT INTO child_parent (parent_id, child_id, status, created_at)
        VALUES ($1, $2, 'active', NOW())
        RETURNING *`,
       [parentId, child.id]
     );
 
-    // ===== УВЕДОМЛЕНИЕ РОДИТЕЛЮ =====
     await createNotification(
       parentId,
       'system',
@@ -2130,7 +2188,6 @@ app.post('/api/parent-link-child', async (req, res) => {
       'high'
     );
 
-    // ===== УВЕДОМЛЕНИЕ РЕБЁНКУ =====
     await createNotification(
       child.id,
       'system',
@@ -2156,564 +2213,10 @@ app.post('/api/parent-link-child', async (req, res) => {
 });
 
 // ============================================================
-// МЕРОПРИЯТИЯ КЛУБА
-// ============================================================
-
-// ПОЛУЧЕНИЕ МЕРОПРИЯТИЙ КЛУБА
-app.get('/api/club-events/:clubId', async (req, res) => {
-  try {
-    const { clubId } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    // Проверяем, что пользователь имеет доступ к клубу
-    let query = `
-      SELECT e.*, 
-             u.full_name as proposed_by_name,
-             COUNT(DISTINCT ep.user_id) as current_participants
-      FROM events e
-      LEFT JOIN users u ON e.proposed_by = u.id
-      LEFT JOIN event_participants ep ON e.id = ep.event_id AND ep.status = 'registered'
-      WHERE e.club_id = $1 AND e.is_club_event = true
-    `;
-    const params = [clubId];
-
-    // Фильтрация по ролям
-    if (userRole === 'participant') {
-      query += ` AND (e.status = 'approved' OR e.proposed_by = $2)`;
-      params.push(userId);
-    } else if (userRole === 'tutor') {
-      // Тьютор видит только те мероприятия, куда приглашён
-      query += ` AND (e.status = 'approved' OR e.id IN (
-        SELECT event_id FROM event_tutors WHERE tutor_id = $2
-      ))`;
-      params.push(userId);
-    }
-    // Координатор, админ, президент видят всё
-
-    query += ` GROUP BY e.id, u.full_name ORDER BY e.event_date ASC`;
-
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Ошибка получения мероприятий клуба:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// СОЗДАНИЕ МЕРОПРИЯТИЯ КЛУБА
-app.post('/api/club-events', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    const {
-      title, description, location, event_date, end_date,
-      start_time, end_time, max_participants, registration_deadline,
-      club_id, is_club_event
-    } = req.body;
-
-    if (!title || !event_date || !club_id) {
-      return res.status(400).json({ error: 'Название, дата и клуб обязательны' });
-    }
-
-    // Определяем статус
-    let status = 'pending';
-    if (['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      status = 'approved';
-    }
-
-    const result = await pool.query(
-      `INSERT INTO events (
-        title, description, location, event_date, end_date,
-        start_time, end_time, max_participants, registration_deadline,
-        club_id, is_club_event, proposed_by, status, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      RETURNING *`,
-      [
-        title, description || '', location || '', event_date, end_date || event_date,
-        start_time || null, end_time || null, max_participants || 20, registration_deadline || null,
-        club_id, is_club_event || false, userId, status, userId
-      ]
-    );
-
-    // Уведомление координатору, если предложил участник
-    if (userRole === 'participant' && status === 'pending') {
-      const club = await pool.query('SELECT coordinator_id FROM clubs WHERE id = $1', [club_id]);
-      if (club.rows.length > 0 && club.rows[0].coordinator_id) {
-        await createNotification(
-          club.rows[0].coordinator_id,
-          'event',
-          '📅 Новое предложение мероприятия',
-          `Участник предложил мероприятие "${title}" в вашем клубе`,
-          `/club/${club_id}`,
-          'high'
-        );
-      }
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Ошибка создания мероприятия клуба:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// МОДЕРАЦИЯ МЕРОПРИЯТИЯ КЛУБА
-app.patch('/api/club-events/:id/moderate', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status, comment } = req.body;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-    const userId = decoded.userId;
-
-    // Проверка прав
-    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'];
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для модерации' });
-    }
-
-    const result = await pool.query(
-      `UPDATE events 
-       SET status = $1, moderator_comment = $2, moderated_by = $3, moderated_at = NOW()
-       WHERE id = $4
-       RETURNING *`,
-      [status, comment || null, userId, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Мероприятие не найдено' });
-    }
-
-    // Уведомление автору
-    const event = result.rows[0];
-    if (event.proposed_by) {
-      await createNotification(
-        event.proposed_by,
-        'event',
-        status === 'approved' ? '✅ Мероприятие одобрено' : '❌ Мероприятие отклонено',
-        `Ваше мероприятие "${event.title}" ${status === 'approved' ? 'одобрено' : 'отклонено'}`,
-        `/club/${event.club_id}`,
-        status === 'approved' ? 'high' : 'normal'
-      );
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Ошибка модерации мероприятия клуба:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ЗАПИСЬ НА МЕРОПРИЯТИЕ
-app.post('/api/club-events/:id/register', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-
-    // Проверяем, что мероприятие существует и одобрено
-    const eventCheck = await pool.query(
-      'SELECT id, max_participants FROM events WHERE id = $1 AND status = \'approved\'',
-      [id]
-    );
-    if (eventCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Мероприятие не найдено или не одобрено' });
-    }
-
-    // Проверяем, не записан ли уже
-    const existing = await pool.query(
-      'SELECT id FROM event_participants WHERE event_id = $1 AND user_id = $2',
-      [id, userId]
-    );
-    if (existing.rows.length > 0) {
-      return res.status(400).json({ error: 'Вы уже записаны на это мероприятие' });
-    }
-
-    // Проверяем лимит участников
-    const count = await pool.query(
-      'SELECT COUNT(*) FROM event_participants WHERE event_id = $1 AND status = \'registered\'',
-      [id]
-    );
-    const maxParticipants = eventCheck.rows[0].max_participants || 20;
-    if (parseInt(count.rows[0].count) >= maxParticipants) {
-      return res.status(400).json({ error: 'Лимит участников достигнут' });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO event_participants (event_id, user_id, status, registered_at)
-       VALUES ($1, $2, 'registered', NOW())
-       RETURNING *`,
-      [id, userId]
-    );
-
-    res.json({ message: 'Вы записаны на мероприятие!', participant: result.rows[0] });
-  } catch (error) {
-    console.error('Ошибка записи на мероприятие:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// ЗАДАНИЯ ДЛЯ ПРЕЗИДЕНТОВ
-// ============================================================
-
-// ПОЛУЧЕНИЕ ЗАДАНИЙ
-app.get('/api/president-tasks', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    let query = `
-      SELECT pt.*, 
-             u.full_name as created_by_name,
-             u2.full_name as assigned_to_name,
-             c.name as club_name,
-             (SELECT COUNT(*) FROM president_task_responses WHERE task_id = pt.id) as response_count
-      FROM president_tasks pt
-      LEFT JOIN users u ON pt.created_by = u.id
-      LEFT JOIN users u2 ON pt.assigned_to = u2.id
-      LEFT JOIN clubs c ON pt.club_id = c.id
-    `;
-    const params = [];
-    const conditions = [];
-
-    // ===== ФИЛЬТРАЦИЯ ПО РОЛЯМ =====
-    if (userRole === 'club_coordinator') {
-      // Координатор КЮДа — видит задания своего клуба
-      const clubResult = await pool.query(
-        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
-        [userId]
-      );
-      if (clubResult.rows.length > 0) {
-        conditions.push(`(pt.club_id = $${params.length + 1} OR pt.is_global = true)`);
-        params.push(clubResult.rows[0].club_id);
-      } else {
-        conditions.push('1 = 0');
-      }
-    } else if (userRole === 'president') {
-      // Президент — видит только свои задания
-      conditions.push(`(pt.assigned_to = $${params.length + 1} OR pt.assigned_to IS NULL)`);
-      params.push(userId);
-    } else if (userRole === 'vice_president') {
-      // Вице-президент — видит все задания (как наблюдатель)
-      conditions.push('1 = 1');
-    } else if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      conditions.push('1 = 0');
-    }
-
-    if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
-    }
-
-    query += ' GROUP BY pt.id, u.full_name, u2.full_name, c.name ORDER BY pt.created_at DESC';
-
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Ошибка получения заданий:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// СОЗДАНИЕ ЗАДАНИЯ
-app.post('/api/president-tasks', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    const { title, description, priority, club_id, assigned_to, is_global, deadline } = req.body;
-
-    if (!title) {
-      return res.status(400).json({ error: 'Название задания обязательно' });
-    }
-
-    // Проверка прав
-    if (userRole === 'club_coordinator') {
-      // Координатор КЮДа может создавать задания только для своего клуба
-      const clubResult = await pool.query(
-        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
-        [userId]
-      );
-      if (clubResult.rows.length === 0) {
-        return res.status(403).json({ error: 'Вы не привязаны к КЮДу' });
-      }
-      const clubId = clubResult.rows[0].club_id;
-      
-      // Если указан другой клуб — запрещаем
-      if (club_id && club_id !== clubId) {
-        return res.status(403).json({ error: 'Вы можете создавать задания только для своего клуба' });
-      }
-      
-      // Координатор не может создавать глобальные задания
-      if (is_global) {
-        return res.status(403).json({ error: 'Координатор КЮДа не может создавать глобальные задания' });
-      }
-    } else if (!['admin', 'movement_coordinator', 'vice_president'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для создания заданий' });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO president_tasks 
-       (id, title, description, priority, club_id, assigned_to, is_global, deadline, created_by, created_at)
-       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, NOW())
-       RETURNING *`,
-      [title, description || '', priority || 'medium', club_id || null, assigned_to || null, is_global || false, deadline || null, userId]
-    );
-
-    const newTask = result.rows[0];
-
-    // ===== УВЕДОМЛЕНИЯ =====
-    // Если назначен конкретный президент
-    if (assigned_to) {
-      await createNotification(
-        assigned_to,
-        'president',
-        '👑 Новое задание',
-        `Вам назначено новое задание: "${title}"`,
-        '/president-tasks',
-        'high'
-      );
-    }
-
-    // Если глобальное — уведомляем всех президентов
-    if (is_global) {
-      const presidents = await pool.query(
-        `SELECT id FROM users WHERE role = 'president' AND status = 'active'`
-      );
-      for (const p of presidents.rows) {
-        await createNotification(
-          p.id,
-          'president',
-          '👑 Новое глобальное задание',
-          `Новое задание для всех президентов: "${title}"`,
-          '/president-tasks',
-          'high'
-        );
-      }
-    }
-
-    res.status(201).json(newTask);
-  } catch (error) {
-    console.error('Ошибка создания задания:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ОБНОВЛЕНИЕ СТАТУСА ЗАДАНИЯ
-app.patch('/api/president-tasks/:id/status', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    const taskCheck = await pool.query(
-      'SELECT assigned_to, created_by, club_id FROM president_tasks WHERE id = $1',
-      [id]
-    );
-    if (taskCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Задание не найдено' });
-    }
-
-    const task = taskCheck.rows[0];
-
-    // Проверка прав на изменение статуса
-    const isAdmin = ['admin', 'movement_coordinator', 'vice_president'].includes(userRole);
-    const isCreator = task.created_by === userId;
-    const isAssigned = task.assigned_to === userId || task.assigned_to === null;
-
-    if (!isAdmin && !isCreator && !isAssigned) {
-      return res.status(403).json({ error: 'У вас нет прав для изменения статуса' });
-    }
-
-    const result = await pool.query(
-      `UPDATE president_tasks 
-       SET status = $1, 
-           updated_at = NOW(),
-           completed_at = CASE WHEN $1 = 'completed' THEN NOW() ELSE completed_at END
-       WHERE id = $2
-       RETURNING *`,
-      [status, id]
-    );
-
-    // Уведомление создателю о смене статуса
-    if (task.created_by && task.created_by !== userId) {
-      await createNotification(
-        task.created_by,
-        'president',
-        '📋 Статус задания изменён',
-        `Задание "${result.rows[0].title}" изменено на "${status}"`,
-        '/president-tasks',
-        'normal'
-      );
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Ошибка обновления задания:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ОТВЕТ НА ЗАДАНИЕ (ДЛЯ ПРЕЗИДЕНТА)
-app.post('/api/president-tasks/:id/respond', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { response } = req.body;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    if (userRole !== 'president' && userRole !== 'vice_president') {
-      return res.status(403).json({ error: 'Только президенты могут отвечать на задания' });
-    }
-
-    if (!response) {
-      return res.status(400).json({ error: 'Текст ответа обязателен' });
-    }
-
-    // Проверяем, что задание существует и назначено этому президенту
-    const taskCheck = await pool.query(
-      'SELECT id, assigned_to, created_by, title FROM president_tasks WHERE id = $1',
-      [id]
-    );
-    if (taskCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Задание не найдено' });
-    }
-
-    const task = taskCheck.rows[0];
-    if (task.assigned_to && task.assigned_to !== userId) {
-      return res.status(403).json({ error: 'Это задание не назначено вам' });
-    }
-
-    // Сохраняем ответ
-    const result = await pool.query(
-      `INSERT INTO president_task_responses (id, task_id, president_id, response, status, created_at)
-       VALUES (gen_random_uuid(), $1, $2, $3, 'pending', NOW())
-       RETURNING *`,
-      [id, userId, response]
-    );
-
-    // Уведомление создателю
-    if (task.created_by) {
-      await createNotification(
-        task.created_by,
-        'president',
-        '📨 Ответ на задание',
-        `Президент ответил на задание "${task.title}"`,
-        '/president-tasks',
-        'normal'
-      );
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Ошибка ответа на задание:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// УДАЛЕНИЕ ЗАДАНИЯ
-app.delete('/api/president-tasks/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    const taskCheck = await pool.query(
-      'SELECT created_by FROM president_tasks WHERE id = $1',
-      [id]
-    );
-    if (taskCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Задание не найдено' });
-    }
-
-    // Только создатель или админ/координатор движения может удалить
-    const isAdmin = ['admin', 'movement_coordinator', 'vice_president'].includes(userRole);
-    if (taskCheck.rows[0].created_by !== userId && !isAdmin) {
-      return res.status(403).json({ error: 'У вас нет прав для удаления' });
-    }
-
-    await pool.query('DELETE FROM president_tasks WHERE id = $1', [id]);
-    res.json({ message: 'Задание удалено' });
-  } catch (error) {
-    console.error('Ошибка удаления задания:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-
-// ============================================================
 // ВНУТРЕННИЕ МЕРОПРИЯТИЯ КЛУБА
 // ============================================================
 
-// ПОЛУЧЕНИЕ ВНУТРЕННИХ МЕРОПРИЯТИЙ КЛУБА (С ПРОВЕРКОЙ ДОСТУПА)
+// ПОЛУЧЕНИЕ ВНУТРЕННИХ МЕРОПРИЯТИЙ КЛУБА
 app.get('/api/club-events/:clubId', async (req, res) => {
   try {
     const { clubId } = req.params;
@@ -2727,15 +2230,12 @@ app.get('/api/club-events/:clubId', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
-    // Проверяем, что пользователь имеет доступ к клубу
     let hasAccess = false;
     
-    // 1. Админ, координатор движения, президент, вице — видят всё
     if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
       hasAccess = true;
     }
     
-    // 2. Координатор клуба — видит свой клуб
     if (userRole === 'club_coordinator') {
       const clubCheck = await pool.query(
         'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
@@ -2746,7 +2246,6 @@ app.get('/api/club-events/:clubId', async (req, res) => {
       }
     }
     
-    // 3. Участник клуба — видит свой клуб
     if (userRole === 'participant') {
       const userCheck = await pool.query(
         'SELECT club_id FROM users WHERE id = $1 AND club_id = $2',
@@ -2757,7 +2256,6 @@ app.get('/api/club-events/:clubId', async (req, res) => {
       }
     }
     
-    // 4. Тьютор — видит клубы, где он назначен
     if (userRole === 'tutor') {
       const tutorCheck = await pool.query(
         'SELECT id FROM event_tutors WHERE tutor_id = $1 AND club_id = $2',
@@ -2772,7 +2270,6 @@ app.get('/api/club-events/:clubId', async (req, res) => {
       return res.status(403).json({ error: 'У вас нет доступа к этому клубу' });
     }
 
-    // Получаем мероприятия клуба
     const result = await pool.query(
       `SELECT e.*, 
               u.full_name as proposed_by_name,
@@ -2825,15 +2322,12 @@ app.post('/api/club-events', async (req, res) => {
       return res.status(400).json({ error: 'Название, дата и клуб обязательны' });
     }
 
-    // Проверяем права на создание
     let canCreate = false;
     
-    // 1. Админ, координатор движения, президент, вице — могут создавать
     if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
       canCreate = true;
     }
     
-    // 2. Координатор клуба — может создавать для своего клуба
     if (userRole === 'club_coordinator') {
       const clubCheck = await pool.query(
         'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
@@ -2848,7 +2342,6 @@ app.post('/api/club-events', async (req, res) => {
       return res.status(403).json({ error: 'У вас нет прав для создания мероприятий в этом клубе' });
     }
 
-    // Статус: сразу одобрено для координаторов и админов
     let status = 'approved';
     if (userRole === 'participant') {
       status = 'pending';
@@ -2880,7 +2373,6 @@ app.post('/api/club-events', async (req, res) => {
 
     const newEvent = result.rows[0];
 
-    // ===== УВЕДОМЛЕНИЕ УЧАСТНИКАМ КЛУБА =====
     const participants = await pool.query(
       'SELECT id FROM users WHERE club_id = $1 AND role = $2 AND status = $3',
       [club_id, 'participant', 'active']
@@ -2897,7 +2389,6 @@ app.post('/api/club-events', async (req, res) => {
       );
     }
 
-    // ===== УВЕДОМЛЕНИЕ КООРДИНАТОРУ (если создал участник) =====
     if (userRole === 'participant' && status === 'pending') {
       const coordinators = await pool.query(
         'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
@@ -2938,7 +2429,6 @@ app.patch('/api/club-events/:id/moderate', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
-    // Проверяем права на модерацию
     let canModerate = false;
     if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
       canModerate = true;
@@ -2975,7 +2465,6 @@ app.patch('/api/club-events/:id/moderate', async (req, res) => {
 
     const event = result.rows[0];
 
-    // Уведомление автору
     if (event.proposed_by) {
       await createNotification(
         event.proposed_by,
@@ -2987,7 +2476,6 @@ app.patch('/api/club-events/:id/moderate', async (req, res) => {
       );
     }
 
-    // Если одобрено — уведомляем всех участников клуба
     if (status === 'approved') {
       const participants = await pool.query(
         'SELECT id FROM users WHERE club_id = $1 AND role = $2 AND status = $3',
@@ -3026,7 +2514,6 @@ app.post('/api/club-events/:id/register', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
-    // Проверяем, что мероприятие существует и одобрено
     const eventCheck = await pool.query(
       'SELECT id, club_id, max_participants, status FROM events WHERE id = $1 AND is_club_event = true',
       [id]
@@ -3041,7 +2528,6 @@ app.post('/api/club-events/:id/register', async (req, res) => {
       return res.status(400).json({ error: 'Мероприятие ещё не одобрено' });
     }
 
-    // Проверяем, что пользователь является участником этого клуба
     const userCheck = await pool.query(
       'SELECT id FROM users WHERE id = $1 AND club_id = $2 AND role = $3',
       [userId, event.club_id, 'participant']
@@ -3050,7 +2536,6 @@ app.post('/api/club-events/:id/register', async (req, res) => {
       return res.status(403).json({ error: 'Вы не являетесь участником этого клуба' });
     }
 
-    // Проверяем, не записан ли уже
     const existing = await pool.query(
       'SELECT id FROM event_participants WHERE event_id = $1 AND user_id = $2',
       [id, userId]
@@ -3059,7 +2544,6 @@ app.post('/api/club-events/:id/register', async (req, res) => {
       return res.status(400).json({ error: 'Вы уже записаны на это мероприятие' });
     }
 
-    // Проверяем лимит участников
     const count = await pool.query(
       'SELECT COUNT(*) FROM event_participants WHERE event_id = $1 AND status = $2',
       [id, 'registered']
@@ -3076,7 +2560,6 @@ app.post('/api/club-events/:id/register', async (req, res) => {
       [id, userId]
     );
 
-    // Уведомление координатору
     const coordinators = await pool.query(
       'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
       [event.club_id]
@@ -3119,11 +2602,9 @@ app.get('/api/my-club-events', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
-    // Получаем клубы пользователя
     let clubIds = [];
 
     if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      // Админы видят все внутренние мероприятия
       const result = await pool.query(
         `SELECT e.*, 
                 c.name as club_name,
@@ -3138,7 +2619,6 @@ app.get('/api/my-club-events', async (req, res) => {
     }
 
     if (userRole === 'club_coordinator') {
-      // Координатор видит мероприятия своих клубов
       const clubs = await pool.query(
         'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
         [userId]
@@ -3147,7 +2627,6 @@ app.get('/api/my-club-events', async (req, res) => {
     }
 
     if (userRole === 'participant') {
-      // Участник видит мероприятия своего клуба
       const user = await pool.query(
         'SELECT club_id FROM users WHERE id = $1',
         [userId]
@@ -3158,7 +2637,6 @@ app.get('/api/my-club-events', async (req, res) => {
     }
 
     if (userRole === 'tutor') {
-      // Тьютор видит клубы, где он назначен
       const clubs = await pool.query(
         'SELECT DISTINCT club_id FROM event_tutors WHERE tutor_id = $1',
         [userId]

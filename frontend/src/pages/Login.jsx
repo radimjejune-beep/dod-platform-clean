@@ -183,6 +183,7 @@ export default function Login() {
           justify-content: center;
           padding: 20px;
           position: relative;
+          background: linear-gradient(145deg, #0B1F3A 0%, #07152B 100%);
         }
 
         .login-bg {
@@ -191,10 +192,6 @@ export default function Login() {
           left: 0;
           right: 0;
           bottom: 0;
-          background: 
-            radial-gradient(ellipse at 20% 30%, rgba(201, 162, 39, 0.05) 0%, transparent 60%),
-            radial-gradient(ellipse at 80% 70%, rgba(23, 74, 126, 0.05) 0%, transparent 60%),
-            linear-gradient(145deg, #0B1F3A 0%, #07152B 100%);
           z-index: 0;
         }
 
@@ -204,10 +201,9 @@ export default function Login() {
           left: 0;
           right: 0;
           bottom: 0;
-          background-image: 
-            repeating-linear-gradient(0deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 3px),
-            repeating-linear-gradient(90deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 3px);
-          background-size: 40px 40px;
+          background: 
+            radial-gradient(ellipse at 20% 30%, rgba(201, 162, 39, 0.06) 0%, transparent 60%),
+            radial-gradient(ellipse at 80% 70%, rgba(23, 74, 126, 0.06) 0%, transparent 60%);
         }
 
         .login-bg-particles {
@@ -222,7 +218,7 @@ export default function Login() {
 
         .login-bg-particles span {
           position: absolute;
-          color: rgba(201, 162, 39, 0.08);
+          color: rgba(201, 162, 39, 0.05);
           font-size: 20px;
           animation: float 20s infinite linear;
         }
@@ -237,23 +233,23 @@ export default function Login() {
         .login-bg-particles span:nth-child(8) { top: 90%; left: 30%; animation-delay: 11s; }
 
         @keyframes float {
-          0% { transform: translate(0, 0) rotate(0deg); opacity: 0.6; }
+          0% { transform: translate(0, 0) rotate(0deg); opacity: 0.4; }
           25% { transform: translate(30px, -20px) rotate(90deg); opacity: 1; }
-          50% { transform: translate(-20px, 30px) rotate(180deg); opacity: 0.6; }
+          50% { transform: translate(-20px, 30px) rotate(180deg); opacity: 0.4; }
           75% { transform: translate(40px, 10px) rotate(270deg); opacity: 1; }
-          100% { transform: translate(0, 0) rotate(360deg); opacity: 0.6; }
+          100% { transform: translate(0, 0) rotate(360deg); opacity: 0.4; }
         }
 
         .login-card {
           position: relative;
           z-index: 1;
           width: 100%;
-          max-width: 420px;
-          background: rgba(255, 255, 255, 0.95);
+          max-width: 440px;
+          background: rgba(255, 255, 255, 0.97);
           backdrop-filter: blur(20px);
           border-radius: 20px;
           padding: 40px 36px;
-          box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(201, 162, 39, 0.1);
+          box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(201, 162, 39, 0.08);
           animation: slideUp 0.6s ease;
         }
 
@@ -275,16 +271,16 @@ export default function Login() {
         }
 
         .login-emblem-logo {
-          height: 64px;
+          height: 56px;
           width: auto;
           object-fit: contain;
         }
 
         .login-emblem-line {
-          width: 60px;
+          width: 50px;
           height: 2px;
           background: linear-gradient(135deg, #C9A227, #E8D9A8);
-          margin-top: 12px;
+          margin-top: 10px;
           border-radius: 2px;
         }
 
@@ -304,10 +300,10 @@ export default function Login() {
         }
 
         .login-emblem-ard {
-          height: 28px;
+          height: 24px;
           width: auto;
           object-fit: contain;
-          opacity: 0.7;
+          opacity: 0.6;
           transition: opacity 0.3s ease;
         }
 
@@ -322,7 +318,7 @@ export default function Login() {
 
         .login-header h1 {
           font-family: 'Inter', sans-serif;
-          font-size: 14px;
+          font-size: 12px;
           font-weight: 400;
           color: #667085;
           letter-spacing: 2px;
@@ -357,29 +353,30 @@ export default function Login() {
         }
 
         .login-welcome {
-          font-size: 13px;
+          font-size: 14px;
           color: #667085;
           margin: 0;
         }
 
         .login-form-group {
-          margin-bottom: 16px;
+          margin-bottom: 18px;
         }
 
         .login-form-group label {
           display: block;
           font-size: 13px;
-          font-weight: 500;
+          font-weight: 600;
           color: #0B1F3A;
-          margin-bottom: 4px;
+          margin-bottom: 6px;
+          letter-spacing: 0.3px;
         }
 
         .login-form-group input {
           width: 100%;
-          padding: 10px 14px;
+          padding: 12px 16px;
           border: 1.5px solid #D5DCE7;
           border-radius: 10px;
-          font-size: 14px;
+          font-size: 15px;
           outline: none;
           transition: all 0.3s ease;
           background: #F8FAFC;
@@ -389,7 +386,7 @@ export default function Login() {
         .login-form-group input:focus {
           border-color: #C9A227;
           background: white;
-          box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.1);
+          box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.08);
         }
 
         .login-form-group input::placeholder {
@@ -398,23 +395,23 @@ export default function Login() {
 
         .login-btn {
           width: 100%;
-          padding: 12px;
-          background: linear-gradient(135deg, #C9A227, #E8D9A8);
+          padding: 14px;
+          background: linear-gradient(135deg, #C9A227, #B8921F);
           border: none;
           border-radius: 10px;
           font-size: 16px;
-          font-weight: 600;
+          font-weight: 700;
           color: #0B1F3A;
           cursor: pointer;
           transition: all 0.3s ease;
-          box-shadow: 0 4px 16px rgba(201, 162, 39, 0.25);
-          margin-top: 4px;
+          box-shadow: 0 4px 16px rgba(201, 162, 39, 0.2);
+          margin-top: 6px;
           letter-spacing: 0.5px;
         }
 
         .login-btn:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 30px rgba(201, 162, 39, 0.35);
+          box-shadow: 0 8px 30px rgba(201, 162, 39, 0.3);
         }
 
         .login-btn:disabled {
@@ -425,12 +422,16 @@ export default function Login() {
 
         .login-btn-loader {
           display: inline-block;
-          width: 20px;
-          height: 20px;
+          width: 22px;
+          height: 22px;
           border: 2px solid rgba(11, 31, 58, 0.2);
           border-top-color: #0B1F3A;
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
 
         .login-error {
@@ -438,7 +439,7 @@ export default function Login() {
           background: #FCEBEC;
           color: #B3262E;
           border-radius: 10px;
-          margin-bottom: 16px;
+          margin-bottom: 18px;
           font-size: 14px;
           text-align: center;
           border-left: 4px solid #B3262E;
@@ -447,7 +448,7 @@ export default function Login() {
         .login-footer {
           text-align: center;
           margin-top: 20px;
-          padding-top: 16px;
+          padding-top: 18px;
           border-top: 1px solid #F4F6F9;
         }
 
@@ -480,15 +481,25 @@ export default function Login() {
         @media (max-width: 480px) {
           .login-card {
             padding: 28px 20px;
+            max-width: 100%;
+            margin: 0 10px;
           }
           .login-header h2 {
             font-size: 20px;
           }
           .login-emblem-logo {
-            height: 48px;
+            height: 44px;
           }
           .login-emblem-ard {
-            height: 22px;
+            height: 20px;
+          }
+          .login-btn {
+            padding: 12px;
+            font-size: 15px;
+          }
+          .login-form-group input {
+            padding: 10px 14px;
+            font-size: 14px;
           }
         }
       `}</style>

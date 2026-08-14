@@ -214,6 +214,24 @@ app.post('/api/login', async (req, res) => {
 
     console.log('✅ Успешный вход:', email);
 
+    // ============================================================
+    // АВТОМАТИЧЕСКАЯ ПРИВЯЗКА КООРДИНАТОРА ПРИ ВХОДЕ
+    // ============================================================
+    if (user.role === 'club_coordinator' && user.club_id) {
+      const existingCoord = await pool.query(
+        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
+        [user.id, user.club_id]
+      );
+      if (existingCoord.rows.length === 0) {
+        await pool.query(
+          `INSERT INTO club_coordinators (profile_id, club_id, created_at)
+           VALUES ($1, $2, NOW())`,
+          [user.id, user.club_id]
+        );
+        console.log(`✅ Координатор ${user.full_name} автоматически привязан при входе`);
+      }
+    }
+
     res.json({
       token,
       user: {
@@ -488,12 +506,19 @@ app.post('/api/users', async (req, res) => {
       await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, user.id]);
 
       if (role === 'club_coordinator') {
-        await pool.query(
-          `INSERT INTO club_coordinators (profile_id, club_id, created_at)
-           VALUES ($1, $2, NOW())
-           ON CONFLICT (profile_id, club_id) DO NOTHING`,
+        const existingCoord = await pool.query(
+          'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
           [user.id, club_id]
         );
+        
+        if (existingCoord.rows.length === 0) {
+          await pool.query(
+            `INSERT INTO club_coordinators (profile_id, club_id, created_at)
+             VALUES ($1, $2, NOW())`,
+            [user.id, club_id]
+          );
+          console.log(`✅ Координатор ${user.full_name} привязан к клубу ${club_id}`);
+        }
       } else {
         await pool.query(
           `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
@@ -558,15 +583,20 @@ app.patch('/api/users/:id', async (req, res) => {
       await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, id]);
 
       if (role === 'club_coordinator') {
-        await pool.query('DELETE FROM club_coordinators WHERE profile_id = $1', [id]);
-        await pool.query(
-          `INSERT INTO club_coordinators (profile_id, club_id, created_at)
-           VALUES ($1, $2, NOW())
-           ON CONFLICT (profile_id, club_id) DO NOTHING`,
+        const existingCoord = await pool.query(
+          'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
           [id, club_id]
         );
+        if (existingCoord.rows.length === 0) {
+          await pool.query(
+            `INSERT INTO club_coordinators (profile_id, club_id, created_at)
+             VALUES ($1, $2, NOW())`,
+            [id, club_id]
+          );
+          console.log(`✅ Координатор ${user.full_name} привязан к клубу ${club_id}`);
+        }
       } else {
-        await pool.query('DELETE FROM club_participants WHERE profile_id = $1', [id]);
+        await pool.query('DELETE FROM club_coordinators WHERE profile_id = $1', [id]);
         await pool.query(
           `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
            VALUES ($1, $2, 'active', NOW())
@@ -578,15 +608,6 @@ app.patch('/api/users/:id', async (req, res) => {
 
     if (oldRole === 'club_coordinator' && role !== 'club_coordinator') {
       await pool.query('DELETE FROM club_coordinators WHERE profile_id = $1', [id]);
-    }
-
-    if (oldRole !== 'club_coordinator' && role === 'club_coordinator' && club_id) {
-      await pool.query(
-        `INSERT INTO club_coordinators (profile_id, club_id, created_at)
-         VALUES ($1, $2, NOW())
-         ON CONFLICT (profile_id, club_id) DO NOTHING`,
-        [id, club_id]
-      );
     }
 
     const userResult = await pool.query(
@@ -3463,6 +3484,171 @@ app.delete('/api/president-tasks/:id', async (req, res) => {
     res.json({ success: true, message: 'Задание удалено' });
   } catch (error) {
     console.error('❌ Ошибка удаления задания:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// НАЗНАЧЕНИЕ ПРЕЗИДЕНТА КЛУБА
+// ============================================================
+app.patch('/api/clubs/:clubId/president', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    const { clubId } = req.params;
+    const { president_id } = req.body;
+
+    console.log(`👑 Назначение президента: клуб ${clubId}, пользователь ${president_id}, роль ${userRole}`);
+
+    let hasAccess = false;
+
+    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
+      hasAccess = true;
+    }
+
+    if (userRole === 'club_coordinator') {
+      if (decoded.club_id === clubId) {
+        hasAccess = true;
+      }
+      
+      if (!hasAccess) {
+        const clubCheck = await pool.query(
+          'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
+          [userId, clubId]
+        );
+        if (clubCheck.rows.length > 0) {
+          hasAccess = true;
+        }
+      }
+    }
+
+    if (!hasAccess) {
+      return res.status(403).json({ 
+        error: 'У вас нет прав для этого клуба. Вы не привязаны к этому КЮДу.' 
+      });
+    }
+
+    if (!president_id) {
+      await pool.query(
+        'UPDATE users SET is_president = false WHERE club_id = $1 AND is_president = true',
+        [clubId]
+      );
+      await pool.query(
+        'UPDATE clubs SET president_id = NULL, updated_at = NOW() WHERE id = $1',
+        [clubId]
+      );
+      return res.json({ 
+        message: 'Президент снят с должности',
+        president: null 
+      });
+    }
+
+    const userCheck = await pool.query(
+      `SELECT u.id, u.role, u.club_id, u.full_name, u.is_president
+       FROM users u 
+       WHERE u.id = $1`,
+      [president_id]
+    );
+    
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Участник не найден' });
+    }
+    
+    const candidate = userCheck.rows[0];
+    
+    if (candidate.role !== 'participant') {
+      return res.status(400).json({ 
+        error: 'Президентом может быть только участник с ролью participant' 
+      });
+    }
+    
+    if (candidate.club_id !== clubId) {
+      return res.status(400).json({ 
+        error: 'Участник не состоит в этом клубе' 
+      });
+    }
+
+    await pool.query(
+      'UPDATE users SET is_president = false WHERE club_id = $1 AND is_president = true',
+      [clubId]
+    );
+
+    await pool.query(
+      'UPDATE users SET is_president = true WHERE id = $1',
+      [president_id]
+    );
+
+    const result = await pool.query(
+      'UPDATE clubs SET president_id = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [president_id, clubId]
+    );
+
+    const president = await pool.query(
+      'SELECT id, full_name, email, avatar_url FROM users WHERE id = $1',
+      [president_id]
+    );
+
+    await createNotification(
+      president_id,
+      'system',
+      '👑 Вы назначены президентом клуба',
+      `Поздравляем! Вы назначены президентом клуба "${result.rows[0].name || 'КЮД'}"`,
+      `/club/${clubId}`,
+      'high'
+    );
+
+    const coordinators = await pool.query(
+      'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
+      [clubId]
+    );
+    for (const coord of coordinators.rows) {
+      if (coord.profile_id !== userId) {
+        await createNotification(
+          coord.profile_id,
+          'system',
+          '👑 Назначен президент клуба',
+          `Новый президент назначен в вашем клубе: ${candidate.full_name}`,
+          `/club/${clubId}`,
+          'medium'
+        );
+      }
+    }
+
+    res.json({
+      message: 'Президент назначен',
+      club: result.rows[0],
+      president: president.rows[0]
+    });
+  } catch (error) {
+    console.error('❌ Ошибка назначения президента:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ПОЛУЧЕНИЕ ПРЕЗИДЕНТА КЛУБА =====
+app.get('/api/clubs/:clubId/president', async (req, res) => {
+  try {
+    const { clubId } = req.params;
+
+    const result = await pool.query(
+      `SELECT u.id, u.full_name, u.email, u.phone, u.school, u.class_name, u.avatar_url
+       FROM users u
+       WHERE u.club_id = $1 AND u.is_president = true
+       LIMIT 1`,
+      [clubId]
+    );
+
+    res.json(result.rows[0] || null);
+  } catch (error) {
+    console.error('❌ Ошибка получения президента:', error);
     res.status(500).json({ error: error.message });
   }
 });

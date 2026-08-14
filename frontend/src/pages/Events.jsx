@@ -20,7 +20,6 @@ export default function Events() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [moderationComment, setModerationComment] = useState('');
   
-  // ===== ФИЛЬТРЫ =====
   const [filters, setFilters] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -42,7 +41,7 @@ export default function Events() {
   const navigate = useNavigate();
 
   // ============================================================
-  // ПРОВЕРКА СОХРАНЁННОГО КЛУБА ДЛЯ ВНУТРЕННЕГО МЕРОПРИЯТИЯ
+  // ПРОВЕРКА СОХРАНЁННОГО КЛУБА
   // ============================================================
   useEffect(() => {
     const clubId = localStorage.getItem('clubEventTarget');
@@ -180,15 +179,13 @@ export default function Events() {
   };
 
   // ===== ВАЖНО: ПРОВЕРКА ПРАВ НА СОЗДАНИЕ =====
-  const canCreate = () => {
-    const role = profile?.role;
-    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'];
-    return allowedRoles.includes(role);
-  };
-
+  const canCreate = profile && ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(profile.role);
   const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
   const isClubCoordinator = profile?.role === 'club_coordinator';
   const isMovementCoordinator = profile?.role === 'movement_coordinator';
+
+  console.log('👤 profile:', profile);
+  console.log('🎯 canCreate:', canCreate);
 
   // ===== СОЗДАНИЕ/РЕДАКТИРОВАНИЕ =====
   const handleSubmit = async (e) => {
@@ -213,18 +210,12 @@ export default function Events() {
         is_club_event: !!form.club_id
       };
 
-      // ============================================================
-      // ДЛЯ КООРДИНАТОРА ДВИЖЕНИЯ — СОЗДАЁТ ГЛОБАЛЬНЫЕ МЕРОПРИЯТИЯ
-      // ============================================================
       if (isMovementCoordinator) {
         eventData.is_global = true;
         eventData.is_club_event = false;
         eventData.club_id = null;
       }
 
-      // ============================================================
-      // ДЛЯ КООРДИНАТОРА КЛУБА — ПОДСТАВЛЯЕМ ЕГО КЛУБ
-      // ============================================================
       if (isClubCoordinator && !form.club_id) {
         const userClub = clubs.find(c => 
           c.coordinator_id === profile.id || 
@@ -374,31 +365,13 @@ export default function Events() {
             <h1>Мероприятия</h1>
             <p>Всего: {filteredEvents.length}</p>
           </div>
-          {canCreate() && (
+          {canCreate && (
             <button 
               className="btn-primary" 
               style={{ marginLeft: 'auto' }} 
               onClick={() => { 
                 console.log('🔄 Кнопка нажата, showForm:', showForm);
                 setShowForm(!showForm); 
-                if (!showForm) {
-                  // Сбрасываем форму при открытии
-                  setForm({
-                    id: null,
-                    title: '',
-                    description: '',
-                    location: '',
-                    event_date: '',
-                    end_date: '',
-                    start_time: '',
-                    end_time: '',
-                    type: 'internal',
-                    capacity: 20,
-                    club_id: '',
-                    form_url: '',
-                    is_global: false
-                  });
-                }
               }}
             >
               {showForm ? '✖ Закрыть' : '➕ Создать'}
@@ -452,11 +425,10 @@ export default function Events() {
           </div>
         </FilterBar>
 
-        {showForm && canCreate() && (
+        {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3>{form.id ? '✏️ Редактировать' : '📝 Создать'}</h3>
             
-            {/* ===== ИНДИКАТОР ВНУТРЕННЕГО МЕРОПРИЯТИЯ ===== */}
             {form.club_id && (
               <div style={{ 
                 padding: '10px 16px', 
@@ -492,7 +464,6 @@ export default function Events() {
               </div>
             )}
 
-            {/* ===== ДЛЯ КООРДИНАТОРА ДВИЖЕНИЯ — ИНФОРМАЦИЯ ===== */}
             {isMovementCoordinator && (
               <div style={{ 
                 padding: '12px 16px', 
@@ -561,7 +532,6 @@ export default function Events() {
                   <input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} min="1" />
                 </div>
                 
-                {/* ===== ВЫБОР КЛУБА — СКРЫВАЕМ ДЛЯ КООРДИНАТОРА ДВИЖЕНИЯ ===== */}
                 {!isMovementCoordinator && (
                   <div className="form-group">
                     <label>Клуб</label>
@@ -655,7 +625,6 @@ export default function Events() {
                     </div>
                     {event.description && <div className="meta">{event.description}</div>}
                     
-                    {/* ===== КНОПКИ ДЕЙСТВИЙ ===== */}
                     <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       {userCanEdit && (
                         <button

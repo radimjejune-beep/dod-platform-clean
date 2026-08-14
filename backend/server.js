@@ -4507,11 +4507,13 @@ app.get('/api/event-tutor-assignments', async (req, res) => {
     if (userRole === 'tutor') {
       query += ' AND eta.tutor_id = $1';
       params.push(userId);
+      console.log(`👨‍🏫 Загрузка назначений для тьютора ${userId}`);
     }
 
     query += ' ORDER BY eta.assigned_at DESC';
 
     const result = await pool.query(query, params);
+    console.log(`📥 Найдено назначений: ${result.rows.length}`);
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения назначений:', error);

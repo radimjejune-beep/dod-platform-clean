@@ -616,6 +616,47 @@ export const removeClubPresident = async (clubId) => {
 };
 
 // ============================================================
+// АДМИН-ФУНКЦИИ
+// ============================================================
+
+// ===== ПРИКРЕПЛЕНИЕ УЧАСТНИКА К КЛУБУ (АДМИН) =====
+export const assignUserToClub = async (userId, clubId) => {
+  const response = await fetch(`${API_URL}/users/${userId}/assign-club`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ club_id: clubId })
+  });
+  return response.json();
+};
+
+// ===== СБРОС ПАРОЛЯ ПОЛЬЗОВАТЕЛЯ (АДМИН) =====
+export const resetUserPassword = async (userId) => {
+  const response = await fetch(`${API_URL}/users/${userId}/reset-password`, {
+    method: 'POST',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ===== УДАЛЕНИЕ ПРЕЗИДЕНТА КЛУБА (АДМИН) =====
+export const removeClubPresident = async (clubId) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/president`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ===== ПОЛУЧЕНИЕ ДАННЫХ ПОЛЬЗОВАТЕЛЯ (ЛОГИН) =====
+export const getUserCredentials = async (userId) => {
+  const response = await fetch(`${API_URL}/users/${userId}/credentials`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
 // ЭКСПОРТ API ОБЪЕКТА
 // ============================================================
 const api = {

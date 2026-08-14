@@ -238,22 +238,12 @@ app.get('/api/me', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
-      console.log('❌ Нет заголовка Authorization');
       return res.status(401).json({ error: 'Нет токена' });
     }
 
     const token = authHeader.split(' ')[1];
-    if (!token) {
-      console.log('❌ Токен не найден в заголовке');
-      return res.status(401).json({ error: 'Токен не найден' });
-    }
-
-    console.log('🔑 Проверка токена:', token.substring(0, 20) + '...');
-    console.log('🔐 JWT_SECRET:', process.env.JWT_SECRET ? 'установлен' : 'НЕ УСТАНОВЛЕН!');
-
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
-      console.log('✅ Токен верифицирован для пользователя:', decoded.userId);
 
       const result = await pool.query(
         `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
@@ -268,16 +258,13 @@ app.get('/api/me', async (req, res) => {
       );
 
       if (result.rows.length === 0) {
-        console.log('❌ Пользователь не найден в БД');
         return res.status(404).json({ error: 'Пользователь не найден' });
       }
 
-      console.log('✅ Пользователь найден:', result.rows[0].email);
       res.json(result.rows[0]);
     } catch (jwtError) {
       console.error('❌ Ошибка JWT:', jwtError.message);
-      console.error('❌ Тип ошибки:', jwtError.name);
-      return res.status(401).json({ error: 'Неверный токен', detail: jwtError.message });
+      return res.status(401).json({ error: 'Неверный токен' });
     }
 
   } catch (error) {
@@ -966,12 +953,10 @@ app.post('/api/registrations', async (req, res) => {
 });
 
 // ============================================================
-// ============================================================
-// МОДУЛЬ ОБРАЩЕНИЙ (ПОЛНОСТЬЮ ПЕРЕПИСАН)
-// ============================================================
+// 18. ОБРАЩЕНИЯ
 // ============================================================
 
-// ===== 1. ПОЛУЧЕНИЕ ОБРАЩЕНИЙ =====
+// ===== ПОЛУЧЕНИЕ ОБРАЩЕНИЙ =====
 app.get('/api/appeals', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -984,57 +969,36 @@ app.get('/api/appeals', async (req, res) => {
     const userRole = decoded.role;
     const userId = decoded.userId;
 
-    console.log('📋 Запрос обращений от:', userId, 'Роль:', userRole);
-
     let query = `
-      SELECT 
-        a.id,
-        a.club_id,
-        a.coordinator_id,
-        a.subject,
-        a.message,
-        a.priority,
-        a.status,
-        a.created_at,
-        a.updated_at,
-        a.resolved_by,
-        a.resolved_at,
-        a.resolution_comment,
-        u.full_name as coordinator_name,
-        c.name as club_name,
-        r.full_name as resolved_by_name,
-        (SELECT COUNT(*) FROM appeal_replies WHERE appeal_id = a.id) as reply_count
+      SELECT a.*, 
+             u.full_name as coordinator_name,
+             c.name as club_name,
+             r.full_name as resolved_by_name
       FROM appeals a
       LEFT JOIN users u ON a.coordinator_id = u.id
       LEFT JOIN clubs c ON a.club_id = c.id
       LEFT JOIN users r ON a.resolved_by = r.id
     `;
-    
     const params = [];
 
-    // Логика доступа по ролям
     if (userRole === 'club_coordinator') {
-      // Координатор видит только свои обращения
       query += ' WHERE a.coordinator_id = $1';
       params.push(userId);
     } else if (!['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      // Остальные не видят
       query += ' WHERE 1 = 0';
     }
-    // Админ, Координатор движения, Президент, Вице видят все
 
     query += ' ORDER BY a.created_at DESC';
 
     const result = await pool.query(query, params);
-    console.log('✅ Загружено обращений:', result.rows.length);
     res.json(result.rows);
   } catch (error) {
-    console.error('❌ Ошибка получения обращений:', error);
+    console.error('Ошибка получения обращений:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// ===== 2. СОЗДАНИЕ ОБРАЩЕНИЯ =====
+// ===== СОЗДАНИЕ ОБРАЩЕНИЯ =====
 app.post('/api/appeals', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -1049,89 +1013,61 @@ app.post('/api/appeals', async (req, res) => {
 
     const { subject, message, priority } = req.body;
 
-    console.log('📝 Создание обращения от:', userId);
-    console.log('📝 Тема:', subject);
-
     if (!subject || !message) {
-      return res.status(400).json({ error: 'Тема и текст обращения обязательны' });
+      return res.status(400).json({ error: 'subject и message обязательны' });
     }
 
-    // Только координаторы КЮДа могут создавать обращения
     if (userRole !== 'club_coordinator') {
       return res.status(403).json({ error: 'Только координаторы КЮДа могут создавать обращения' });
     }
 
-    // Получаем клуб координатора
+    let clubId = null;
     const clubResult = await pool.query(
       'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
       [userId]
     );
-    
-    if (clubResult.rows.length === 0) {
+    if (clubResult.rows.length > 0) {
+      clubId = clubResult.rows[0].club_id;
+    }
+
+    if (!clubId) {
       return res.status(400).json({ error: 'Вы не привязаны к КЮДу' });
     }
 
-    const clubId = clubResult.rows[0].club_id;
-
-    // Создаём обращение
     const result = await pool.query(
-      `INSERT INTO appeals (
-        club_id, 
-        coordinator_id, 
-        subject, 
-        message, 
-        priority, 
-        status, 
-        created_at
-      ) VALUES ($1, $2, $3, $4, $5, 'pending', NOW())
-      RETURNING *`,
+      `INSERT INTO appeals (club_id, coordinator_id, subject, message, priority, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, 'pending', NOW())
+       RETURNING *`,
       [clubId, userId, subject, message, priority || 'medium']
     );
 
-    console.log('✅ Обращение создано, ID:', result.rows[0].id);
-
-    // Отправляем уведомления администраторам
     const admins = await pool.query(
       "SELECT id FROM users WHERE role IN ('admin', 'movement_coordinator', 'president', 'vice_president')"
     );
-    
     for (const admin of admins.rows) {
-      try {
-        await pool.query(
-          `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-          [
-            admin.id,
-            'appeal',
-            '📨 Новое обращение',
-            `Новое обращение от координатора: "${subject}"`,
-            '/appeals',
-            'high'
-          ]
-        );
-      } catch (notifError) {
-        console.warn('⚠️ Ошибка уведомления:', notifError.message);
-      }
+      await createNotification(
+        admin.id,
+        'appeal',
+        '📨 Новое обращение',
+        `Новое обращение от координатора: "${subject}"`,
+        '/appeals',
+        'high'
+      );
     }
 
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('❌ Ошибка создания обращения:', error);
+    console.error('Ошибка создания обращения:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// ===== 3. ОТВЕТ НА ОБРАЩЕНИЕ =====
+// ===== ОТВЕТ НА ОБРАЩЕНИЕ =====
 app.post('/api/appeals/:id/reply', async (req, res) => {
   try {
     const { id } = req.params;
     const { message, status } = req.body;
 
-    console.log('📤 Ответ на обращение:', id);
-    console.log('📤 Текст:', message);
-    console.log('📤 Статус:', status);
-
-    // Проверка токена
     const authHeader = req.headers.authorization;
     if (!authHeader) {
       return res.status(401).json({ error: 'Нет токена' });
@@ -1142,7 +1078,6 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
-    // Проверка прав
     const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
     if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав для ответа на обращения' });
@@ -1152,7 +1087,6 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       return res.status(400).json({ error: 'Текст ответа обязателен' });
     }
 
-    // Проверяем существование обращения
     const appealCheck = await pool.query(
       'SELECT id, coordinator_id, status FROM appeals WHERE id = $1',
       [id]
@@ -1164,62 +1098,42 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
 
     const appeal = appealCheck.rows[0];
 
-    // Проверяем, не закрыто ли обращение
     if (appeal.status === 'resolved' || appeal.status === 'rejected') {
       return res.status(400).json({ error: 'Это обращение уже закрыто' });
     }
 
-    // Сохраняем ответ
     await pool.query(
       `INSERT INTO appeal_replies (appeal_id, author_id, message, created_at)
        VALUES ($1, $2, $3, NOW())`,
       [id, userId, message.trim()]
     );
 
-    console.log('✅ Ответ сохранён');
-
-    // Обновляем статус обращения
     const newStatus = status || 'in_progress';
     await pool.query(
       `UPDATE appeals 
        SET status = $1,
            resolved_by = $2,
-           resolved_at = NOW()
+           resolved_at = CASE WHEN $1 IN ('resolved', 'rejected') THEN NOW() ELSE NULL END
        WHERE id = $3`,
       [newStatus, userId, id]
     );
 
-    console.log('✅ Статус обновлён на:', newStatus);
-
-    // Отправляем уведомление координатору
     if (appeal.coordinator_id) {
-      try {
-        await pool.query(
-          `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-          [
-            appeal.coordinator_id,
-            'appeal',
-            '📨 Ответ на обращение',
-            `Получен ответ на ваше обращение`,
-            '/appeals',
-            'high'
-          ]
-        );
-        console.log('✅ Уведомление отправлено координатору');
-      } catch (notifError) {
-        console.warn('⚠️ Ошибка уведомления:', notifError.message);
-      }
+      await createNotification(
+        appeal.coordinator_id,
+        'appeal',
+        '📨 Ответ на обращение',
+        `Получен ответ на ваше обращение`,
+        '/appeals',
+        'high'
+      );
     }
 
-    // Получаем обновлённые данные обращения
     const result = await pool.query(
-      `SELECT 
-        a.*,
-        u.full_name as coordinator_name,
-        c.name as club_name,
-        r.full_name as resolved_by_name,
-        (SELECT COUNT(*) FROM appeal_replies WHERE appeal_id = a.id) as reply_count
+      `SELECT a.*, 
+              u.full_name as coordinator_name,
+              c.name as club_name,
+              r.full_name as resolved_by_name
        FROM appeals a
        LEFT JOIN users u ON a.coordinator_id = u.id
        LEFT JOIN clubs c ON a.club_id = c.id
@@ -1229,10 +1143,9 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
     );
 
     res.json({
-      message: 'Ответ отправлен успешно',
+      message: 'Ответ отправлен',
       appeal: result.rows[0]
     });
-
   } catch (error) {
     console.error('❌ Ошибка ответа на обращение:', error);
     console.error('❌ Детали:', error.detail || 'Нет деталей');
@@ -1243,39 +1156,30 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
   }
 });
 
-// ===== 4. ПОЛУЧЕНИЕ ОТВЕТОВ НА ОБРАЩЕНИЕ =====
+// ===== ПОЛУЧЕНИЕ ОТВЕТОВ =====
 app.get('/api/appeals/:id/replies', async (req, res) => {
   try {
     const { id } = req.params;
 
-    console.log('📋 Запрос ответов для обращения:', id);
-
     const result = await pool.query(
-      `SELECT 
-        r.id,
-        r.message,
-        r.created_at,
-        u.id as author_id,
-        u.full_name as author_name,
-        u.role as author_role,
-        a.status as appeal_status
+      `SELECT r.*, 
+              u.full_name as author_name,
+              u.role as author_role
        FROM appeal_replies r
        LEFT JOIN users u ON r.author_id = u.id
-       LEFT JOIN appeals a ON r.appeal_id = a.id
        WHERE r.appeal_id = $1
        ORDER BY r.created_at ASC`,
       [id]
     );
 
-    console.log('✅ Найдено ответов:', result.rows.length);
     res.json(result.rows);
   } catch (error) {
-    console.error('❌ Ошибка получения ответов:', error);
+    console.error('Ошибка получения ответов:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// ===== 5. УДАЛЕНИЕ ОБРАЩЕНИЯ =====
+// ===== УДАЛЕНИЕ ОБРАЩЕНИЯ =====
 app.delete('/api/appeals/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1298,15 +1202,12 @@ app.delete('/api/appeals/:id', async (req, res) => {
       return res.status(404).json({ error: 'Обращение не найдено' });
     }
 
-    // Сначала удаляем все ответы на это обращение
     await pool.query('DELETE FROM appeal_replies WHERE appeal_id = $1', [id]);
-    // Затем удаляем само обращение
     await pool.query('DELETE FROM appeals WHERE id = $1', [id]);
 
-    console.log('✅ Обращение удалено:', id);
     res.json({ message: 'Обращение удалено' });
   } catch (error) {
-    console.error('❌ Ошибка удаления обращения:', error);
+    console.error('Ошибка удаления обращения:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1909,10 +1810,6 @@ app.patch('/api/clubs/:clubId/president', async (req, res) => {
     const { clubId } = req.params;
     const { president_id } = req.body;
 
-    if (!president_id) {
-      return res.status(400).json({ error: 'president_id обязателен' });
-    }
-
     if (userRole === 'club_coordinator') {
       const clubCheck = await pool.query(
         'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
@@ -1923,6 +1820,18 @@ app.patch('/api/clubs/:clubId/president', async (req, res) => {
       }
     } else if (!['admin', 'movement_coordinator'].includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав' });
+    }
+
+    if (!president_id) {
+      await pool.query(
+        'UPDATE users SET is_president = false WHERE club_id = $1 AND is_president = true',
+        [clubId]
+      );
+      await pool.query(
+        'UPDATE clubs SET president_id = NULL, updated_at = NOW() WHERE id = $1',
+        [clubId]
+      );
+      return res.json({ message: 'Президент снят с должности' });
     }
 
     const userCheck = await pool.query(
@@ -2309,14 +2218,14 @@ app.post('/api/parent-link-child', async (req, res) => {
     }
 
     const existingLink = await pool.query(
-      'SELECT id FROM child_parent WHERE child_id = $1 AND status = \'active\'',
-      [child.id]
+      'SELECT id FROM child_parent WHERE child_id = $1 AND status = $2',
+      [child.id, 'active']
     );
 
     if (existingLink.rows.length > 0) {
       const sameParent = await pool.query(
-        'SELECT id FROM child_parent WHERE child_id = $1 AND parent_id = $2 AND status = \'active\'',
-        [child.id, parentId]
+        'SELECT id FROM child_parent WHERE child_id = $1 AND parent_id = $2 AND status = $3',
+        [child.id, parentId, 'active']
       );
       if (sameParent.rows.length > 0) {
         return res.status(400).json({ error: 'Этот ребёнок уже привязан к вам' });

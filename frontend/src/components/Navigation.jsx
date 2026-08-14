@@ -289,9 +289,10 @@ export default function Navigation({ profile }) {
     staffCalendar: 'Календарь',
     clubEvents: 'Мой клуб',
     settings: 'Настройки',
+    assignments: '📅 Мои назначения',  // ← ДОБАВЬ ЭТО
   };
 
-  const groupOrder = ['main', 'events', 'people', 'clubs', 'clubManagement', 'achievements', 'reviews', 'reports', 'tasks', 'communication', 'documents', 'staffCalendar', 'clubEvents', 'settings'];
+  const groupOrder = ['main', 'events', 'people', 'clubs', 'clubManagement', 'achievements', 'reviews', 'reports', 'tasks', 'assignments', 'communication', 'documents', 'staffCalendar', 'clubEvents', 'settings'];
 
   const menuGroups = getMenuGroups();
 

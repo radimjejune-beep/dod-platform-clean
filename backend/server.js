@@ -1068,7 +1068,7 @@ app.post('/api/appeals', async (req, res) => {
 });
 
 // ============================================================
-// ОТВЕТ НА ОБРАЩЕНИЕ (ИСПРАВЛЕННЫЙ - БЕЗ ОШИБОК)
+// ОТВЕТ НА ОБРАЩЕНИЕ (ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // ============================================================
 app.post('/api/appeals/:id/reply', async (req, res) => {
   try {
@@ -1085,6 +1085,7 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
+    // Проверка прав - кто может отвечать
     const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
     if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав для ответа на обращения' });
@@ -1095,15 +1096,22 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
     }
 
     // ===== 1. ПРОВЕРЯЕМ СУЩЕСТВОВАНИЕ ОБРАЩЕНИЯ =====
+    // Используем явное приведение типа ::UUID
     const appealCheck = await pool.query(
-      'SELECT id, coordinator_id FROM appeals WHERE id = $1::UUID',
+      'SELECT id, coordinator_id, status FROM appeals WHERE id = $1::UUID',
       [id]
     );
+    
     if (appealCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Обращение не найдено' });
     }
 
     const appeal = appealCheck.rows[0];
+
+    // Проверяем, не закрыто ли обращение
+    if (appeal.status === 'resolved' || appeal.status === 'rejected') {
+      return res.status(400).json({ error: 'Это обращение уже закрыто' });
+    }
 
     // ===== 2. ВСТАВЛЯЕМ ОТВЕТ =====
     await pool.query(
@@ -1112,7 +1120,7 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       [id, userId, message.trim()]
     );
 
-    // ===== 3. ОБНОВЛЯЕМ СТАТУС =====
+    // ===== 3. ОБНОВЛЯЕМ СТАТУС ОБРАЩЕНИЯ =====
     const newStatus = status || 'in_progress';
     await pool.query(
       `UPDATE appeals 
@@ -1125,14 +1133,23 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
 
     // ===== 4. УВЕДОМЛЕНИЕ КООРДИНАТОРУ =====
     if (appeal.coordinator_id) {
-      await createNotification(
-        appeal.coordinator_id,
-        'appeal',
-        '📨 Ответ на обращение',
-        `Получен ответ на ваше обращение`,
-        '/appeals',
-        'high'
-      );
+      try {
+        await pool.query(
+          `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
+           VALUES ($1::UUID, $2, $3, $4, $5, $6, NOW())`,
+          [
+            appeal.coordinator_id,
+            'appeal',
+            '📨 Ответ на обращение',
+            `Получен ответ на ваше обращение`,
+            '/appeals',
+            'high'
+          ]
+        );
+        console.log('✅ Уведомление отправлено координатору');
+      } catch (notifError) {
+        console.warn('⚠️ Ошибка создания уведомления:', notifError.message);
+      }
     }
 
     // ===== 5. ПОЛУЧАЕМ ОБНОВЛЁННОЕ ОБРАЩЕНИЕ =====
@@ -1155,15 +1172,17 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Ошибка ответа на обращение:', error);
-    console.error('❌ Детали:', error.detail || 'Нет деталей');
+    console.error('❌ Детали ошибки:', error.detail || 'Нет деталей');
+    console.error('❌ Стек:', error.stack);
     res.status(500).json({ 
       error: 'Ошибка сервера', 
-      detail: error.message 
+      detail: error.message,
+      code: error.code || 'UNKNOWN'
     });
   }
 });
 
-// ===== ПОЛУЧЕНИЕ ОТВЕТОВ =====
+// ===== ПОЛУЧЕНИЕ ОТВЕТОВ НА ОБРАЩЕНИЕ =====
 app.get('/api/appeals/:id/replies', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1174,14 +1193,14 @@ app.get('/api/appeals/:id/replies', async (req, res) => {
               u.role as author_role
        FROM appeal_replies r
        LEFT JOIN users u ON r.author_id = u.id
-       WHERE r.appeal_id = $1
+       WHERE r.appeal_id = $1::UUID
        ORDER BY r.created_at ASC`,
       [id]
     );
 
     res.json(result.rows);
   } catch (error) {
-    console.error('Ошибка получения ответов:', error);
+    console.error('❌ Ошибка получения ответов:', error);
     res.status(500).json({ error: error.message });
   }
 });

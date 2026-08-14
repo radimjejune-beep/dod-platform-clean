@@ -257,7 +257,7 @@ export const addAppeal = async (data) => {
   return response.json();
 };
 
-// ===== НОВЫЙ МЕТОД: ОТВЕТ НА ОБРАЩЕНИЕ =====
+// ===== ОТВЕТ НА ОБРАЩЕНИЕ =====
 export const replyToAppeal = async (appealId, data) => {
   const response = await fetch(`${API_URL}/appeals/${appealId}/reply`, {
     method: 'POST',

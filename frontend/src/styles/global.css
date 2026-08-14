@@ -73,9 +73,9 @@ body {
 }
 
 .container-page {
-  max-width: 1200px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 20px 20px 60px;
+  padding: 16px 20px 40px;
   position: relative;
   z-index: 1;
 }
@@ -148,7 +148,7 @@ body {
 .card {
   background: var(--card-bg);
   border-radius: var(--radius);
-  padding: 24px 28px;
+  padding: 20px 24px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   transition: var(--transition);

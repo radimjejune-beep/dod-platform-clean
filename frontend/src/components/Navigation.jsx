@@ -226,6 +226,14 @@ export default function Navigation({ profile }) {
         { path: '/president-tasks', label: 'Задания президента', icon: Icons.target, roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
         { path: '/my-journal', label: 'Журнал тьютора', icon: Icons.book, roles: ['tutor'] },
       ],
+      assignments: [
+        { 
+          path: '/tutor-assignments', 
+          label: '📅 Мои назначения', 
+          icon: Icons.calendar, 
+          roles: ['tutor'] 
+        },
+      ],
       communication: [
         { path: '/appeals', label: 'Обращения', icon: Icons.mail, roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
         { path: '/tutor-requests', label: 'Запросы на тьюторов', icon: Icons.mail, roles: ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'] },
@@ -252,14 +260,6 @@ export default function Navigation({ profile }) {
         { path: '/admin/invite', label: 'Пригласить', icon: Icons.userPlus, roles: ['admin', 'movement_coordinator'] },
         { path: '/import-participants', label: 'Импорт', icon: Icons.upload, roles: ['admin', 'movement_coordinator'] },
       ],
-      assignments: [
-        { 
-         path: '/tutor-assignments', 
-         label: '📅 Мои назначения', 
-         icon: Icons.calendar, 
-         roles: ['tutor'] 
-        },
-       ],
     };
 
     const result = {};
@@ -284,12 +284,12 @@ export default function Navigation({ profile }) {
     reviews: 'Оценки',
     reports: 'Отчёты',
     tasks: 'Задания',
+    assignments: '📅 Мои назначения',
     communication: 'Коммуникация',
     documents: '📜 Официальные документы',
     staffCalendar: 'Календарь',
     clubEvents: 'Мой клуб',
     settings: 'Настройки',
-    assignments: '📅 Мои назначения',  // ← ДОБАВЬ ЭТО
   };
 
   const groupOrder = ['main', 'events', 'people', 'clubs', 'clubManagement', 'achievements', 'reviews', 'reports', 'tasks', 'assignments', 'communication', 'documents', 'staffCalendar', 'clubEvents', 'settings'];

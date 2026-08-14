@@ -13,7 +13,6 @@ export default function ClubCoordinatorDashboard() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
   
-  // ===== СТАТИСТИКА =====
   const [stats, setStats] = useState({
     participants: 0,
     activeParticipants: 0,
@@ -22,10 +21,10 @@ export default function ClubCoordinatorDashboard() {
     achievements: 0,
     pendingRequests: 0,
     pendingAppeals: 0,
-    upcomingEvents: 0
+    upcomingEvents: 0,
+    newParticipantsThisMonth: 0
   });
   
-  // ===== СПИСКИ =====
   const [participants, setParticipants] = useState([]);
   const [recentParticipants, setRecentParticipants] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
@@ -34,7 +33,6 @@ export default function ClubCoordinatorDashboard() {
   const [pendingAppeals, setPendingAppeals] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
   
-  // ===== ДЛЯ ФИЛЬТРА =====
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedTab, setSelectedTab] = useState('overview');
   
@@ -60,7 +58,6 @@ export default function ClubCoordinatorDashboard() {
 
       setProfile(userData);
 
-      // ===== ПОИСК КЛУБА КООРДИНАТОРА =====
       const clubsData = await api.getClubs();
       let coordinatorClub = null;
 
@@ -97,7 +94,6 @@ export default function ClubCoordinatorDashboard() {
 
       setClub(coordinatorClub);
 
-      // ===== ЗАГРУЗКА ДАННЫХ =====
       await Promise.all([
         loadStats(coordinatorClub.id),
         loadParticipants(coordinatorClub.id),
@@ -146,6 +142,12 @@ export default function ClubCoordinatorDashboard() {
         return date >= now && e.status !== 'completed' && e.status !== 'rejected';
       });
 
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      const newParticipantsThisMonth = clubParticipants.filter(p => 
+        new Date(p.created_at) > oneMonthAgo
+      );
+
       setStats({
         participants: clubParticipants.length,
         activeParticipants: clubParticipants.filter(p => p.status === 'active').length,
@@ -154,7 +156,8 @@ export default function ClubCoordinatorDashboard() {
         achievements: clubAchievements.length,
         pendingRequests: 0,
         pendingAppeals: 0,
-        upcomingEvents: upcomingEvents.length
+        upcomingEvents: upcomingEvents.length,
+        newParticipantsThisMonth: newParticipantsThisMonth.length
       });
 
     } catch (err) {
@@ -336,9 +339,7 @@ export default function ClubCoordinatorDashboard() {
       <Navigation profile={profile} />
       <div className="container-page">
         
-        {/* ============================================================
-            ШАПКА ПРОФИЛЯ
-            ============================================================ */}
+        {/* ===== ШАПКА ПРОФИЛЯ ===== */}
         <div className="card" style={{ 
           marginBottom: '24px',
           background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
@@ -438,6 +439,25 @@ export default function ClubCoordinatorDashboard() {
               }} />
             </div>
           </div>
+
+          {/* НОВЫЕ УЧАСТНИКИ ЗА МЕСЯЦ */}
+          <div style={{ 
+            marginTop: '12px', 
+            paddingTop: '12px', 
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            display: 'flex',
+            gap: '16px',
+            flexWrap: 'wrap',
+            fontSize: '13px',
+            opacity: 0.8
+          }}>
+            {stats.newParticipantsThisMonth > 0 && (
+              <span>🆕 +{stats.newParticipantsThisMonth} новых участников за месяц</span>
+            )}
+            {stats.participants > 0 && (
+              <span>📊 {Math.round((stats.activeParticipants / stats.participants) * 100)}% активных</span>
+            )}
+          </div>
         </div>
 
         {message && (
@@ -446,9 +466,32 @@ export default function ClubCoordinatorDashboard() {
           </div>
         )}
 
-        {/* ============================================================
-            СТАТИСТИКА
-            ============================================================ */}
+        {/* УВЕДОМЛЕНИЯ О PENDING ЗАПРОСАХ */}
+        {stats.pendingRequests > 0 && (
+          <div style={{ 
+            padding: '10px 16px', 
+            background: '#FBF4DC', 
+            borderLeft: '4px solid #C9A227',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '8px'
+          }}>
+            <span>⚠️ У вас {stats.pendingRequests} запросов на тьюторов ожидают рассмотрения</span>
+            <button 
+              className="btn-primary" 
+              style={{ padding: '4px 16px', fontSize: '12px' }}
+              onClick={() => navigate('/tutor-requests')}
+            >
+              Перейти →
+            </button>
+          </div>
+        )}
+
+        {/* ===== СТАТИСТИКА ===== */}
         <div className="grid-4" style={{ marginBottom: '24px' }}>
           <div className="stat-card" style={{ borderTop: '3px solid #174A7E' }}>
             <div className="number">{stats.participants}</div>
@@ -488,7 +531,6 @@ export default function ClubCoordinatorDashboard() {
             ⚡ Быстрые действия
           </h3>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            {/* ===== КНОПКА ДЛЯ ВНУТРЕННЕГО МЕРОПРИЯТИЯ ===== */}
             <button
               className="btn-primary"
               style={{ padding: '8px 16px', fontSize: '13px' }}
@@ -508,12 +550,10 @@ export default function ClubCoordinatorDashboard() {
               🏆 Добавить достижение
             </button>
 
-            {/* ===== КНОПКА: НАЗНАЧИТЬ ПРЕЗИДЕНТА ===== */}
             <button
               className="btn-primary"
               style={{ padding: '8px 16px', fontSize: '13px', background: '#6B46C1', color: 'white', border: 'none' }}
               onClick={() => {
-                // Используем ID клуба из состояния
                 if (club && club.id) {
                   navigate(`/club/${club.id}/president`);
                 } else {
@@ -526,7 +566,6 @@ export default function ClubCoordinatorDashboard() {
               👑 Назначить президента
             </button>
 
-            {/* ===== КНОПКА: РЕЙТИНГ КЛУБА ===== */}
             <button
               className="btn-primary"
               style={{ padding: '8px 16px', fontSize: '13px', background: '#C9A227', color: '#0B1F3A', border: 'none' }}
@@ -653,9 +692,7 @@ export default function ClubCoordinatorDashboard() {
             ============================================================ */}
         {selectedTab === 'overview' && (
           <div>
-            {/* ДВЕ КОЛОНКИ */}
             <div className="grid-2">
-              {/* ПОСЛЕДНИЕ УЧАСТНИКИ */}
               <div className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A' }}>
@@ -728,7 +765,6 @@ export default function ClubCoordinatorDashboard() {
                 )}
               </div>
 
-              {/* ПРЕДСТОЯЩИЕ МЕРОПРИЯТИЯ */}
               <div className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A' }}>
@@ -775,7 +811,6 @@ export default function ClubCoordinatorDashboard() {
               </div>
             </div>
 
-            {/* ПОСЛЕДНИЕ ДОСТИЖЕНИЯ */}
             {recentAchievements.length > 0 && (
               <div className="card" style={{ marginTop: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
@@ -810,6 +845,36 @@ export default function ClubCoordinatorDashboard() {
                 </div>
               </div>
             )}
+
+            {/* ГРАФИК АКТИВНОСТИ */}
+            <div className="card" style={{ marginTop: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
+                📊 Активность клуба за месяц
+              </h3>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '14px', fontWeight: '600' }}>
+                  {stats.eventsThisMonth} мероприятий
+                </span>
+                <div style={{ 
+                  flex: 1, 
+                  height: '8px', 
+                  background: '#F4F6F9', 
+                  borderRadius: '4px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: `${Math.min((stats.eventsThisMonth / 10) * 100, 100)}%`,
+                    height: '100%',
+                    background: 'linear-gradient(90deg, #C9A227, #E8D9A8)',
+                    borderRadius: '4px',
+                    transition: 'width 0.5s ease'
+                  }} />
+                </div>
+              </div>
+              <div style={{ fontSize: '12px', color: '#98A2B3', marginTop: '4px' }}>
+                {stats.eventsThisMonth === 0 ? 'Нет мероприятий в этом месяце' : '🚀 Отличная активность!'}
+              </div>
+            </div>
           </div>
         )}
 
@@ -1035,7 +1100,6 @@ export default function ClubCoordinatorDashboard() {
               </div>
             )}
 
-            {/* ОЖИДАЮЩИЕ ЗАПРОСЫ И ОБРАЩЕНИЯ */}
             {(stats.pendingRequests > 0 || stats.pendingAppeals > 0) && (
               <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #F4F6F9' }}>
                 <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#0B1F3A', marginBottom: '10px' }}>

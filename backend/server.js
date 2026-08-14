@@ -4362,6 +4362,50 @@ app.post('/api/documents/:id/read', async (req, res) => {
   }
 });
 
+// ===== УДАЛЕНИЕ ДОКУМЕНТА (ТОЛЬКО АДМИН) =====
+app.delete('/api/documents/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    // Только админ может удалять документы
+    if (userRole !== 'admin') {
+      return res.status(403).json({ error: 'Только администратор может удалять документы' });
+    }
+
+    // Проверяем, существует ли документ
+    const check = await pool.query('SELECT id, title FROM official_documents WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Документ не найден' });
+    }
+
+    const doc = check.rows[0];
+
+    // Удаляем связанные записи
+    await pool.query('DELETE FROM document_acknowledgments WHERE document_id = $1', [id]);
+    await pool.query('DELETE FROM document_comments WHERE document_id = $1', [id]);
+    await pool.query('DELETE FROM official_documents WHERE id = $1', [id]);
+
+    console.log(`✅ Документ "${doc.title}" удалён администратором`);
+
+    res.json({ 
+      message: 'Документ удалён',
+      deleted_document: doc
+    });
+  } catch (error) {
+    console.error('❌ Ошибка удаления документа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ============================================================
 // ЗАПУСК СЕРВЕРА
 // ============================================================

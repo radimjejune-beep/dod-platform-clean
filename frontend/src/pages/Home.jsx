@@ -69,17 +69,13 @@ export default function Home() {
       <Navigation profile={profile} />
 
       {/* ============================================================
-          ГЕРОЙ-СЕКЦИЯ
+          ГЕРОЙ-СЕКЦИЯ — КОМПАКТНАЯ
           ============================================================ */}
       <section className="home-hero">
         <div className="home-hero-bg" />
-        <div className="home-hero-particles">
-          <span>✦</span><span>✦</span><span>✦</span><span>✦</span>
-          <span>✦</span><span>✦</span><span>✦</span><span>✦</span>
-          <span>✦</span><span>✦</span><span>✦</span><span>✦</span>
-        </div>
         <div className="home-hero-content">
           <div className="home-hero-badge">🇷🇺 Официальное движение</div>
+          
           <div className="home-hero-emblem">
             <img 
               src={logo} 
@@ -87,57 +83,38 @@ export default function Home() {
               className="home-hero-logo"
             />
           </div>
+          
           <h1>
-            Межрегиональное детское<br />
-            общественное Движение<br />
             <span>«Дипломаты Будущего»</span>
           </h1>
           <p className="home-hero-motto">
             Воспитываем новое поколение дипломатов, развиваем лидерские качества<br />
             и формируем гражданскую позицию у молодёжи
           </p>
+          
           <div className="home-hero-buttons">
             {profile ? (
               <button className="home-hero-btn-primary" onClick={handleGetStarted}>
-                <span>📊</span> Перейти в кабинет
+                📊 Перейти в кабинет
               </button>
             ) : (
               <>
                 <button className="home-hero-btn-secondary" onClick={handleLogin}>
-                  <span>🔑</span> Вход
+                  🔑 Вход
                 </button>
                 <button className="home-hero-btn-primary" onClick={handleGetStarted}>
-                  <span>🚀</span> Присоединиться
+                  🚀 Присоединиться
                 </button>
               </>
             )}
           </div>
+          
           {!profile && (
             <p className="home-hero-register">
               Уже есть аккаунт? <Link to="/login">Войти</Link>
             </p>
           )}
-          <div className="home-hero-stats">
-            <div className="home-hero-stat">
-              <span className="home-hero-stat-number">10+</span>
-              <span className="home-hero-stat-label">КЮДов</span>
-            </div>
-            <div className="home-hero-stat-divider" />
-            <div className="home-hero-stat">
-              <span className="home-hero-stat-number">500+</span>
-              <span className="home-hero-stat-label">Участников</span>
-            </div>
-            <div className="home-hero-stat-divider" />
-            <div className="home-hero-stat">
-              <span className="home-hero-stat-number">50+</span>
-              <span className="home-hero-stat-label">Мероприятий</span>
-            </div>
-            <div className="home-hero-stat-divider" />
-            <div className="home-hero-stat">
-              <span className="home-hero-stat-number">8</span>
-              <span className="home-hero-stat-label">Лет работы</span>
-            </div>
-          </div>
+
           <div className="home-hero-partners">
             <span className="home-hero-partner-label">При поддержке</span>
             <img 
@@ -280,12 +257,12 @@ export default function Home() {
         /* ===== ГЕРОЙ ===== */
         .home-hero {
           position: relative;
-          min-height: 100vh;
+          min-height: 70vh;
           display: flex;
           align-items: center;
           justify-content: center;
           text-align: center;
-          padding: 100px 24px 60px;
+          padding: 60px 24px 40px;
           overflow: hidden;
           background: linear-gradient(160deg, #0B1F3A 0%, #051224 100%);
         }
@@ -308,92 +285,52 @@ export default function Home() {
           100% { transform: translate(30px, -30px) scale(0.95); }
         }
 
-        .home-hero-particles {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          overflow: hidden;
-          pointer-events: none;
-        }
-
-        .home-hero-particles span {
-          position: absolute;
-          color: rgba(201, 162, 39, 0.05);
-          font-size: 24px;
-          animation: floatParticle 25s infinite linear;
-        }
-
-        .home-hero-particles span:nth-child(1) { top: 10%; left: 5%; animation-delay: 0s; }
-        .home-hero-particles span:nth-child(2) { top: 20%; left: 90%; animation-delay: 3s; }
-        .home-hero-particles span:nth-child(3) { top: 60%; left: 10%; animation-delay: 6s; }
-        .home-hero-particles span:nth-child(4) { top: 80%; left: 85%; animation-delay: 9s; }
-        .home-hero-particles span:nth-child(5) { top: 40%; left: 50%; animation-delay: 2s; }
-        .home-hero-particles span:nth-child(6) { top: 15%; left: 45%; animation-delay: 5s; }
-        .home-hero-particles span:nth-child(7) { top: 70%; left: 75%; animation-delay: 8s; }
-        .home-hero-particles span:nth-child(8) { top: 90%; left: 20%; animation-delay: 11s; }
-        .home-hero-particles span:nth-child(9) { top: 30%; left: 70%; animation-delay: 14s; }
-        .home-hero-particles span:nth-child(10) { top: 50%; left: 25%; animation-delay: 17s; }
-        .home-hero-particles span:nth-child(11) { top: 75%; left: 50%; animation-delay: 20s; }
-        .home-hero-particles span:nth-child(12) { top: 5%; left: 60%; animation-delay: 22s; }
-
-        @keyframes floatParticle {
-          0% { transform: translate(0, 0) rotate(0deg); opacity: 0.3; }
-          25% { transform: translate(40px, -30px) rotate(90deg); opacity: 0.8; }
-          50% { transform: translate(-30px, 40px) rotate(180deg); opacity: 0.3; }
-          75% { transform: translate(50px, 15px) rotate(270deg); opacity: 0.8; }
-          100% { transform: translate(0, 0) rotate(360deg); opacity: 0.3; }
-        }
-
         .home-hero-content {
           position: relative;
           z-index: 1;
-          max-width: 1000px;
+          max-width: 900px;
         }
 
         .home-hero-badge {
           display: inline-block;
-          padding: 6px 20px;
+          padding: 4px 16px;
           border-radius: 20px;
           background: rgba(201, 162, 39, 0.15);
           color: #E8D9A8;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 600;
-          letter-spacing: 1.5px;
+          letter-spacing: 1px;
           text-transform: uppercase;
-          margin-bottom: 24px;
-          border: 1px solid rgba(201, 162, 39, 0.15);
-          backdrop-filter: blur(10px);
+          margin-bottom: 16px;
+          border: 1px solid rgba(201, 162, 39, 0.12);
         }
 
         .home-hero-emblem {
-          width: 100px;
-          height: 100px;
-          margin: 0 auto 28px;
+          width: 64px;
+          height: 64px;
+          margin: 0 auto 16px;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: rgba(255, 255, 255, 0.03);
+          background: rgba(255, 255, 255, 0.04);
           border-radius: 50%;
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.06);
         }
 
         .home-hero-logo {
-          height: 60px;
+          height: 40px;
           width: auto;
           object-fit: contain;
-          filter: drop-shadow(0 4px 30px rgba(201, 162, 39, 0.15));
+          filter: drop-shadow(0 4px 20px rgba(201, 162, 39, 0.15));
         }
 
         .home-hero h1 {
           font-family: 'Playfair Display', serif;
-          font-size: 42px;
+          font-size: 36px;
           font-weight: 700;
           color: white;
-          margin-bottom: 16px;
-          line-height: 1.25;
+          margin-bottom: 10px;
+          line-height: 1.2;
           letter-spacing: -0.5px;
         }
 
@@ -405,70 +342,67 @@ export default function Home() {
         }
 
         .home-hero-motto {
-          font-size: 18px;
-          color: rgba(255, 255, 255, 0.6);
-          line-height: 1.8;
-          margin-bottom: 32px;
+          font-size: 16px;
+          color: rgba(255, 255, 255, 0.55);
+          line-height: 1.7;
+          margin-bottom: 24px;
           font-weight: 300;
-          letter-spacing: 0.3px;
         }
 
         .home-hero-buttons {
           display: flex;
-          gap: 16px;
+          gap: 14px;
           justify-content: center;
           flex-wrap: wrap;
         }
 
         .home-hero-btn-primary {
-          padding: 16px 40px;
+          padding: 14px 36px;
           background: linear-gradient(135deg, #C9A227, #B8921F);
           color: #0B1F3A;
           border: none;
-          border-radius: 12px;
-          font-size: 16px;
+          border-radius: 10px;
+          font-size: 15px;
           font-weight: 700;
           cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-          box-shadow: 0 4px 30px rgba(201, 162, 39, 0.25);
-          letter-spacing: 0.3px;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 24px rgba(201, 162, 39, 0.2);
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
         }
 
         .home-hero-btn-primary:hover {
-          transform: translateY(-4px) scale(1.02);
-          box-shadow: 0 12px 50px rgba(201, 162, 39, 0.35);
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 8px 40px rgba(201, 162, 39, 0.3);
         }
 
         .home-hero-btn-secondary {
-          padding: 16px 36px;
-          background: rgba(255, 255, 255, 0.05);
+          padding: 14px 32px;
+          background: rgba(255, 255, 255, 0.06);
           color: white;
           border: 1.5px solid rgba(255, 255, 255, 0.15);
-          border-radius: 12px;
-          font-size: 16px;
+          border-radius: 10px;
+          font-size: 15px;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-          letter-spacing: 0.3px;
+          transition: all 0.3s ease;
           backdrop-filter: blur(10px);
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
         }
 
         .home-hero-btn-secondary:hover {
-          border-color: rgba(201, 162, 39, 0.5);
+          border-color: rgba(201, 162, 39, 0.4);
           background: rgba(255, 255, 255, 0.08);
-          transform: translateY(-4px);
+          transform: translateY(-3px);
         }
 
         .home-hero-register {
-          margin-top: 18px;
+          margin-top: 14px;
           font-size: 14px;
-          color: rgba(255, 255, 255, 0.4);
+          color: rgba(255, 255, 255, 0.35);
         }
 
         .home-hero-register a {
@@ -482,76 +416,38 @@ export default function Home() {
           color: #E8D9A8;
         }
 
-        .home-hero-stats {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 32px;
-          margin-top: 40px;
-          padding-top: 32px;
-          border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .home-hero-stat {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-
-        .home-hero-stat-number {
-          font-family: 'Playfair Display', serif;
-          font-size: 28px;
-          font-weight: 700;
-          color: #E8D9A8;
-          line-height: 1.2;
-        }
-
-        .home-hero-stat-label {
-          font-size: 12px;
-          color: rgba(255, 255, 255, 0.4);
-          letter-spacing: 0.5px;
-          text-transform: uppercase;
-          margin-top: 4px;
-        }
-
-        .home-hero-stat-divider {
-          width: 1px;
-          height: 40px;
-          background: rgba(255, 255, 255, 0.06);
-        }
-
         .home-hero-partners {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 16px;
-          margin-top: 32px;
-          padding-top: 24px;
+          gap: 14px;
+          margin-top: 24px;
+          padding-top: 18px;
           border-top: 1px solid rgba(255, 255, 255, 0.04);
         }
 
         .home-hero-partner-label {
           font-size: 10px;
-          color: rgba(255, 255, 255, 0.25);
+          color: rgba(255, 255, 255, 0.2);
           letter-spacing: 1.5px;
           text-transform: uppercase;
         }
 
         .home-hero-ard {
-          height: 28px;
+          height: 24px;
           width: auto;
           object-fit: contain;
-          opacity: 0.4;
+          opacity: 0.35;
           transition: opacity 0.3s ease;
         }
 
         .home-hero-ard:hover {
-          opacity: 0.8;
+          opacity: 0.7;
         }
 
         /* ===== О ДВИЖЕНИИ ===== */
         .home-about {
-          padding: 80px 24px;
+          padding: 60px 24px;
           background: #FFFFFF;
         }
 
@@ -563,7 +459,7 @@ export default function Home() {
         .home-about-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 60px;
+          gap: 50px;
           align-items: center;
         }
 
@@ -582,18 +478,18 @@ export default function Home() {
 
         .home-about-text h2 {
           font-family: 'Playfair Display', serif;
-          font-size: 38px;
+          font-size: 34px;
           font-weight: 700;
           color: #0B1F3A;
           line-height: 1.2;
-          margin-bottom: 16px;
+          margin-bottom: 14px;
         }
 
         .home-about-text p {
-          font-size: 16px;
+          font-size: 15px;
           color: #667085;
           line-height: 1.8;
-          margin-bottom: 28px;
+          margin-bottom: 24px;
         }
 
         .home-about-text p strong {
@@ -603,14 +499,14 @@ export default function Home() {
         .home-about-values {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 16px;
+          gap: 12px;
         }
 
         .home-about-value {
           display: flex;
           align-items: flex-start;
           gap: 12px;
-          padding: 16px;
+          padding: 14px 16px;
           background: #F8FAFC;
           border-radius: 12px;
           border: 1px solid #F4F6F9;
@@ -624,7 +520,7 @@ export default function Home() {
         }
 
         .home-about-value-icon {
-          font-size: 24px;
+          font-size: 22px;
           flex-shrink: 0;
         }
 
@@ -650,7 +546,7 @@ export default function Home() {
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 80px;
+          font-size: 72px;
           border: 1px solid #E2E7EF;
           position: relative;
           overflow: hidden;
@@ -668,7 +564,7 @@ export default function Home() {
 
         /* ===== ЦИФРЫ ===== */
         .home-numbers {
-          padding: 60px 24px;
+          padding: 50px 24px;
           background: linear-gradient(135deg, #0B1F3A, #07152B);
         }
 
@@ -677,7 +573,7 @@ export default function Home() {
           margin: 0 auto;
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 32px;
+          gap: 24px;
         }
 
         .home-numbers-item {
@@ -687,7 +583,7 @@ export default function Home() {
         .home-numbers-number {
           display: block;
           font-family: 'Playfair Display', serif;
-          font-size: 40px;
+          font-size: 36px;
           font-weight: 700;
           color: #E8D9A8;
           line-height: 1.2;
@@ -695,16 +591,15 @@ export default function Home() {
 
         .home-numbers-label {
           display: block;
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.5);
-          margin-top: 6px;
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.45);
+          margin-top: 4px;
           font-weight: 300;
-          letter-spacing: 0.3px;
         }
 
         /* ===== КОНТАКТЫ ===== */
         .home-contacts-section {
-          padding: 80px 24px;
+          padding: 60px 24px;
           background: #FFFFFF;
         }
 
@@ -715,7 +610,7 @@ export default function Home() {
 
         .home-contacts-header {
           text-align: center;
-          margin-bottom: 48px;
+          margin-bottom: 40px;
         }
 
         .home-contacts-tag {
@@ -728,33 +623,33 @@ export default function Home() {
           font-weight: 600;
           letter-spacing: 1px;
           text-transform: uppercase;
-          margin-bottom: 12px;
+          margin-bottom: 10px;
         }
 
         .home-contacts-header h2 {
           font-family: 'Playfair Display', serif;
-          font-size: 36px;
+          font-size: 32px;
           font-weight: 700;
           color: #0B1F3A;
-          margin-bottom: 8px;
+          margin-bottom: 6px;
         }
 
         .home-contacts-header p {
-          font-size: 16px;
+          font-size: 15px;
           color: #667085;
         }
 
         .home-contacts-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 20px;
+          gap: 16px;
         }
 
         .home-contacts-card {
           text-align: center;
-          padding: 32px 20px;
+          padding: 24px 16px;
           background: #F8FAFC;
-          border-radius: 16px;
+          border-radius: 14px;
           border: 1px solid #F4F6F9;
           transition: all 0.3s ease;
         }
@@ -766,22 +661,22 @@ export default function Home() {
         }
 
         .home-contacts-card-icon {
-          font-size: 32px;
-          margin-bottom: 12px;
+          font-size: 28px;
+          margin-bottom: 10px;
         }
 
         .home-contacts-card h4 {
           font-size: 14px;
           font-weight: 600;
           color: #0B1F3A;
-          margin: 0 0 8px 0;
+          margin: 0 0 6px 0;
         }
 
         .home-contacts-card p {
           font-size: 13px;
           color: #667085;
           margin: 0;
-          line-height: 1.6;
+          line-height: 1.5;
         }
 
         .home-contacts-card p a {
@@ -795,21 +690,17 @@ export default function Home() {
         }
 
         /* ===== АДАПТИВНОСТЬ ===== */
-        @media (max-width: 1200px) {
-          .home-hero h1 {
-            font-size: 36px;
-          }
-          .home-about-grid {
-            gap: 40px;
-          }
-        }
-
         @media (max-width: 992px) {
+          .home-hero {
+            min-height: 60vh;
+            padding: 50px 20px 30px;
+          }
           .home-hero h1 {
-            font-size: 32px;
+            font-size: 30px;
           }
           .home-about-grid {
             grid-template-columns: 1fr;
+            gap: 30px;
           }
           .home-about-image-placeholder {
             aspect-ratio: 16/9;
@@ -820,41 +711,34 @@ export default function Home() {
           .home-contacts-grid {
             grid-template-columns: repeat(2, 1fr);
           }
-          .home-hero-stats {
-            gap: 16px;
-            flex-wrap: wrap;
-          }
-          .home-hero-stat-divider {
-            display: none;
-          }
         }
 
         @media (max-width: 768px) {
           .home-hero {
-            min-height: auto;
-            padding: 80px 16px 40px;
+            min-height: 50vh;
+            padding: 40px 16px 24px;
           }
 
           .home-hero h1 {
-            font-size: 26px;
+            font-size: 24px;
           }
 
           .home-hero-motto {
-            font-size: 15px;
+            font-size: 14px;
           }
 
           .home-hero-emblem {
-            width: 72px;
-            height: 72px;
+            width: 56px;
+            height: 56px;
           }
 
           .home-hero-logo {
-            height: 44px;
+            height: 34px;
           }
 
           .home-hero-btn-primary,
           .home-hero-btn-secondary {
-            padding: 14px 24px;
+            padding: 12px 24px;
             font-size: 14px;
             width: 100%;
             justify-content: center;
@@ -863,26 +747,16 @@ export default function Home() {
           .home-hero-buttons {
             flex-direction: column;
             width: 100%;
-            max-width: 320px;
+            max-width: 280px;
             margin: 0 auto;
           }
 
-          .home-hero-stats {
-            flex-wrap: wrap;
-            gap: 12px;
-            justify-content: center;
-          }
-
-          .home-hero-stat-number {
-            font-size: 22px;
-          }
-
           .home-about {
-            padding: 48px 16px;
+            padding: 40px 16px;
           }
 
           .home-about-text h2 {
-            font-size: 28px;
+            font-size: 26px;
           }
 
           .home-about-values {
@@ -890,60 +764,7 @@ export default function Home() {
           }
 
           .home-numbers {
-            padding: 40px 16px;
-          }
-
-          .home-numbers-container {
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-          }
-
-          .home-numbers-number {
-            font-size: 32px;
-          }
-
-          .home-contacts-section {
-            padding: 48px 16px;
-          }
-
-          .home-contacts-header h2 {
-            font-size: 28px;
-          }
-
-          .home-contacts-grid {
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-          }
-
-          .home-contacts-card {
-            padding: 20px 16px;
-          }
-
-          .home-hero-badge {
-            font-size: 10px;
-            padding: 4px 14px;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .home-hero h1 {
-            font-size: 22px;
-          }
-
-          .home-hero-motto {
-            font-size: 13px;
-          }
-
-          .home-hero-stat-number {
-            font-size: 18px;
-          }
-
-          .home-hero-stat-label {
-            font-size: 10px;
-          }
-
-          .home-contacts-grid {
-            grid-template-columns: 1fr;
+            padding: 32px 16px;
           }
 
           .home-numbers-container {
@@ -952,11 +773,71 @@ export default function Home() {
           }
 
           .home-numbers-number {
+            font-size: 28px;
+          }
+
+          .home-contacts-section {
+            padding: 40px 16px;
+          }
+
+          .home-contacts-header h2 {
             font-size: 26px;
           }
 
+          .home-contacts-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+          }
+
+          .home-contacts-card {
+            padding: 16px 12px;
+          }
+
+          .home-hero-badge {
+            font-size: 10px;
+            padding: 3px 12px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .home-hero h1 {
+            font-size: 20px;
+          }
+
+          .home-hero-motto {
+            font-size: 13px;
+          }
+
+          .home-hero-emblem {
+            width: 48px;
+            height: 48px;
+          }
+
+          .home-hero-logo {
+            height: 28px;
+          }
+
+          .home-hero-btn-primary,
+          .home-hero-btn-secondary {
+            padding: 10px 20px;
+            font-size: 13px;
+          }
+
+          .home-contacts-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .home-numbers-container {
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+          }
+
+          .home-numbers-number {
+            font-size: 24px;
+          }
+
           .home-numbers-label {
-            font-size: 12px;
+            font-size: 11px;
           }
         }
       `}</style>

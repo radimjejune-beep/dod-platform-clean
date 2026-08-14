@@ -224,13 +224,12 @@ export default function Navigation({ profile }) {
       staffCalendar: [
         { path: '/staff-calendar', label: 'Календарь сотрудников', icon: Icons.calendar, roles: ['admin', 'movement_coordinator'] },
       ],
-      // ============================================================
-      // НОВЫЙ РАЗДЕЛ: ВНУТРЕННИЕ МЕРОПРИЯТИЯ КЛУБА
-      // ============================================================
+      // ===== ВНУТРЕННИЕ МЕРОПРИЯТИЯ КЛУБА =====
       clubEvents: [
         { path: '/my-club-events', label: 'Мои мероприятия', icon: Icons.calendar, roles: ['club_coordinator', 'participant', 'tutor'] },
         { path: '/club-calendar', label: 'Календарь клуба', icon: Icons.calendar, roles: ['club_coordinator', 'participant', 'tutor'] },
       ],
+      // ===== НАСТРОЙКИ (только для админа и координатора движения) =====
       settings: [
         { path: '/settings', label: 'Настройки', icon: Icons.settings, roles: ['admin', 'movement_coordinator'] },
         { path: '/admin/news', label: 'Новости', icon: Icons.mail, roles: ['admin', 'movement_coordinator'] },

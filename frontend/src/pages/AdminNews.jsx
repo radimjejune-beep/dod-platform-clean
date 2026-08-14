@@ -35,7 +35,7 @@ export default function AdminNews() {
         return;
       }
 
-      // ===== ПРОВЕРКА ПРАВ =====
+      // ===== ПРОВЕРКА ПРАВ: АДМИН ИЛИ КООРДИНАТОР ДВИЖЕНИЯ =====
       if (userData.role !== 'admin' && userData.role !== 'movement_coordinator') {
         navigate('/dashboard');
         return;

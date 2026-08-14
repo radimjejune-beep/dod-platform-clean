@@ -35,14 +35,6 @@ export default function Home() {
     setLoading(false);
   };
 
-  const handleGetStarted = () => {
-    if (profile) {
-      navigate('/dashboard');
-    } else {
-      navigate('/register');
-    }
-  };
-
   const handleLogin = () => {
     navigate('/login');
   };
@@ -74,31 +66,22 @@ export default function Home() {
             Детское общественное движение<br />
             <span>«Дипломаты будущего»</span>
           </h1>
-          <p>
-            Воспитываем новое поколение дипломатов,<br />
-            развиваем лидерские качества и формируем гражданскую позицию у молодёжи
+          <p className="home-hero-motto">
+            «Воспитываем новое поколение дипломатов,<br />
+            развиваем лидерские качества и формируем<br />
+            гражданскую позицию у молодёжи»
           </p>
           <div className="home-hero-buttons">
             {profile ? (
-              <button className="home-hero-btn-primary" onClick={handleGetStarted}>
+              <button className="home-hero-btn-primary" onClick={() => navigate('/dashboard')}>
                 📊 Перейти в кабинет
               </button>
             ) : (
-              <>
-                <button className="home-hero-btn-secondary" onClick={handleLogin}>
-                  🔑 Вход
-                </button>
-                <button className="home-hero-btn-primary" onClick={handleGetStarted}>
-                  🚀 Присоединиться
-                </button>
-              </>
+              <button className="home-hero-btn-primary" onClick={handleLogin}>
+                🔑 Войти в систему
+              </button>
             )}
           </div>
-          {!profile && (
-            <p className="home-hero-register">
-              Уже есть аккаунт? <Link to="/login">Войти</Link>
-            </p>
-          )}
           <div className="home-hero-partners">
             <span className="home-hero-partner-label">При поддержке</span>
             <img 
@@ -174,19 +157,20 @@ export default function Home() {
       <style>{`
         .home-page {
           min-height: 100vh;
-          background: #F0EDE8;
+          background: #F5F2ED;
         }
 
+        /* ===== ГЕРОЙ ===== */
         .home-hero {
           position: relative;
-          min-height: 500px;
+          min-height: 480px;
           display: flex;
           align-items: center;
           justify-content: center;
           text-align: center;
           padding: 60px 24px;
           overflow: hidden;
-          background: linear-gradient(145deg, #0B1F3A 0%, #07152B 100%);
+          background: linear-gradient(145deg, #0B1F3A 0%, #051224 100%);
         }
 
         .home-hero-bg {
@@ -196,8 +180,8 @@ export default function Home() {
           width: 200%;
           height: 200%;
           background-image:
-            radial-gradient(ellipse at 30% 40%, rgba(201, 162, 39, 0.06) 0%, transparent 50%),
-            radial-gradient(ellipse at 70% 60%, rgba(23, 74, 126, 0.06) 0%, transparent 50%);
+            radial-gradient(ellipse at 30% 40%, rgba(201, 162, 39, 0.05) 0%, transparent 50%),
+            radial-gradient(ellipse at 70% 60%, rgba(23, 74, 126, 0.05) 0%, transparent 50%);
           animation: heroFloat 30s ease-in-out infinite alternate;
         }
 
@@ -214,27 +198,27 @@ export default function Home() {
         }
 
         .home-hero-emblem {
-          width: 80px;
-          height: 80px;
-          margin: 0 auto 24px;
+          width: 72px;
+          height: 72px;
+          margin: 0 auto 20px;
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
         .home-hero-logo {
-          height: 56px;
+          height: 48px;
           width: auto;
           object-fit: contain;
-          filter: drop-shadow(0 2px 20px rgba(201, 162, 39, 0.15));
+          filter: drop-shadow(0 2px 20px rgba(201, 162, 39, 0.1));
         }
 
         .home-hero h1 {
           font-family: 'Playfair Display', serif;
-          font-size: 44px;
+          font-size: 38px;
           font-weight: 700;
           color: white;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
           line-height: 1.2;
         }
 
@@ -245,12 +229,13 @@ export default function Home() {
           background-clip: text;
         }
 
-        .home-hero p {
-          font-size: 18px;
-          color: rgba(255, 255, 255, 0.7);
+        .home-hero-motto {
+          font-size: 17px;
+          color: rgba(255, 255, 255, 0.6);
           line-height: 1.7;
-          margin-bottom: 32px;
+          margin-bottom: 28px;
           font-weight: 300;
+          letter-spacing: 0.3px;
         }
 
         .home-hero-buttons {
@@ -262,55 +247,21 @@ export default function Home() {
 
         .home-hero-btn-primary {
           padding: 14px 40px;
-          background: linear-gradient(135deg, #C9A227, #E8D9A8);
+          background: linear-gradient(135deg, #C9A227, #B8921F);
           color: #0B1F3A;
           border: none;
-          border-radius: 12px;
-          font-size: 18px;
+          border-radius: 10px;
+          font-size: 17px;
           font-weight: 700;
           cursor: pointer;
           transition: all 0.3s ease;
-          box-shadow: 0 4px 24px rgba(201, 162, 39, 0.3);
+          box-shadow: 0 4px 24px rgba(201, 162, 39, 0.25);
+          letter-spacing: 0.3px;
         }
 
         .home-hero-btn-primary:hover {
           transform: translateY(-4px) scale(1.02);
-          box-shadow: 0 8px 40px rgba(201, 162, 39, 0.4);
-        }
-
-        .home-hero-btn-secondary {
-          padding: 14px 36px;
-          background: transparent;
-          color: white;
-          border: 2px solid rgba(255, 255, 255, 0.3);
-          border-radius: 12px;
-          font-size: 18px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-
-        .home-hero-btn-secondary:hover {
-          border-color: rgba(255, 255, 255, 0.6);
-          background: rgba(255, 255, 255, 0.05);
-          transform: translateY(-4px);
-        }
-
-        .home-hero-register {
-          margin-top: 20px;
-          font-size: 15px;
-          color: rgba(255, 255, 255, 0.5);
-        }
-
-        .home-hero-register a {
-          color: #C9A227;
-          text-decoration: none;
-          font-weight: 600;
-          transition: all 0.2s ease;
-        }
-
-        .home-hero-register a:hover {
-          color: #E8D9A8;
+          box-shadow: 0 8px 40px rgba(201, 162, 39, 0.35);
         }
 
         .home-hero-partners {
@@ -319,29 +270,30 @@ export default function Home() {
           justify-content: center;
           gap: 12px;
           margin-top: 24px;
-          padding-top: 20px;
-          border-top: 1px solid rgba(255, 255, 255, 0.06);
+          padding-top: 16px;
+          border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .home-hero-partner-label {
-          font-size: 12px;
-          color: rgba(255, 255, 255, 0.4);
+          font-size: 11px;
+          color: rgba(255, 255, 255, 0.3);
           letter-spacing: 1px;
           text-transform: uppercase;
         }
 
         .home-hero-ard {
-          height: 32px;
+          height: 28px;
           width: auto;
           object-fit: contain;
-          opacity: 0.6;
+          opacity: 0.4;
           transition: opacity 0.3s ease;
         }
 
         .home-hero-ard:hover {
-          opacity: 1;
+          opacity: 0.8;
         }
 
+        /* ===== СТАТИСТИКА ===== */
         .home-stats {
           margin-top: -30px;
           position: relative;
@@ -355,9 +307,9 @@ export default function Home() {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           background: white;
-          border-radius: 20px;
-          padding: 32px 40px;
-          box-shadow: 0 12px 48px rgba(11, 31, 58, 0.08);
+          border-radius: 16px;
+          padding: 28px 32px;
+          box-shadow: 0 12px 48px rgba(11, 31, 58, 0.06);
           border: 1px solid #E2E7EF;
         }
 
@@ -368,16 +320,16 @@ export default function Home() {
         .home-stat-number {
           display: block;
           font-family: 'Playfair Display', serif;
-          font-size: 32px;
+          font-size: 28px;
           font-weight: 700;
           color: #0B1F3A;
         }
 
         .home-stat-label {
           display: block;
-          font-size: 14px;
+          font-size: 13px;
           color: #667085;
-          margin-top: 4px;
+          margin-top: 2px;
         }
 
         .home-stat-divider {
@@ -385,9 +337,10 @@ export default function Home() {
           background: #E2E7EF;
         }
 
+        /* ===== МИССИЯ ===== */
         .home-mission {
           padding: 60px 24px;
-          background: linear-gradient(145deg, #0B1F3A 0%, #07152B 100%);
+          background: linear-gradient(145deg, #0B1F3A 0%, #051224 100%);
           margin-top: 40px;
           position: relative;
           overflow: hidden;
@@ -413,30 +366,30 @@ export default function Home() {
         }
 
         .home-mission-icon {
-          font-size: 48px;
-          margin-bottom: 16px;
+          font-size: 40px;
+          margin-bottom: 12px;
         }
 
         .home-mission h2 {
           font-family: 'Playfair Display', serif;
-          font-size: 32px;
+          font-size: 28px;
           font-weight: 700;
           color: white;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
 
         .home-mission p {
-          font-size: 18px;
-          color: rgba(255, 255, 255, 0.7);
+          font-size: 17px;
+          color: rgba(255, 255, 255, 0.6);
           line-height: 1.8;
-          margin-bottom: 32px;
+          margin-bottom: 28px;
           font-weight: 300;
         }
 
         .home-mission-values {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 20px;
+          gap: 16px;
           max-width: 700px;
           margin: 0 auto;
         }
@@ -444,32 +397,35 @@ export default function Home() {
         .home-mission-value {
           text-align: center;
           padding: 16px 12px;
-          background: rgba(255, 255, 255, 0.04);
-          border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.05);
           transition: all 0.3s ease;
         }
 
         .home-mission-value:hover {
-          background: rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.06);
           transform: translateY(-4px);
+          border-color: rgba(201, 162, 39, 0.15);
         }
 
         .home-mission-value span:first-child {
           display: block;
-          font-size: 28px;
-          margin-bottom: 6px;
+          font-size: 24px;
+          margin-bottom: 4px;
         }
 
         .home-mission-value span:last-child {
-          font-size: 13px;
-          color: rgba(255, 255, 255, 0.6);
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.5);
           font-weight: 400;
+          letter-spacing: 0.5px;
         }
 
+        /* ===== МОБИЛЬНЫЕ ===== */
         @media (max-width: 768px) {
           .home-hero {
-            min-height: 400px;
+            min-height: 380px;
             padding: 40px 20px;
           }
 
@@ -477,28 +433,27 @@ export default function Home() {
             font-size: 28px;
           }
 
-          .home-hero p {
-            font-size: 16px;
+          .home-hero-motto {
+            font-size: 15px;
           }
 
-          .home-hero-btn-primary,
-          .home-hero-btn-secondary {
+          .home-hero-btn-primary {
             padding: 12px 28px;
             font-size: 15px;
           }
 
           .home-hero-logo {
-            height: 40px;
+            height: 36px;
           }
 
           .home-hero-ard {
-            height: 24px;
+            height: 22px;
           }
 
           .home-stats-container {
             grid-template-columns: repeat(2, 1fr);
             gap: 16px;
-            padding: 24px;
+            padding: 20px;
           }
 
           .home-stat-divider:nth-child(2) {
@@ -511,48 +466,60 @@ export default function Home() {
         }
 
         @media (max-width: 480px) {
+          .home-hero {
+            min-height: 340px;
+            padding: 30px 16px;
+          }
+
           .home-hero h1 {
             font-size: 22px;
           }
 
-          .home-hero p {
-            font-size: 14px;
+          .home-hero-motto {
+            font-size: 13px;
           }
 
-          .home-hero-buttons {
-            flex-direction: column;
-            align-items: center;
-          }
-
-          .home-hero-btn-primary,
-          .home-hero-btn-secondary {
+          .home-hero-btn-primary {
             width: 100%;
             text-align: center;
             padding: 12px 20px;
             font-size: 14px;
           }
 
+          .home-hero-emblem {
+            width: 56px;
+            height: 56px;
+          }
+
+          .home-hero-logo {
+            height: 32px;
+          }
+
           .home-stats-container {
             grid-template-columns: 1fr 1fr;
             gap: 12px;
-            padding: 20px;
+            padding: 16px;
           }
 
           .home-stat-number {
-            font-size: 24px;
+            font-size: 22px;
           }
 
           .home-mission h2 {
-            font-size: 24px;
+            font-size: 22px;
           }
 
           .home-mission p {
-            font-size: 15px;
+            font-size: 14px;
           }
 
           .home-mission-values {
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            gap: 10px;
+          }
+
+          .home-mission-value span:first-child {
+            font-size: 20px;
           }
         }
       `}</style>

@@ -314,20 +314,20 @@ export default function Navigation({ profile }) {
   };
 
   if (!profile) {
-    return (
-      <nav className="nav-new">
-        <div className="nav-new-container">
-          <Link to="/" className="nav-new-logo">
-            <img src={logo} alt="ДОД «Дипломаты будущего»" className="nav-new-logo-img" />
-            <span className="nav-new-logo-text">Дипломаты будущего</span>
-          </Link>
-          <div className="nav-new-right">
-            <Link to="/login" className="nav-new-link">Войти</Link>
-          </div>
+  return (
+    <nav className="nav-new">
+      <div className="nav-new-container">
+        <Link to="/" className="nav-new-logo">
+          <img src={logo} alt="ДОД «Дипломаты будущего»" className="nav-new-logo-img" />
+          <span className="nav-new-logo-text">Дипломаты будущего</span>
+        </Link>
+        <div className="nav-new-right">
+          <Link to="/login" className="nav-new-link">Войти</Link>
         </div>
-      </nav>
-    );
-  }
+      </div>
+    </nav>
+  );
+}
 
   return (
     <nav className="nav-new">

@@ -87,20 +87,33 @@ export default function Appeals() {
   // ============================================================
   const handleReply = async (e) => {
     e.preventDefault();
-    if (!replyMessage.trim()) return;
-
     setSending(true);
     setMessage('');
 
     try {
+      if (!replyMessage.trim()) {
+        setMessage('❌ Введите текст ответа');
+        setMessageType('error');
+        setSending(false);
+        return;
+      }
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setMessage('❌ Не авторизован');
+        setMessageType('error');
+        setSending(false);
+        return;
+      }
+
       const response = await fetch(`https://dod-backend.relaxdev.ru/api/appeals/${selectedAppeal.id}/reply`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          message: replyMessage,
+          message: replyMessage.trim(),
           status: replyStatus
         })
       });
@@ -115,6 +128,7 @@ export default function Appeals() {
       setMessageType('success');
       setReplyMessage('');
       setShowReplyModal(false);
+      setShowReplies(false);
       
       await loadData();
       
@@ -134,7 +148,6 @@ export default function Appeals() {
   const handleDelete = async (id) => {
     const role = profile?.role;
     
-    // Проверяем права — только админ может удалять
     if (role !== 'admin') {
       setMessage('❌ У вас нет прав для удаления обращений');
       setMessageType('error');
@@ -173,9 +186,10 @@ export default function Appeals() {
 
   const loadReplies = async (appealId) => {
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`https://dod-backend.relaxdev.ru/api/appeals/${appealId}/replies`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
       const data = await response.json();
@@ -241,8 +255,6 @@ export default function Appeals() {
                   profile?.role === 'vice_president';
 
   const canCreate = profile?.role === 'club_coordinator';
-  
-  // ===== ТОЛЬКО АДМИН МОЖЕТ УДАЛЯТЬ =====
   const canDelete = profile?.role === 'admin';
 
   if (loading) {
@@ -322,10 +334,10 @@ export default function Appeals() {
                   value={form.priority}
                   onChange={(e) => setForm({ ...form, priority: e.target.value })}
                 >
-                  <option value="low">🟢 Низкий</option>
-                  <option value="medium">🟡 Средний</option>
-                  <option value="high">🔴 Высокий</option>
-                  <option value="urgent">🔥 Срочный</option>
+                  <option value="low">Низкий</option>
+                  <option value="medium">Средний</option>
+                  <option value="high">Высокий</option>
+                  <option value="urgent">Срочный</option>
                 </select>
               </div>
 
@@ -442,7 +454,6 @@ export default function Appeals() {
                         📝 Ответить
                       </button>
                     )}
-                    {/* ===== КНОПКА УДАЛЕНИЯ (ТОЛЬКО ДЛЯ АДМИНА) ===== */}
                     {canDelete && (
                       <button
                         className="btn-danger"

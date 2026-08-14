@@ -2817,34 +2817,64 @@ app.get('/api/president-tasks', async (req, res) => {
       WHERE 1=1
     `;
     const params = [];
+    let conditions = [];
 
-    // Если президент — видит только свои задания
-    if (userRole === 'president' || userRole === 'vice_president') {
-      query += ` AND (pt.assigned_to = $1 OR pt.is_global = true)`;
-      params.push(userId);
+    // ============================================================
+    // ЛОГИКА ПРОСМОТРА ПО РОЛЯМ
+    // ============================================================
+
+    if (['admin', 'movement_coordinator'].includes(userRole)) {
+      // Админ и координатор движения — видят ВСЕ задания
+      console.log('👑 Админ/Координатор движения: видит все задания');
     } 
-    // Если координатор клуба — видит задания своего клуба
+    else if (userRole === 'president') {
+      // Президент ДВИЖЕНИЯ — видит все задания (он создаёт их)
+      console.log('👑 Президент движения: видит все задания');
+    }
+    else if (userRole === 'vice_president') {
+      // Вице-президент ДВИЖЕНИЯ — видит все задания
+      console.log('👑 Вице-президент движения: видит все задания');
+    }
     else if (userRole === 'club_coordinator') {
+      // Координатор КЮДа — видит задания:
+      // 1. Созданные им (created_by = userId)
+      // 2. Задания для его клуба (club_id = его клуб)
+      // 3. Глобальные задания
+      
       const clubResult = await pool.query(
         'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
         [userId]
       );
+      
       if (clubResult.rows.length > 0) {
         const clubId = clubResult.rows[0].club_id;
-        query += ` AND (pt.club_id = $1 OR pt.is_global = true)`;
-        params.push(clubId);
+        conditions.push(`(
+          pt.created_by = $${params.length + 1} 
+          OR pt.club_id = $${params.length + 2} 
+          OR pt.is_global = true
+        )`);
+        params.push(userId, clubId);
+        console.log(`🏫 Координатор КЮДа: видит свои задания, задания клуба и глобальные`);
       } else {
-        query += ` AND 1 = 0`;
+        conditions.push(`pt.created_by = $${params.length + 1}`);
+        params.push(userId);
+        console.log('⚠️ Координатор без клуба: видит только свои задания');
       }
     }
-    // Если не админ и не координатор движения — ничего не видит
-    else if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      query += ` AND 1 = 0`;
+    else {
+      // Остальные роли — ничего не видят
+      conditions.push('1 = 0');
+      console.log('⛔ Нет прав для просмотра заданий');
     }
 
-    query += ` ORDER BY pt.created_at DESC`;
+    if (conditions.length > 0) {
+      query += ' AND (' + conditions.join(' OR ') + ')';
+    }
+
+    query += ' ORDER BY pt.created_at DESC';
 
     const result = await pool.query(query, params);
+    console.log(`📥 Загружено заданий: ${result.rows.length}`);
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения заданий:', error);
@@ -2908,16 +2938,102 @@ app.post('/api/president-tasks', async (req, res) => {
       is_global 
     } = req.body;
 
-    // Проверка прав: только admin, movement_coordinator, vice_president, club_coordinator
-    const allowedRoles = ['admin', 'movement_coordinator', 'vice_president', 'club_coordinator'];
-    if (!allowedRoles.includes(userRole)) {
+    // ============================================================
+    // КТО МОЖЕТ СОЗДАВАТЬ ЗАДАНИЯ
+    // ============================================================
+    
+    // 1. ПРЕЗИДЕНТ ДВИЖЕНИЯ
+    if (userRole === 'president') {
+      // Президент движения может создавать задания для президентов клубов
+      // НЕ может создавать глобальные задания
+      if (is_global) {
+        return res.status(403).json({ error: 'Президент движения не может создавать глобальные задания' });
+      }
+      if (!assigned_to) {
+        return res.status(400).json({ error: 'Укажите президента клуба, которому назначается задание' });
+      }
+    }
+    // 2. ВИЦЕ-ПРЕЗИДЕНТ ДВИЖЕНИЯ
+    else if (userRole === 'vice_president') {
+      if (is_global) {
+        return res.status(403).json({ error: 'Вице-президент движения не может создавать глобальные задания' });
+      }
+      if (!assigned_to) {
+        return res.status(400).json({ error: 'Укажите президента клуба, которому назначается задание' });
+      }
+    }
+    // 3. КООРДИНАТОР КЛУБА
+    else if (userRole === 'club_coordinator') {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      
+      if (clubResult.rows.length === 0) {
+        return res.status(400).json({ error: 'Вы не привязаны к КЮДу' });
+      }
+      
+      const coordinatorClubId = clubResult.rows[0].club_id;
+      
+      if (club_id && club_id !== coordinatorClubId) {
+        return res.status(403).json({ error: 'Вы можете создавать задания только для своего КЮДа' });
+      }
+      
+      if (is_global) {
+        return res.status(403).json({ error: 'Координатор КЮДа не может создавать глобальные задания' });
+      }
+      
+      // Проверяем, что назначенный пользователь — президент этого клуба
+      if (assigned_to) {
+        const presidentCheck = await pool.query(
+          `SELECT u.id, u.role, u.is_president, u.club_id 
+           FROM users u 
+           WHERE u.id = $1`,
+          [assigned_to]
+        );
+        if (presidentCheck.rows.length === 0) {
+          return res.status(400).json({ error: 'Пользователь не найден' });
+        }
+        const president = presidentCheck.rows[0];
+        if (president.role !== 'president' && !president.is_president) {
+          return res.status(400).json({ error: 'Указанный пользователь не является президентом клуба' });
+        }
+        if (president.club_id !== coordinatorClubId) {
+          return res.status(403).json({ error: 'Вы можете назначать задания только президенту своего КЮДа' });
+        }
+      }
+    }
+    // 4. АДМИН И КООРДИНАТОР ДВИЖЕНИЯ
+    else if (!['admin', 'movement_coordinator'].includes(userRole)) {
       return res.status(403).json({ error: 'Недостаточно прав для создания задания' });
+    }
+
+    // ============================================================
+    // ПРОВЕРКА: ЕСЛИ НАЗНАЧЕН КОНКРЕТНЫЙ ПРЕЗИДЕНТ КЛУБА
+    // ============================================================
+    if (assigned_to) {
+      const presidentCheck = await pool.query(
+        `SELECT u.id, u.role, u.is_president, u.club_id 
+         FROM users u 
+         WHERE u.id = $1`,
+        [assigned_to]
+      );
+      if (presidentCheck.rows.length === 0) {
+        return res.status(400).json({ error: 'Пользователь не найден' });
+      }
+      const president = presidentCheck.rows[0];
+      if (president.role !== 'president' && !president.is_president) {
+        return res.status(400).json({ error: 'Указанный пользователь не является президентом клуба' });
+      }
     }
 
     if (!title || title.trim() === '') {
       return res.status(400).json({ error: 'Заголовок обязателен' });
     }
 
+    // ============================================================
+    // СОЗДАНИЕ ЗАДАНИЯ
+    // ============================================================
     const result = await pool.query(
       `
       INSERT INTO president_tasks (
@@ -2948,7 +3064,7 @@ app.post('/api/president-tasks', async (req, res) => {
         u.full_name as assigned_to_name,
         u2.full_name as created_by_name,
         c.name as club_name,
-        0 as response_count
+        (SELECT COUNT(*) FROM president_task_responses ptr WHERE ptr.task_id = pt.id) as response_count
       FROM president_tasks pt
       LEFT JOIN users u ON pt.assigned_to = u.id
       LEFT JOIN users u2 ON pt.created_by = u2.id
@@ -2958,30 +3074,96 @@ app.post('/api/president-tasks', async (req, res) => {
       [newTask.id]
     );
 
-    // Уведомление для назначенного президента
+    // ============================================================
+    // УВЕДОМЛЕНИЯ
+    // ============================================================
+
+    // 1. Уведомление для назначенного президента клуба
     if (assigned_to) {
+      let notificationTitle = '👑 Новое задание';
+      let notificationMessage = `Вам назначено задание: "${title}"`;
+      
+      if (userRole === 'president') {
+        notificationTitle = '👑 Новое задание от президента движения';
+        notificationMessage = `Президент движения назначил вам задание: "${title}"`;
+      } else if (userRole === 'vice_president') {
+        notificationTitle = '👑 Новое задание от вице-президента движения';
+        notificationMessage = `Вице-президент движения назначил вам задание: "${title}"`;
+      } else if (userRole === 'club_coordinator') {
+        notificationTitle = '📌 Новое задание от координатора КЮДа';
+        notificationMessage = `Координатор вашего КЮДа назначил вам задание: "${title}"`;
+      }
+      
       await createNotification(
         assigned_to,
         'task',
-        '👑 Новое задание',
-        `Вам назначено задание: "${title}"`,
+        notificationTitle,
+        notificationMessage,
         '/president-tasks',
         'high'
       );
-    } else {
-      // Если задание глобальное — уведомляем всех президентов
+    }
+
+    // 2. Если задание для президента клуба — уведомляем координатора этого клуба
+    if (club_id) {
+      const coordinators = await pool.query(
+        'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
+        [club_id]
+      );
+      for (const coord of coordinators.rows) {
+        if (coord.profile_id !== userId) {
+          let fromWho = 'Назначено';
+          if (userRole === 'president') fromWho = 'Президент движения';
+          else if (userRole === 'vice_president') fromWho = 'Вице-президент движения';
+          else if (userRole === 'admin') fromWho = 'Администратор';
+          else if (userRole === 'movement_coordinator') fromWho = 'Координатор движения';
+          else if (userRole === 'club_coordinator') fromWho = 'Координатор КЮДа';
+          
+          await createNotification(
+            coord.profile_id,
+            'task',
+            '📌 Задание для президента вашего клуба',
+            `${fromWho} назначил задание президенту вашего клуба: "${title}"`,
+            '/president-tasks',
+            'medium'
+          );
+        }
+      }
+    }
+
+    // 3. Если глобальное задание — уведомляем всех президентов клубов
+    if (is_global) {
       const presidents = await pool.query(
-        "SELECT id FROM users WHERE role IN ('president', 'vice_president')"
+        "SELECT id FROM users WHERE role = 'president' OR is_president = true"
       );
       for (const p of presidents.rows) {
         await createNotification(
           p.id,
           'task',
           '👑 Новое глобальное задание',
-          `Новое задание для всех президентов: "${title}"`,
+          `Новое задание для всех президентов клубов: "${title}"`,
           '/president-tasks',
           'medium'
         );
+      }
+    }
+
+    // 4. Если задание создал координатор КЮДа — уведомляем админов и координаторов движения
+    if (userRole === 'club_coordinator') {
+      const admins = await pool.query(
+        "SELECT id FROM users WHERE role IN ('admin', 'movement_coordinator', 'president', 'vice_president')"
+      );
+      for (const admin of admins.rows) {
+        if (admin.id !== userId) {
+          await createNotification(
+            admin.id,
+            'task',
+            '📌 Новое задание от координатора КЮДа',
+            `Координатор КЮДа создал задание для президента: "${title}"`,
+            '/president-tasks',
+            'normal'
+          );
+        }
       }
     }
 
@@ -3024,10 +3206,26 @@ app.patch('/api/president-tasks/:id/status', async (req, res) => {
 
     const task = taskCheck.rows[0];
 
-    // Проверка прав: только создатель, admin, movement_coordinator, vice_president
-    const allowedRoles = ['admin', 'movement_coordinator', 'vice_president'];
-    if (!allowedRoles.includes(userRole) && task.created_by !== userId) {
+    // ============================================================
+    // КТО МОЖЕТ МЕНЯТЬ СТАТУС:
+    // - Админ ✅
+    // - Координатор движения ✅
+    // - Президент движения ✅
+    // - Вице-президент движения ✅
+    // - Координатор КЮДа ✅ (только если это его задание)
+    // - Президент клуба ❌ (только отвечает)
+    // ============================================================
+    const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
+    const isAllowed = allowedRoles.includes(userRole);
+    const isCreator = task.created_by === userId;
+
+    if (!isAllowed && !isCreator) {
       return res.status(403).json({ error: 'Недостаточно прав для изменения статуса' });
+    }
+
+    // Координатор КЮДа может менять статус только своих заданий
+    if (userRole === 'club_coordinator' && !isCreator) {
+      return res.status(403).json({ error: 'Вы можете менять статус только своих заданий' });
     }
 
     const completedAt = status === 'completed' ? new Date() : null;
@@ -3052,6 +3250,26 @@ app.patch('/api/president-tasks/:id/status', async (req, res) => {
         '/president-tasks',
         'normal'
       );
+    }
+
+    // Если задание было для президента клуба — уведомляем координатора
+    if (task.club_id) {
+      const coordinators = await pool.query(
+        'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
+        [task.club_id]
+      );
+      for (const coord of coordinators.rows) {
+        if (coord.profile_id !== userId && coord.profile_id !== task.created_by) {
+          await createNotification(
+            coord.profile_id,
+            'task',
+            `📌 Статус задания для президента изменён`,
+            `Статус задания "${task.title}" изменён на: ${status}`,
+            '/president-tasks',
+            'normal'
+          );
+        }
+      }
     }
 
     res.json(result.rows[0]);
@@ -3092,9 +3310,22 @@ app.post('/api/president-tasks/:id/respond', async (req, res) => {
 
     const task = taskCheck.rows[0];
 
-    // Проверка: только президенты могут отвечать
+    // ============================================================
+    // КТО МОЖЕТ ОТВЕЧАТЬ:
+    // - Президент клуба ✅ (если задание назначено ему или глобальное)
+    // - Остальные ❌
+    // ============================================================
     if (userRole !== 'president' && userRole !== 'vice_president') {
-      return res.status(403).json({ error: 'Только президенты могут отвечать на задания' });
+      return res.status(403).json({ error: 'Только президенты клубов могут отвечать на задания' });
+    }
+
+    // Проверяем, что это президент КЛУБА (не президент движения)
+    const userCheck = await pool.query(
+      'SELECT is_president, club_id FROM users WHERE id = $1',
+      [userId]
+    );
+    if (userCheck.rows.length === 0 || !userCheck.rows[0].is_president) {
+      return res.status(403).json({ error: 'Вы не являетесь президентом клуба' });
     }
 
     // Проверка: задание должно быть назначено этому президенту или глобальное
@@ -3116,10 +3347,30 @@ app.post('/api/president-tasks/:id/respond', async (req, res) => {
       task.created_by,
       'task',
       '💬 Новый ответ на задание',
-      `Получен ответ на задание "${task.title}"`,
+      `Получен ответ от президента клуба на задание "${task.title}"`,
       `/president-tasks`,
       'medium'
     );
+
+    // Уведомление координатора клуба
+    if (task.club_id) {
+      const coordinators = await pool.query(
+        'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
+        [task.club_id]
+      );
+      for (const coord of coordinators.rows) {
+        if (coord.profile_id !== task.created_by) {
+          await createNotification(
+            coord.profile_id,
+            'task',
+            '💬 Президент клуба ответил на задание',
+            `Президент вашего клуба ответил на задание "${task.title}"`,
+            `/president-tasks`,
+            'normal'
+          );
+        }
+      }
+    }
 
     res.status(201).json({ 
       success: true, 
@@ -3141,7 +3392,8 @@ app.get('/api/president-tasks/:id/responses', async (req, res) => {
       SELECT 
         ptr.*,
         u.full_name as user_name,
-        u.role as user_role
+        u.role as user_role,
+        u.is_president
       FROM president_task_responses ptr
       LEFT JOIN users u ON ptr.user_id = u.id
       WHERE ptr.task_id = $1
@@ -3183,9 +3435,24 @@ app.delete('/api/president-tasks/:id', async (req, res) => {
 
     const task = taskCheck.rows[0];
 
-    // Проверка прав: только admin, movement_coordinator или создатель
+    // ============================================================
+    // КТО МОЖЕТ УДАЛЯТЬ:
+    // - Админ ✅
+    // - Координатор движения ✅
+    // - Создатель задания ✅ (включая координатора КЮДа)
+    // - Президент движения ❌ (не может удалять)
+    // - Вице-президент ❌ (не может удалять)
+    // ============================================================
     const allowedRoles = ['admin', 'movement_coordinator'];
-    if (!allowedRoles.includes(userRole) && task.created_by !== userId) {
+    const isAllowed = allowedRoles.includes(userRole);
+    const isCreator = task.created_by === userId;
+
+    // Президент движения и вице-президент НЕ могут удалять
+    if (userRole === 'president' || userRole === 'vice_president') {
+      return res.status(403).json({ error: 'Президент и вице-президент не могут удалять задания' });
+    }
+
+    if (!isAllowed && !isCreator) {
       return res.status(403).json({ error: 'Недостаточно прав для удаления' });
     }
 

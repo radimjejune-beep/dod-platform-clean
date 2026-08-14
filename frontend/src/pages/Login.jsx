@@ -176,6 +176,7 @@ export default function Login() {
       </div>
 
       <style>{`
+        /* ===== LOGIN PAGE ===== */
         .login-page {
           min-height: 100vh;
           display: flex;
@@ -183,6 +184,7 @@ export default function Login() {
           justify-content: center;
           padding: 20px;
           position: relative;
+          background: linear-gradient(145deg, #0B1F3A 0%, #07152B 100%);
         }
 
         .login-bg {
@@ -191,10 +193,6 @@ export default function Login() {
           left: 0;
           right: 0;
           bottom: 0;
-          background: 
-            radial-gradient(ellipse at 20% 30%, rgba(201, 162, 39, 0.05) 0%, transparent 60%),
-            radial-gradient(ellipse at 80% 70%, rgba(23, 74, 126, 0.05) 0%, transparent 60%),
-            linear-gradient(145deg, #0B1F3A 0%, #07152B 100%);
           z-index: 0;
         }
 
@@ -204,10 +202,9 @@ export default function Login() {
           left: 0;
           right: 0;
           bottom: 0;
-          background-image: 
-            repeating-linear-gradient(0deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 3px),
-            repeating-linear-gradient(90deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 3px);
-          background-size: 40px 40px;
+          background: 
+            radial-gradient(ellipse at 20% 30%, rgba(201, 162, 39, 0.06) 0%, transparent 60%),
+            radial-gradient(ellipse at 80% 70%, rgba(23, 74, 126, 0.06) 0%, transparent 60%);
         }
 
         .login-bg-particles {
@@ -222,7 +219,7 @@ export default function Login() {
 
         .login-bg-particles span {
           position: absolute;
-          color: rgba(201, 162, 39, 0.08);
+          color: rgba(201, 162, 39, 0.05);
           font-size: 20px;
           animation: float 20s infinite linear;
         }
@@ -249,11 +246,11 @@ export default function Login() {
           z-index: 1;
           width: 100%;
           max-width: 420px;
-          background: rgba(255, 255, 255, 0.95);
+          background: rgba(255, 255, 255, 0.97);
           backdrop-filter: blur(20px);
           border-radius: 20px;
-          padding: 40px 36px;
-          box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(201, 162, 39, 0.1);
+          padding: 32px 28px;
+          box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(201, 162, 39, 0.1);
           animation: slideUp 0.6s ease;
         }
 
@@ -271,20 +268,20 @@ export default function Login() {
           align-items: center;
           justify-content: center;
           flex-direction: column;
-          margin-bottom: 20px;
+          margin-bottom: 16px;
         }
 
         .login-emblem-logo {
-          height: 64px;
+          height: 48px;
           width: auto;
           object-fit: contain;
         }
 
         .login-emblem-line {
-          width: 60px;
+          width: 40px;
           height: 2px;
           background: linear-gradient(135deg, #C9A227, #E8D9A8);
-          margin-top: 12px;
+          margin-top: 8px;
           border-radius: 2px;
         }
 
@@ -292,22 +289,22 @@ export default function Login() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 4px;
-          margin-top: 8px;
+          gap: 2px;
+          margin-top: 6px;
         }
 
         .login-emblem-partner-label {
-          font-size: 10px;
+          font-size: 9px;
           color: #98A2B3;
           letter-spacing: 1px;
           text-transform: uppercase;
         }
 
         .login-emblem-ard {
-          height: 28px;
+          height: 22px;
           width: auto;
           object-fit: contain;
-          opacity: 0.7;
+          opacity: 0.6;
           transition: opacity 0.3s ease;
         }
 
@@ -317,58 +314,58 @@ export default function Login() {
 
         .login-header {
           text-align: center;
-          margin-bottom: 28px;
+          margin-bottom: 20px;
         }
 
         .login-header h1 {
           font-family: 'Inter', sans-serif;
-          font-size: 14px;
+          font-size: 11px;
           font-weight: 400;
           color: #667085;
           letter-spacing: 2px;
           text-transform: uppercase;
-          margin: 0 0 4px;
+          margin: 0 0 2px;
         }
 
         .login-header h2 {
           font-family: 'Playfair Display', serif;
-          font-size: 24px;
+          font-size: 20px;
           font-weight: 700;
           color: #0B1F3A;
-          margin: 0 0 4px;
+          margin: 0 0 2px;
           letter-spacing: 0.5px;
         }
 
         .login-subtitle {
-          font-size: 11px;
+          font-size: 10px;
           color: #C9A227;
           font-weight: 600;
           letter-spacing: 1.5px;
           text-transform: uppercase;
-          margin: 4px 0 0;
+          margin: 2px 0 0;
         }
 
         .login-divider {
-          width: 40px;
+          width: 32px;
           height: 2px;
           background: linear-gradient(135deg, #C9A227, #E8D9A8);
-          margin: 12px auto;
+          margin: 8px auto;
           border-radius: 2px;
         }
 
         .login-welcome {
-          font-size: 13px;
+          font-size: 12px;
           color: #667085;
           margin: 0;
         }
 
         .login-form-group {
-          margin-bottom: 16px;
+          margin-bottom: 14px;
         }
 
         .login-form-group label {
           display: block;
-          font-size: 13px;
+          font-size: 12px;
           font-weight: 500;
           color: #0B1F3A;
           margin-bottom: 4px;
@@ -376,7 +373,7 @@ export default function Login() {
 
         .login-form-group input {
           width: 100%;
-          padding: 10px 14px;
+          padding: 9px 14px;
           border: 1.5px solid #D5DCE7;
           border-radius: 10px;
           font-size: 14px;
@@ -398,17 +395,17 @@ export default function Login() {
 
         .login-btn {
           width: 100%;
-          padding: 12px;
+          padding: 11px;
           background: linear-gradient(135deg, #C9A227, #E8D9A8);
           border: none;
           border-radius: 10px;
-          font-size: 16px;
+          font-size: 15px;
           font-weight: 600;
           color: #0B1F3A;
           cursor: pointer;
           transition: all 0.3s ease;
           box-shadow: 0 4px 16px rgba(201, 162, 39, 0.25);
-          margin-top: 4px;
+          margin-top: 2px;
           letter-spacing: 0.5px;
         }
 
@@ -433,26 +430,30 @@ export default function Login() {
           animation: spin 0.8s linear infinite;
         }
 
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
         .login-error {
-          padding: 12px 16px;
+          padding: 10px 14px;
           background: #FCEBEC;
           color: #B3262E;
           border-radius: 10px;
-          margin-bottom: 16px;
-          font-size: 14px;
+          margin-bottom: 14px;
+          font-size: 13px;
           text-align: center;
           border-left: 4px solid #B3262E;
         }
 
         .login-footer {
           text-align: center;
-          margin-top: 20px;
-          padding-top: 16px;
+          margin-top: 16px;
+          padding-top: 14px;
           border-top: 1px solid #F4F6F9;
         }
 
         .login-footer p {
-          font-size: 14px;
+          font-size: 13px;
           color: #667085;
           margin: 0;
         }
@@ -472,23 +473,33 @@ export default function Login() {
         }
 
         .login-security {
-          font-size: 12px !important;
+          font-size: 11px !important;
           color: #98A2B3 !important;
-          margin-top: 8px !important;
+          margin-top: 6px !important;
         }
 
         @media (max-width: 480px) {
           .login-card {
-            padding: 28px 20px;
+            padding: 24px 16px;
+            max-width: 100%;
+            margin: 0 10px;
           }
           .login-header h2 {
-            font-size: 20px;
+            font-size: 17px;
           }
           .login-emblem-logo {
-            height: 48px;
+            height: 40px;
           }
           .login-emblem-ard {
-            height: 22px;
+            height: 18px;
+          }
+          .login-btn {
+            padding: 10px;
+            font-size: 14px;
+          }
+          .login-form-group input {
+            padding: 8px 12px;
+            font-size: 13px;
           }
         }
       `}</style>

@@ -1275,3 +1275,378 @@ table tbody tr:last-child td {
 .w-full {
   width: 100%;
 }
+/* ===== СПЕЦИАЛЬНЫЙ ФИКС ДЛЯ СТРАНИЦЫ ВХОДА ===== */
+.login-page * {
+  box-sizing: border-box;
+}
+
+.login-page .login-card {
+  max-width: 420px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.login-page .login-emblem-logo {
+  max-height: 56px;
+  width: auto;
+}
+
+.login-page .login-emblem-ard {
+  max-height: 26px;
+  width: auto;
+}
+
+/* ===== ФИКС ДЛЯ ВСЕХ СТРАНИЦ ===== */
+.page-background {
+  min-height: 100vh;
+  background: #F4F6F9;
+}
+
+.container-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 20px 40px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== ФИКС ДЛЯ ШАПКИ ===== */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #0B1F3A, #07152B);
+  border-radius: 12px;
+  color: white;
+}
+
+.page-header > span:first-child {
+  font-size: 28px;
+}
+
+.page-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+}
+
+.page-header p {
+  color: rgba(255, 255, 255, 0.7);
+  margin: 2px 0 0 0;
+  font-size: 13px;
+}
+
+/* ===== ФИКС ДЛЯ КАРТОЧЕК ===== */
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px 20px;
+  border: 1px solid #E2E7EF;
+  box-shadow: 0 2px 8px rgba(11, 31, 58, 0.04);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 16px rgba(11, 31, 58, 0.08);
+  transform: translateY(-2px);
+}
+
+/* ===== ФИКС ДЛЯ СТАТИСТИКИ ===== */
+.stat-card {
+  background: white;
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 1px solid #E2E7EF;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.stat-card .number {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: #0B1F3A;
+}
+
+.stat-card .label {
+  font-size: 12px;
+  color: #667085;
+  margin-top: 4px;
+}
+
+/* ===== ФИКС ДЛЯ КНОПОК ===== */
+.btn-primary {
+  padding: 8px 18px;
+  background: linear-gradient(135deg, #C9A227, #E8D9A8);
+  color: #0B1F3A;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(201, 162, 39, 0.3);
+}
+
+.btn-secondary {
+  padding: 8px 18px;
+  background: transparent;
+  color: #0B1F3A;
+  border: 1.5px solid #D5DCE7;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-secondary:hover {
+  border-color: #C9A227;
+  background: #FBF4DC;
+}
+
+.btn-success {
+  padding: 8px 18px;
+  background: #16845B;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+  background: #0F6B49;
+  transform: translateY(-2px);
+}
+
+.btn-danger {
+  padding: 8px 18px;
+  background: #B3262E;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+  background: #8C1D24;
+  transform: translateY(-2px);
+}
+
+/* ===== ФИКС ДЛЯ GRID ===== */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .grid-2,
+  .grid-3,
+  .grid-4 {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+/* ===== ФИКС ДЛЯ ФОРМ ===== */
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 500;
+  color: #0B1F3A;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid #E2E7EF;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.3s ease;
+  background: #F8FAFC;
+  color: #0B1F3A;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #C9A227;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.08);
+}
+
+/* ===== ФИКС ДЛЯ ТАБЛИЦ ===== */
+.table-wrapper {
+  overflow-x: auto;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #E2E7EF;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+table thead {
+  background: #0B1F3A;
+  color: white;
+}
+
+table thead th {
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+table tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #F4F6F9;
+  color: #667085;
+}
+
+table tbody tr:hover td {
+  background: #F8FAFC;
+}
+
+/* ===== ФИКС ДЛЯ СООБЩЕНИЙ ===== */
+.message-success {
+  padding: 10px 16px;
+  background: #E8F5EF;
+  color: #16845B;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  border-left: 4px solid #16845B;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.message-error {
+  padding: 10px 16px;
+  background: #FCEBEC;
+  color: #B3262E;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  border-left: 4px solid #B3262E;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+/* ===== ФИКС ДЛЯ EMPTY STATE ===== */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  background: white;
+  border-radius: 12px;
+  border: 1px dashed #D5DCE7;
+}
+
+.empty-state .icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+  opacity: 0.6;
+}
+
+.empty-state p {
+  color: #667085;
+  font-size: 15px;
+}
+
+/* ===== СПИННЕР ===== */
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #E2E7EF;
+  border-top-color: #C9A227;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== МЕДИА ЗАПРОСЫ ===== */
+@media (max-width: 768px) {
+  .page-header {
+    padding: 14px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .page-header h1 {
+    font-size: 18px;
+  }
+  .page-header > span:first-child {
+    font-size: 24px;
+  }
+  .container-page {
+    padding: 10px 12px 30px;
+  }
+  .card {
+    padding: 14px 16px;
+  }
+  .stat-card .number {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header h1 {
+    font-size: 16px;
+  }
+  .page-header p {
+    font-size: 12px;
+  }
+  .btn-primary,
+  .btn-secondary,
+  .btn-success,
+  .btn-danger {
+    padding: 6px 14px;
+    font-size: 12px;
+  }
+}

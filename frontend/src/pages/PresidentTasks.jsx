@@ -36,6 +36,9 @@ export default function PresidentTasks() {
 
   const loadData = async () => {
     try {
+      setLoading(true);
+      setMessage('');
+      
       const userData = await api.getMe();
       if (!userData || !userData.id) {
         navigate('/login');
@@ -43,29 +46,76 @@ export default function PresidentTasks() {
       }
       setProfile(userData);
 
-      // Загружаем задания
+      // ============================================================
+      // ЗАГРУЗКА ЗАДАНИЙ (с обработкой ошибок)
+      // ============================================================
       const token = localStorage.getItem('token');
-      const tasksResponse = await fetch('https://dod-backend.relaxdev.ru/api/president-tasks', {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      
+      if (!token) {
+        console.warn('⚠️ Нет токена для загрузки заданий');
+        setTasks([]);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('https://dod-backend.relaxdev.ru/api/president-tasks', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('📥 Статус /president-tasks:', response.status);
+
+        if (response.status === 404) {
+          // API ещё не реализован — показываем пустой список
+          console.warn('⚠️ API /president-tasks не найден (404)');
+          setTasks([]);
+        } else if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Ошибка загрузки заданий:', response.status, errorText);
+          setTasks([]);
+        } else {
+          const data = await response.json();
+          console.log('📥 Загружено заданий:', data?.length || 0);
+          setTasks(Array.isArray(data) ? data : []);
         }
-      });
-      const tasksData = await tasksResponse.json();
-      setTasks(tasksData || []);
+      } catch (fetchError) {
+        console.error('❌ Ошибка запроса заданий:', fetchError);
+        setTasks([]);
+      }
 
-      // Загружаем клубы
-      const clubsData = await api.getClubs();
-      setClubs(clubsData || []);
+      // ============================================================
+      // ЗАГРУЗКА КЛУБОВ
+      // ============================================================
+      try {
+        const clubsData = await api.getClubs();
+        setClubs(Array.isArray(clubsData) ? clubsData : []);
+      } catch (clubsError) {
+        console.error('❌ Ошибка загрузки клубов:', clubsError);
+        setClubs([]);
+      }
 
-      // Загружаем президентов
-      const usersData = await api.getUsers();
-      const presidentsData = usersData.filter(u => u.is_president === true);
-      setPresidents(presidentsData || []);
+      // ============================================================
+      // ЗАГРУЗКА ПРЕЗИДЕНТОВ
+      // ============================================================
+      try {
+        const usersData = await api.getUsers();
+        const presidentsData = Array.isArray(usersData) 
+          ? usersData.filter(u => u.is_president === true || u.role === 'president')
+          : [];
+        setPresidents(presidentsData);
+      } catch (usersError) {
+        console.error('❌ Ошибка загрузки пользователей:', usersError);
+        setPresidents([]);
+      }
 
     } catch (err) {
-      console.error('Ошибка:', err);
-      setMessage('❌ Ошибка загрузки: ' + err.message);
+      console.error('❌ Общая ошибка загрузки:', err);
+      setMessage('❌ Ошибка загрузки данных');
       setMessageType('error');
+      setTasks([]);
     } finally {
       setLoading(false);
     }
@@ -93,6 +143,11 @@ export default function PresidentTasks() {
         },
         body: JSON.stringify(form)
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Ошибка ${response.status}`);
+      }
 
       const result = await response.json();
       if (result.error) throw new Error(result.error);
@@ -139,6 +194,11 @@ export default function PresidentTasks() {
         body: JSON.stringify({ response: responseText })
       });
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Ошибка ${response.status}`);
+      }
+
       const result = await response.json();
       if (result.error) throw new Error(result.error);
 
@@ -169,6 +229,11 @@ export default function PresidentTasks() {
         },
         body: JSON.stringify({ status })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Ошибка ${response.status}`);
+      }
 
       const result = await response.json();
       if (result.error) throw new Error(result.error);
@@ -466,12 +531,16 @@ export default function PresidentTasks() {
                             if (confirm('Удалить задание?')) {
                               try {
                                 const token = localStorage.getItem('token');
-                                await fetch(`https://dod-backend.relaxdev.ru/api/president-tasks/${task.id}`, {
+                                const response = await fetch(`https://dod-backend.relaxdev.ru/api/president-tasks/${task.id}`, {
                                   method: 'DELETE',
                                   headers: {
                                     'Authorization': `Bearer ${token}`
                                   }
                                 });
+                                if (!response.ok) {
+                                  const errorData = await response.json().catch(() => ({}));
+                                  throw new Error(errorData.error || `Ошибка ${response.status}`);
+                                }
                                 setMessage('✅ Задание удалено');
                                 setMessageType('success');
                                 loadData();
@@ -516,7 +585,7 @@ export default function PresidentTasks() {
         >
           <div
             className="card"
-            style={{ maxWidth: '500px', width: '100%', padding: '32px' }}
+            style={{ maxWidth: '600px', width: '100%', padding: '32px' }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0B1F3A', marginBottom: '4px' }}>

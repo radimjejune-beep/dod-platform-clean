@@ -1,7 +1,7 @@
 // frontend/src/pages/Home.jsx
 
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import NewsSection from '../components/NewsSection';
@@ -36,11 +36,7 @@ export default function Home() {
   };
 
   const handleGetStarted = () => {
-    if (profile) {
-      navigate('/dashboard');
-    } else {
-      navigate('/register');
-    }
+    navigate('/register');
   };
 
   const handleLogin = () => {
@@ -80,26 +76,13 @@ export default function Home() {
             гражданскую позицию у молодёжи»
           </p>
           <div className="home-hero-buttons">
-            {profile ? (
-              <button className="home-hero-btn-primary" onClick={handleGetStarted}>
-                📊 Перейти в кабинет
-              </button>
-            ) : (
-              <>
-                <button className="home-hero-btn-secondary" onClick={handleLogin}>
-                  🔑 Вход
-                </button>
-                <button className="home-hero-btn-primary" onClick={handleGetStarted}>
-                  🚀 Присоединиться
-                </button>
-              </>
-            )}
+            <button className="home-hero-btn-secondary" onClick={handleLogin}>
+              🔑 Вход
+            </button>
+            <button className="home-hero-btn-primary" onClick={handleGetStarted}>
+              🚀 Присоединиться
+            </button>
           </div>
-          {!profile && (
-            <p className="home-hero-register">
-              Уже есть аккаунт? <Link to="/login">Войти</Link>
-            </p>
-          )}
           <div className="home-hero-partners">
             <span className="home-hero-partner-label">При поддержке</span>
             <img 
@@ -298,23 +281,6 @@ export default function Home() {
           border-color: rgba(255, 255, 255, 0.5);
           background: rgba(255, 255, 255, 0.05);
           transform: translateY(-4px);
-        }
-
-        .home-hero-register {
-          margin-top: 16px;
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.4);
-        }
-
-        .home-hero-register a {
-          color: #C9A227;
-          text-decoration: none;
-          font-weight: 600;
-          transition: all 0.2s ease;
-        }
-
-        .home-hero-register a:hover {
-          color: #E8D9A8;
         }
 
         .home-hero-partners {

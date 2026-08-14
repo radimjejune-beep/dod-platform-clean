@@ -1,4 +1,4 @@
-/* frontend/src/styles/global.css - ОРИГИНАЛЬНЫЕ РАЗМЕРЫ */
+/* frontend/src/styles/global.css - НОРМАЛЬНЫЙ РАЗМЕР ДЛЯ КОМПЬЮТЕРА */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700;800&display=swap');
 
@@ -76,7 +76,7 @@ body {
 .container-page {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 16px 20px 40px;
+  padding: 20px 24px 40px;
   position: relative;
   z-index: 1;
 }
@@ -309,15 +309,6 @@ body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
-}
-
-@media (max-width: 768px) {
-  .grid-2,
-  .grid-3,
-  .grid-4 {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
 }
 
 /* ===== СТАТИСТИКА ===== */
@@ -580,7 +571,7 @@ table tbody tr:last-child td {
   to { transform: rotate(360deg); }
 }
 
-/* ===== МЕДИА ЗАПРОСЫ ===== */
+/* ===== МЕДИА ЗАПРОСЫ - ТОЛЬКО ДЛЯ ОЧЕНЬ МАЛЕНЬКИХ ЭКРАНОВ ===== */
 @media (max-width: 768px) {
   .page-header {
     padding: 16px 20px;

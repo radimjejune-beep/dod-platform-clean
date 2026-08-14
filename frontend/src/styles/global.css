@@ -196,11 +196,19 @@ body {
   display: inline-block;
   box-shadow: 0 2px 12px rgba(201, 162, 39, 0.25);
   letter-spacing: 0.3px;
+  pointer-events: auto !important;
+  user-select: none;
+  position: relative;
+  z-index: 10;
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 24px rgba(201, 162, 39, 0.35);
+}
+
+.btn-primary:active {
+  transform: scale(0.97);
 }
 
 .btn-secondary {
@@ -215,12 +223,20 @@ body {
   transition: var(--transition);
   text-decoration: none;
   display: inline-block;
+  pointer-events: auto !important;
+  user-select: none;
+  position: relative;
+  z-index: 10;
 }
 
 .btn-secondary:hover {
   border-color: var(--gold-light);
   color: var(--gold-light);
   transform: translateY(-2px);
+}
+
+.btn-secondary:active {
+  transform: scale(0.97);
 }
 
 .btn-success {
@@ -234,12 +250,20 @@ body {
   cursor: pointer;
   transition: var(--transition);
   box-shadow: 0 2px 12px rgba(22, 132, 91, 0.25);
+  pointer-events: auto !important;
+  user-select: none;
+  position: relative;
+  z-index: 10;
 }
 
 .btn-success:hover {
   background: #0F6B49;
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(22, 132, 91, 0.3);
+}
+
+.btn-success:active {
+  transform: scale(0.97);
 }
 
 .btn-danger {
@@ -253,12 +277,48 @@ body {
   cursor: pointer;
   transition: var(--transition);
   box-shadow: 0 2px 12px rgba(179, 38, 46, 0.2);
+  pointer-events: auto !important;
+  user-select: none;
+  position: relative;
+  z-index: 10;
 }
 
 .btn-danger:hover {
   background: #8C1D24;
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(179, 38, 46, 0.3);
+}
+
+.btn-danger:active {
+  transform: scale(0.97);
+}
+
+/* ===== КНОПКИ В ШАПКЕ (ПРАВЫЙ ВЕРХНИЙ УГОЛ) ===== */
+.page-header .btn-primary,
+.page-header .btn-secondary,
+.page-header .btn-success,
+.page-header .btn-danger {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  position: relative;
+  z-index: 20;
+}
+
+/* ===== ОБЩИЕ ПРАВИЛА ДЛЯ ВСЕХ КНОПОК ===== */
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+.btn-primary,
+.btn-secondary,
+.btn-success,
+.btn-danger,
+.btn-outline {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  user-select: none;
+  position: relative;
+  z-index: 10;
 }
 
 /* ===== ФОРМЫ ===== */
@@ -675,4 +735,43 @@ table tbody tr:last-child td {
   .stat-card .number {
     font-size: 22px;
   }
+}
+
+/* ===== ИСПРАВЛЕНИЕ ДЛЯ КНОПОК ===== */
+/* Гарантируем, что все кнопки кликабельны */
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+.btn-primary,
+.btn-secondary,
+.btn-success,
+.btn-danger,
+.btn-outline {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  user-select: none;
+  position: relative;
+  z-index: 10;
+}
+
+/* Кнопки в заголовках страниц должны быть поверх всего */
+.page-header button,
+.page-header .btn-primary,
+.page-header .btn-secondary,
+.page-header .btn-success,
+.page-header .btn-danger {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  position: relative;
+  z-index: 20;
+}
+
+/* Убираем возможные блокировки */
+*[style*="pointer-events: none"] button,
+*[style*="pointer-events: none"] .btn-primary,
+*[style*="pointer-events: none"] .btn-secondary,
+*[style*="pointer-events: none"] .btn-success,
+*[style*="pointer-events: none"] .btn-danger {
+  pointer-events: auto !important;
 }

@@ -28,13 +28,16 @@ const routeRoles = {
   '/admin/news': ['admin', 'movement_coordinator'],
   '/import-participants': ['admin', 'movement_coordinator'],
   '/appeals': ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'],
-  '/staff': ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'],
-  '/staff-calendar': ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'],
+  '/staff': ['admin', 'movement_coordinator'],
+  '/staff-calendar': ['admin', 'movement_coordinator'],
   '/president-tasks': ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'],
   '/my-journal': ['tutor'],
   '/calendar': ['all'],
   '/tutor-requests': ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'],
   '/tutor-invitations': ['tutor', 'admin', 'movement_coordinator', 'president', 'vice_president'],
+  // ===== НОВЫЕ МАРШРУТЫ =====
+  '/my-club-events': ['club_coordinator', 'participant', 'tutor'],
+  '/club-calendar': ['club_coordinator', 'participant', 'tutor'],
 };
 
 // ===== КАКАЯ СТРАНИЦА ДЛЯ КАЖДОЙ РОЛИ ПО УМОЛЧАНИЮ =====
@@ -56,7 +59,6 @@ export default function ProtectedRoute({ children }) {
   const [hasAccess, setHasAccess] = useState(true);
   const [redirectPath, setRedirectPath] = useState(null);
 
-  // ===== ПРОВЕРКА СЕССИИ =====
   const checkSession = () => {
     const token = localStorage.getItem('token');
     const sessionId = sessionStorage.getItem('sessionId');

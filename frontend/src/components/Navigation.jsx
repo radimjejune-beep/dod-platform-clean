@@ -222,7 +222,14 @@ export default function Navigation({ profile }) {
         { path: '/tutor-invitations', label: 'Приглашения тьюторам', icon: Icons.mail, roles: ['tutor', 'admin', 'movement_coordinator', 'president', 'vice_president'] },
       ],
       staffCalendar: [
-        { path: '/staff-calendar', label: 'Календарь сотрудников', icon: Icons.calendar, roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'] },
+        { path: '/staff-calendar', label: 'Календарь сотрудников', icon: Icons.calendar, roles: ['admin', 'movement_coordinator'] },
+      ],
+      // ============================================================
+      // НОВЫЙ РАЗДЕЛ: ВНУТРЕННИЕ МЕРОПРИЯТИЯ КЛУБА
+      // ============================================================
+      clubEvents: [
+        { path: '/my-club-events', label: 'Мои мероприятия', icon: Icons.calendar, roles: ['club_coordinator', 'participant', 'tutor'] },
+        { path: '/club-calendar', label: 'Календарь клуба', icon: Icons.calendar, roles: ['club_coordinator', 'participant', 'tutor'] },
       ],
       settings: [
         { path: '/settings', label: 'Настройки', icon: Icons.settings, roles: ['admin', 'movement_coordinator'] },
@@ -257,10 +264,11 @@ export default function Navigation({ profile }) {
     tasks: 'Задания',
     communication: 'Коммуникация',
     staffCalendar: 'Календарь',
+    clubEvents: 'Мой клуб',
     settings: 'Настройки',
   };
 
-  const groupOrder = ['main', 'events', 'people', 'clubs', 'achievements', 'reviews', 'reports', 'tasks', 'communication', 'staffCalendar', 'settings'];
+  const groupOrder = ['main', 'events', 'people', 'clubs', 'achievements', 'reviews', 'reports', 'tasks', 'communication', 'staffCalendar', 'clubEvents', 'settings'];
 
   const sortedGroups = Object.entries(menuGroups).sort((a, b) => {
     const indexA = groupOrder.indexOf(a[0]);
@@ -270,7 +278,6 @@ export default function Navigation({ profile }) {
     return indexA - indexB;
   });
 
-  // Закрытие меню при клике вне
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target) && 
@@ -283,7 +290,6 @@ export default function Navigation({ profile }) {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  // Блокировка прокрутки при открытом меню
   useEffect(() => {
     if (isMenuOpen) {
       document.body.style.overflow = 'hidden';
@@ -295,7 +301,6 @@ export default function Navigation({ profile }) {
     };
   }, [isMenuOpen]);
 
-  // Закрытие меню при нажатии Escape
   useEffect(() => {
     const handleEscape = (event) => {
       if (event.key === 'Escape') {
@@ -470,7 +475,6 @@ export default function Navigation({ profile }) {
           height: 100%;
         }
 
-        /* ===== ЛОГОТИП ===== */
         .nav-new-logo {
           display: flex;
           align-items: center;
@@ -493,7 +497,6 @@ export default function Navigation({ profile }) {
           letter-spacing: 0.3px;
         }
 
-        /* ===== ПРАВАЯ ЧАСТЬ ===== */
         .nav-new-right {
           display: flex;
           align-items: center;
@@ -548,7 +551,6 @@ export default function Navigation({ profile }) {
           color: #0B1F3A;
         }
 
-        /* ===== КНОПКА МЕНЮ ===== */
         .nav-new-menu-btn {
           display: flex;
           align-items: center;
@@ -578,7 +580,6 @@ export default function Navigation({ profile }) {
           height: 20px;
         }
 
-        /* ===== ОВЕРЛЕЙ МЕНЮ ===== */
         .nav-menu-overlay {
           position: fixed;
           top: 52px;
@@ -598,7 +599,6 @@ export default function Navigation({ profile }) {
           visibility: visible;
         }
 
-        /* ===== ПАНЕЛЬ МЕНЮ ===== */
         .nav-menu-panel {
           position: fixed;
           top: 52px;
@@ -620,7 +620,6 @@ export default function Navigation({ profile }) {
           transform: translateX(0);
         }
 
-        /* ===== ЗАГОЛОВОК МЕНЮ ===== */
         .nav-menu-header {
           padding: 16px 20px 12px;
           border-bottom: 1px solid #F4F6F9;
@@ -663,7 +662,6 @@ export default function Navigation({ profile }) {
           color: #98A2B3;
         }
 
-        /* ===== ТЕЛО МЕНЮ ===== */
         .nav-menu-body {
           flex: 1;
           overflow-y: auto;
@@ -679,7 +677,6 @@ export default function Navigation({ profile }) {
           border-radius: 2px;
         }
 
-        /* ===== ПУНКТЫ МЕНЮ ===== */
         .nav-menu-item {
           display: flex;
           align-items: center;
@@ -716,7 +713,6 @@ export default function Navigation({ profile }) {
           opacity: 1;
         }
 
-        /* ===== ГРУППЫ МЕНЮ ===== */
         .nav-menu-group {
           margin-bottom: 2px;
         }
@@ -765,7 +761,6 @@ export default function Navigation({ profile }) {
           transform: rotate(180deg);
         }
 
-        /* ===== ПОДМЕНЮ ===== */
         .nav-menu-sublist {
           overflow: hidden;
           max-height: 0;
@@ -811,7 +806,6 @@ export default function Navigation({ profile }) {
           opacity: 1;
         }
 
-        /* ===== ФУТЕР МЕНЮ ===== */
         .nav-menu-footer {
           padding: 12px 16px 16px;
           border-top: 1px solid #F4F6F9;
@@ -844,7 +838,6 @@ export default function Navigation({ profile }) {
           height: 16px;
         }
 
-        /* ===== АДАПТИВНОСТЬ ===== */
         @media (max-width: 768px) {
           .nav-new {
             height: 48px;

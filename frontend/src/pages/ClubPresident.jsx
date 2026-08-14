@@ -31,9 +31,9 @@ export default function ClubPresident() {
         return;
       }
 
-      // ============================================================
-      // ПРОВЕРКА ПРАВ: КООРДИНАТОР ИЛИ АДМИН
-      // ============================================================
+      console.log('👤 Текущий пользователь:', userData);
+
+      // Проверяем, что пользователь — координатор или админ
       if (userData.role !== 'club_coordinator' && userData.role !== 'admin') {
         navigate('/dashboard');
         return;
@@ -45,40 +45,77 @@ export default function ClubPresident() {
       // ЗАГРУЗКА КЛУБА
       // ============================================================
       const clubsData = await api.getClubs();
+      console.log('🏫 Все клубы:', clubsData);
       
-      // Ищем клуб по ID
       const foundClub = clubsData.find(c => c.id === clubId);
+      console.log('🏫 Найденный клуб:', foundClub);
       
-      // Если координатор — проверяем, что это его клуб
+      if (!foundClub) {
+        setMessage('❌ Клуб не найден');
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
+
+      // ============================================================
+      // ПРОВЕРКА ПРАВ ДЛЯ КООРДИНАТОРА
+      // ============================================================
+      let hasAccess = false;
+
+      // Админ имеет доступ ко всем клубам
+      if (userData.role === 'admin') {
+        hasAccess = true;
+        console.log('✅ Админ: доступ есть');
+      }
+      
+      // Координатор — проверяем привязку
       if (userData.role === 'club_coordinator') {
-        const isMyClub = foundClub && (
-          foundClub.coordinator_id === userData.id || 
-          foundClub.leader_id === userData.id
-        );
+        // Проверка 1: через club_id в профиле
+        if (userData.club_id === clubId) {
+          hasAccess = true;
+          console.log('✅ Координатор: доступ через club_id в профиле');
+        }
         
-        // Дополнительная проверка через club_coordinators
-        let isCoordinator = isMyClub;
-        if (!isCoordinator) {
+        // Проверка 2: через таблицу club_coordinators
+        if (!hasAccess) {
           try {
-            const coordResponse = await fetch(
-              `https://dod-backend.relaxdev.ru/api/club-coordinators?profile_id=${userData.id}`
+            const token = localStorage.getItem('token');
+            const response = await fetch(
+              `https://dod-backend.relaxdev.ru/api/club-coordinators?profile_id=${userData.id}`,
+              { headers: { 'Authorization': `Bearer ${token}` } }
             );
-            const coordData = await coordResponse.json();
+            const coordData = await response.json();
+            console.log('📋 Данные club_coordinators:', coordData);
+            
             if (coordData && coordData.length > 0) {
               const userClubId = coordData[0].club_id;
-              isCoordinator = userClubId === clubId;
+              if (userClubId === clubId) {
+                hasAccess = true;
+                console.log('✅ Координатор: доступ через club_coordinators');
+              }
             }
           } catch (e) {
-            console.log('Ошибка проверки координатора:', e);
+            console.log('❌ Ошибка проверки координатора:', e);
           }
         }
         
-        if (!isCoordinator) {
-          setMessage('❌ У вас нет прав для этого клуба');
-          setMessageType('error');
-          setLoading(false);
-          return;
+        // Проверка 3: если клуб в URL совпадает с клубом координатора
+        if (!hasAccess) {
+          // Проверяем, что клуб из URL совпадает с club_id координатора
+          if (userData.club_id && userData.club_id === clubId) {
+            hasAccess = true;
+            console.log('✅ Координатор: доступ через club_id (прямая проверка)');
+          }
         }
+      }
+
+      console.log('🔑 Итоговый доступ:', hasAccess);
+
+      if (!hasAccess) {
+        setMessage('❌ У вас нет прав для этого клуба. Вы не привязаны к этому КЮДу.');
+        setMessageType('error');
+        setLoading(false);
+        return;
       }
 
       setClub(foundClub);
@@ -86,25 +123,26 @@ export default function ClubPresident() {
       // ============================================================
       // ЗАГРУЗКА УЧАСТНИКОВ КЛУБА
       // ============================================================
+      const token = localStorage.getItem('token');
+      
+      // Получаем всех участников
       const participantsData = await api.getParticipants();
       console.log('📥 Все участники:', participantsData?.length || 0);
       
-      // ФИЛЬТРУЕМ ТОЛЬКО УЧАСТНИКОВ ЭТОГО КЛУБА
+      // Фильтруем по club_id
       const clubParticipants = participantsData.filter(p => p.club_id === clubId);
       console.log(`📥 Участники клуба ${clubId}:`, clubParticipants?.length || 0);
+      console.log('📥 Список участников:', clubParticipants);
       
       setParticipants(clubParticipants);
 
       // ============================================================
       // ЗАГРУЗКА ТЕКУЩЕГО ПРЕЗИДЕНТА
       // ============================================================
-      const token = localStorage.getItem('token');
       try {
         const response = await fetch(
           `https://dod-backend.relaxdev.ru/api/clubs/${clubId}/president`,
-          {
-            headers: { 'Authorization': `Bearer ${token}` }
-          }
+          { headers: { 'Authorization': `Bearer ${token}` } }
         );
         const data = await response.json();
         console.log('👑 Текущий президент:', data);
@@ -113,11 +151,11 @@ export default function ClubPresident() {
           setSelectedParticipant(data.id);
         }
       } catch (err) {
-        console.error('Ошибка загрузки президента:', err);
+        console.error('❌ Ошибка загрузки президента:', err);
       }
 
     } catch (err) {
-      console.error('Ошибка:', err);
+      console.error('❌ Ошибка:', err);
       setMessage('❌ Ошибка загрузки данных: ' + err.message);
       setMessageType('error');
     } finally {
@@ -159,7 +197,7 @@ export default function ClubPresident() {
       setMessageType('success');
       setCurrentPresident(result.president);
       
-      // Обновляем список участников, чтобы показать нового президента
+      // Обновляем список участников
       await loadData();
       
       setTimeout(() => setMessage(''), 3000);
@@ -179,7 +217,6 @@ export default function ClubPresident() {
     );
   }
 
-  // Если нет участников — показываем сообщение
   const hasParticipants = participants && participants.length > 0;
 
   return (

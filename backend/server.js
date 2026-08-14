@@ -731,7 +731,7 @@ app.delete('/api/achievements/:id', async (req, res) => {
 });
 
 // ============================================================
-// ОТВЕТ НА ОБРАЩЕНИЕ (ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ)
+// ОТВЕТ НА ОБРАЩЕНИЕ (ИСПРАВЛЕННЫЙ - БЕЗ ДУБЛИКАТОВ)
 // ============================================================
 app.post('/api/appeals/:id/reply', async (req, res) => {
   try {
@@ -807,7 +807,11 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
   } catch (error) {
     console.error('❌ Ошибка ответа на обращение:', error);
     console.error('❌ Детали:', error.detail || 'Нет деталей');
-    res.status(500).json({ error: error.message, detail: error.detail || 'Ошибка сервера' });
+    res.status(500).json({
+      error: 'Ошибка сервера',
+      detail: error.message,
+      code: error.code
+    });
   }
 });
 
@@ -943,6 +947,9 @@ app.post('/api/appeals', async (req, res) => {
   }
 });
 
+// ============================================================
+// ОТВЕТ НА ОБРАЩЕНИЕ (ИСПРАВЛЕННЫЙ - БЕЗ ДУБЛИКАТОВ)
+// ============================================================
 app.post('/api/appeals/:id/reply', async (req, res) => {
   try {
     const { id } = req.params;
@@ -963,25 +970,39 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       return res.status(403).json({ error: 'У вас нет прав для ответа на обращения' });
     }
 
-    if (!message) {
+    if (!message || !message.trim()) {
       return res.status(400).json({ error: 'Текст ответа обязателен' });
     }
 
-    await pool.query(
+    // ===== ПРОВЕРЯЕМ, ЧТО ОБРАЩЕНИЕ СУЩЕСТВУЕТ =====
+    const appealCheck = await pool.query(
+      'SELECT id FROM appeals WHERE id = $1',
+      [id]
+    );
+    if (appealCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Обращение не найдено' });
+    }
+
+    // ===== ВСТАВЛЯЕМ ОТВЕТ =====
+    const replyResult = await pool.query(
       `INSERT INTO appeal_replies (appeal_id, author_id, message, created_at)
-       VALUES ($1, $2, $3, NOW())`,
-      [id, userId, message]
+       VALUES ($1, $2, $3, NOW())
+       RETURNING *`,
+      [id, userId, message.trim()]
     );
 
+    // ===== ОБНОВЛЯЕМ СТАТУС ОБРАЩЕНИЯ =====
+    const newStatus = status || 'in_progress';
     await pool.query(
       `UPDATE appeals 
        SET status = $1,
            resolved_by = $2,
            resolved_at = CASE WHEN $1 IN ('resolved', 'rejected') THEN NOW() ELSE NULL END
        WHERE id = $3`,
-      [status || 'in_progress', userId, id]
+      [newStatus, userId, id]
     );
 
+    // ===== ПОЛУЧАЕМ ОБНОВЛЁННОЕ ОБРАЩЕНИЕ =====
     const result = await pool.query(
       `SELECT a.*, 
               u.full_name as coordinator_name,
@@ -997,11 +1018,17 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
 
     res.json({
       message: 'Ответ отправлен',
-      appeal: result.rows[0]
+      appeal: result.rows[0],
+      reply: replyResult.rows[0]
     });
   } catch (error) {
-    console.error('Ошибка ответа на обращение:', error);
-    res.status(500).json({ error: error.message });
+    console.error('❌ Ошибка ответа на обращение:', error);
+    console.error('❌ Детали:', error.detail || 'Нет деталей');
+    res.status(500).json({
+      error: 'Ошибка сервера',
+      detail: error.message,
+      code: error.code
+    });
   }
 });
 

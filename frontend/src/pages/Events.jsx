@@ -179,7 +179,13 @@ export default function Events() {
     return false;
   };
 
-  const canCreate = ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(profile?.role);
+  // ===== ВАЖНО: ПРОВЕРКА ПРАВ НА СОЗДАНИЕ =====
+  const canCreate = () => {
+    const role = profile?.role;
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'];
+    return allowedRoles.includes(role);
+  };
+
   const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
   const isClubCoordinator = profile?.role === 'club_coordinator';
   const isMovementCoordinator = profile?.role === 'movement_coordinator';
@@ -210,7 +216,7 @@ export default function Events() {
       // ============================================================
       // ДЛЯ КООРДИНАТОРА ДВИЖЕНИЯ — СОЗДАЁТ ГЛОБАЛЬНЫЕ МЕРОПРИЯТИЯ
       // ============================================================
-      if (profile?.role === 'movement_coordinator') {
+      if (isMovementCoordinator) {
         eventData.is_global = true;
         eventData.is_club_event = false;
         eventData.club_id = null;
@@ -219,7 +225,7 @@ export default function Events() {
       // ============================================================
       // ДЛЯ КООРДИНАТОРА КЛУБА — ПОДСТАВЛЯЕМ ЕГО КЛУБ
       // ============================================================
-      if (profile?.role === 'club_coordinator' && !form.club_id) {
+      if (isClubCoordinator && !form.club_id) {
         const userClub = clubs.find(c => 
           c.coordinator_id === profile.id || 
           c.leader_id === profile.id
@@ -368,8 +374,33 @@ export default function Events() {
             <h1>Мероприятия</h1>
             <p>Всего: {filteredEvents.length}</p>
           </div>
-          {canCreate && (
-            <button className="btn-primary" style={{ marginLeft: 'auto' }} onClick={() => { resetForm(); setShowForm(!showForm); }}>
+          {canCreate() && (
+            <button 
+              className="btn-primary" 
+              style={{ marginLeft: 'auto' }} 
+              onClick={() => { 
+                console.log('🔄 Кнопка нажата, showForm:', showForm);
+                setShowForm(!showForm); 
+                if (!showForm) {
+                  // Сбрасываем форму при открытии
+                  setForm({
+                    id: null,
+                    title: '',
+                    description: '',
+                    location: '',
+                    event_date: '',
+                    end_date: '',
+                    start_time: '',
+                    end_time: '',
+                    type: 'internal',
+                    capacity: 20,
+                    club_id: '',
+                    form_url: '',
+                    is_global: false
+                  });
+                }
+              }}
+            >
               {showForm ? '✖ Закрыть' : '➕ Создать'}
             </button>
           )}
@@ -421,7 +452,7 @@ export default function Events() {
           </div>
         </FilterBar>
 
-        {showForm && canCreate && (
+        {showForm && canCreate() && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3>{form.id ? '✏️ Редактировать' : '📝 Создать'}</h3>
             

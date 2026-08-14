@@ -1128,21 +1128,6 @@ app.post('/api/appeals', async (req, res) => {
       [clubId, userId, subject, message, priority || 'medium']
     );
 
-    // Уведомление админам
-    const admins = await pool.query(
-      "SELECT id FROM users WHERE role IN ('admin', 'movement_coordinator', 'president', 'vice_president')"
-    );
-    for (const admin of admins.rows) {
-      await createNotification(
-        admin.id,
-        'appeal',
-        '📨 Новое обращение',
-        `Новое обращение от координатора: "${subject}"`,
-        '/appeals',
-        'high'
-      );
-    }
-
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Ошибка создания обращения:', error);
@@ -1177,25 +1162,23 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       return res.status(400).json({ error: 'Текст ответа обязателен' });
     }
 
-    // ===== ПРОВЕРЯЕМ, ЧТО ОБРАЩЕНИЕ СУЩЕСТВУЕТ =====
+    // Проверяем существование обращения
     const appealCheck = await pool.query(
-      'SELECT id, coordinator_id, subject FROM appeals WHERE id = $1',
+      'SELECT id FROM appeals WHERE id = $1',
       [id]
     );
     if (appealCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Обращение не найдено' });
     }
 
-    const appeal = appealCheck.rows[0];
-
-    // ===== ВСТАВЛЯЕМ ОТВЕТ =====
+    // Вставляем ответ
     await pool.query(
       `INSERT INTO appeal_replies (appeal_id, author_id, message, created_at)
        VALUES ($1, $2, $3, NOW())`,
       [id, userId, message.trim()]
     );
 
-    // ===== ОБНОВЛЯЕМ СТАТУС ОБРАЩЕНИЯ =====
+    // Обновляем статус
     const newStatus = status || 'in_progress';
     await pool.query(
       `UPDATE appeals 
@@ -1206,25 +1189,12 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       [newStatus, userId, id]
     );
 
-    // ===== УВЕДОМЛЕНИЕ КООРДИНАТОРУ =====
-    if (appeal.coordinator_id) {
-      await createNotification(
-        appeal.coordinator_id,
-        'appeal',
-        '📨 Ответ на обращение',
-        `Получен ответ на ваше обращение: "${appeal.subject}"`,
-        '/appeals',
-        'high'
-      );
-    }
-
-    // ===== ПОЛУЧАЕМ ОБНОВЛЁННОЕ ОБРАЩЕНИЕ =====
+    // Получаем обновлённое обращение
     const result = await pool.query(
       `SELECT a.*, 
               u.full_name as coordinator_name,
               c.name as club_name,
-              r.full_name as resolved_by_name,
-              (SELECT COUNT(*) FROM appeal_replies WHERE appeal_id = a.id) as reply_count
+              r.full_name as resolved_by_name
        FROM appeals a
        LEFT JOIN users u ON a.coordinator_id = u.id
        LEFT JOIN clubs c ON a.club_id = c.id

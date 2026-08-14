@@ -1086,8 +1086,11 @@ app.get('/api/appeals', async (req, res) => {
   }
 });
 
-app.post('/api/appeals', async (req, res) => {
+app.post('/api/appeals/:id/reply', async (req, res) => {
   try {
+    const { id } = req.params;
+    const { message, status } = req.body;
+
     const authHeader = req.headers.authorization;
     if (!authHeader) {
       return res.status(401).json({ error: 'Нет токена' });
@@ -1098,39 +1101,77 @@ app.post('/api/appeals', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
-    const { subject, message, priority } = req.body;
-
-    if (!subject || !message) {
-      return res.status(400).json({ error: 'subject и message обязательны' });
+    const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для ответа на обращения' });
     }
 
-    if (userRole !== 'club_coordinator') {
-      return res.status(403).json({ error: 'Только координаторы КЮДа могут создавать обращения' });
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Текст ответа обязателен' });
     }
 
-    let clubId = null;
-    const clubResult = await pool.query(
-      'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
-      [userId]
+    // Проверяем существование обращения
+    const appealCheck = await pool.query(
+      'SELECT id, coordinator_id, subject FROM appeals WHERE id = $1',
+      [id]
     );
-    if (clubResult.rows.length > 0) {
-      clubId = clubResult.rows[0].club_id;
+    if (appealCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Обращение не найдено' });
     }
 
-    if (!clubId) {
-      return res.status(400).json({ error: 'Вы не привязаны к КЮДу' });
+    const appeal = appealCheck.rows[0];
+
+    // Вставляем ответ
+    await pool.query(
+      `INSERT INTO appeal_replies (appeal_id, author_id, message, created_at)
+       VALUES ($1, $2, $3, NOW())`,
+      [id, userId, message.trim()]
+    );
+
+    // Обновляем статус
+    const newStatus = status || 'in_progress';
+    await pool.query(
+      `UPDATE appeals 
+       SET status = $1,
+           resolved_by = $2,
+           resolved_at = CASE WHEN $1 IN ('resolved', 'rejected') THEN NOW() ELSE NULL END
+       WHERE id = $3`,
+      [newStatus, userId, id]
+    );
+
+    // Уведомление координатору
+    if (appeal.coordinator_id) {
+      await createNotification(
+        appeal.coordinator_id,
+        'appeal',
+        '📨 Ответ на обращение',
+        `Получен ответ на ваше обращение`,
+        '/appeals',
+        'high'
+      );
     }
 
+    // Получаем обновлённое обращение
     const result = await pool.query(
-      `INSERT INTO appeals (club_id, coordinator_id, subject, message, priority, status, created_at)
-       VALUES ($1, $2, $3, $4, $5, 'pending', NOW())
-       RETURNING *`,
-      [clubId, userId, subject, message, priority || 'medium']
+      `SELECT a.*, 
+              u.full_name as coordinator_name,
+              c.name as club_name,
+              r.full_name as resolved_by_name
+       FROM appeals a
+       LEFT JOIN users u ON a.coordinator_id = u.id
+       LEFT JOIN clubs c ON a.club_id = c.id
+       LEFT JOIN users r ON a.resolved_by = r.id
+       WHERE a.id = $1`,
+      [id]
     );
 
-    res.json(result.rows[0]);
+    res.json({
+      message: 'Ответ отправлен',
+      appeal: result.rows[0]
+    });
   } catch (error) {
-    console.error('Ошибка создания обращения:', error);
+    console.error('❌ Ошибка ответа на обращение:', error);
+    console.error('❌ Детали:', error.detail || 'Нет деталей');
     res.status(500).json({ error: error.message });
   }
 });

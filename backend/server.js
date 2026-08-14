@@ -731,7 +731,7 @@ app.delete('/api/achievements/:id', async (req, res) => {
 });
 
 // ============================================================
-// 16. СОБЫТИЯ (ИСПРАВЛЕННЫЙ МАРШРУТ С ЯВНЫМИ ТИПАМИ)
+// 16. СОБЫТИЯ (ИСПРАВЛЕННЫЙ МАРШРУТ)
 // ============================================================
 app.get('/api/events', async (req, res) => {
   try {
@@ -764,21 +764,27 @@ app.get('/api/events', async (req, res) => {
     // ===== 2. ВНУТРЕННИЕ МЕРОПРИЯТИЯ =====
     const role = userRole;
 
+    // Админ, координатор движения, президент, вице — видят все внутренние
     if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
       conditions.push('(e.is_club_event = true)');
-    } else if (role === 'club_coordinator') {
+    } 
+    // Координатор КЮДа — видит только свой клуб
+    else if (role === 'club_coordinator') {
       const clubResult = await pool.query(
         'SELECT club_id FROM club_coordinators WHERE profile_id = $1::UUID',
         [userId]
       );
       if (clubResult.rows.length > 0) {
         const clubId = clubResult.rows[0].club_id;
+        // Используем $1::UUID для одного значения
         conditions.push(`(e.is_club_event = true AND e.club_id = $${params.length + 1}::UUID)`);
         params.push(clubId);
       } else {
         conditions.push('1 = 0');
       }
-    } else if (role === 'participant') {
+    } 
+    // Участник — видит только свой клуб
+    else if (role === 'participant') {
       const user = await pool.query(
         'SELECT club_id FROM users WHERE id = $1::UUID',
         [userId]
@@ -790,19 +796,24 @@ app.get('/api/events', async (req, res) => {
       } else {
         conditions.push('1 = 0');
       }
-    } else if (role === 'tutor') {
+    } 
+    // Тьютор — видит клубы, где назначен
+    else if (role === 'tutor') {
       const clubs = await pool.query(
         'SELECT DISTINCT club_id FROM event_tutors WHERE tutor_id = $1::UUID',
         [userId]
       );
       if (clubs.rows.length > 0) {
         const clubIds = clubs.rows.map(r => r.club_id);
+        // Для массива используем ANY(...::UUID[])
         conditions.push(`(e.is_club_event = true AND e.club_id = ANY($${params.length + 1}::UUID[]))`);
         params.push(clubIds);
       } else {
         conditions.push('1 = 0');
       }
-    } else if (role === 'parent') {
+    } 
+    // Родитель — не видит внутренние
+    else if (role === 'parent') {
       conditions.push('1 = 0');
     }
 

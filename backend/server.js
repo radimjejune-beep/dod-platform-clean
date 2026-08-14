@@ -699,6 +699,193 @@ app.get('/api/achievements', async (req, res) => {
   }
 });
 
+// ============================================================
+// 16. СОБЫТИЯ (ИСПРАВЛЕННЫЙ)
+// ============================================================
+app.get('/api/events', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    let query = `
+      SELECT e.*, 
+             c.name as club_name,
+             u.full_name as created_by_name,
+             (SELECT COUNT(*) FROM registrations r WHERE r.event_id = e.id AND r.status = 'confirmed') as participants_count
+      FROM events e
+      LEFT JOIN clubs c ON e.club_id = c.id
+      LEFT JOIN users u ON e.created_by = u.id
+      WHERE (e.moderation_status = 'approved' OR e.moderation_status IS NULL)
+    `;
+    const params = [];
+    const conditions = [];
+
+    // ===== 1. ГЛОБАЛЬНЫЕ МЕРОПРИЯТИЯ =====
+    conditions.push('(e.is_global = true OR e.is_global IS NULL)');
+
+    // ===== 2. ВНУТРЕННИЕ МЕРОПРИЯТИЯ =====
+    const role = userRole;
+
+    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
+      conditions.push('(e.is_club_event = true)');
+    } else if (role === 'club_coordinator') {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      if (clubResult.rows.length > 0) {
+        const clubId = clubResult.rows[0].club_id;
+        conditions.push(`(e.is_club_event = true AND e.club_id = $${params.length + 1})`);
+        params.push(clubId);
+      } else {
+        conditions.push('1 = 0');
+      }
+    } else if (role === 'participant') {
+      const user = await pool.query(
+        'SELECT club_id FROM users WHERE id = $1',
+        [userId]
+      );
+      if (user.rows.length > 0 && user.rows[0].club_id) {
+        const clubId = user.rows[0].club_id;
+        conditions.push(`(e.is_club_event = true AND e.club_id = $${params.length + 1})`);
+        params.push(clubId);
+      } else {
+        conditions.push('1 = 0');
+      }
+    } else if (role === 'tutor') {
+      const clubs = await pool.query(
+        'SELECT DISTINCT club_id FROM event_tutors WHERE tutor_id = $1',
+        [userId]
+      );
+      if (clubs.rows.length > 0) {
+        const clubIds = clubs.rows.map(r => r.club_id);
+        conditions.push(`(e.is_club_event = true AND e.club_id = ANY($${params.length + 1}::uuid[]))`);
+        params.push(clubIds);
+      } else {
+        conditions.push('1 = 0');
+      }
+    } else if (role === 'parent') {
+      conditions.push('1 = 0');
+    }
+
+    if (conditions.length > 0) {
+      query += ' AND (' + conditions.join(' OR ') + ')';
+    }
+
+    query += ' ORDER BY e.event_date ASC';
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Ошибка получения событий:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/events', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    const { title, description, location, event_date, end_date, start_time, end_time, type, capacity, club_id, form_url, is_global, is_club_event } = req.body;
+
+    if (!title || !event_date) {
+      return res.status(400).json({ error: 'title и event_date обязательны' });
+    }
+
+    let moderationStatus = 'approved';
+    let finalClubId = club_id || null;
+    let finalIsClubEvent = is_club_event || false;
+
+    if (userRole === 'club_coordinator') {
+      if (is_global) {
+        moderationStatus = 'pending';
+      }
+    } else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
+      moderationStatus = 'approved';
+    } else {
+      return res.status(403).json({ error: 'У вас нет прав для создания мероприятий' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO events (
+        title, description, location, event_date, end_date, 
+        start_time, end_time, type, capacity, club_id, form_url,
+        is_global, is_club_event, moderation_status, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      RETURNING *`,
+      [
+        title, description || '', location || '', event_date, end_date || event_date,
+        start_time || null, end_time || null, type || 'internal', capacity || 20,
+        finalClubId, form_url || null,
+        is_global || false, finalIsClubEvent, moderationStatus, userId
+      ]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Ошибка создания события:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.patch('/api/events/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, location, event_date, end_date, start_time, end_time, type, capacity, club_id, form_url } = req.body;
+
+    const result = await pool.query(
+      `UPDATE events 
+       SET title = COALESCE($1, title),
+           description = COALESCE($2, description),
+           location = COALESCE($3, location),
+           event_date = COALESCE($4, event_date),
+           end_date = COALESCE($5, end_date),
+           start_time = COALESCE($6, start_time),
+           end_time = COALESCE($7, end_time),
+           type = COALESCE($8, type),
+           capacity = COALESCE($9, capacity),
+           club_id = COALESCE($10, club_id),
+           form_url = COALESCE($11, form_url)
+       WHERE id = $12
+       RETURNING *`,
+      [title, description, location, event_date, end_date, start_time, end_time, type, capacity, club_id, form_url, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Событие не найдено' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/events/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM events WHERE id = $1', [id]);
+    res.json({ message: 'Событие удалено' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/achievements', async (req, res) => {
   try {
     const { participant_id, title, description, achievement_date } = req.body;
@@ -873,7 +1060,8 @@ app.get('/api/appeals', async (req, res) => {
       SELECT a.*, 
              u.full_name as coordinator_name,
              c.name as club_name,
-             r.full_name as resolved_by_name
+             r.full_name as resolved_by_name,
+             (SELECT COUNT(*) FROM appeal_replies WHERE appeal_id = a.id) as reply_count
       FROM appeals a
       LEFT JOIN users u ON a.coordinator_id = u.id
       LEFT JOIN clubs c ON a.club_id = c.id
@@ -940,6 +1128,21 @@ app.post('/api/appeals', async (req, res) => {
       [clubId, userId, subject, message, priority || 'medium']
     );
 
+    // Уведомление админам
+    const admins = await pool.query(
+      "SELECT id FROM users WHERE role IN ('admin', 'movement_coordinator', 'president', 'vice_president')"
+    );
+    for (const admin of admins.rows) {
+      await createNotification(
+        admin.id,
+        'appeal',
+        '📨 Новое обращение',
+        `Новое обращение от координатора: "${subject}"`,
+        '/appeals',
+        'high'
+      );
+    }
+
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Ошибка создания обращения:', error);
@@ -948,7 +1151,7 @@ app.post('/api/appeals', async (req, res) => {
 });
 
 // ============================================================
-// ОТВЕТ НА ОБРАЩЕНИЕ (ИСПРАВЛЕННЫЙ - БЕЗ ДУБЛИКАТОВ)
+// ОТВЕТ НА ОБРАЩЕНИЕ (ИСПРАВЛЕННЫЙ)
 // ============================================================
 app.post('/api/appeals/:id/reply', async (req, res) => {
   try {
@@ -976,18 +1179,19 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
 
     // ===== ПРОВЕРЯЕМ, ЧТО ОБРАЩЕНИЕ СУЩЕСТВУЕТ =====
     const appealCheck = await pool.query(
-      'SELECT id FROM appeals WHERE id = $1',
+      'SELECT id, coordinator_id, subject FROM appeals WHERE id = $1',
       [id]
     );
     if (appealCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Обращение не найдено' });
     }
 
+    const appeal = appealCheck.rows[0];
+
     // ===== ВСТАВЛЯЕМ ОТВЕТ =====
-    const replyResult = await pool.query(
+    await pool.query(
       `INSERT INTO appeal_replies (appeal_id, author_id, message, created_at)
-       VALUES ($1, $2, $3, NOW())
-       RETURNING *`,
+       VALUES ($1, $2, $3, NOW())`,
       [id, userId, message.trim()]
     );
 
@@ -1002,12 +1206,25 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       [newStatus, userId, id]
     );
 
+    // ===== УВЕДОМЛЕНИЕ КООРДИНАТОРУ =====
+    if (appeal.coordinator_id) {
+      await createNotification(
+        appeal.coordinator_id,
+        'appeal',
+        '📨 Ответ на обращение',
+        `Получен ответ на ваше обращение: "${appeal.subject}"`,
+        '/appeals',
+        'high'
+      );
+    }
+
     // ===== ПОЛУЧАЕМ ОБНОВЛЁННОЕ ОБРАЩЕНИЕ =====
     const result = await pool.query(
       `SELECT a.*, 
               u.full_name as coordinator_name,
               c.name as club_name,
-              r.full_name as resolved_by_name
+              r.full_name as resolved_by_name,
+              (SELECT COUNT(*) FROM appeal_replies WHERE appeal_id = a.id) as reply_count
        FROM appeals a
        LEFT JOIN users u ON a.coordinator_id = u.id
        LEFT JOIN clubs c ON a.club_id = c.id
@@ -1018,16 +1235,14 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
 
     res.json({
       message: 'Ответ отправлен',
-      appeal: result.rows[0],
-      reply: replyResult.rows[0]
+      appeal: result.rows[0]
     });
   } catch (error) {
     console.error('❌ Ошибка ответа на обращение:', error);
     console.error('❌ Детали:', error.detail || 'Нет деталей');
     res.status(500).json({
       error: 'Ошибка сервера',
-      detail: error.message,
-      code: error.code
+      detail: error.message || 'Неизвестная ошибка'
     });
   }
 });

@@ -3026,6 +3026,18 @@ app.post('/api/president-tasks', async (req, res) => {
       is_global 
     } = req.body;
 
+    // Уведомление для назначенного президента клуба
+   if (assigned_to) {
+     await createNotification(
+     assigned_to,
+     'task',
+     '👑 Новое задание от президента движения',
+     `Вам назначено задание: "${title}"`,
+     '/president-tasks',
+     'high'
+     );
+    }
+
     // ============================================================
     // КТО МОЖЕТ СОЗДАВАТЬ ЗАДАНИЯ
     // ============================================================
@@ -3713,6 +3725,270 @@ app.get('/api/clubs/:clubId/president', async (req, res) => {
     res.json(result.rows[0] || null);
   } catch (error) {
     console.error('❌ Ошибка получения президента:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ПОЛУЧЕНИЕ ДАННЫХ УЧАСТНИКА (ЛОГИН И ПАРОЛЬ) =====
+app.get('/api/users/:id/credentials', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Проверка авторизации
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    // Только админ может видеть пароли
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ error: 'Доступ запрещён. Только администратор.' });
+    }
+
+    const result = await pool.query(
+      'SELECT id, email, full_name, role, password_hash FROM users WHERE id = $1',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    const user = result.rows[0];
+    
+    // Возвращаем email (логин) и хеш пароля (пароль не восстановить, но можно показать что он установлен)
+    // Лучше вернуть сгенерированный пароль, если он был записан при создании
+    // Для этого нужно хранить пароль отдельно или генерировать новый
+    
+    res.json({
+      id: user.id,
+      email: user.email,
+      full_name: user.full_name,
+      role: user.role,
+      has_password: !!user.password_hash,
+      message: 'Для сброса пароля используйте функцию сброса'
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения данных пользователя:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== СБРОС ПАРОЛЯ ПОЛЬЗОВАТЕЛЯ (АДМИН) =====
+app.post('/api/users/:id/reset-password', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Проверка авторизации
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    // Только админ может сбрасывать пароли
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ error: 'Доступ запрещён. Только администратор.' });
+    }
+
+    // Проверяем, существует ли пользователь
+    const userCheck = await pool.query('SELECT id, full_name FROM users WHERE id = $1', [id]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    // Генерируем новый пароль
+    const newPassword = generatePassword();
+    const password_hash = await bcrypt.hash(newPassword, 10);
+
+    // Обновляем пароль
+    await pool.query(
+      'UPDATE users SET password_hash = $1 WHERE id = $2',
+      [password_hash, id]
+    );
+
+    // Уведомление пользователю
+    await createNotification(
+      id,
+      'system',
+      '🔑 Пароль сброшен администратором',
+      `Ваш пароль был сброшен администратором. Новый пароль: ${newPassword}. Пожалуйста, измените его при входе.`,
+      '/profile',
+      'high'
+    );
+
+    res.json({
+      message: 'Пароль сброшен',
+      new_password: newPassword,
+      user: userCheck.rows[0]
+    });
+  } catch (error) {
+    console.error('❌ Ошибка сброса пароля:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ПРИКРЕПЛЕНИЕ УЧАСТНИКА К КЛУБУ (АДМИН) =====
+app.patch('/api/users/:id/assign-club', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { club_id } = req.body;
+
+    // Проверка авторизации
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    // Только админ может прикреплять к клубу
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ error: 'Доступ запрещён. Только администратор.' });
+    }
+
+    if (!club_id) {
+      return res.status(400).json({ error: 'club_id обязателен' });
+    }
+
+    // Проверяем, существует ли пользователь
+    const userCheck = await pool.query('SELECT id, full_name, role FROM users WHERE id = $1', [id]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    const user = userCheck.rows[0];
+
+    // Проверяем, существует ли клуб
+    const clubCheck = await pool.query('SELECT id, name FROM clubs WHERE id = $1', [club_id]);
+    if (clubCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Клуб не найден' });
+    }
+
+    const club = clubCheck.rows[0];
+
+    // Обновляем club_id у пользователя
+    await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, id]);
+
+    // Если пользователь — участник, добавляем в club_participants
+    if (user.role === 'participant') {
+      await pool.query(
+        `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
+         VALUES ($1, $2, 'active', NOW())
+         ON CONFLICT (profile_id, club_id) DO NOTHING`,
+        [id, club_id]
+      );
+    }
+
+    // Если пользователь — координатор, добавляем в club_coordinators
+    if (user.role === 'club_coordinator') {
+      await pool.query(
+        `INSERT INTO club_coordinators (profile_id, club_id, created_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (profile_id, club_id) DO NOTHING`,
+        [id, club_id]
+      );
+    }
+
+    // Уведомление пользователю
+    await createNotification(
+      id,
+      'system',
+      '🏫 Вы прикреплены к КЮДу',
+      `Администратор прикрепил вас к клубу "${club.name}"`,
+      `/club/${club_id}`,
+      'high'
+    );
+
+    res.json({
+      message: `Пользователь "${user.full_name}" прикреплён к клубу "${club.name}"`,
+      user: {
+        id: user.id,
+        full_name: user.full_name,
+        club_id: club_id,
+        club_name: club.name
+      }
+    });
+  } catch (error) {
+    console.error('❌ Ошибка прикрепления к клубу:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== УДАЛЕНИЕ ПРЕЗИДЕНТА КЛУБА (АДМИН) =====
+app.delete('/api/clubs/:clubId/president', async (req, res) => {
+  try {
+    const { clubId } = req.params;
+
+    // Проверка авторизации
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    // Только админ может удалять президента
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ error: 'Доступ запрещён. Только администратор.' });
+    }
+
+    // Проверяем, существует ли клуб
+    const clubCheck = await pool.query('SELECT id, name, president_id FROM clubs WHERE id = $1', [clubId]);
+    if (clubCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Клуб не найден' });
+    }
+
+    const club = clubCheck.rows[0];
+
+    if (!club.president_id) {
+      return res.status(400).json({ error: 'В этом клубе нет президента' });
+    }
+
+    // Получаем данные президента для уведомления
+    const presidentCheck = await pool.query(
+      'SELECT id, full_name FROM users WHERE id = $1',
+      [club.president_id]
+    );
+    const president = presidentCheck.rows[0] || { full_name: 'Неизвестно' };
+
+    // Снимаем президента
+    await pool.query(
+      'UPDATE users SET is_president = false WHERE id = $1',
+      [club.president_id]
+    );
+
+    await pool.query(
+      'UPDATE clubs SET president_id = NULL, updated_at = NOW() WHERE id = $1',
+      [clubId]
+    );
+
+    // Уведомление бывшему президенту
+    if (club.president_id) {
+      await createNotification(
+        club.president_id,
+        'system',
+        '👑 Вы сняты с должности президента клуба',
+        `Администратор снял вас с должности президента клуба "${club.name}"`,
+        `/club/${clubId}`,
+        'high'
+      );
+    }
+
+    res.json({
+      message: `Президент "${president.full_name}" снят с должности`,
+      club: club,
+      removed_president: president
+    });
+  } catch (error) {
+    console.error('❌ Ошибка удаления президента:', error);
     res.status(500).json({ error: error.message });
   }
 });

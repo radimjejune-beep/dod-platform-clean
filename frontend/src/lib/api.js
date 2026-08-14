@@ -494,6 +494,43 @@ export const getClubRating = async (clubId, limit = 20) => {
 };
 
 // ============================================================
+// 20. ПРИГЛАШЕНИЯ ТЬЮТОРОВ (НОВЫЕ МЕТОДЫ)
+// ============================================================
+export const getTutorInvitations = async () => {
+  const response = await fetch(`${API_URL}/tutor-invitations`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const createTutorInvitation = async (data) => {
+  const response = await fetch(`${API_URL}/tutor-invitations`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const respondToTutorInvitation = async (invitationId, status) => {
+  const response = await fetch(`${API_URL}/tutor-invitations/${invitationId}/respond`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ status })
+  });
+  return response.json();
+};
+
+export const cancelTutorInvitation = async (invitationId) => {
+  const response = await fetch(`${API_URL}/tutor-invitations/${invitationId}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
 // ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ (ПО ЛОГИНУ И ПАРОЛЮ)
 // ============================================================
 export const parentLinkChild = async (data) => {
@@ -504,9 +541,6 @@ export const parentLinkChild = async (data) => {
   });
   return response.json();
 };
-
-
-
 
 // ============================================================
 // ЭКСПОРТ API ОБЪЕКТА
@@ -595,7 +629,13 @@ const api = {
   // Рейтинг клуба
   getClubRating,
   
-  // Привязка ребёнка (НОВЫЙ МЕТОД)
+  // Приглашения тьюторов (НОВЫЕ МЕТОДЫ)
+  getTutorInvitations,
+  createTutorInvitation,
+  respondToTutorInvitation,
+  cancelTutorInvitation,
+  
+  // Привязка ребёнка
   parentLinkChild,
 };
 

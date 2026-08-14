@@ -238,12 +238,22 @@ app.get('/api/me', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
+      console.log('❌ Нет заголовка Authorization');
       return res.status(401).json({ error: 'Нет токена' });
     }
 
     const token = authHeader.split(' ')[1];
+    if (!token) {
+      console.log('❌ Токен не найден в заголовке');
+      return res.status(401).json({ error: 'Токен не найден' });
+    }
+
+    console.log('🔑 Проверка токена:', token.substring(0, 20) + '...');
+    console.log('🔐 JWT_SECRET:', process.env.JWT_SECRET ? 'установлен' : 'НЕ УСТАНОВЛЕН!');
+
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
+      console.log('✅ Токен верифицирован для пользователя:', decoded.userId);
 
       const result = await pool.query(
         `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
@@ -258,13 +268,16 @@ app.get('/api/me', async (req, res) => {
       );
 
       if (result.rows.length === 0) {
+        console.log('❌ Пользователь не найден в БД');
         return res.status(404).json({ error: 'Пользователь не найден' });
       }
 
+      console.log('✅ Пользователь найден:', result.rows[0].email);
       res.json(result.rows[0]);
     } catch (jwtError) {
       console.error('❌ Ошибка JWT:', jwtError.message);
-      return res.status(401).json({ error: 'Неверный токен' });
+      console.error('❌ Тип ошибки:', jwtError.name);
+      return res.status(401).json({ error: 'Неверный токен', detail: jwtError.message });
     }
 
   } catch (error) {

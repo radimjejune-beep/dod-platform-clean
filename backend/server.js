@@ -15,13 +15,49 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dod-platform-
 
 console.log('🚀 ЗАПУСК БЭКЕНДА');
 
+// ============================================================
+// CORS НАСТРОЙКА (ИСПРАВЛЕННАЯ)
+// ============================================================
 app.use(cors({
-  origin: '*',
+  origin: [
+    '*',
+    'https://dod-frontend.relaxdev.ru',
+    'https://dod-platform-clean.relaxdev.ru',
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 app.options('*', cors());
+
+// ДОПОЛНИТЕЛЬНЫЙ CORS MIDDLEWARE (НА ВСЯКИЙ СЛУЧАЙ)
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'https://dod-frontend.relaxdev.ru',
+    'https://dod-platform-clean.relaxdev.ru',
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ];
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin) || !origin) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 

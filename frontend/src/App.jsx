@@ -46,6 +46,10 @@ import TutorInvitations from './pages/TutorInvitations';
 import StaffManagement from './pages/StaffManagement';
 import StaffCalendar from './pages/StaffCalendar';
 
+// ===== НОВЫЕ СТРАНИЦЫ ДЛЯ ВНУТРЕННИХ МЕРОПРИЯТИЙ КЛУБА =====
+import MyClubEvents from './pages/MyClubEvents';
+import ClubCalendar from './pages/ClubCalendar';
+
 // Тьютор
 import TutorDashboard from './pages/TutorDashboard';
 import MyJournal from './pages/MyJournal';
@@ -307,6 +311,21 @@ function AppRoutes() {
       <Route path="/staff-calendar" element={
         <ProtectedRoute>
           <StaffCalendar />
+        </ProtectedRoute>
+      } />
+
+      {/* ============================================================
+          НОВЫЕ МАРШРУТЫ: ВНУТРЕННИЕ МЕРОПРИЯТИЯ КЛУБА
+          ============================================================ */}
+      <Route path="/my-club-events" element={
+        <ProtectedRoute>
+          <MyClubEvents />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/club-calendar" element={
+        <ProtectedRoute>
+          <ClubCalendar />
         </ProtectedRoute>
       } />
 

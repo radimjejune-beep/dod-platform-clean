@@ -1,581 +1,494 @@
-// frontend/src/pages/Home.jsx
+// frontend/src/pages/Login.jsx
 
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import Navigation from '../components/Navigation';
-import Footer from '../components/Footer';
-import NewsSection from '../components/NewsSection';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import logo from '../assets/Image.png';
 import ardLogo from '../assets/АРДЛОГО.png';
 
-export default function Home() {
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+const API_URL = import.meta.env.VITE_API_URL || 'https://dod-backend.relaxdev.ru/api';
+
+export default function Login() {
+  const [email, setEmail] = useState('newadmin@dod.ru');
+  const [password, setPassword] = useState('123456');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
     const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const response = await fetch('https://dod-backend.relaxdev.ru/api/me', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) {
-          const user = await response.json();
-          setProfile(user);
-        }
-      } catch (err) {
-        console.error('Ошибка:', err);
+    const sessionId = sessionStorage.getItem('sessionId');
+    
+    if (token && !sessionId) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    }
+    
+    if (token && sessionId) {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (user && user.role) {
+        redirectByRole(user.role);
       }
     }
-    setLoading(false);
+  }, []);
+
+  const redirectByRole = (role) => {
+    const routes = {
+      'participant': '/participant-dashboard',
+      'parent': '/parent-dashboard',
+      'club_coordinator': '/club-coordinator-dashboard',
+      'tutor': '/tutor-dashboard',
+      'admin': '/dashboard',
+      'movement_coordinator': '/dashboard',
+      'president': '/dashboard',
+      'vice_president': '/dashboard'
+    };
+    navigate(routes[role] || '/dashboard');
   };
 
-  const handleGetStarted = () => {
-    if (profile) {
-      navigate('/dashboard');
-    } else {
-      navigate('/register');
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Ошибка входа');
+      }
+
+      const data = await response.json();
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      const sessionId = Date.now().toString() + '_' + Math.random().toString(36).slice(2, 6);
+      sessionStorage.setItem('sessionId', sessionId);
+      sessionStorage.setItem('userId', data.user.id);
+      sessionStorage.setItem('userRole', data.user.role);
+
+      redirectByRole(data.user.role);
+
+    } catch (err) {
+      console.error('❌ Ошибка входа:', err);
+      setError(err.message || 'Неверный email или пароль');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleLogin = () => {
-    navigate('/login');
-  };
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0B1F3A' }}>
-        <div className="spinner" />
-      </div>
-    );
-  }
-
   return (
-    <div className="home-page">
-      <Navigation profile={profile} />
+    <div className="login-page">
+      <div className="login-bg">
+        <div className="login-bg-overlay" />
+        <div className="login-bg-particles">
+          <span>✦</span><span>✦</span><span>✦</span><span>✦</span>
+          <span>✦</span><span>✦</span><span>✦</span><span>✦</span>
+        </div>
+      </div>
 
-      {/* ===== ГЕРОЙ ===== */}
-      <section className="home-hero">
-        <div className="home-hero-bg" />
-        <div className="home-hero-content">
-          <div className="home-hero-emblem">
+      <div className="login-card">
+        <div className="login-card-inner">
+          <div className="login-emblem">
             <img 
               src={logo} 
               alt="ДОД «Дипломаты будущего»" 
-              className="home-hero-logo"
+              className="login-emblem-logo"
             />
+            <div className="login-emblem-line" />
+            <div className="login-emblem-partners">
+              <span className="login-emblem-partner-label">При поддержке</span>
+              <img 
+                src={ardLogo} 
+                alt="Ассоциация российских дипломатов" 
+                className="login-emblem-ard"
+              />
+            </div>
           </div>
-          <h1>
-            Детское общественное движение<br />
-            <span>«Дипломаты будущего»</span>
-          </h1>
-          <p className="home-hero-motto">
-            «Воспитываем новое поколение дипломатов,<br />
-            развиваем лидерские качества и формируем<br />
-            гражданскую позицию у молодёжи»
-          </p>
-          <div className="home-hero-buttons">
-            {profile ? (
-              <button className="home-hero-btn-primary" onClick={handleGetStarted}>
-                📊 Перейти в кабинет
-              </button>
-            ) : (
-              <>
-                <button className="home-hero-btn-secondary" onClick={handleLogin}>
-                  🔑 Вход
-                </button>
-                <button className="home-hero-btn-primary" onClick={handleGetStarted}>
-                  🚀 Присоединиться
-                </button>
-              </>
-            )}
+
+          <div className="login-header">
+            <h1>Детское общественное движение</h1>
+            <h2>«Дипломаты будущего»</h2>
+            <p className="login-subtitle">Ассоциация российских дипломатов</p>
+            <div className="login-divider" />
+            <p className="login-welcome">Добро пожаловать в систему</p>
           </div>
-          {!profile && (
-            <p className="home-hero-register">
-              Уже есть аккаунт? <Link to="/login">Войти</Link>
-            </p>
+
+          {error && (
+            <div className="login-error">
+              ❌ {error}
+            </div>
           )}
-          <div className="home-hero-partners">
-            <span className="home-hero-partner-label">При поддержке</span>
-            <img 
-              src={ardLogo} 
-              alt="Ассоциация российских дипломатов" 
-              className="home-hero-ard"
-            />
+
+          <form onSubmit={handleLogin}>
+            <div className="login-form-group">
+              <label>Email или логин</label>
+              <input
+                type="text"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="example@mail.com"
+              />
+            </div>
+
+            <div className="login-form-group">
+              <label>Пароль</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="Введите пароль"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="login-btn"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="login-btn-loader" />
+              ) : (
+                '🔑 Войти в систему'
+              )}
+            </button>
+          </form>
+
+          <div className="login-footer">
+            <p>
+              Нет аккаунта?{' '}
+              <Link to="/register" className="login-register-link">
+                Зарегистрироваться
+              </Link>
+            </p>
+            <p className="login-security">
+              🔒 Сессия действует только пока открыта вкладка
+            </p>
           </div>
         </div>
-      </section>
-
-      {/* ===== СТАТИСТИКА ===== */}
-      <section className="home-stats">
-        <div className="home-stats-container">
-          <div className="home-stat-item">
-            <span className="home-stat-number">10+</span>
-            <span className="home-stat-label">КЮДов</span>
-          </div>
-          <div className="home-stat-divider" />
-          <div className="home-stat-item">
-            <span className="home-stat-number">500+</span>
-            <span className="home-stat-label">Участников</span>
-          </div>
-          <div className="home-stat-divider" />
-          <div className="home-stat-item">
-            <span className="home-stat-number">50+</span>
-            <span className="home-stat-label">Мероприятий</span>
-          </div>
-          <div className="home-stat-divider" />
-          <div className="home-stat-item">
-            <span className="home-stat-number">8</span>
-            <span className="home-stat-label">Лет работы</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ===== МИССИЯ ===== */}
-      <section className="home-mission">
-        <div className="home-mission-container">
-          <div className="home-mission-icon">🕊️</div>
-          <h2>Наша миссия</h2>
-          <p>
-            Воспитание нового поколения дипломатов,<br />
-            развитие лидерских качеств и формирование<br />
-            гражданской позиции у молодёжи
-          </p>
-          <div className="home-mission-values">
-            <div className="home-mission-value">
-              <span>🤝</span>
-              <span>Дипломатия</span>
-            </div>
-            <div className="home-mission-value">
-              <span>🎯</span>
-              <span>Лидерство</span>
-            </div>
-            <div className="home-mission-value">
-              <span>🌐</span>
-              <span>Международное общение</span>
-            </div>
-            <div className="home-mission-value">
-              <span>⭐</span>
-              <span>Гражданская позиция</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ===== НОВОСТИ ===== */}
-      <NewsSection limit={3} />
-
-      <Footer />
+      </div>
 
       <style>{`
-        .home-page {
+        .login-page {
           min-height: 100vh;
-          background: #F5F2ED;
-        }
-
-        /* ===== ГЕРОЙ ===== */
-        .home-hero {
-          position: relative;
-          min-height: 480px;
           display: flex;
           align-items: center;
           justify-content: center;
-          text-align: center;
-          padding: 60px 24px;
-          overflow: hidden;
-          background: linear-gradient(145deg, #0B1F3A 0%, #051224 100%);
+          padding: 20px;
+          position: relative;
         }
 
-        .home-hero-bg {
+        .login-bg {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: 
+            radial-gradient(ellipse at 20% 30%, rgba(201, 162, 39, 0.05) 0%, transparent 60%),
+            radial-gradient(ellipse at 80% 70%, rgba(23, 74, 126, 0.05) 0%, transparent 60%),
+            linear-gradient(145deg, #0B1F3A 0%, #07152B 100%);
+          z-index: 0;
+        }
+
+        .login-bg-overlay {
           position: absolute;
-          top: -50%;
-          left: -50%;
-          width: 200%;
-          height: 200%;
-          background-image:
-            radial-gradient(ellipse at 30% 40%, rgba(201, 162, 39, 0.05) 0%, transparent 50%),
-            radial-gradient(ellipse at 70% 60%, rgba(23, 74, 126, 0.05) 0%, transparent 50%);
-          animation: heroFloat 30s ease-in-out infinite alternate;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-image: 
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 3px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 3px);
+          background-size: 40px 40px;
         }
 
-        @keyframes heroFloat {
-          0% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(-20px, 20px) scale(1.05); }
-          100% { transform: translate(20px, -20px) scale(0.95); }
+        .login-bg-particles {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          overflow: hidden;
+          pointer-events: none;
         }
 
-        .home-hero-content {
+        .login-bg-particles span {
+          position: absolute;
+          color: rgba(201, 162, 39, 0.08);
+          font-size: 20px;
+          animation: float 20s infinite linear;
+        }
+
+        .login-bg-particles span:nth-child(1) { top: 10%; left: 10%; animation-delay: 0s; }
+        .login-bg-particles span:nth-child(2) { top: 30%; left: 85%; animation-delay: 3s; }
+        .login-bg-particles span:nth-child(3) { top: 70%; left: 15%; animation-delay: 6s; }
+        .login-bg-particles span:nth-child(4) { top: 85%; left: 70%; animation-delay: 9s; }
+        .login-bg-particles span:nth-child(5) { top: 50%; left: 50%; animation-delay: 2s; }
+        .login-bg-particles span:nth-child(6) { top: 15%; left: 50%; animation-delay: 5s; }
+        .login-bg-particles span:nth-child(7) { top: 60%; left: 90%; animation-delay: 8s; }
+        .login-bg-particles span:nth-child(8) { top: 90%; left: 30%; animation-delay: 11s; }
+
+        @keyframes float {
+          0% { transform: translate(0, 0) rotate(0deg); opacity: 0.6; }
+          25% { transform: translate(30px, -20px) rotate(90deg); opacity: 1; }
+          50% { transform: translate(-20px, 30px) rotate(180deg); opacity: 0.6; }
+          75% { transform: translate(40px, 10px) rotate(270deg); opacity: 1; }
+          100% { transform: translate(0, 0) rotate(360deg); opacity: 0.6; }
+        }
+
+        .login-card {
           position: relative;
           z-index: 1;
-          max-width: 800px;
+          width: 100%;
+          max-width: 420px;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(20px);
+          border-radius: 20px;
+          padding: 40px 36px;
+          box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(201, 162, 39, 0.1);
+          animation: slideUp 0.6s ease;
         }
 
-        .home-hero-emblem {
-          width: 72px;
-          height: 72px;
-          margin: 0 auto 20px;
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-card-inner {
+          position: relative;
+        }
+
+        .login-emblem {
           display: flex;
           align-items: center;
           justify-content: center;
+          flex-direction: column;
+          margin-bottom: 20px;
         }
 
-        .home-hero-logo {
-          height: 48px;
+        .login-emblem-logo {
+          height: 64px;
           width: auto;
           object-fit: contain;
-          filter: drop-shadow(0 2px 20px rgba(201, 162, 39, 0.1));
         }
 
-        .home-hero h1 {
-          font-family: 'Playfair Display', serif;
-          font-size: 38px;
-          font-weight: 700;
-          color: white;
-          margin-bottom: 12px;
-          line-height: 1.2;
-        }
-
-        .home-hero h1 span {
+        .login-emblem-line {
+          width: 60px;
+          height: 2px;
           background: linear-gradient(135deg, #C9A227, #E8D9A8);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+          margin-top: 12px;
+          border-radius: 2px;
         }
 
-        .home-hero-motto {
-          font-size: 17px;
-          color: rgba(255, 255, 255, 0.6);
-          line-height: 1.7;
-          margin-bottom: 28px;
-          font-weight: 300;
-          letter-spacing: 0.3px;
-        }
-
-        .home-hero-buttons {
+        .login-emblem-partners {
           display: flex;
-          gap: 16px;
-          justify-content: center;
-          flex-wrap: wrap;
-        }
-
-        .home-hero-btn-primary {
-          padding: 14px 36px;
-          background: linear-gradient(135deg, #C9A227, #B8921F);
-          color: #0B1F3A;
-          border: none;
-          border-radius: 10px;
-          font-size: 17px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          box-shadow: 0 4px 24px rgba(201, 162, 39, 0.25);
-          letter-spacing: 0.3px;
-        }
-
-        .home-hero-btn-primary:hover {
-          transform: translateY(-4px) scale(1.02);
-          box-shadow: 0 8px 40px rgba(201, 162, 39, 0.35);
-        }
-
-        .home-hero-btn-secondary {
-          padding: 14px 32px;
-          background: transparent;
-          color: white;
-          border: 2px solid rgba(255, 255, 255, 0.2);
-          border-radius: 10px;
-          font-size: 17px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          letter-spacing: 0.3px;
-        }
-
-        .home-hero-btn-secondary:hover {
-          border-color: rgba(255, 255, 255, 0.5);
-          background: rgba(255, 255, 255, 0.05);
-          transform: translateY(-4px);
-        }
-
-        .home-hero-register {
-          margin-top: 16px;
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.4);
-        }
-
-        .home-hero-register a {
-          color: #C9A227;
-          text-decoration: none;
-          font-weight: 600;
-          transition: all 0.2s ease;
-        }
-
-        .home-hero-register a:hover {
-          color: #E8D9A8;
-        }
-
-        .home-hero-partners {
-          display: flex;
+          flex-direction: column;
           align-items: center;
-          justify-content: center;
-          gap: 12px;
-          margin-top: 20px;
-          padding-top: 16px;
-          border-top: 1px solid rgba(255, 255, 255, 0.05);
+          gap: 4px;
+          margin-top: 8px;
         }
 
-        .home-hero-partner-label {
-          font-size: 11px;
-          color: rgba(255, 255, 255, 0.3);
+        .login-emblem-partner-label {
+          font-size: 10px;
+          color: #98A2B3;
           letter-spacing: 1px;
           text-transform: uppercase;
         }
 
-        .home-hero-ard {
+        .login-emblem-ard {
           height: 28px;
           width: auto;
           object-fit: contain;
-          opacity: 0.4;
+          opacity: 0.7;
           transition: opacity 0.3s ease;
         }
 
-        .home-hero-ard:hover {
-          opacity: 0.8;
+        .login-emblem-ard:hover {
+          opacity: 1;
         }
 
-        /* ===== СТАТИСТИКА ===== */
-        .home-stats {
-          margin-top: -30px;
-          position: relative;
-          z-index: 2;
-          padding: 0 24px;
-        }
-
-        .home-stats-container {
-          max-width: 900px;
-          margin: 0 auto;
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          background: white;
-          border-radius: 16px;
-          padding: 28px 32px;
-          box-shadow: 0 12px 48px rgba(11, 31, 58, 0.06);
-          border: 1px solid #E2E7EF;
-        }
-
-        .home-stat-item {
+        .login-header {
           text-align: center;
+          margin-bottom: 28px;
         }
 
-        .home-stat-number {
-          display: block;
+        .login-header h1 {
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          font-weight: 400;
+          color: #667085;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          margin: 0 0 4px;
+        }
+
+        .login-header h2 {
           font-family: 'Playfair Display', serif;
-          font-size: 28px;
+          font-size: 24px;
           font-weight: 700;
           color: #0B1F3A;
-        }
-
-        .home-stat-label {
-          display: block;
-          font-size: 13px;
-          color: #667085;
-          margin-top: 2px;
-        }
-
-        .home-stat-divider {
-          width: 1px;
-          background: #E2E7EF;
-        }
-
-        /* ===== МИССИЯ ===== */
-        .home-mission {
-          padding: 60px 24px;
-          background: linear-gradient(145deg, #0B1F3A 0%, #051224 100%);
-          margin-top: 40px;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .home-mission::before {
-          content: '';
-          position: absolute;
-          top: -30%;
-          right: -10%;
-          width: 300px;
-          height: 300px;
-          background: radial-gradient(circle, rgba(201, 162, 39, 0.03), transparent 70%);
-          border-radius: 50%;
-        }
-
-        .home-mission-container {
-          max-width: 800px;
-          margin: 0 auto;
-          text-align: center;
-          position: relative;
-          z-index: 1;
-        }
-
-        .home-mission-icon {
-          font-size: 40px;
-          margin-bottom: 12px;
-        }
-
-        .home-mission h2 {
-          font-family: 'Playfair Display', serif;
-          font-size: 28px;
-          font-weight: 700;
-          color: white;
-          margin-bottom: 12px;
-        }
-
-        .home-mission p {
-          font-size: 17px;
-          color: rgba(255, 255, 255, 0.6);
-          line-height: 1.8;
-          margin-bottom: 28px;
-          font-weight: 300;
-        }
-
-        .home-mission-values {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
-          max-width: 700px;
-          margin: 0 auto;
-        }
-
-        .home-mission-value {
-          text-align: center;
-          padding: 16px 12px;
-          background: rgba(255, 255, 255, 0.03);
-          border-radius: 10px;
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          transition: all 0.3s ease;
-        }
-
-        .home-mission-value:hover {
-          background: rgba(255, 255, 255, 0.06);
-          transform: translateY(-4px);
-          border-color: rgba(201, 162, 39, 0.15);
-        }
-
-        .home-mission-value span:first-child {
-          display: block;
-          font-size: 24px;
-          margin-bottom: 4px;
-        }
-
-        .home-mission-value span:last-child {
-          font-size: 12px;
-          color: rgba(255, 255, 255, 0.5);
-          font-weight: 400;
+          margin: 0 0 4px;
           letter-spacing: 0.5px;
         }
 
-        /* ===== МОБИЛЬНЫЕ ===== */
-        @media (max-width: 768px) {
-          .home-hero {
-            min-height: 380px;
-            padding: 40px 20px;
-          }
+        .login-subtitle {
+          font-size: 11px;
+          color: #C9A227;
+          font-weight: 600;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          margin: 4px 0 0;
+        }
 
-          .home-hero h1 {
-            font-size: 28px;
-          }
+        .login-divider {
+          width: 40px;
+          height: 2px;
+          background: linear-gradient(135deg, #C9A227, #E8D9A8);
+          margin: 12px auto;
+          border-radius: 2px;
+        }
 
-          .home-hero-motto {
-            font-size: 15px;
-          }
+        .login-welcome {
+          font-size: 13px;
+          color: #667085;
+          margin: 0;
+        }
 
-          .home-hero-btn-primary,
-          .home-hero-btn-secondary {
-            padding: 12px 24px;
-            font-size: 15px;
-          }
+        .login-form-group {
+          margin-bottom: 16px;
+        }
 
-          .home-hero-logo {
-            height: 36px;
-          }
+        .login-form-group label {
+          display: block;
+          font-size: 13px;
+          font-weight: 500;
+          color: #0B1F3A;
+          margin-bottom: 4px;
+        }
 
-          .home-hero-ard {
-            height: 22px;
-          }
+        .login-form-group input {
+          width: 100%;
+          padding: 10px 14px;
+          border: 1.5px solid #D5DCE7;
+          border-radius: 10px;
+          font-size: 14px;
+          outline: none;
+          transition: all 0.3s ease;
+          background: #F8FAFC;
+          color: #0B1F3A;
+        }
 
-          .home-stats-container {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-            padding: 20px;
-          }
+        .login-form-group input:focus {
+          border-color: #C9A227;
+          background: white;
+          box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.1);
+        }
 
-          .home-stat-divider:nth-child(2) {
-            display: none;
-          }
+        .login-form-group input::placeholder {
+          color: #98A2B3;
+        }
 
-          .home-mission-values {
-            grid-template-columns: repeat(2, 1fr);
-          }
+        .login-btn {
+          width: 100%;
+          padding: 12px;
+          background: linear-gradient(135deg, #C9A227, #E8D9A8);
+          border: none;
+          border-radius: 10px;
+          font-size: 16px;
+          font-weight: 600;
+          color: #0B1F3A;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 16px rgba(201, 162, 39, 0.25);
+          margin-top: 4px;
+          letter-spacing: 0.5px;
+        }
+
+        .login-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 30px rgba(201, 162, 39, 0.35);
+        }
+
+        .login-btn:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        .login-btn-loader {
+          display: inline-block;
+          width: 20px;
+          height: 20px;
+          border: 2px solid rgba(11, 31, 58, 0.2);
+          border-top-color: #0B1F3A;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        .login-error {
+          padding: 12px 16px;
+          background: #FCEBEC;
+          color: #B3262E;
+          border-radius: 10px;
+          margin-bottom: 16px;
+          font-size: 14px;
+          text-align: center;
+          border-left: 4px solid #B3262E;
+        }
+
+        .login-footer {
+          text-align: center;
+          margin-top: 20px;
+          padding-top: 16px;
+          border-top: 1px solid #F4F6F9;
+        }
+
+        .login-footer p {
+          font-size: 14px;
+          color: #667085;
+          margin: 0;
+        }
+
+        .login-register-link {
+          color: #0B1F3A;
+          font-weight: 600;
+          text-decoration: none;
+          border-bottom: 2px solid #C9A227;
+          padding-bottom: 2px;
+          transition: all 0.2s ease;
+        }
+
+        .login-register-link:hover {
+          color: #174A7E;
+          border-bottom-color: #174A7E;
+        }
+
+        .login-security {
+          font-size: 12px !important;
+          color: #98A2B3 !important;
+          margin-top: 8px !important;
         }
 
         @media (max-width: 480px) {
-          .home-hero h1 {
-            font-size: 22px;
+          .login-card {
+            padding: 28px 20px;
           }
-
-          .home-hero-motto {
-            font-size: 13px;
-          }
-
-          .home-hero-buttons {
-            flex-direction: column;
-            align-items: center;
-          }
-
-          .home-hero-btn-primary,
-          .home-hero-btn-secondary {
-            width: 100%;
-            text-align: center;
-            padding: 12px 20px;
-            font-size: 14px;
-          }
-
-          .home-hero-emblem {
-            width: 56px;
-            height: 56px;
-          }
-
-          .home-hero-logo {
-            height: 32px;
-          }
-
-          .home-stats-container {
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            padding: 16px;
-          }
-
-          .home-stat-number {
-            font-size: 22px;
-          }
-
-          .home-mission h2 {
-            font-size: 22px;
-          }
-
-          .home-mission p {
-            font-size: 14px;
-          }
-
-          .home-mission-values {
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-          }
-
-          .home-mission-value span:first-child {
+          .login-header h2 {
             font-size: 20px;
+          }
+          .login-emblem-logo {
+            height: 48px;
+          }
+          .login-emblem-ard {
+            height: 22px;
           }
         }
       `}</style>

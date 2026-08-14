@@ -27,6 +27,9 @@ export default function Home() {
         if (response.ok) {
           const user = await response.json();
           setProfile(user);
+        } else {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
         }
       } catch (err) {
         console.error('Ошибка:', err);

@@ -24,41 +24,52 @@ export default function NewsSection({ limit = 3 }) {
     loadProfile();
   }, []);
 
+  // ===== ЗАГРУЗКА ПРОФИЛЯ (БЕЗ ТОКЕНА - НЕ КРИТИЧНО) =====
   const loadProfile = async () => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('👤 Нет токена, профиль не загружен');
+        return;
+      }
+      
       const response = await fetch('https://dod-backend.relaxdev.ru/api/me', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
+      
       if (response.ok) {
         const data = await response.json();
         setProfile(data);
+        console.log('👤 Профиль загружен:', data.role);
+      } else {
+        console.log('👤 Не удалось загрузить профиль, статус:', response.status);
+        // Не удаляем токен, просто не показываем кнопки управления
       }
     } catch (err) {
       console.error('Ошибка загрузки профиля:', err);
+      // Игнорируем ошибку - новости всё равно покажутся
     }
   };
 
+  // ===== ЗАГРУЗКА НОВОСТЕЙ (ПУБЛИЧНЫЙ ДОСТУП - БЕЗ ТОКЕНА) =====
   const loadNews = async () => {
     try {
-      const token = localStorage.getItem('token');
+      setLoading(true);
       console.log('📰 Загрузка новостей...');
-      const response = await fetch('https://dod-backend.relaxdev.ru/api/news', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      
+      // НЕ ОТПРАВЛЯЕМ ТОКЕН - ПУБЛИЧНЫЙ ДОСТУП
+      const response = await fetch('https://dod-backend.relaxdev.ru/api/news');
       
       if (!response.ok) {
-        throw new Error('Ошибка загрузки новостей');
+        throw new Error(`Ошибка ${response.status}: ${response.statusText}`);
       }
       
       const data = await response.json();
       console.log('📰 Загружено новостей:', data?.length || 0);
-      console.log('📰 Данные:', data);
       setNews(data || []);
+      setError('');
     } catch (err) {
       console.error('❌ Ошибка загрузки новостей:', err);
       setError('Не удалось загрузить новости');
@@ -68,6 +79,7 @@ export default function NewsSection({ limit = 3 }) {
   };
 
   const formatDate = (date) => {
+    if (!date) return '';
     return new Date(date).toLocaleDateString('ru-RU', {
       day: 'numeric',
       month: 'long',
@@ -125,6 +137,12 @@ export default function NewsSection({ limit = 3 }) {
 
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setMessage('❌ Не авторизован');
+        setMessageType('error');
+        setSaving(false);
+        return;
+      }
       
       // Если есть новое изображение — загружаем
       let imageUrl = editForm.image_url;
@@ -188,6 +206,12 @@ export default function NewsSection({ limit = 3 }) {
     
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setMessage('❌ Не авторизован');
+        setMessageType('error');
+        return;
+      }
+      
       const response = await fetch(`https://dod-backend.relaxdev.ru/api/news/${id}`, {
         method: 'DELETE',
         headers: {

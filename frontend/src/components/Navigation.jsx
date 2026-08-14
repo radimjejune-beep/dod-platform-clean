@@ -259,7 +259,7 @@ export default function Navigation({ profile }) {
     events: 'Мероприятия',
     people: 'Люди',
     clubs: 'КЮДы',
-    clubManagement: 'Управление клубом',  // ← НОВАЯ ГРУППА
+    clubManagement: 'Управление клубом',
     achievements: 'Достижения',
     reviews: 'Оценки',
     reports: 'Отчёты',
@@ -271,6 +271,9 @@ export default function Navigation({ profile }) {
   };
 
   const groupOrder = ['main', 'events', 'people', 'clubs', 'clubManagement', 'achievements', 'reviews', 'reports', 'tasks', 'communication', 'staffCalendar', 'clubEvents', 'settings'];
+
+  // ===== ВАЖНО: menuGroups вычисляется ЗДЕСЬ =====
+  const menuGroups = getMenuGroups();
 
   const sortedGroups = Object.entries(menuGroups).sort((a, b) => {
     const indexA = groupOrder.indexOf(a[0]);

@@ -316,6 +316,7 @@ export default function AdminNews() {
                   e.currentTarget.style.background = '#FBF4DC';
                 }}
                 onDragLeave={(e) => {
+                  e.preventDefault();
                   e.currentTarget.style.borderColor = '#D5DCE7';
                   e.currentTarget.style.background = '#F8FAFC';
                 }}
@@ -335,7 +336,7 @@ export default function AdminNews() {
                 >
                   {imagePreview ? (
                     <div>
-                      <img src={imagePreview} alt="Превью" style={{ maxHeight: '200px', maxWidth: '100%', borderRadius: '8px' }} />
+                      <img src={imagePreview} alt="Превью" style={{ maxHeight: '150px', maxWidth: '100%', borderRadius: '8px' }} />
                       <button
                         type="button"
                         className="btn-secondary"

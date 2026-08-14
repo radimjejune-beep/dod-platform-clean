@@ -2828,7 +2828,7 @@ app.get('/api/president-tasks', async (req, res) => {
       console.log('👑 Админ/Координатор движения: видит все задания');
     } 
     else if (userRole === 'president') {
-      // Президент ДВИЖЕНИЯ — видит все задания (он создаёт их)
+      // Президент ДВИЖЕНИЯ — видит все задания
       console.log('👑 Президент движения: видит все задания');
     }
     else if (userRole === 'vice_president') {
@@ -2836,10 +2836,9 @@ app.get('/api/president-tasks', async (req, res) => {
       console.log('👑 Вице-президент движения: видит все задания');
     }
     else if (userRole === 'club_coordinator') {
-      // Координатор КЮДа — видит задания:
-      // 1. Созданные им (created_by = userId)
-      // 2. Задания для его клуба (club_id = его клуб)
-      // 3. Глобальные задания
+      // ============================================================
+      // КООРДИНАТОР КЮДА — ВИДИТ ТОЛЬКО ЗАДАНИЯ СВОЕГО КЛУБА
+      // ============================================================
       
       const clubResult = await pool.query(
         'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
@@ -2848,13 +2847,18 @@ app.get('/api/president-tasks', async (req, res) => {
       
       if (clubResult.rows.length > 0) {
         const clubId = clubResult.rows[0].club_id;
+        
+        // Координатор видит:
+        // 1. Задания, которые он сам создал (created_by = userId)
+        // 2. Задания для его клуба (club_id = его клуб)
+        // 3. Глобальные задания (is_global = true)
         conditions.push(`(
           pt.created_by = $${params.length + 1} 
           OR pt.club_id = $${params.length + 2} 
           OR pt.is_global = true
         )`);
         params.push(userId, clubId);
-        console.log(`🏫 Координатор КЮДа: видит свои задания, задания клуба и глобальные`);
+        console.log(`🏫 Координатор КЮДа (клуб ${clubId}): видит только задания своего клуба и глобальные`);
       } else {
         conditions.push(`pt.created_by = $${params.length + 1}`);
         params.push(userId);
@@ -2862,7 +2866,6 @@ app.get('/api/president-tasks', async (req, res) => {
       }
     }
     else {
-      // Остальные роли — ничего не видят
       conditions.push('1 = 0');
       console.log('⛔ Нет прав для просмотра заданий');
     }
@@ -2944,8 +2947,6 @@ app.post('/api/president-tasks', async (req, res) => {
     
     // 1. ПРЕЗИДЕНТ ДВИЖЕНИЯ
     if (userRole === 'president') {
-      // Президент движения может создавать задания для президентов клубов
-      // НЕ может создавать глобальные задания
       if (is_global) {
         return res.status(403).json({ error: 'Президент движения не может создавать глобальные задания' });
       }
@@ -2983,7 +2984,6 @@ app.post('/api/president-tasks', async (req, res) => {
         return res.status(403).json({ error: 'Координатор КЮДа не может создавать глобальные задания' });
       }
       
-      // Проверяем, что назначенный пользователь — президент этого клуба
       if (assigned_to) {
         const presidentCheck = await pool.query(
           `SELECT u.id, u.role, u.is_president, u.club_id 

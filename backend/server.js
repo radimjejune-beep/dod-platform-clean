@@ -1087,9 +1087,9 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       return res.status(400).json({ error: 'Текст ответа обязателен' });
     }
 
-    // Проверяем существование обращения
+    // ===== ПРОВЕРЯЕМ СУЩЕСТВОВАНИЕ ОБРАЩЕНИЯ (С ЯВНЫМ UUID) =====
     const appealCheck = await pool.query(
-      'SELECT id, coordinator_id FROM appeals WHERE id = $1',
+      'SELECT id, coordinator_id FROM appeals WHERE id = $1::UUID',
       [id]
     );
     if (appealCheck.rows.length === 0) {
@@ -1098,14 +1098,14 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
 
     const appeal = appealCheck.rows[0];
 
-    // Вставляем ответ
+    // ===== ВСТАВЛЯЕМ ОТВЕТ =====
     await pool.query(
       `INSERT INTO appeal_replies (appeal_id, author_id, message, created_at)
        VALUES ($1, $2, $3, NOW())`,
       [id, userId, message.trim()]
     );
 
-    // Обновляем статус
+    // ===== ОБНОВЛЯЕМ СТАТУС =====
     const newStatus = status || 'in_progress';
     await pool.query(
       `UPDATE appeals 
@@ -1116,7 +1116,7 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       [newStatus, userId, id]
     );
 
-    // Уведомление координатору
+    // ===== УВЕДОМЛЕНИЕ КООРДИНАТОРУ =====
     if (appeal.coordinator_id) {
       await createNotification(
         appeal.coordinator_id,
@@ -1128,7 +1128,7 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       );
     }
 
-    // Получаем обновлённое обращение
+    // ===== ПОЛУЧАЕМ ОБНОВЛЁННОЕ ОБРАЩЕНИЕ =====
     const result = await pool.query(
       `SELECT a.*, 
               u.full_name as coordinator_name,

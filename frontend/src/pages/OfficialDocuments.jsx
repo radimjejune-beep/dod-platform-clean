@@ -65,6 +65,7 @@ export default function OfficialDocuments() {
   const canApprove = profile && ['president', 'vice_president'].includes(profile.role);
   const canPublish = profile && ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile.role);
   const canView = profile && ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'].includes(profile.role);
+  const isAdmin = profile?.role === 'admin';
 
   const getDocumentTypeLabel = (type) => {
     const labels = {
@@ -124,7 +125,6 @@ export default function OfficialDocuments() {
         throw new Error(result.error);
       }
 
-      // Автоматически отправляем на согласование
       const submitResponse = await fetch(`https://dod-backend.relaxdev.ru/api/documents/${result.id}/submit`, {
         method: 'PATCH',
         headers: {
@@ -242,6 +242,34 @@ export default function OfficialDocuments() {
     }
   };
 
+  const handleDelete = async (id, title) => {
+    if (!confirm(`Удалить документ "${title}"?`)) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/documents/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      setMessage('✅ Документ удалён');
+      setMessageType('success');
+      loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
+
   const handleMarkAsRead = async (id) => {
     try {
       const token = localStorage.getItem('token');
@@ -318,7 +346,6 @@ export default function OfficialDocuments() {
           </div>
         )}
 
-        {/* ФОРМА СОЗДАНИЯ */}
         {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px', borderLeft: '4px solid #C9A227' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
@@ -407,7 +434,6 @@ export default function OfficialDocuments() {
           </div>
         )}
 
-        {/* СПИСОК ДОКУМЕНТОВ */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
@@ -526,6 +552,18 @@ export default function OfficialDocuments() {
                           }}
                         >
                           📢 Опубликовать
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button
+                          className="btn-danger"
+                          style={{ padding: '4px 12px', fontSize: '12px' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(doc.id, doc.title);
+                          }}
+                        >
+                          🗑️ Удалить
                         </button>
                       )}
                       <button
@@ -697,6 +735,19 @@ export default function OfficialDocuments() {
                 </div>
               )}
             </div>
+
+            {isAdmin && (
+              <button
+                className="btn-danger"
+                style={{ width: '100%', marginTop: '16px' }}
+                onClick={() => {
+                  handleDelete(selectedDocument.id, selectedDocument.title);
+                  setShowModal(false);
+                }}
+              >
+                🗑️ Удалить документ
+              </button>
+            )}
 
             {canApprove && selectedDocument.status === 'pending_approval' && (
               <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E7EF', display: 'flex', gap: '12px' }}>

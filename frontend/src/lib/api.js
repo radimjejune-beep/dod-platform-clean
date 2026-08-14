@@ -53,9 +53,6 @@ export const getMe = async () => {
   const data = await response.json();
   console.log('📥 Ответ:', data);
   
-  // ============================================================
-  // СОХРАНЯЕМ club_id В LOCALSTORAGE ДЛЯ БЫСТРОГО ДОСТУПА
-  // ============================================================
   if (data && data.club_id) {
     localStorage.setItem('userClubId', data.club_id);
     console.log('🏫 Сохранён club_id в localStorage:', data.club_id);
@@ -63,7 +60,6 @@ export const getMe = async () => {
     localStorage.removeItem('userClubId');
   }
   
-  // Сохраняем всю информацию о пользователе
   if (data && data.id) {
     localStorage.setItem('user', JSON.stringify(data));
   }
@@ -75,10 +71,7 @@ export const getMe = async () => {
 // ПОЛУЧЕНИЕ CLUB_ID ИЗ LOCALSTORAGE
 // ============================================================
 export const getUserClubId = () => {
-  // Пробуем получить из localStorage
   let clubId = localStorage.getItem('userClubId');
-  
-  // Если нет — пробуем из сохранённого пользователя
   if (!clubId) {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -87,7 +80,6 @@ export const getUserClubId = () => {
       clubId = null;
     }
   }
-  
   return clubId;
 };
 
@@ -293,7 +285,6 @@ export const addAppeal = async (data) => {
   return response.json();
 };
 
-// ===== ОТВЕТ НА ОБРАЩЕНИЕ =====
 export const replyToAppeal = async (appealId, data) => {
   const response = await fetch(`${API_URL}/appeals/${appealId}/reply`, {
     method: 'POST',
@@ -567,7 +558,7 @@ export const cancelTutorInvitation = async (invitationId) => {
 };
 
 // ============================================================
-// ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ
+// 21. ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ (ПО ЛОГИНУ И ПАРОЛЮ)
 // ============================================================
 export const parentLinkChild = async (data) => {
   const response = await fetch(`${API_URL}/parent-link-child`, {
@@ -578,79 +569,42 @@ export const parentLinkChild = async (data) => {
   return response.json();
 };
 
-// ===== ПОЛУЧЕНИЕ ДАННЫХ ПОЛЬЗОВАТЕЛЯ (АДМИН) =====
-export const getUserCredentials = async (userId) => {
-  const response = await fetch(`${API_URL}/users/${userId}/credentials`, {
-    method: 'GET',
-    headers: headers()
-  });
-  return response.json();
-};
-
-// ===== СБРОС ПАРОЛЯ ПОЛЬЗОВАТЕЛЯ (АДМИН) =====
-export const resetUserPassword = async (userId) => {
-  const response = await fetch(`${API_URL}/users/${userId}/reset-password`, {
-    method: 'POST',
-    headers: headers()
-  });
-  return response.json();
-};
-
-// ===== ПРИКРЕПЛЕНИЕ УЧАСТНИКА К КЛУБУ (АДМИН) =====
-export const assignUserToClub = async (userId, clubId) => {
-  const response = await fetch(`${API_URL}/users/${userId}/assign-club`, {
-    method: 'PATCH',
-    headers: headers(),
-    body: JSON.stringify({ club_id: clubId })
-  });
-  return response.json();
-};
-
-// ===== УДАЛЕНИЕ ПРЕЗИДЕНТА КЛУБА (АДМИН) =====
-export const removeClubPresident = async (clubId) => {
-  const response = await fetch(`${API_URL}/clubs/${clubId}/president`, {
-    method: 'DELETE',
-    headers: headers()
-  });
-  return response.json();
-};
-
 // ============================================================
-// АДМИН-ФУНКЦИИ
+// 22. АДМИН-ФУНКЦИИ
 // ============================================================
-
-// ===== ПРИКРЕПЛЕНИЕ УЧАСТНИКА К КЛУБУ (АДМИН) =====
-export const assignUserToClub = async (userId, clubId) => {
-  const response = await fetch(`${API_URL}/users/${userId}/assign-club`, {
-    method: 'PATCH',
-    headers: headers(),
-    body: JSON.stringify({ club_id: clubId })
-  });
-  return response.json();
-};
-
-// ===== СБРОС ПАРОЛЯ ПОЛЬЗОВАТЕЛЯ (АДМИН) =====
-export const resetUserPassword = async (userId) => {
-  const response = await fetch(`${API_URL}/users/${userId}/reset-password`, {
-    method: 'POST',
-    headers: headers()
-  });
-  return response.json();
-};
-
-// ===== УДАЛЕНИЕ ПРЕЗИДЕНТА КЛУБА (АДМИН) =====
-export const removeClubPresident = async (clubId) => {
-  const response = await fetch(`${API_URL}/clubs/${clubId}/president`, {
-    method: 'DELETE',
-    headers: headers()
-  });
-  return response.json();
-};
 
 // ===== ПОЛУЧЕНИЕ ДАННЫХ ПОЛЬЗОВАТЕЛЯ (ЛОГИН) =====
 export const getUserCredentials = async (userId) => {
   const response = await fetch(`${API_URL}/users/${userId}/credentials`, {
     method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ===== СБРОС ПАРОЛЯ ПОЛЬЗОВАТЕЛЯ (АДМИН) =====
+export const resetUserPassword = async (userId) => {
+  const response = await fetch(`${API_URL}/users/${userId}/reset-password`, {
+    method: 'POST',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ===== ПРИКРЕПЛЕНИЕ УЧАСТНИКА К КЛУБУ (АДМИН) =====
+export const assignUserToClub = async (userId, clubId) => {
+  const response = await fetch(`${API_URL}/users/${userId}/assign-club`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ club_id: clubId })
+  });
+  return response.json();
+};
+
+// ===== УДАЛЕНИЕ ПРЕЗИДЕНТА КЛУБА (АДМИН) =====
+export const removeClubPresident = async (clubId) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/president`, {
+    method: 'DELETE',
     headers: headers()
   });
   return response.json();
@@ -696,7 +650,7 @@ const api = {
   // Обращения
   getAppeals,
   addAppeal,
-  replyToAppeal,        // ← НОВЫЙ МЕТОД!
+  replyToAppeal,
   getAppealReplies,
   
   // Запросы на тьюторов
@@ -751,6 +705,12 @@ const api = {
   
   // Привязка ребёнка
   parentLinkChild,
+  
+  // Админ-функции
+  getUserCredentials,
+  resetUserPassword,
+  assignUserToClub,
+  removeClubPresident,
 };
 
 export default api;

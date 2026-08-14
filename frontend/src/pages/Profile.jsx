@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import AvatarUpload from '../components/AvatarUpload';
+import PresidentSection from '../components/PresidentSection';
 
 export default function Profile() {
   const [profile, setProfile] = useState(null);
@@ -655,6 +656,7 @@ export default function Profile() {
           </form>
         </div>
       </div>
+      {profile?.is_president && <PresidentSection profile={profile} />}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import PresidentSection from '../components/PresidentSection';
 
 export default function ParticipantDashboard() {
   const [profile, setProfile] = useState(null);
@@ -484,6 +485,9 @@ export default function ParticipantDashboard() {
           </div>
         )}
       </div>
+      // И в конце рендера, после всех вкладок, добавь:
+{/* ===== РАЗДЕЛ ПРЕЗИДЕНТА ===== */}
+<PresidentSection profile={profile} />
     </div>
   );
 }

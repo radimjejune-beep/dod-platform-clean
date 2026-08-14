@@ -48,6 +48,7 @@ import ClubCalendar from './pages/ClubCalendar';
 import MyClubEvents from './pages/MyClubEvents';
 import NewsDetail from './pages/NewsDetail';
 import OfficialDocuments from './pages/OfficialDocuments';
+import TutorAssignments from './pages/TutorAssignments'; // ← ДОБАВЬ ЭТО
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -141,6 +142,7 @@ function App() {
         <Route path="/my-journal" element={<MyJournal />} />
         <Route path="/tutor-requests" element={<TutorRequests />} />
         <Route path="/tutor-invitations" element={<TutorInvitations />} />
+        <Route path="/tutor-assignments" element={<TutorAssignments />} /> {/* ← ДОБАВЬ ЭТО */}
         
         {/* Сотрудники */}
         <Route path="/staff" element={<StaffManagement />} />

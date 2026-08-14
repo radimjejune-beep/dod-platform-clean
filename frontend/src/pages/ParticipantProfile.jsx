@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import AssignClubModal from '../components/AssignClubModal';
 
 export default function ParticipantProfile() {
   const { id } = useParams();
@@ -14,6 +15,7 @@ export default function ParticipantProfile() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('info');
   const [error, setError] = useState('');
+  const [showAssignModal, setShowAssignModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function ParticipantProfile() {
       }
       setParticipant(found);
 
-      // ===== ЗАГРУЖАЕМ ДОСТИЖЕНИЯ ЧЕРЕЗ ПРЯМОЙ FETCH =====
+      // ===== ЗАГРУЖАЕМ ДОСТИЖЕНИЯ =====
       const token = localStorage.getItem('token');
       
       try {
@@ -65,7 +67,7 @@ export default function ParticipantProfile() {
         console.error('Ошибка получения достижений:', err);
       }
 
-      // ===== ЗАГРУЖАЕМ МЕРОПРИЯТИЯ ЧЕРЕЗ ПРЯМОЙ FETCH =====
+      // ===== ЗАГРУЖАЕМ МЕРОПРИЯТИЯ =====
       try {
         const response = await fetch('https://dod-backend.relaxdev.ru/api/events', {
           headers: {
@@ -247,15 +249,42 @@ export default function ParticipantProfile() {
               </div>
             </div>
 
-            {canEdit && (
-              <button
-                className="btn-primary"
-                onClick={() => navigate(`/participant/${participant.id}/edit`)}
-              >
-                ✏️ Редактировать
-              </button>
-            )}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {canEdit && (
+                <button
+                  className="btn-primary"
+                  onClick={() => navigate(`/participant/${participant.id}/edit`)}
+                >
+                  ✏️ Редактировать
+                </button>
+              )}
+              {canEdit && profile?.role === 'admin' && (
+                <button
+                  className="btn-secondary"
+                  style={{ padding: '8px 16px', fontSize: '13px', background: '#6B46C1', color: 'white', border: 'none' }}
+                  onClick={() => setShowAssignModal(true)}
+                >
+                  📌 Прикрепить к КЮДу
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Информация о клубе */}
+          {participant.club_name && (
+            <div style={{ 
+              marginTop: '16px', 
+              paddingTop: '16px', 
+              borderTop: '1px solid #E2E7EF',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <span style={{ fontSize: '14px', color: '#667085' }}>
+                🏫 Клуб: <strong>{participant.club_name}</strong>
+              </span>
+            </div>
+          )}
         </div>
 
         {/* ВКЛАДКИ */}
@@ -524,6 +553,21 @@ export default function ParticipantProfile() {
           </div>
         )}
       </div>
+
+      {/* ===== МОДАЛЬНОЕ ОКНО: ПРИКРЕПЛЕНИЕ К КЛУБУ ===== */}
+      <AssignClubModal
+        isOpen={showAssignModal}
+        onClose={() => {
+          setShowAssignModal(false);
+          loadData(); // Обновляем данные после закрытия
+        }}
+        userId={participant?.id}
+        userFullName={participant?.full_name}
+        currentClubId={participant?.club_id}
+        onAssigned={() => {
+          loadData(); // Обновляем данные после привязки
+        }}
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import FilterBar from '../components/FilterBar';
+import AssignClubModal from '../components/AssignClubModal';
 import * as XLSX from 'xlsx';
 
 export default function AdminUsers() {
@@ -34,9 +35,10 @@ export default function AdminUsers() {
   const [availableParents, setAvailableParents] = useState([]);
   const [availableChildren, setAvailableChildren] = useState([]);
   
-  // ===== ДЛЯ ПРИКРЕПЛЕНИЯ К КЛУБУ =====
-  const [selectedClub, setSelectedClub] = useState('');
+  // ===== ПРИКРЕПЛЕНИЕ К КЛУБУ (ИНДИВИДУАЛЬНО) =====
+  const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [selectedUserFullName, setSelectedUserFullName] = useState('');
   
   const [form, setForm] = useState({
     full_name: '',
@@ -233,61 +235,6 @@ export default function AdminUsers() {
       setMessage(`✅ Пароль для "${fullName}" сброшен. Новый пароль: ${result.new_password}`);
       setMessageType('success');
       setTimeout(() => setMessage(''), 5000);
-    } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
-      setMessageType('error');
-    }
-  };
-
-  // ===== ПРИКРЕПЛЕНИЕ К КЛУБУ =====
-  const handleAssignToClub = async (userId, fullName) => {
-    if (!isAdmin) {
-      setMessage('❌ У вас нет прав для прикрепления к клубу');
-      setMessageType('error');
-      return;
-    }
-
-    if (!selectedClub) {
-      setMessage('❌ Выберите КЮД');
-      setMessageType('error');
-      return;
-    }
-
-    if (!confirm(`Прикрепить "${fullName}" к выбранному КЮДу?`)) return;
-
-    try {
-      const result = await api.assignUserToClub(userId, selectedClub);
-      if (result.error) throw new Error(result.error);
-      
-      setMessage(`✅ "${fullName}" прикреплён к КЮДу!`);
-      setMessageType('success');
-      setSelectedClub('');
-      loadData();
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
-      setMessageType('error');
-    }
-  };
-
-  // ===== УДАЛЕНИЕ ПРЕЗИДЕНТА КЛУБА =====
-  const handleRemovePresident = async (clubId, clubName) => {
-    if (!isAdmin) {
-      setMessage('❌ У вас нет прав для снятия президента');
-      setMessageType('error');
-      return;
-    }
-
-    if (!confirm(`Снять президента с клуба "${clubName}"?`)) return;
-
-    try {
-      const result = await api.removeClubPresident(clubId);
-      if (result.error) throw new Error(result.error);
-      
-      setMessage(`✅ Президент снят с клуба "${clubName}"`);
-      setMessageType('success');
-      loadData();
-      setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
@@ -1025,19 +972,14 @@ export default function AdminUsers() {
                               🔑
                             </button>
 
-                            {/* ПРИКРЕПЛЕНИЕ К КЛУБУ */}
-                            <select
-                              value={selectedClub}
-                              onChange={(e) => setSelectedClub(e.target.value)}
-                              style={{ padding: '4px 6px', fontSize: '11px', borderRadius: '6px', border: '1px solid #D5DCE7', maxWidth: '120px' }}
-                              title="Выберите КЮД"
-                            >
-                              <option value="">КЮД</option>
-                              {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
+                            {/* ПРИКРЕПЛЕНИЕ К КЛУБУ (ИНДИВИДУАЛЬНО) */}
                             <button
-                              style={{ padding: '4px 10px', background: '#EAF2FA', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}
-                              onClick={() => handleAssignToClub(u.id, u.full_name)}
+                              style={{ padding: '4px 10px', background: '#6B46C1', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: 'white' }}
+                              onClick={() => {
+                                setSelectedUserId(u.id);
+                                setSelectedUserFullName(u.full_name);
+                                setShowAssignModal(true);
+                              }}
                               title="Прикрепить к КЮДу"
                             >
                               📌
@@ -1073,6 +1015,21 @@ export default function AdminUsers() {
           </table>
         </div>
       </div>
+
+      {/* ===== МОДАЛЬНОЕ ОКНО: ПРИКРЕПЛЕНИЕ К КЛУБУ (ИНДИВИДУАЛЬНО) ===== */}
+      <AssignClubModal
+        isOpen={showAssignModal}
+        onClose={() => {
+          setShowAssignModal(false);
+          setSelectedUserId(null);
+          setSelectedUserFullName('');
+        }}
+        userId={selectedUserId}
+        userFullName={selectedUserFullName}
+        onAssigned={() => {
+          loadData(); // Обновляем список пользователей
+        }}
+      />
     </div>
   );
 }

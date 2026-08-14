@@ -753,54 +753,78 @@ app.get('/api/events', async (req, res) => {
       FROM events e
       LEFT JOIN clubs c ON e.club_id = c.id
       LEFT JOIN users u ON e.created_by = u.id
-      WHERE e.moderation_status = 'approved' OR e.moderation_status IS NULL
+      WHERE (e.moderation_status = 'approved' OR e.moderation_status IS NULL)
     `;
     const params = [];
     const conditions = [];
 
-    // ===== ГЛОБАЛЬНЫЕ МЕРОПРИЯТИЯ (видят все) =====
+    // ============================================================
+    // 1. ГЛОБАЛЬНЫЕ МЕРОПРИЯТИЯ — видят все
+    // ============================================================
     conditions.push('(e.is_global = true OR e.is_global IS NULL)');
 
-    // ===== ВНУТРЕННИЕ МЕРОПРИЯТИЯ КЛУБА =====
+    // ============================================================
+    // 2. ВНУТРЕННИЕ МЕРОПРИЯТИЯ КЛУБА — только для своих клубов
+    // ============================================================
+    
+    // Админ, координатор движения, президент, вице — видят ВСЕ внутренние мероприятия ВСЕХ клубов
     if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
       conditions.push('e.is_club_event = true');
     }
     
+    // Координатор КЮДа — видит внутренние мероприятия ТОЛЬКО СВОЕГО клуба
     if (userRole === 'club_coordinator') {
-      const clubIds = await pool.query(
+      const clubResult = await pool.query(
         'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
         [userId]
       );
-      const ids = clubIds.rows.map(r => r.club_id);
-      if (ids.length > 0) {
-        conditions.push(`(e.club_id = ANY($${params.length + 1}::uuid[]))`);
-        params.push(ids);
+      const clubIds = clubResult.rows.map(r => r.club_id);
+      if (clubIds.length > 0) {
+        conditions.push(`(e.is_club_event = true AND e.club_id = ANY($${params.length + 1}::uuid[]))`);
+        params.push(clubIds);
+      } else {
+        // Если у координатора нет клуба — не показываем внутренние
+        conditions.push('1 = 0');
       }
     }
     
+    // Участник — видит внутренние мероприятия ТОЛЬКО СВОЕГО клуба
     if (userRole === 'participant') {
       const user = await pool.query(
         'SELECT club_id FROM users WHERE id = $1',
         [userId]
       );
       if (user.rows.length > 0 && user.rows[0].club_id) {
-        conditions.push(`(e.club_id = $${params.length + 1})`);
+        conditions.push(`(e.is_club_event = true AND e.club_id = $${params.length + 1})`);
         params.push(user.rows[0].club_id);
+      } else {
+        // Если у участника нет клуба — не показываем внутренние
+        conditions.push('1 = 0');
       }
     }
     
+    // Тьютор — видит внутренние мероприятия клубов, где он назначен
     if (userRole === 'tutor') {
       const clubs = await pool.query(
         'SELECT DISTINCT club_id FROM event_tutors WHERE tutor_id = $1',
         [userId]
       );
-      const ids = clubs.rows.map(r => r.club_id);
-      if (ids.length > 0) {
-        conditions.push(`(e.club_id = ANY($${params.length + 1}::uuid[]))`);
-        params.push(ids);
+      const clubIds = clubs.rows.map(r => r.club_id);
+      if (clubIds.length > 0) {
+        conditions.push(`(e.is_club_event = true AND e.club_id = ANY($${params.length + 1}::uuid[]))`);
+        params.push(clubIds);
+      } else {
+        // Если тьютор не назначен ни в один клуб — не показываем внутренние
+        conditions.push('1 = 0');
       }
     }
+    
+    // Родитель — НЕ видит внутренние мероприятия
+    if (userRole === 'parent') {
+      conditions.push('1 = 0');
+    }
 
+    // Собираем все условия
     if (conditions.length > 0) {
       query += ' AND (' + conditions.join(' OR ') + ')';
     }
@@ -811,102 +835,6 @@ app.get('/api/events', async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Ошибка получения событий:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/events', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    const { title, description, location, event_date, end_date, start_time, end_time, type, capacity, club_id, form_url, is_global } = req.body;
-
-    if (!title || !event_date) {
-      return res.status(400).json({ error: 'title и event_date обязательны' });
-    }
-
-    let moderationStatus = 'approved';
-    let finalClubId = club_id || null;
-
-    if (userRole === 'club_coordinator') {
-      if (is_global) {
-        moderationStatus = 'pending';
-      }
-    } else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      moderationStatus = 'approved';
-    } else {
-      return res.status(403).json({ error: 'У вас нет прав для создания мероприятий' });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO events (
-        title, description, location, event_date, end_date, 
-        start_time, end_time, type, capacity, club_id, form_url,
-        is_global, moderation_status, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      RETURNING *`,
-      [
-        title, description || '', location || '', event_date, end_date || event_date,
-        start_time || null, end_time || null, type || 'internal', capacity || 20, 
-        finalClubId, form_url || null,
-        is_global || false, moderationStatus, userId
-      ]
-    );
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Ошибка создания события:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.patch('/api/events/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { title, description, location, event_date, end_date, start_time, end_time, type, capacity, club_id, form_url } = req.body;
-
-    const result = await pool.query(
-      `UPDATE events 
-       SET title = COALESCE($1, title),
-           description = COALESCE($2, description),
-           location = COALESCE($3, location),
-           event_date = COALESCE($4, event_date),
-           end_date = COALESCE($5, end_date),
-           start_time = COALESCE($6, start_time),
-           end_time = COALESCE($7, end_time),
-           type = COALESCE($8, type),
-           capacity = COALESCE($9, capacity),
-           club_id = COALESCE($10, club_id),
-           form_url = COALESCE($11, form_url)
-       WHERE id = $12
-       RETURNING *`,
-      [title, description, location, event_date, end_date, start_time, end_time, type, capacity, club_id, form_url, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Событие не найдено' });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.delete('/api/events/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await pool.query('DELETE FROM events WHERE id = $1', [id]);
-    res.json({ message: 'Событие удалено' });
-  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });

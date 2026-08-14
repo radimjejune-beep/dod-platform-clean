@@ -1,4 +1,4 @@
-// frontend/src/pages/Login.jsx
+// frontend/src/pages/Login.jsx - ОРИГИНАЛ
 
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -244,7 +244,7 @@ export default function Login() {
           position: relative;
           z-index: 1;
           width: 100%;
-          max-width: 440px;
+          max-width: 420px;
           background: rgba(255, 255, 255, 0.97);
           backdrop-filter: blur(20px);
           border-radius: 20px;
@@ -328,7 +328,7 @@ export default function Login() {
 
         .login-header h2 {
           font-family: 'Playfair Display', serif;
-          font-size: 24px;
+          font-size: 22px;
           font-weight: 700;
           color: #0B1F3A;
           margin: 0 0 4px;

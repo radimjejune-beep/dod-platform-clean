@@ -26,17 +26,63 @@ export default function Clubs() {
       setProfile(userData);
 
       const clubsData = await api.getClubs();
-      setClubs(clubsData || []);
+      
+      // ============================================================
+      // ФИЛЬТРАЦИЯ: КООРДИНАТОР ВИДИТ ТОЛЬКО СВОЙ КЛУБ
+      // ============================================================
+      let filteredClubs = clubsData || [];
+      
+      if (userData.role === 'club_coordinator') {
+        // Ищем клуб координатора
+        let coordinatorClub = null;
+        
+        // 1. По club_id в профиле
+        if (userData.club_id) {
+          coordinatorClub = filteredClubs.find(c => c.id === userData.club_id);
+        }
+        
+        // 2. По coordinator_id или leader_id
+        if (!coordinatorClub) {
+          coordinatorClub = filteredClubs.find(c => 
+            c.coordinator_id === userData.id || 
+            c.leader_id === userData.id
+          );
+        }
+        
+        // 3. Через club_coordinators
+        if (!coordinatorClub) {
+          try {
+            const coordResponse = await fetch(
+              `https://dod-backend.relaxdev.ru/api/club-coordinators?profile_id=${userData.id}`
+            );
+            const coordData = await coordResponse.json();
+            if (coordData && coordData.length > 0) {
+              const clubId = coordData[0].club_id;
+              coordinatorClub = filteredClubs.find(c => c.id === clubId);
+            }
+          } catch (e) {
+            console.log('Ошибка получения координатора:', e);
+          }
+        }
+        
+        // Показываем только свой клуб (или пустой массив, если не найден)
+        filteredClubs = coordinatorClub ? [coordinatorClub] : [];
+        
+        console.log('🏫 Координатор видит клуб:', coordinatorClub?.name || 'не найден');
+      }
+      
+      setClubs(filteredClubs);
 
       // Считаем количество участников для каждого клуба
       const counts = {};
       const participantsData = await api.getParticipants();
       const participants = participantsData || [];
       
-      clubsData.forEach(club => {
+      filteredClubs.forEach(club => {
         counts[club.id] = participants.filter(p => p.club_id === club.id).length;
       });
       setParticipantsCount(counts);
+      
     } catch (err) {
       console.error('Ошибка:', err);
     } finally {
@@ -56,6 +102,42 @@ export default function Clubs() {
   const isCoordinator = role === 'club_coordinator';
   const canEdit = role === 'admin' || role === 'movement_coordinator';
 
+  // ============================================================
+  // ЕСЛИ КООРДИНАТОР И КЛУБ НЕ НАЙДЕН
+  // ============================================================
+  if (isCoordinator && clubs.length === 0) {
+    return (
+      <div className="page-background">
+        <Navigation profile={profile} />
+        <div className="container-page">
+          <div className="page-header">
+            <span style={{ fontSize: '32px' }}>🏫</span>
+            <div>
+              <h1>Мой КЮД</h1>
+              <p>Информация о вашем клубе</p>
+            </div>
+          </div>
+          <div className="empty-state">
+            <div className="icon">🏫</div>
+            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>
+              Клуб не найден
+            </p>
+            <p style={{ color: '#667085' }}>
+              Вы не привязаны ни к одному КЮДу. Обратитесь к администратору.
+            </p>
+            <button 
+              className="btn-primary" 
+              onClick={() => navigate('/profile')} 
+              style={{ marginTop: '16px' }}
+            >
+              👤 Перейти в профиль
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="page-background">
       <Navigation profile={profile} />
@@ -63,10 +145,10 @@ export default function Clubs() {
         <div className="page-header">
           <span style={{ fontSize: '32px' }}>🏫</span>
           <div>
-            <h1>{isCoordinator ? 'Все КЮДы' : 'Клубы юных дипломатов'}</h1>
+            <h1>{isCoordinator ? 'Мой КЮД' : 'Клубы юных дипломатов'}</h1>
             <p>
               {isCoordinator 
-                ? 'Просмотр всех клубов движения (ваш клуб — с пометкой)' 
+                ? 'Информация о вашем клубе' 
                 : `Всего клубов: ${clubs.length}`}
             </p>
           </div>
@@ -82,11 +164,10 @@ export default function Clubs() {
         ) : (
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
+            gridTemplateColumns: isCoordinator ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', 
             gap: '20px' 
           }}>
             {clubs.map((club) => {
-              // Проверяем, является ли этот клуб клубом координатора
               const isMyClub = isCoordinator && club.id === profile?.club_id;
               
               return (
@@ -94,7 +175,7 @@ export default function Clubs() {
                   key={club.id} 
                   className="card"
                   style={{
-                    cursor: isCoordinator ? 'pointer' : 'pointer',
+                    cursor: 'pointer',
                     border: isMyClub ? '2px solid #C9A227' : '1px solid #E2E7EF',
                     position: 'relative',
                     transition: 'all 0.3s ease'
@@ -150,7 +231,7 @@ export default function Clubs() {
                     </div>
                   </div>
 
-                  {/* ИНФОРМАЦИЯ О КЛУБЕ (контакты) */}
+                  {/* ИНФОРМАЦИЯ О КЛУБЕ */}
                   <div style={{
                     display: 'grid',
                     gridTemplateColumns: '1fr 1fr',
@@ -201,7 +282,7 @@ export default function Clubs() {
                       {club.created_at && `Создан: ${new Date(club.created_at).toLocaleDateString('ru-RU')}`}
                     </span>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      {canEdit && (
+                      {canEdit && !isCoordinator && (
                         <button
                           className="btn-secondary"
                           style={{ padding: '4px 12px', fontSize: '12px' }}

@@ -731,7 +731,7 @@ app.delete('/api/achievements/:id', async (req, res) => {
 });
 
 // ============================================================
-// 16. СОБЫТИЯ (ОБНОВЛЁННЫЙ МАРШРУТ)
+// 16. СОБЫТИЯ (ИСПРАВЛЕННЫЙ МАРШРУТ)
 // ============================================================
 app.get('/api/events', async (req, res) => {
   try {
@@ -764,63 +764,65 @@ app.get('/api/events', async (req, res) => {
     conditions.push('(e.is_global = true OR e.is_global IS NULL)');
 
     // ============================================================
-    // 2. ВНУТРЕННИЕ МЕРОПРИЯТИЯ КЛУБА — только для своих клубов
+    // 2. ВНУТРЕННИЕ МЕРОПРИЯТИЯ КЛУБА
     // ============================================================
     
-    // Админ, координатор движения, президент, вице — видят ВСЕ внутренние мероприятия ВСЕХ клубов
-    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      conditions.push('e.is_club_event = true');
+    const role = userRole;
+
+    // Админ, координатор движения, президент, вице — видят ВСЕ внутренние
+    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
+      conditions.push('(e.is_club_event = true)');
     }
     
-    // Координатор КЮДа — видит внутренние мероприятия ТОЛЬКО СВОЕГО клуба
-    if (userRole === 'club_coordinator') {
+    // Координатор КЮДа — видит ТОЛЬКО СВОЙ клуб
+    else if (role === 'club_coordinator') {
       const clubResult = await pool.query(
         'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
         [userId]
       );
-      const clubIds = clubResult.rows.map(r => r.club_id);
-      if (clubIds.length > 0) {
-        conditions.push(`(e.is_club_event = true AND e.club_id = ANY($${params.length + 1}::uuid[]))`);
-        params.push(clubIds);
+      if (clubResult.rows.length > 0) {
+        const clubId = clubResult.rows[0].club_id;
+        // Используем $1, а не массив
+        conditions.push(`(e.is_club_event = true AND e.club_id = $${params.length + 1})`);
+        params.push(clubId);
       } else {
-        // Если у координатора нет клуба — не показываем внутренние
+        // Если нет клуба — не показываем внутренние
         conditions.push('1 = 0');
       }
     }
     
-    // Участник — видит внутренние мероприятия ТОЛЬКО СВОЕГО клуба
-    if (userRole === 'participant') {
+    // Участник — видит ТОЛЬКО СВОЙ клуб
+    else if (role === 'participant') {
       const user = await pool.query(
         'SELECT club_id FROM users WHERE id = $1',
         [userId]
       );
       if (user.rows.length > 0 && user.rows[0].club_id) {
+        const clubId = user.rows[0].club_id;
         conditions.push(`(e.is_club_event = true AND e.club_id = $${params.length + 1})`);
-        params.push(user.rows[0].club_id);
+        params.push(clubId);
       } else {
-        // Если у участника нет клуба — не показываем внутренние
         conditions.push('1 = 0');
       }
     }
     
-    // Тьютор — видит внутренние мероприятия клубов, где он назначен
-    if (userRole === 'tutor') {
+    // Тьютор — видит клубы, где он назначен
+    else if (role === 'tutor') {
       const clubs = await pool.query(
         'SELECT DISTINCT club_id FROM event_tutors WHERE tutor_id = $1',
         [userId]
       );
-      const clubIds = clubs.rows.map(r => r.club_id);
-      if (clubIds.length > 0) {
+      if (clubs.rows.length > 0) {
+        const clubIds = clubs.rows.map(r => r.club_id);
         conditions.push(`(e.is_club_event = true AND e.club_id = ANY($${params.length + 1}::uuid[]))`);
         params.push(clubIds);
       } else {
-        // Если тьютор не назначен ни в один клуб — не показываем внутренние
         conditions.push('1 = 0');
       }
     }
     
-    // Родитель — НЕ видит внутренние мероприятия
-    if (userRole === 'parent') {
+    // Родитель — НЕ видит внутренние
+    else if (role === 'parent') {
       conditions.push('1 = 0');
     }
 

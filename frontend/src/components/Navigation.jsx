@@ -252,6 +252,14 @@ export default function Navigation({ profile }) {
         { path: '/admin/invite', label: 'Пригласить', icon: Icons.userPlus, roles: ['admin', 'movement_coordinator'] },
         { path: '/import-participants', label: 'Импорт', icon: Icons.upload, roles: ['admin', 'movement_coordinator'] },
       ],
+      assignments: [
+        { 
+         path: '/tutor-assignments', 
+         label: '📅 Мои назначения', 
+         icon: Icons.calendar, 
+         roles: ['tutor'] 
+        },
+       ],
     };
 
     const result = {};

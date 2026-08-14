@@ -20,6 +20,14 @@ export default function Events() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [moderationComment, setModerationComment] = useState('');
   
+  // ===== ДЛЯ НАЗНАЧЕНИЯ ТЬЮТОРА =====
+  const [showTutorModal, setShowTutorModal] = useState(false);
+  const [selectedEventForTutor, setSelectedEventForTutor] = useState(null);
+  const [selectedTutor, setSelectedTutor] = useState('');
+  const [tutors, setTutors] = useState([]);
+  const [tutorRole, setTutorRole] = useState('tutor');
+  const [tutorNotes, setTutorNotes] = useState('');
+  
   const [filters, setFilters] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -71,13 +79,18 @@ export default function Events() {
       }
       setProfile(userData);
 
-      const [clubsData, eventsData] = await Promise.all([
+      const [clubsData, eventsData, usersData] = await Promise.all([
         api.getClubs(),
-        api.getEvents()
+        api.getEvents(),
+        api.getUsers()
       ]);
 
       setClubs(clubsData || []);
       setAllEvents(eventsData || []);
+      
+      // Загружаем тьюторов для модалки
+      const tutorList = usersData.filter(u => u.role === 'tutor');
+      setTutors(tutorList || []);
       
       const pending = eventsData.filter(e => e.moderation_status === 'pending');
       setPendingEvents(pending || []);
@@ -174,12 +187,52 @@ export default function Events() {
     return false;
   };
 
-  // ===== ВАЖНО: ИСПРАВЛЕННАЯ СТРОКА =====
   const canCreate = profile && ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(profile.role);
-  
   const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
   const isClubCoordinator = profile?.role === 'club_coordinator';
   const isMovementCoordinator = profile?.role === 'movement_coordinator';
+
+  // ===== НАЗНАЧЕНИЕ ТЬЮТОРА =====
+  const handleAssignTutor = async () => {
+    if (!selectedTutor) {
+      setMessage('❌ Выберите тьютора');
+      setMessageType('error');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/events/${selectedEventForTutor.id}/tutors`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          tutor_id: selectedTutor,
+          role: tutorRole,
+          notes: tutorNotes
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      setMessage('✅ Тьютор назначен на мероприятие!');
+      setMessageType('success');
+      setShowTutorModal(false);
+      setSelectedTutor('');
+      setTutorNotes('');
+      loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -362,7 +415,9 @@ export default function Events() {
             <button 
               className="btn-primary" 
               style={{ marginLeft: 'auto' }} 
-              onClick={() => setShowForm(!showForm)}
+              onClick={() => { 
+                setShowForm(!showForm); 
+              }}
             >
               {showForm ? '✖ Закрыть' : '➕ Создать'}
             </button>
@@ -572,6 +627,7 @@ export default function Events() {
               {filteredEvents.map((event) => {
                 const userCanEdit = canEdit(event);
                 const userCanDelete = canDelete(event);
+                const canAssignTutor = ['admin', 'movement_coordinator', 'club_coordinator'].includes(profile?.role);
                 
                 return (
                   <div
@@ -658,6 +714,21 @@ export default function Events() {
                           </button>
                         </>
                       )}
+                      {canAssignTutor && (
+                        <button
+                          className="btn-primary"
+                          style={{ padding: '4px 12px', fontSize: '12px', background: '#6B46C1', color: 'white' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedEventForTutor(event);
+                            setSelectedTutor('');
+                            setTutorNotes('');
+                            setShowTutorModal(true);
+                          }}
+                        >
+                          🧑‍🏫 Назначить тьютора
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -667,6 +738,7 @@ export default function Events() {
         </div>
       </div>
 
+      {/* МОДАЛЬНОЕ ОКНО МОДЕРАЦИИ */}
       {showModerationModal && selectedEvent && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(11, 31, 58, 0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={() => setShowModerationModal(false)}>
           <div className="card" style={{ maxWidth: '500px', width: '100%', padding: '32px' }} onClick={(e) => e.stopPropagation()}>
@@ -678,6 +750,118 @@ export default function Events() {
               <button className="btn-danger" style={{ flex: 1 }} onClick={() => handleModerate(selectedEvent.id, 'rejected')}>❌ Отклонить</button>
             </div>
             <button className="btn-secondary" style={{ width: '100%', marginTop: '12px' }} onClick={() => setShowModerationModal(false)}>Отмена</button>
+          </div>
+        </div>
+      )}
+
+      {/* МОДАЛЬНОЕ ОКНО: НАЗНАЧЕНИЕ ТЬЮТОРА */}
+      {showTutorModal && selectedEventForTutor && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(11, 31, 58, 0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setShowTutorModal(false)}
+        >
+          <div
+            className="card"
+            style={{ maxWidth: '500px', width: '100%', padding: '32px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+              🧑‍🏫 Назначить тьютора
+            </h3>
+            <p style={{ color: '#667085', marginBottom: '16px' }}>
+              Мероприятие: <strong>{selectedEventForTutor.title}</strong>
+            </p>
+
+            <div className="form-group">
+              <label>Выберите тьютора *</label>
+              <select
+                value={selectedTutor}
+                onChange={(e) => setSelectedTutor(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: '1.5px solid #D5DCE7',
+                  borderRadius: '10px',
+                  fontSize: '14px'
+                }}
+              >
+                <option value="">— Выберите тьютора —</option>
+                {tutors.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.full_name} ({t.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Роль</label>
+              <select
+                value={tutorRole}
+                onChange={(e) => setTutorRole(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: '1.5px solid #D5DCE7',
+                  borderRadius: '10px',
+                  fontSize: '14px'
+                }}
+              >
+                <option value="tutor">📚 Тьютор</option>
+                <option value="lead_tutor">⭐ Старший тьютор</option>
+                <option value="organizer">📋 Организатор</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Примечание</label>
+              <textarea
+                rows="3"
+                value={tutorNotes}
+                onChange={(e) => setTutorNotes(e.target.value)}
+                placeholder="Дополнительная информация..."
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: '1.5px solid #D5DCE7',
+                  borderRadius: '10px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                className="btn-success"
+                style={{ flex: 1 }}
+                onClick={handleAssignTutor}
+              >
+                ✅ Назначить
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setShowTutorModal(false);
+                  setSelectedTutor('');
+                  setTutorNotes('');
+                }}
+              >
+                ❌ Отмена
+              </button>
+            </div>
           </div>
         </div>
       )}

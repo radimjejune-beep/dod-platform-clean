@@ -316,20 +316,20 @@ export default function Navigation({ profile }) {
   };
 
   if (!profile) {
-  return (
-    <nav className="nav-new">
-      <div className="nav-new-container">
-        <Link to="/" className="nav-new-logo">
-          <img src={logo} alt="ДОД «Дипломаты будущего»" className="nav-new-logo-img" />
-          <span className="nav-new-logo-text">Дипломаты будущего</span>
-        </Link>
-        <div className="nav-new-right">
-          <Link to="/login" className="nav-new-link">Войти</Link>
+    return (
+      <nav className="nav-new">
+        <div className="nav-new-container">
+          <Link to="/" className="nav-new-logo">
+            <img src={logo} alt="ДОД «Дипломаты будущего»" className="nav-new-logo-img" />
+            <span className="nav-new-logo-text">Дипломаты будущего</span>
+          </Link>
+          <div className="nav-new-right">
+            <Link to="/login" className="nav-new-link">Войти</Link>
+          </div>
         </div>
-      </div>
-    </nav>
-  );
-}
+      </nav>
+    );
+  }
 
   return (
     <nav className="nav-new">
@@ -452,19 +452,20 @@ export default function Navigation({ profile }) {
         .nav-new {
           background: #FFFFFF;
           border-bottom: 1px solid #E2E7EF;
-          padding: 0 16px;
+          padding: 0 24px;
           position: sticky;
           top: 0;
           z-index: 999;
-          height: 52px;
+          height: 56px;
           display: flex;
           align-items: center;
           justify-content: center;
           box-shadow: 0 1px 3px rgba(11, 31, 58, 0.04);
+          width: 100%;
         }
 
         .nav-new-container {
-          max-width: 1200px;
+          max-width: 1440px;
           width: 100%;
           margin: 0 auto;
           display: flex;
@@ -476,20 +477,20 @@ export default function Navigation({ profile }) {
         .nav-new-logo {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
           text-decoration: none;
           flex-shrink: 0;
         }
 
         .nav-new-logo-img {
-          height: 28px;
+          height: 32px;
           width: auto;
           object-fit: contain;
         }
 
         .nav-new-logo-text {
           font-family: 'Playfair Display', serif;
-          font-size: 14px;
+          font-size: 16px;
           font-weight: 700;
           color: #0B1F3A;
           letter-spacing: 0.3px;
@@ -498,7 +499,7 @@ export default function Navigation({ profile }) {
         .nav-new-right {
           display: flex;
           align-items: center;
-          gap: 2px;
+          gap: 4px;
           flex-shrink: 0;
         }
 
@@ -519,9 +520,9 @@ export default function Navigation({ profile }) {
         .nav-new-profile {
           display: flex;
           align-items: center;
-          gap: 5px;
-          padding: 2px 8px 2px 2px;
-          border-radius: 16px;
+          gap: 6px;
+          padding: 2px 10px 2px 2px;
+          border-radius: 20px;
           text-decoration: none;
           color: #0B1F3A;
           transition: all 0.2s ease;
@@ -532,31 +533,31 @@ export default function Navigation({ profile }) {
         }
 
         .nav-avatar {
-          width: 26px;
-          height: 26px;
+          width: 30px;
+          height: 30px;
           border-radius: 50%;
           object-fit: cover;
-          border: 1.5px solid #E2E7EF;
+          border: 2px solid #E2E7EF;
         }
 
         .nav-avatar-letter {
-          width: 26px;
-          height: 26px;
+          width: 30px;
+          height: 30px;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 10px;
+          font-size: 12px;
           font-weight: 600;
           background: linear-gradient(135deg, #0B1F3A, #174A7E);
           color: white;
-          border: 1.5px solid #E2E7EF;
+          border: 2px solid #E2E7EF;
         }
 
         .nav-new-profile-name {
-          font-size: 11px;
+          font-size: 13px;
           font-weight: 500;
-          max-width: 60px;
+          max-width: 80px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -567,8 +568,8 @@ export default function Navigation({ profile }) {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 36px;
-          height: 36px;
+          width: 38px;
+          height: 38px;
           border: none;
           background: transparent;
           border-radius: 8px;
@@ -588,13 +589,13 @@ export default function Navigation({ profile }) {
         }
 
         .nav-new-menu-btn svg {
-          width: 20px;
-          height: 20px;
+          width: 22px;
+          height: 22px;
         }
 
         .nav-menu-overlay {
           position: fixed;
-          top: 52px;
+          top: 56px;
           left: 0;
           right: 0;
           bottom: 0;
@@ -613,10 +614,10 @@ export default function Navigation({ profile }) {
 
         .nav-menu-panel {
           position: fixed;
-          top: 52px;
+          top: 56px;
           right: 0;
           bottom: 0;
-          width: 340px;
+          width: 380px;
           max-width: 85vw;
           background: #FFFFFF;
           box-shadow: -8px 0 40px rgba(11, 31, 58, 0.12);
@@ -633,7 +634,7 @@ export default function Navigation({ profile }) {
         }
 
         .nav-menu-header {
-          padding: 16px 20px 12px;
+          padding: 20px 24px 16px;
           border-bottom: 1px solid #F4F6F9;
           flex-shrink: 0;
         }
@@ -641,7 +642,7 @@ export default function Navigation({ profile }) {
         .nav-menu-user {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 14px;
         }
 
         .nav-menu-avatar {
@@ -650,9 +651,9 @@ export default function Navigation({ profile }) {
 
         .nav-menu-avatar .nav-avatar,
         .nav-menu-avatar .nav-avatar-letter {
-          width: 40px;
-          height: 40px;
-          font-size: 14px;
+          width: 44px;
+          height: 44px;
+          font-size: 16px;
         }
 
         .nav-menu-user-info {
@@ -661,7 +662,7 @@ export default function Navigation({ profile }) {
         }
 
         .nav-menu-user-name {
-          font-size: 14px;
+          font-size: 15px;
           font-weight: 600;
           color: #0B1F3A;
           white-space: nowrap;
@@ -677,7 +678,7 @@ export default function Navigation({ profile }) {
         .nav-menu-body {
           flex: 1;
           overflow-y: auto;
-          padding: 8px 12px;
+          padding: 12px 16px;
         }
 
         .nav-menu-body::-webkit-scrollbar {
@@ -693,11 +694,11 @@ export default function Navigation({ profile }) {
           display: flex;
           align-items: center;
           gap: 10px;
-          padding: 8px 12px;
+          padding: 10px 14px;
           border-radius: 8px;
           text-decoration: none;
           color: #667085;
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 500;
           transition: all 0.15s ease;
           margin-bottom: 1px;
@@ -715,8 +716,8 @@ export default function Navigation({ profile }) {
         }
 
         .nav-menu-item .nav-menu-icon svg {
-          width: 16px;
-          height: 16px;
+          width: 18px;
+          height: 18px;
           opacity: 0.6;
         }
 
@@ -734,12 +735,12 @@ export default function Navigation({ profile }) {
           align-items: center;
           justify-content: space-between;
           width: 100%;
-          padding: 8px 12px;
+          padding: 10px 14px;
           border: none;
           background: transparent;
           border-radius: 8px;
           cursor: pointer;
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 500;
           color: #667085;
           transition: all 0.15s ease;
@@ -787,11 +788,11 @@ export default function Navigation({ profile }) {
           display: flex;
           align-items: center;
           gap: 10px;
-          padding: 7px 12px 7px 32px;
+          padding: 8px 14px 8px 36px;
           border-radius: 8px;
           text-decoration: none;
           color: #667085;
-          font-size: 12.5px;
+          font-size: 13px;
           font-weight: 400;
           transition: all 0.15s ease;
         }
@@ -808,8 +809,8 @@ export default function Navigation({ profile }) {
         }
 
         .nav-menu-subitem .nav-menu-icon svg {
-          width: 14px;
-          height: 14px;
+          width: 16px;
+          height: 16px;
           opacity: 0.5;
         }
 
@@ -819,7 +820,7 @@ export default function Navigation({ profile }) {
         }
 
         .nav-menu-footer {
-          padding: 12px 16px 16px;
+          padding: 14px 20px 20px;
           border-top: 1px solid #F4F6F9;
           flex-shrink: 0;
         }
@@ -835,7 +836,7 @@ export default function Navigation({ profile }) {
           background: #FCEBEC;
           border-radius: 8px;
           color: #B3262E;
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.15s ease;
@@ -846,23 +847,90 @@ export default function Navigation({ profile }) {
         }
 
         .nav-menu-logout svg {
-          width: 16px;
-          height: 16px;
+          width: 18px;
+          height: 18px;
+        }
+
+        @media (max-width: 1200px) {
+          .nav-new {
+            padding: 0 16px;
+          }
+          .nav-new-container {
+            max-width: 100%;
+          }
         }
 
         @media (max-width: 768px) {
           .nav-new {
-            height: 48px;
+            height: 50px;
             padding: 0 12px;
+          }
+          .nav-new-logo-img {
+            height: 26px;
+          }
+          .nav-new-logo-text {
+            font-size: 13px;
+          }
+          .nav-new-profile-name {
+            display: none;
+          }
+          .nav-avatar,
+          .nav-avatar-letter {
+            width: 26px;
+            height: 26px;
+            font-size: 10px;
+          }
+          .nav-new-menu-btn {
+            width: 34px;
+            height: 34px;
+          }
+          .nav-new-menu-btn svg {
+            width: 20px;
+            height: 20px;
+          }
+          .nav-menu-overlay {
+            top: 50px;
+          }
+          .nav-menu-panel {
+            top: 50px;
+            width: 320px;
+          }
+          .nav-menu-header {
+            padding: 16px 20px 12px;
+          }
+          .nav-menu-body {
+            padding: 8px 12px;
+          }
+          .nav-menu-item {
+            font-size: 13px;
+            padding: 8px 12px;
+          }
+          .nav-menu-group-btn {
+            font-size: 13px;
+            padding: 8px 12px;
+          }
+          .nav-menu-subitem {
+            font-size: 12px;
+            padding: 6px 12px 6px 32px;
+          }
+          .nav-menu-panel {
+            width: 320px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .nav-new {
+            height: 46px;
+            padding: 0 8px;
+          }
+          .nav-new-logo-text {
+            display: none;
           }
           .nav-new-logo-img {
             height: 24px;
           }
-          .nav-new-logo-text {
-            font-size: 12px;
-          }
-          .nav-new-profile-name {
-            display: none;
+          .nav-new-profile {
+            padding: 2px 6px 2px 2px;
           }
           .nav-avatar,
           .nav-avatar-letter {
@@ -871,62 +939,50 @@ export default function Navigation({ profile }) {
             font-size: 9px;
           }
           .nav-new-menu-btn {
-            width: 32px;
-            height: 32px;
+            width: 30px;
+            height: 30px;
           }
           .nav-new-menu-btn svg {
             width: 18px;
             height: 18px;
           }
           .nav-menu-overlay {
-            top: 48px;
+            top: 46px;
           }
           .nav-menu-panel {
-            top: 48px;
-            width: 300px;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .nav-new {
-            height: 44px;
-            padding: 0 8px;
-          }
-          .nav-new-logo-text {
-            display: none;
-          }
-          .nav-new-logo-img {
-            height: 22px;
-          }
-          .nav-avatar,
-          .nav-avatar-letter {
-            width: 22px;
-            height: 22px;
-            font-size: 8px;
-          }
-          .nav-new-menu-btn {
-            width: 28px;
-            height: 28px;
-          }
-          .nav-new-menu-btn svg {
-            width: 16px;
-            height: 16px;
-          }
-          .nav-menu-overlay {
-            top: 44px;
-          }
-          .nav-menu-panel {
-            top: 44px;
+            top: 46px;
             width: 280px;
           }
-          .nav-menu-item,
+          .nav-menu-header {
+            padding: 14px 16px 10px;
+          }
+          .nav-menu-user-name {
+            font-size: 13px;
+          }
+          .nav-menu-body {
+            padding: 6px 10px;
+          }
+          .nav-menu-item {
+            font-size: 12px;
+            padding: 6px 10px;
+          }
           .nav-menu-group-btn {
             font-size: 12px;
             padding: 6px 10px;
           }
           .nav-menu-subitem {
-            font-size: 11.5px;
+            font-size: 11px;
             padding: 5px 10px 5px 28px;
+          }
+          .nav-menu-panel {
+            width: 280px;
+          }
+          .nav-menu-footer {
+            padding: 10px 16px 14px;
+          }
+          .nav-menu-logout {
+            font-size: 12px;
+            padding: 8px;
           }
         }
       `}</style>

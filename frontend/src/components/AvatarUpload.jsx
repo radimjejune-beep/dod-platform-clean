@@ -1,58 +1,116 @@
 // frontend/src/components/AvatarUpload.jsx
 
 import { useState, useRef } from 'react';
-import { uploadAvatar } from '../lib/api';
+import api from '../lib/api';
 
 export default function AvatarUpload({ currentAvatar, onAvatarUpdated, userId }) {
   const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState(currentAvatar || null);
   const [error, setError] = useState('');
-  const [preview, setPreview] = useState(currentAvatar);
   const fileInputRef = useRef(null);
 
-  const handleFileSelect = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError('❌ Файл слишком большой. Максимум 5MB');
+    // ============================================================
+    // ОГРАНИЧЕНИЕ РАЗМЕРА — МАКСИМУМ 500KB
+    // ============================================================
+    const MAX_SIZE = 500 * 1024; // 500KB
+    
+    if (file.size > MAX_SIZE) {
+      setError(`❌ Файл слишком большой! Максимум ${MAX_SIZE / 1024} KB. Сожмите изображение.`);
+      setTimeout(() => setError(''), 4000);
       return;
     }
 
+    // ============================================================
+    // ОГРАНИЧЕНИЕ ТИПА ФАЙЛА
+    // ============================================================
     if (!file.type.startsWith('image/')) {
       setError('❌ Пожалуйста, выберите изображение');
+      setTimeout(() => setError(''), 4000);
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setPreview(event.target.result);
-      handleUpload(event.target.result);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleUpload = async (base64Data) => {
     setLoading(true);
     setError('');
 
     try {
-      const result = await uploadAvatar(base64Data);
+      // ============================================================
+      // СЖАТИЕ ИЗОБРАЖЕНИЯ ПЕРЕД ЗАГРУЗКОЙ
+      // ============================================================
+      const compressedBase64 = await compressImage(file, 200, 200, 0.7);
+      
+      // Загружаем на сервер
+      const result = await api.uploadAvatar(compressedBase64);
       
       if (result.error) {
         throw new Error(result.error);
       }
 
+      // Обновляем preview (не сохраняем в localStorage!)
+      setPreview(result.avatar_url);
+      
+      // Сохраняем только ссылку в localStorage
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      user.avatar_url = result.avatar_url;
+      localStorage.setItem('user', JSON.stringify(user));
+      
       if (onAvatarUpdated) {
         onAvatarUpdated(result.avatar_url);
       }
 
-      setPreview(result.avatar_url);
+      alert('✅ Аватар обновлён!');
+
     } catch (err) {
+      console.error('Ошибка загрузки аватара:', err);
       setError('❌ Ошибка загрузки: ' + err.message);
-      setPreview(currentAvatar);
+      setTimeout(() => setError(''), 4000);
     } finally {
       setLoading(false);
     }
+  };
+
+  // ============================================================
+  // ФУНКЦИЯ СЖАТИЯ ИЗОБРАЖЕНИЯ
+  // ============================================================
+  const compressImage = (file, maxWidth, maxHeight, quality) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          // Вычисляем новые размеры
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+
+          // Создаём canvas и сжимаем
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Конвертируем в JPEG с качеством quality
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve(compressedDataUrl);
+        };
+        img.onerror = reject;
+      };
+      reader.onerror = reject;
+    });
   };
 
   const handleClick = () => {
@@ -60,105 +118,76 @@ export default function AvatarUpload({ currentAvatar, onAvatarUpdated, userId })
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center',
-      gap: '8px'
-    }}>
-      <div 
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+      <div
         onClick={handleClick}
         style={{
           width: '120px',
           height: '120px',
           borderRadius: '50%',
-          background: preview ? `url(${preview}) center/cover` : '#F4F6F9',
-          border: '3px solid #E2E7EF',
           cursor: 'pointer',
+          overflow: 'hidden',
+          border: '3px solid #C9A227',
+          background: '#F4F6F9',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '40px',
-          color: '#98A2B3',
           transition: 'all 0.3s ease',
-          position: 'relative',
-          overflow: 'hidden'
+          position: 'relative'
         }}
-        onMouseEnter={(e) => {
-          if (!loading) {
-            e.currentTarget.style.borderColor = '#C9A227';
-            e.currentTarget.style.boxShadow = '0 4px 20px rgba(201, 162, 39, 0.2)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = '#E2E7EF';
-          e.currentTarget.style.boxShadow = 'none';
-        }}
+        onMouseEnter={(e) => e.currentTarget.style.borderColor = '#E8D9A8'}
+        onMouseLeave={(e) => e.currentTarget.style.borderColor = '#C9A227'}
       >
-        {!preview && '📷'}
-        {loading && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.4)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '50%',
-            color: 'white',
-            fontSize: '14px'
-          }}>
-            ⏳
-          </div>
+        {loading ? (
+          <div className="spinner" style={{ width: '30px', height: '30px' }} />
+        ) : preview ? (
+          <img
+            src={preview}
+            alt="Аватар"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+          />
+        ) : (
+          <span style={{ fontSize: '40px', color: '#98A2B3' }}>📷</span>
         )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileSelect}
-          style={{ display: 'none' }}
-        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '0',
+            left: '0',
+            right: '0',
+            background: 'rgba(11, 31, 58, 0.7)',
+            color: 'white',
+            fontSize: '10px',
+            padding: '4px',
+            textAlign: 'center'
+          }}
+        >
+          {loading ? 'Загрузка...' : 'Изменить'}
+        </div>
       </div>
 
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
+
       {error && (
-        <div style={{
-          fontSize: '13px',
-          color: '#B3262E',
-          background: '#FCEBEC',
-          padding: '4px 12px',
-          borderRadius: '6px'
-        }}>
+        <div style={{ color: '#B3262E', fontSize: '12px', textAlign: 'center', maxWidth: '200px' }}>
           {error}
         </div>
       )}
 
-      <button
-        onClick={handleClick}
-        disabled={loading}
-        style={{
-          padding: '6px 16px',
-          fontSize: '13px',
-          background: 'transparent',
-          border: '1.5px solid #D5DCE7',
-          borderRadius: '8px',
-          cursor: 'pointer',
-          color: '#0B1F3A',
-          transition: 'all 0.2s ease'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = '#C9A227';
-          e.currentTarget.style.background = '#FBF4DC';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = '#D5DCE7';
-          e.currentTarget.style.background = 'transparent';
-        }}
-      >
-        {loading ? '⏳ Загрузка...' : '📷 Загрузить фото'}
-      </button>
+      <div style={{ fontSize: '11px', color: '#98A2B3', textAlign: 'center' }}>
+        Максимум 500KB<br />
+        Рекомендуемый размер: 200×200
+      </div>
     </div>
   );
 }

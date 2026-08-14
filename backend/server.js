@@ -1434,9 +1434,7 @@ app.patch('/api/tutor-requests/:id', async (req, res) => {
   }
 });
 
-// ============================================================
-// ЗАГРУЗКА АВАТАРА
-// ============================================================
+// ===== ЗАГРУЗКА АВАТАРА =====
 app.post('/api/upload-avatar', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -1458,6 +1456,20 @@ app.post('/api/upload-avatar', async (req, res) => {
       return res.status(400).json({ error: 'Неверный формат изображения' });
     }
 
+    // ============================================================
+    // ПРОВЕРКА РАЗМЕРА — МАКСИМУМ 500KB
+    // ============================================================
+    const sizeInBytes = Buffer.from(avatar_base64.split(',')[1], 'base64').length;
+    const sizeInKB = sizeInBytes / 1024;
+    console.log(`📦 Размер аватара: ${sizeInKB.toFixed(2)} KB`);
+    
+    if (sizeInBytes > 500 * 1024) {
+      return res.status(400).json({ 
+        error: 'Изображение слишком большое. Максимум 500KB. Пожалуйста, сожмите изображение.' 
+      });
+    }
+
+    // Сохраняем в БД
     const result = await pool.query(
       `UPDATE users 
        SET avatar_url = $1

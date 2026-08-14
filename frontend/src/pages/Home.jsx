@@ -55,7 +55,6 @@ export default function Home() {
       <section className="home-hero">
         <div className="home-hero-bg" />
         <div className="home-hero-content">
-          {/* ЛОГОТИП - ТЕПЕРЬ НОРМАЛЬНОГО РАЗМЕРА */}
           <div className="home-hero-emblem">
             <img 
               src={logo} 
@@ -73,15 +72,9 @@ export default function Home() {
             гражданскую позицию у молодёжи»
           </p>
           <div className="home-hero-buttons">
-            {profile ? (
-              <button className="home-hero-btn-primary" onClick={() => navigate('/dashboard')}>
-                📊 Перейти в кабинет
-              </button>
-            ) : (
-              <button className="home-hero-btn-primary" onClick={handleLogin}>
-                🔑 Войти в систему
-              </button>
-            )}
+            <button className="home-hero-btn-primary" onClick={handleLogin}>
+              🔑 Войти в систему
+            </button>
           </div>
           <div className="home-hero-partners">
             <span className="home-hero-partner-label">При поддержке</span>
@@ -198,7 +191,6 @@ export default function Home() {
           max-width: 800px;
         }
 
-        /* ===== ЛОГОТИП - АККУРАТНЫЙ РАЗМЕР ===== */
         .home-hero-emblem {
           width: 64px;
           height: 64px;

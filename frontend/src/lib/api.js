@@ -52,7 +52,43 @@ export const getMe = async () => {
   
   const data = await response.json();
   console.log('📥 Ответ:', data);
+  
+  // ============================================================
+  // СОХРАНЯЕМ club_id В LOCALSTORAGE ДЛЯ БЫСТРОГО ДОСТУПА
+  // ============================================================
+  if (data && data.club_id) {
+    localStorage.setItem('userClubId', data.club_id);
+    console.log('🏫 Сохранён club_id в localStorage:', data.club_id);
+  } else {
+    localStorage.removeItem('userClubId');
+  }
+  
+  // Сохраняем всю информацию о пользователе
+  if (data && data.id) {
+    localStorage.setItem('user', JSON.stringify(data));
+  }
+  
   return data;
+};
+
+// ============================================================
+// ПОЛУЧЕНИЕ CLUB_ID ИЗ LOCALSTORAGE
+// ============================================================
+export const getUserClubId = () => {
+  // Пробуем получить из localStorage
+  let clubId = localStorage.getItem('userClubId');
+  
+  // Если нет — пробуем из сохранённого пользователя
+  if (!clubId) {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      clubId = user.club_id || null;
+    } catch (e) {
+      clubId = null;
+    }
+  }
+  
+  return clubId;
 };
 
 // ============================================================

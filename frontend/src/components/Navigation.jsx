@@ -152,12 +152,14 @@ export default function Navigation({ profile }) {
   const isActive = (path) => location.pathname === path;
   const role = profile?.role || 'participant';
 
+  
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     sessionStorage.removeItem('sessionId');
     sessionStorage.removeItem('userId');
     sessionStorage.removeItem('userRole');
+    sessionStorage.removeItem('loginTime');
     navigate('/login');
   };
 

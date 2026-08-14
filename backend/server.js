@@ -953,8 +953,10 @@ app.post('/api/registrations', async (req, res) => {
 });
 
 // ============================================================
-// 18. ОБРАЩЕНИЯ (ИСПРАВЛЕННЫЕ)
+// 18. ОБРАЩЕНИЯ
 // ============================================================
+
+// ===== ПОЛУЧЕНИЕ ОБРАЩЕНИЙ =====
 app.get('/api/appeals', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -979,12 +981,16 @@ app.get('/api/appeals', async (req, res) => {
     `;
     const params = [];
 
+    // ===== КТО ЧТО ВИДИТ =====
     if (userRole === 'club_coordinator') {
+      // Координатор видит ТОЛЬКО СВОИ обращения
       query += ' WHERE a.coordinator_id = $1';
       params.push(userId);
     } else if (!['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
+      // Остальные НЕ ВИДЯТ
       query += ' WHERE 1 = 0';
     }
+    // Админ, Координатор движения, Президент, Вице видят ВСЕ
 
     query += ' ORDER BY a.created_at DESC';
 
@@ -996,6 +1002,7 @@ app.get('/api/appeals', async (req, res) => {
   }
 });
 
+// ===== СОЗДАНИЕ ОБРАЩЕНИЯ =====
 app.post('/api/appeals', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -1060,9 +1067,7 @@ app.post('/api/appeals', async (req, res) => {
   }
 });
 
-// ============================================================
-// ОТВЕТ НА ОБРАЩЕНИЕ (ИСПРАВЛЕННЫЙ)
-// ============================================================
+// ===== ОТВЕТ НА ОБРАЩЕНИЕ =====
 app.post('/api/appeals/:id/reply', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1087,9 +1092,9 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       return res.status(400).json({ error: 'Текст ответа обязателен' });
     }
 
-    // ===== ПРОВЕРЯЕМ СУЩЕСТВОВАНИЕ ОБРАЩЕНИЯ (С ЯВНЫМ UUID) =====
+    // ===== 1. ПРОВЕРЯЕМ СУЩЕСТВОВАНИЕ =====
     const appealCheck = await pool.query(
-      'SELECT id, coordinator_id FROM appeals WHERE id = $1::UUID',
+      'SELECT id, coordinator_id FROM appeals WHERE id = $1',
       [id]
     );
     if (appealCheck.rows.length === 0) {
@@ -1098,14 +1103,14 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
 
     const appeal = appealCheck.rows[0];
 
-    // ===== ВСТАВЛЯЕМ ОТВЕТ =====
+    // ===== 2. ВСТАВЛЯЕМ ОТВЕТ =====
     await pool.query(
       `INSERT INTO appeal_replies (appeal_id, author_id, message, created_at)
        VALUES ($1, $2, $3, NOW())`,
       [id, userId, message.trim()]
     );
 
-    // ===== ОБНОВЛЯЕМ СТАТУС =====
+    // ===== 3. ОБНОВЛЯЕМ СТАТУС =====
     const newStatus = status || 'in_progress';
     await pool.query(
       `UPDATE appeals 
@@ -1116,7 +1121,7 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       [newStatus, userId, id]
     );
 
-    // ===== УВЕДОМЛЕНИЕ КООРДИНАТОРУ =====
+    // ===== 4. УВЕДОМЛЕНИЕ ТОЛЬКО АВТОРУ ОБРАЩЕНИЯ =====
     if (appeal.coordinator_id) {
       await createNotification(
         appeal.coordinator_id,
@@ -1128,7 +1133,7 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       );
     }
 
-    // ===== ПОЛУЧАЕМ ОБНОВЛЁННОЕ ОБРАЩЕНИЕ =====
+    // ===== 5. ПОЛУЧАЕМ ОБНОВЛЁННОЕ ОБРАЩЕНИЕ =====
     const result = await pool.query(
       `SELECT a.*, 
               u.full_name as coordinator_name,
@@ -1153,6 +1158,7 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
   }
 });
 
+// ===== ПОЛУЧЕНИЕ ОТВЕТОВ =====
 app.get('/api/appeals/:id/replies', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1175,6 +1181,7 @@ app.get('/api/appeals/:id/replies', async (req, res) => {
   }
 });
 
+// ===== УДАЛЕНИЕ ОБРАЩЕНИЯ (ТОЛЬКО АДМИН) =====
 app.delete('/api/appeals/:id', async (req, res) => {
   try {
     const { id } = req.params;

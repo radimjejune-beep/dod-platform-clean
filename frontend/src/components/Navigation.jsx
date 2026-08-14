@@ -10,7 +10,7 @@ import logo from '../assets/Image.png';
 // ============================================================
 const Icons = {
   dashboard: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="7" height="7" rx="1" />
       <rect x="14" y="3" width="7" height="7" rx="1" />
       <rect x="3" y="14" width="7" height="7" rx="1" />
@@ -18,7 +18,7 @@ const Icons = {
     </svg>
   ),
   calendar: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
       <line x1="16" y1="2" x2="16" y2="6" />
       <line x1="8" y1="2" x2="8" y2="6" />
@@ -26,7 +26,7 @@ const Icons = {
     </svg>
   ),
   users: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
       <circle cx="9" cy="7" r="4" />
       <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -34,24 +34,24 @@ const Icons = {
     </svg>
   ),
   club: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
       <polyline points="9 22 9 12 15 12 15 22" />
     </svg>
   ),
   award: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="8" r="6" />
       <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11" />
     </svg>
   ),
   star: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
     </svg>
   ),
   fileText: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <polyline points="14 2 14 8 20 8" />
       <line x1="16" y1="13" x2="8" y2="13" />
@@ -60,27 +60,27 @@ const Icons = {
     </svg>
   ),
   barChart: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="12" y1="20" x2="12" y2="10" />
       <line x1="18" y1="20" x2="18" y2="4" />
       <line x1="6" y1="20" x2="6" y2="16" />
     </svg>
   ),
   target: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10" />
       <circle cx="12" cy="12" r="6" />
       <circle cx="12" cy="12" r="2" />
     </svg>
   ),
   mail: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
       <polyline points="22,6 12,13 2,6" />
     </svg>
   ),
   settings: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" />
       <path d="M12 1v4" />
       <path d="M12 19v4" />
@@ -93,13 +93,13 @@ const Icons = {
     </svg>
   ),
   book: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
     </svg>
   ),
   userPlus: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
       <circle cx="8.5" cy="7" r="4" />
       <line x1="20" y1="8" x2="20" y2="14" />
@@ -107,14 +107,14 @@ const Icons = {
     </svg>
   ),
   upload: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="17 8 12 3 7 8" />
       <line x1="12" y1="3" x2="12" y2="15" />
     </svg>
   ),
   briefcase: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
       <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
     </svg>
@@ -126,15 +126,28 @@ const Icons = {
       <line x1="21" y1="12" x2="9" y2="12" />
     </svg>
   ),
+  menu: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  ),
+  close: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  ),
 };
 
 export default function Navigation({ profile }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState(null);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const dropdownTimeoutRef = useRef(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [openSubmenu, setOpenSubmenu] = useState(null);
+  const menuRef = useRef(null);
+  const buttonRef = useRef(null);
   
   const isActive = (path) => location.pathname === path;
   const role = profile?.role || 'participant';
@@ -257,64 +270,22 @@ export default function Navigation({ profile }) {
     return indexA - indexB;
   });
 
-  // ============================================================
-  // ПЛАВНОЕ ОТКРЫТИЕ/ЗАКРЫТИЕ ДРОПДАУНА
-  // ============================================================
-  const handleDropdownOpen = (key) => {
-    if (dropdownTimeoutRef.current) {
-      clearTimeout(dropdownTimeoutRef.current);
-    }
-    setOpenDropdown(key);
-    setIsAnimating(true);
-  };
-
-  const handleDropdownClose = () => {
-    if (dropdownTimeoutRef.current) {
-      clearTimeout(dropdownTimeoutRef.current);
-    }
-    dropdownTimeoutRef.current = setTimeout(() => {
-      setOpenDropdown(null);
-      setTimeout(() => setIsAnimating(false), 200);
-    }, 100);
-  };
-
-  const handleDropdownToggle = (key) => {
-    if (openDropdown === key) {
-      handleDropdownClose();
-    } else {
-      handleDropdownOpen(key);
-    }
-  };
-
-  // Очистка таймаута при размонтировании
-  useEffect(() => {
-    return () => {
-      if (dropdownTimeoutRef.current) {
-        clearTimeout(dropdownTimeoutRef.current);
-      }
-    };
-  }, []);
-
+  // Закрытие меню при клике вне
   useEffect(() => {
     const handleClickOutside = (event) => {
-      const dropdowns = document.querySelectorAll('.nav-new-dropdown');
-      let clickedOnDropdown = false;
-      dropdowns.forEach(dropdown => {
-        if (dropdown.contains(event.target)) {
-          clickedOnDropdown = true;
-        }
-      });
-      if (!clickedOnDropdown) {
-        setOpenDropdown(null);
-        setIsAnimating(false);
+      if (menuRef.current && !menuRef.current.contains(event.target) && 
+          buttonRef.current && !buttonRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+        setOpenSubmenu(null);
       }
     };
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
+  // Блокировка прокрутки при открытом меню
   useEffect(() => {
-    if (isMobileMenuOpen) {
+    if (isMenuOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -322,7 +293,23 @@ export default function Navigation({ profile }) {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isMobileMenuOpen]);
+  }, [isMenuOpen]);
+
+  // Закрытие меню при нажатии Escape
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setIsMenuOpen(false);
+        setOpenSubmenu(null);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, []);
+
+  const toggleSubmenu = (key) => {
+    setOpenSubmenu(openSubmenu === key ? null : key);
+  };
 
   if (!profile) {
     return (
@@ -348,67 +335,6 @@ export default function Navigation({ profile }) {
           <span className="nav-new-logo-text">Дипломаты будущего</span>
         </Link>
 
-        <div className="nav-new-menu">
-          {sortedGroups.map(([key, items]) => {
-            if (!items || items.length === 0) return null;
-            
-            const isOpen = openDropdown === key;
-            const hasActive = items.some(item => isActive(item.path));
-            const label = groupLabels[key] || key;
-            
-            if (key === 'main') {
-              return items.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`nav-new-link ${isActive(item.path) ? 'active' : ''}`}
-                >
-                  <span className="nav-link-icon">{item.icon}</span>
-                  {item.label}
-                </Link>
-              ));
-            }
-            
-            return (
-              <div 
-                key={key} 
-                className="nav-new-dropdown"
-                onMouseEnter={() => handleDropdownOpen(key)}
-                onMouseLeave={handleDropdownClose}
-              >
-                <button 
-                  className={`nav-new-dropdown-btn ${hasActive ? 'active' : ''} ${isOpen ? 'open' : ''}`}
-                  onClick={() => handleDropdownToggle(key)}
-                  aria-expanded={isOpen}
-                  aria-haspopup="true"
-                >
-                  {label}
-                  <span className={`nav-dropdown-arrow ${isOpen ? 'rotated' : ''}`}>▾</span>
-                </button>
-                <div 
-                  className={`nav-dropdown-menu ${isOpen ? 'open' : ''} ${isAnimating ? 'animating' : ''}`}
-                >
-                  {items.map((item) => (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={`nav-dropdown-item ${isActive(item.path) ? 'active' : ''}`}
-                      onClick={() => {
-                        setOpenDropdown(null);
-                        setIsAnimating(false);
-                        setIsMobileMenuOpen(false);
-                      }}
-                    >
-                      <span className="nav-link-icon">{item.icon}</span>
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
         <div className="nav-new-right">
           <Notifications profile={profile} />
           
@@ -420,78 +346,122 @@ export default function Navigation({ profile }) {
           </Link>
 
           <button 
-            className="nav-new-logout" 
-            onClick={handleLogout} 
-            title="Выйти"
-            aria-label="Выйти из системы"
+            ref={buttonRef}
+            className={`nav-new-menu-btn ${isMenuOpen ? 'open' : ''}`}
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label={isMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
           >
-            {Icons.logout}
-          </button>
-
-          <button 
-            className="nav-new-burger" 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label={isMobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
-          >
-            {isMobileMenuOpen ? '✕' : '☰'}
+            {isMenuOpen ? Icons.close : Icons.menu}
           </button>
         </div>
       </div>
 
-      {isMobileMenuOpen && (
-        <div className="nav-new-mobile">
-          {sortedGroups.map(([key, items]) => {
-            if (!items || items.length === 0) return null;
-            const label = groupLabels[key] || key;
-            
-            return (
-              <div key={key} className="nav-new-mobile-group">
-                <div className="nav-new-mobile-title">{label}</div>
-                {items.map((item) => (
+      {/* ===== ВЫПАДАЮЩЕЕ МЕНЮ-СПИСОК ===== */}
+      <div 
+        ref={menuRef}
+        className={`nav-menu-overlay ${isMenuOpen ? 'open' : ''}`}
+        onClick={() => {
+          setIsMenuOpen(false);
+          setOpenSubmenu(null);
+        }}
+      >
+        <div 
+          className={`nav-menu-panel ${isMenuOpen ? 'open' : ''}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="nav-menu-header">
+            <div className="nav-menu-user">
+              <div className="nav-menu-avatar">
+                {getAvatar()}
+              </div>
+              <div className="nav-menu-user-info">
+                <div className="nav-menu-user-name">{profile?.full_name || 'Пользователь'}</div>
+                <div className="nav-menu-user-role">{profile?.role || 'Участник'}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="nav-menu-body">
+            {sortedGroups.map(([key, items]) => {
+              if (!items || items.length === 0) return null;
+              const label = groupLabels[key] || key;
+              const isOpen = openSubmenu === key;
+              const hasActive = items.some(item => isActive(item.path));
+
+              if (key === 'main') {
+                return items.map((item) => (
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`nav-new-mobile-item ${isActive(item.path) ? 'active' : ''}`}
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`nav-menu-item ${isActive(item.path) ? 'active' : ''}`}
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      setOpenSubmenu(null);
+                    }}
                   >
-                    <span className="nav-link-icon">{item.icon}</span>
-                    {item.label}
+                    <span className="nav-menu-icon">{item.icon}</span>
+                    <span>{item.label}</span>
                   </Link>
-                ))}
-              </div>
-            );
-          })}
-          
-          <button 
-            className="nav-new-mobile-logout"
-            onClick={() => {
-              setIsMobileMenuOpen(false);
-              handleLogout();
-            }}
-          >
-            {Icons.logout}
-            Выйти
-          </button>
+                ));
+              }
+
+              return (
+                <div key={key} className="nav-menu-group">
+                  <button
+                    className={`nav-menu-group-btn ${hasActive ? 'active' : ''} ${isOpen ? 'open' : ''}`}
+                    onClick={() => toggleSubmenu(key)}
+                  >
+                    <span className="nav-menu-group-label">{label}</span>
+                    <span className={`nav-menu-group-arrow ${isOpen ? 'rotated' : ''}`}>▾</span>
+                  </button>
+                  <div className={`nav-menu-sublist ${isOpen ? 'open' : ''}`}>
+                    {items.map((item) => (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        className={`nav-menu-subitem ${isActive(item.path) ? 'active' : ''}`}
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          setOpenSubmenu(null);
+                        }}
+                      >
+                        <span className="nav-menu-icon">{item.icon}</span>
+                        <span>{item.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="nav-menu-footer">
+            <button className="nav-menu-logout" onClick={handleLogout}>
+              {Icons.logout}
+              Выйти
+            </button>
+          </div>
         </div>
-      )}
+      </div>
 
       <style>{`
-        /* ===== НАВИГАЦИЯ ===== */
+        /* ===== ОСНОВНАЯ НАВИГАЦИЯ ===== */
         .nav-new {
           background: #FFFFFF;
           border-bottom: 1px solid #E2E7EF;
-          padding: 0 20px;
+          padding: 0 16px;
           position: sticky;
           top: 0;
           z-index: 999;
-          height: 48px;
+          height: 52px;
           display: flex;
           align-items: center;
           justify-content: center;
+          box-shadow: 0 1px 3px rgba(11, 31, 58, 0.04);
         }
 
         .nav-new-container {
-          max-width: 1100px;
+          max-width: 1200px;
           width: 100%;
           margin: 0 auto;
           display: flex;
@@ -523,205 +493,6 @@ export default function Navigation({ profile }) {
           letter-spacing: 0.3px;
         }
 
-        /* ===== МЕНЮ ===== */
-        .nav-new-menu {
-          display: flex;
-          align-items: center;
-          gap: 1px;
-          flex: 1;
-          justify-content: center;
-          padding: 0 8px;
-        }
-
-        .nav-link-icon {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: currentColor;
-          flex-shrink: 0;
-          margin-right: 3px;
-        }
-
-        .nav-link-icon svg {
-          width: 13px;
-          height: 13px;
-          opacity: 0.6;
-          transition: opacity 0.2s ease;
-        }
-
-        .nav-new-link.active .nav-link-icon svg,
-        .nav-new-link:hover .nav-link-icon svg,
-        .nav-dropdown-item.active .nav-link-icon svg,
-        .nav-dropdown-item:hover .nav-link-icon svg {
-          opacity: 1;
-        }
-
-        .nav-new-link {
-          display: flex;
-          align-items: center;
-          gap: 3px;
-          padding: 4px 8px;
-          border-radius: 5px;
-          text-decoration: none;
-          font-size: 11.5px;
-          font-weight: 500;
-          color: #667085;
-          transition: all 0.2s ease;
-          white-space: nowrap;
-          letter-spacing: 0.2px;
-          background: transparent;
-          border: none;
-          cursor: pointer;
-          font-family: inherit;
-        }
-
-        .nav-new-link:hover {
-          background: #F4F6F9;
-          color: #0B1F3A;
-          transform: translateY(-1px);
-        }
-
-        .nav-new-link.active {
-          background: #F4F6F9;
-          color: #0B1F3A;
-          font-weight: 600;
-        }
-
-        /* ===== ДРОПДАУН С АНИМАЦИЕЙ ===== */
-        .nav-new-dropdown {
-          position: relative;
-        }
-
-        .nav-new-dropdown-btn {
-          display: flex;
-          align-items: center;
-          gap: 3px;
-          padding: 4px 8px;
-          border: none;
-          background: transparent;
-          border-radius: 5px;
-          font-size: 11.5px;
-          font-weight: 500;
-          color: #667085;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          white-space: nowrap;
-          letter-spacing: 0.2px;
-          font-family: inherit;
-        }
-
-        .nav-new-dropdown-btn:hover {
-          background: #F4F6F9;
-          color: #0B1F3A;
-          transform: translateY(-1px);
-        }
-
-        .nav-new-dropdown-btn.active {
-          background: #F4F6F9;
-          color: #0B1F3A;
-          font-weight: 600;
-        }
-
-        .nav-new-dropdown-btn.open {
-          background: #F4F6F9;
-          color: #0B1F3A;
-        }
-
-        .nav-dropdown-arrow {
-          font-size: 6px;
-          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          color: #98A2B3;
-          margin-left: 1px;
-        }
-
-        .nav-dropdown-arrow.rotated {
-          transform: rotate(180deg);
-        }
-
-        /* ===== КРАСИВОЕ ВЫПАДАЮЩЕЕ МЕНЮ ===== */
-        .nav-dropdown-menu {
-          position: absolute;
-          top: calc(100% + 6px);
-          left: 50%;
-          transform: translateX(-50%) scale(0.95) translateY(-8px);
-          background: white;
-          border-radius: 10px;
-          box-shadow: 0 8px 40px rgba(11, 31, 58, 0.12), 0 2px 8px rgba(11, 31, 58, 0.04);
-          border: 1px solid #E2E7EF;
-          min-width: 170px;
-          padding: 4px;
-          z-index: 1000;
-          opacity: 0;
-          visibility: hidden;
-          pointer-events: none;
-          transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-          transform-origin: top center;
-        }
-
-        .nav-dropdown-menu.open {
-          opacity: 1;
-          visibility: visible;
-          pointer-events: all;
-          transform: translateX(-50%) scale(1) translateY(0);
-        }
-
-        /* Эффект "прилипания" при закрытии */
-        .nav-dropdown-menu.animating {
-          transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        /* Элементы внутри дропдауна с анимацией появления */
-        .nav-dropdown-item {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 6px 10px;
-          border-radius: 5px;
-          text-decoration: none;
-          color: #667085;
-          font-size: 11.5px;
-          font-weight: 500;
-          transition: all 0.15s ease;
-          white-space: nowrap;
-          opacity: 0;
-          transform: translateX(-8px);
-          transition: all 0.2s ease;
-        }
-
-        .nav-dropdown-menu.open .nav-dropdown-item {
-          opacity: 1;
-          transform: translateX(0);
-        }
-
-        /* Задержка для каждого пункта */
-        .nav-dropdown-menu.open .nav-dropdown-item:nth-child(1) { transition-delay: 0.02s; }
-        .nav-dropdown-menu.open .nav-dropdown-item:nth-child(2) { transition-delay: 0.04s; }
-        .nav-dropdown-menu.open .nav-dropdown-item:nth-child(3) { transition-delay: 0.06s; }
-        .nav-dropdown-menu.open .nav-dropdown-item:nth-child(4) { transition-delay: 0.08s; }
-        .nav-dropdown-menu.open .nav-dropdown-item:nth-child(5) { transition-delay: 0.10s; }
-        .nav-dropdown-menu.open .nav-dropdown-item:nth-child(6) { transition-delay: 0.12s; }
-        .nav-dropdown-menu.open .nav-dropdown-item:nth-child(7) { transition-delay: 0.14s; }
-        .nav-dropdown-menu.open .nav-dropdown-item:nth-child(8) { transition-delay: 0.16s; }
-
-        .nav-dropdown-item:hover {
-          background: #F4F6F9;
-          color: #0B1F3A;
-          transform: translateX(3px);
-        }
-
-        .nav-dropdown-item.active {
-          background: #F4F6F9;
-          color: #0B1F3A;
-          font-weight: 600;
-        }
-
-        .nav-dropdown-item .nav-link-icon {
-          width: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
         /* ===== ПРАВАЯ ЧАСТЬ ===== */
         .nav-new-right {
           display: flex;
@@ -743,7 +514,6 @@ export default function Navigation({ profile }) {
 
         .nav-new-profile:hover {
           background: #F4F6F9;
-          transform: translateY(-1px);
         }
 
         .nav-avatar {
@@ -752,11 +522,6 @@ export default function Navigation({ profile }) {
           border-radius: 50%;
           object-fit: cover;
           border: 1.5px solid #E2E7EF;
-          transition: border-color 0.2s ease;
-        }
-
-        .nav-new-profile:hover .nav-avatar {
-          border-color: #C9A227;
         }
 
         .nav-avatar-letter {
@@ -771,11 +536,6 @@ export default function Navigation({ profile }) {
           background: linear-gradient(135deg, #0B1F3A, #174A7E);
           color: white;
           border: 1.5px solid #E2E7EF;
-          transition: border-color 0.2s ease;
-        }
-
-        .nav-new-profile:hover .nav-avatar-letter {
-          border-color: #C9A227;
         }
 
         .nav-new-profile-name {
@@ -788,214 +548,316 @@ export default function Navigation({ profile }) {
           color: #0B1F3A;
         }
 
-        .nav-new-logout {
+        /* ===== КНОПКА МЕНЮ ===== */
+        .nav-new-menu-btn {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 28px;
-          height: 28px;
+          width: 36px;
+          height: 36px;
           border: none;
           background: transparent;
-          border-radius: 5px;
+          border-radius: 8px;
           cursor: pointer;
           transition: all 0.2s ease;
-          color: #98A2B3;
-          padding: 0;
-        }
-
-        .nav-new-logout:hover {
-          background: #FCEBEC;
-          color: #B3262E;
-          transform: scale(1.05);
-        }
-
-        .nav-new-logout svg {
-          width: 15px;
-          height: 15px;
-        }
-
-        .nav-new-burger {
-          display: none;
-          padding: 2px 4px;
-          border: none;
-          background: transparent;
-          font-size: 18px;
-          cursor: pointer;
           color: #0B1F3A;
-          line-height: 1;
-          transition: all 0.2s ease;
+          padding: 0;
+          margin-left: 2px;
         }
 
-        .nav-new-burger:hover {
-          transform: scale(1.1);
+        .nav-new-menu-btn:hover {
+          background: #F4F6F9;
         }
 
-        /* ===== МОБИЛЬНОЕ МЕНЮ С АНИМАЦИЕЙ ===== */
-        .nav-new-mobile {
-          display: none;
-          flex-direction: column;
-          gap: 4px;
-          padding: 12px 16px;
-          border-top: 1px solid #E2E7EF;
-          margin-top: 0;
-          max-height: 70vh;
-          overflow-y: auto;
+        .nav-new-menu-btn.open {
+          background: #F4F6F9;
+        }
+
+        .nav-new-menu-btn svg {
+          width: 20px;
+          height: 20px;
+        }
+
+        /* ===== ОВЕРЛЕЙ МЕНЮ ===== */
+        .nav-menu-overlay {
           position: fixed;
-          top: 48px;
+          top: 52px;
           left: 0;
           right: 0;
-          background: white;
-          box-shadow: 0 8px 32px rgba(11, 31, 58, 0.1);
-          z-index: 1000;
-          animation: slideDown 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+          bottom: 0;
+          background: rgba(11, 31, 58, 0.3);
+          backdrop-filter: blur(2px);
+          z-index: 998;
+          opacity: 0;
+          visibility: hidden;
+          transition: all 0.3s ease;
         }
 
-        @keyframes slideDown {
-          from {
-            opacity: 0;
-            transform: translateY(-12px) scale(0.97);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
+        .nav-menu-overlay.open {
+          opacity: 1;
+          visibility: visible;
         }
 
-        .nav-new-mobile-group {
+        /* ===== ПАНЕЛЬ МЕНЮ ===== */
+        .nav-menu-panel {
+          position: fixed;
+          top: 52px;
+          right: 0;
+          bottom: 0;
+          width: 340px;
+          max-width: 85vw;
+          background: #FFFFFF;
+          box-shadow: -8px 0 40px rgba(11, 31, 58, 0.12);
+          z-index: 999;
+          transform: translateX(100%);
+          transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
           display: flex;
           flex-direction: column;
-          gap: 1px;
+          overflow: hidden;
         }
 
-        .nav-new-mobile-title {
-          font-size: 9px;
-          font-weight: 600;
-          color: #98A2B3;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          padding: 3px 6px 2px;
+        .nav-menu-panel.open {
+          transform: translateX(0);
         }
 
-        .nav-new-mobile-item {
+        /* ===== ЗАГОЛОВОК МЕНЮ ===== */
+        .nav-menu-header {
+          padding: 16px 20px 12px;
+          border-bottom: 1px solid #F4F6F9;
+          flex-shrink: 0;
+        }
+
+        .nav-menu-user {
           display: flex;
           align-items: center;
-          gap: 6px;
-          padding: 6px 8px;
-          border-radius: 5px;
+          gap: 12px;
+        }
+
+        .nav-menu-avatar {
+          flex-shrink: 0;
+        }
+
+        .nav-menu-avatar .nav-avatar,
+        .nav-menu-avatar .nav-avatar-letter {
+          width: 40px;
+          height: 40px;
+          font-size: 14px;
+        }
+
+        .nav-menu-user-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .nav-menu-user-name {
+          font-size: 14px;
+          font-weight: 600;
+          color: #0B1F3A;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .nav-menu-user-role {
+          font-size: 12px;
+          color: #98A2B3;
+        }
+
+        /* ===== ТЕЛО МЕНЮ ===== */
+        .nav-menu-body {
+          flex: 1;
+          overflow-y: auto;
+          padding: 8px 12px;
+        }
+
+        .nav-menu-body::-webkit-scrollbar {
+          width: 4px;
+        }
+
+        .nav-menu-body::-webkit-scrollbar-thumb {
+          background: #D5DCE7;
+          border-radius: 2px;
+        }
+
+        /* ===== ПУНКТЫ МЕНЮ ===== */
+        .nav-menu-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 8px 12px;
+          border-radius: 8px;
           text-decoration: none;
           color: #667085;
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 500;
           transition: all 0.15s ease;
+          margin-bottom: 1px;
         }
 
-        .nav-new-mobile-item .nav-link-icon {
+        .nav-menu-item:hover {
+          background: #F4F6F9;
+          color: #0B1F3A;
+        }
+
+        .nav-menu-item.active {
+          background: #F4F6F9;
+          color: #0B1F3A;
+          font-weight: 600;
+        }
+
+        .nav-menu-item .nav-menu-icon svg {
           width: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .nav-new-mobile-item .nav-link-icon svg {
-          width: 13px;
-          height: 13px;
+          height: 16px;
           opacity: 0.6;
         }
 
-        .nav-new-mobile-item:hover {
-          background: #F4F6F9;
-          color: #0B1F3A;
-          transform: translateX(4px);
-        }
-
-        .nav-new-mobile-item.active {
-          background: #F4F6F9;
-          color: #0B1F3A;
-          font-weight: 600;
-        }
-
-        .nav-new-mobile-item.active .nav-link-icon svg {
+        .nav-menu-item.active .nav-menu-icon svg,
+        .nav-menu-item:hover .nav-menu-icon svg {
           opacity: 1;
         }
 
-        .nav-new-mobile-logout {
+        /* ===== ГРУППЫ МЕНЮ ===== */
+        .nav-menu-group {
+          margin-bottom: 2px;
+        }
+
+        .nav-menu-group-btn {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          padding: 8px 12px;
+          border: none;
+          background: transparent;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 13px;
+          font-weight: 500;
+          color: #667085;
+          transition: all 0.15s ease;
+          font-family: inherit;
+        }
+
+        .nav-menu-group-btn:hover {
+          background: #F4F6F9;
+          color: #0B1F3A;
+        }
+
+        .nav-menu-group-btn.active {
+          background: #F4F6F9;
+          color: #0B1F3A;
+          font-weight: 600;
+        }
+
+        .nav-menu-group-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .nav-menu-group-arrow {
+          font-size: 8px;
+          transition: transform 0.3s ease;
+          color: #98A2B3;
+        }
+
+        .nav-menu-group-arrow.rotated {
+          transform: rotate(180deg);
+        }
+
+        /* ===== ПОДМЕНЮ ===== */
+        .nav-menu-sublist {
+          overflow: hidden;
+          max-height: 0;
+          transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-menu-sublist.open {
+          max-height: 500px;
+        }
+
+        .nav-menu-subitem {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 7px 12px 7px 32px;
+          border-radius: 8px;
+          text-decoration: none;
+          color: #667085;
+          font-size: 12.5px;
+          font-weight: 400;
+          transition: all 0.15s ease;
+        }
+
+        .nav-menu-subitem:hover {
+          background: #F4F6F9;
+          color: #0B1F3A;
+        }
+
+        .nav-menu-subitem.active {
+          background: #F4F6F9;
+          color: #0B1F3A;
+          font-weight: 600;
+        }
+
+        .nav-menu-subitem .nav-menu-icon svg {
+          width: 14px;
+          height: 14px;
+          opacity: 0.5;
+        }
+
+        .nav-menu-subitem.active .nav-menu-icon svg,
+        .nav-menu-subitem:hover .nav-menu-icon svg {
+          opacity: 1;
+        }
+
+        /* ===== ФУТЕР МЕНЮ ===== */
+        .nav-menu-footer {
+          padding: 12px 16px 16px;
+          border-top: 1px solid #F4F6F9;
+          flex-shrink: 0;
+        }
+
+        .nav-menu-logout {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 6px;
-          margin-top: 4px;
-          padding: 8px 10px;
+          gap: 8px;
+          width: 100%;
+          padding: 10px;
           border: none;
           background: #FCEBEC;
-          border-radius: 6px;
+          border-radius: 8px;
           color: #B3262E;
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.15s ease;
-          width: 100%;
         }
 
-        .nav-new-mobile-logout:hover {
+        .nav-menu-logout:hover {
           background: #FED7D7;
-          transform: scale(1.01);
         }
 
-        .nav-new-mobile-logout svg {
-          width: 14px;
-          height: 14px;
+        .nav-menu-logout svg {
+          width: 16px;
+          height: 16px;
         }
 
         /* ===== АДАПТИВНОСТЬ ===== */
-        @media (max-width: 1100px) {
-          .nav-new-container {
-            max-width: 100%;
-          }
-          .nav-new-link,
-          .nav-new-dropdown-btn {
-            padding: 3px 6px;
-            font-size: 10.5px;
-          }
-          .nav-new-logo-text {
-            font-size: 12px;
-          }
-          .nav-new-profile-name {
-            max-width: 45px;
-            font-size: 10px;
-          }
-        }
-
-        @media (max-width: 1024px) {
-          .nav-new-menu {
-            display: none;
-          }
-          .nav-new-burger {
-            display: block;
-          }
-          .nav-new-mobile {
-            display: flex;
-          }
-        }
-
         @media (max-width: 768px) {
           .nav-new {
-            height: 44px;
+            height: 48px;
             padding: 0 12px;
-          }
-          .nav-new-container {
-            max-width: 100%;
           }
           .nav-new-logo-img {
             height: 24px;
           }
           .nav-new-logo-text {
-            font-size: 11px;
+            font-size: 12px;
           }
           .nav-new-profile-name {
             display: none;
-          }
-          .nav-new-profile {
-            padding: 2px;
           }
           .nav-avatar,
           .nav-avatar-letter {
@@ -1003,27 +865,26 @@ export default function Navigation({ profile }) {
             height: 24px;
             font-size: 9px;
           }
-          .nav-new-logout {
-            width: 24px;
-            height: 24px;
+          .nav-new-menu-btn {
+            width: 32px;
+            height: 32px;
           }
-          .nav-new-logout svg {
-            width: 13px;
-            height: 13px;
+          .nav-new-menu-btn svg {
+            width: 18px;
+            height: 18px;
           }
-          .nav-new-mobile {
-            top: 44px;
-            padding: 10px 12px;
+          .nav-menu-overlay {
+            top: 48px;
           }
-          .nav-new-mobile-item {
-            font-size: 11px;
-            padding: 5px 6px;
+          .nav-menu-panel {
+            top: 48px;
+            width: 300px;
           }
         }
 
         @media (max-width: 480px) {
           .nav-new {
-            height: 40px;
+            height: 44px;
             padding: 0 8px;
           }
           .nav-new-logo-text {
@@ -1032,34 +893,35 @@ export default function Navigation({ profile }) {
           .nav-new-logo-img {
             height: 22px;
           }
-          .nav-new-right {
-            gap: 0;
-          }
-          .nav-new-logout {
-            width: 22px;
-            height: 22px;
-          }
-          .nav-new-logout svg {
-            width: 12px;
-            height: 12px;
-          }
           .nav-avatar,
           .nav-avatar-letter {
             width: 22px;
             height: 22px;
             font-size: 8px;
           }
-          .nav-new-mobile {
-            top: 40px;
-            padding: 8px 10px;
+          .nav-new-menu-btn {
+            width: 28px;
+            height: 28px;
           }
-          .nav-new-mobile-item {
-            font-size: 10px;
-            padding: 4px 6px;
+          .nav-new-menu-btn svg {
+            width: 16px;
+            height: 16px;
           }
-          .nav-new-mobile-logout {
-            font-size: 10px;
-            padding: 6px 8px;
+          .nav-menu-overlay {
+            top: 44px;
+          }
+          .nav-menu-panel {
+            top: 44px;
+            width: 280px;
+          }
+          .nav-menu-item,
+          .nav-menu-group-btn {
+            font-size: 12px;
+            padding: 6px 10px;
+          }
+          .nav-menu-subitem {
+            font-size: 11.5px;
+            padding: 5px 10px 5px 28px;
           }
         }
       `}</style>

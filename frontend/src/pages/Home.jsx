@@ -70,8 +70,9 @@ export default function Home() {
             />
           </div>
           <h1>
-            Детское общественное движение<br />
-            <span>«Дипломаты будущего»</span>
+            Межрегиональное детское общественное Движение<br />
+            по формированию дипломатической культуры<br />
+            <span>«Дипломаты Будущего»</span>
           </h1>
           <p className="home-hero-motto">
             «Воспитываем новое поколение дипломатов,<br />
@@ -137,11 +138,15 @@ export default function Home() {
       <section className="home-mission">
         <div className="home-mission-container">
           <div className="home-mission-icon">🕊️</div>
-          <h2>Наша миссия</h2>
+          <h2>О движении</h2>
           <p>
-            Воспитание нового поколения дипломатов,<br />
-            развитие лидерских качеств и формирование<br />
-            гражданской позиции у молодёжи
+            <strong>Межрегиональное детское общественное Движение<br />
+            по формированию дипломатической культуры<br />
+            «Дипломаты Будущего»</strong>
+          </p>
+          <p className="home-mission-sub">
+            Воспитываем новое поколение дипломатов, развиваем лидерские качества<br />
+            и формируем гражданскую позицию у молодёжи
           </p>
           <div className="home-mission-values">
             <div className="home-mission-value">
@@ -159,6 +164,27 @@ export default function Home() {
             <div className="home-mission-value">
               <span>⭐</span>
               <span>Гражданская позиция</span>
+            </div>
+          </div>
+
+          <div className="home-contacts">
+            <div className="home-contacts-item">
+              <span className="home-contacts-icon">📍</span>
+              <span>119200, Москва, Смоленская-Сенная площадь, дом 32/34 (АРД)</span>
+            </div>
+            <div className="home-contacts-item">
+              <span className="home-contacts-icon">📞</span>
+              <a href="tel:+74992443285">+7 (499) 244-32-85</a>
+            </div>
+            <div className="home-contacts-item">
+              <span className="home-contacts-icon">✉️</span>
+              <a href="mailto:diplomatsothefuture@mail.ru">diplomatsothefuture@mail.ru</a>
+            </div>
+            <div className="home-contacts-item">
+              <span className="home-contacts-icon">🌐</span>
+              <a href="https://www.diplomatsothefuture.ru" target="_blank" rel="noopener noreferrer">
+                diplomatsothefuture.ru
+              </a>
             </div>
           </div>
         </div>
@@ -207,7 +233,7 @@ export default function Home() {
         .home-hero-content {
           position: relative;
           z-index: 1;
-          max-width: 800px;
+          max-width: 900px;
         }
 
         .home-hero-emblem {
@@ -228,11 +254,11 @@ export default function Home() {
 
         .home-hero h1 {
           font-family: 'Playfair Display', serif;
-          font-size: 38px;
+          font-size: 36px;
           font-weight: 700;
           color: white;
           margin-bottom: 12px;
-          line-height: 1.2;
+          line-height: 1.3;
         }
 
         .home-hero h1 span {
@@ -405,7 +431,7 @@ export default function Home() {
         }
 
         .home-mission-container {
-          max-width: 800px;
+          max-width: 900px;
           margin: 0 auto;
           text-align: center;
           position: relative;
@@ -429,8 +455,19 @@ export default function Home() {
           font-size: 17px;
           color: rgba(255, 255, 255, 0.6);
           line-height: 1.8;
-          margin-bottom: 28px;
+          margin-bottom: 8px;
           font-weight: 300;
+        }
+
+        .home-mission p strong {
+          color: #E8D9A8;
+          font-weight: 600;
+        }
+
+        .home-mission-sub {
+          font-size: 15px !important;
+          color: rgba(255, 255, 255, 0.4) !important;
+          margin-bottom: 28px !important;
         }
 
         .home-mission-values {
@@ -467,6 +504,39 @@ export default function Home() {
           color: rgba(255, 255, 255, 0.5);
           font-weight: 400;
           letter-spacing: 0.5px;
+        }
+
+        .home-contacts {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 12px;
+          margin-top: 32px;
+          padding-top: 24px;
+          border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .home-contacts-item {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.4);
+        }
+
+        .home-contacts-icon {
+          font-size: 16px;
+          flex-shrink: 0;
+        }
+
+        .home-contacts-item a {
+          color: rgba(255, 255, 255, 0.4);
+          text-decoration: none;
+          transition: color 0.2s ease;
+        }
+
+        .home-contacts-item a:hover {
+          color: #E8D9A8;
         }
 
         @media (max-width: 768px) {
@@ -509,6 +579,15 @@ export default function Home() {
 
           .home-mission-values {
             grid-template-columns: repeat(2, 1fr);
+          }
+
+          .home-contacts {
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+          }
+
+          .home-contacts-item {
+            font-size: 12px;
           }
         }
 
@@ -573,6 +652,16 @@ export default function Home() {
 
           .home-mission-value span:first-child {
             font-size: 20px;
+          }
+
+          .home-contacts {
+            grid-template-columns: 1fr;
+            gap: 6px;
+          }
+
+          .home-contacts-item {
+            font-size: 11px;
+            justify-content: center;
           }
         }
       `}</style>

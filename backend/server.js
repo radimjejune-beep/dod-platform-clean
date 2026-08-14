@@ -731,10 +731,13 @@ app.delete('/api/achievements/:id', async (req, res) => {
 });
 
 // ============================================================
-// 16. СОБЫТИЯ (ИСПРАВЛЕННЫЙ МАРШРУТ)
+// ОТВЕТ НА ОБРАЩЕНИЕ (ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ)
 // ============================================================
-app.get('/api/events', async (req, res) => {
+app.post('/api/appeals/:id/reply', async (req, res) => {
   try {
+    const { id } = req.params;
+    const { message, status } = req.body;
+
     const authHeader = req.headers.authorization;
     if (!authHeader) {
       return res.status(401).json({ error: 'Нет токена' });
@@ -745,89 +748,66 @@ app.get('/api/events', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
-    let query = `
-      SELECT e.*, 
-             c.name as club_name,
-             u.full_name as created_by_name,
-             (SELECT COUNT(*) FROM registrations r WHERE r.event_id = e.id AND r.status = 'confirmed') as participants_count
-      FROM events e
-      LEFT JOIN clubs c ON e.club_id = c.id
-      LEFT JOIN users u ON e.created_by = u.id
-      WHERE (e.moderation_status = 'approved' OR e.moderation_status IS NULL)
-    `;
-    const params = [];
-    const conditions = [];
-
-    // ===== 1. ГЛОБАЛЬНЫЕ МЕРОПРИЯТИЯ =====
-    conditions.push('(e.is_global = true OR e.is_global IS NULL)');
-
-    // ===== 2. ВНУТРЕННИЕ МЕРОПРИЯТИЯ =====
-    const role = userRole;
-
-    // Админ, координатор движения, президент, вице — видят все внутренние
-    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
-      conditions.push('(e.is_club_event = true)');
-    } 
-    // Координатор КЮДа — видит только свой клуб
-    else if (role === 'club_coordinator') {
-      const clubResult = await pool.query(
-        'SELECT club_id FROM club_coordinators WHERE profile_id = $1::UUID',
-        [userId]
-      );
-      if (clubResult.rows.length > 0) {
-        const clubId = clubResult.rows[0].club_id;
-        // Используем $1::UUID для одного значения
-        conditions.push(`(e.is_club_event = true AND e.club_id = $${params.length + 1}::UUID)`);
-        params.push(clubId);
-      } else {
-        conditions.push('1 = 0');
-      }
-    } 
-    // Участник — видит только свой клуб
-    else if (role === 'participant') {
-      const user = await pool.query(
-        'SELECT club_id FROM users WHERE id = $1::UUID',
-        [userId]
-      );
-      if (user.rows.length > 0 && user.rows[0].club_id) {
-        const clubId = user.rows[0].club_id;
-        conditions.push(`(e.is_club_event = true AND e.club_id = $${params.length + 1}::UUID)`);
-        params.push(clubId);
-      } else {
-        conditions.push('1 = 0');
-      }
-    } 
-    // Тьютор — видит клубы, где назначен
-    else if (role === 'tutor') {
-      const clubs = await pool.query(
-        'SELECT DISTINCT club_id FROM event_tutors WHERE tutor_id = $1::UUID',
-        [userId]
-      );
-      if (clubs.rows.length > 0) {
-        const clubIds = clubs.rows.map(r => r.club_id);
-        // Для массива используем ANY(...::UUID[])
-        conditions.push(`(e.is_club_event = true AND e.club_id = ANY($${params.length + 1}::UUID[]))`);
-        params.push(clubIds);
-      } else {
-        conditions.push('1 = 0');
-      }
-    } 
-    // Родитель — не видит внутренние
-    else if (role === 'parent') {
-      conditions.push('1 = 0');
+    const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для ответа на обращения' });
     }
 
-    if (conditions.length > 0) {
-      query += ' AND (' + conditions.join(' OR ') + ')';
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Текст ответа обязателен' });
     }
 
-    query += ' ORDER BY e.event_date ASC';
+    // ===== ПРОВЕРЯЕМ, ЧТО ОБРАЩЕНИЕ СУЩЕСТВУЕТ =====
+    const appealCheck = await pool.query(
+      'SELECT id FROM appeals WHERE id = $1',
+      [id]
+    );
+    if (appealCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Обращение не найдено' });
+    }
 
-    const result = await pool.query(query, params);
-    res.json(result.rows);
+    // ===== ВСТАВЛЯЕМ ОТВЕТ =====
+    const replyResult = await pool.query(
+      `INSERT INTO appeal_replies (appeal_id, author_id, message, created_at)
+       VALUES ($1, $2, $3, NOW())
+       RETURNING *`,
+      [id, userId, message.trim()]
+    );
+
+    // ===== ОБНОВЛЯЕМ СТАТУС ОБРАЩЕНИЯ =====
+    const newStatus = status || 'in_progress';
+    await pool.query(
+      `UPDATE appeals 
+       SET status = $1,
+           resolved_by = $2,
+           resolved_at = CASE WHEN $1 IN ('resolved', 'rejected') THEN NOW() ELSE NULL END
+       WHERE id = $3`,
+      [newStatus, userId, id]
+    );
+
+    // ===== ПОЛУЧАЕМ ОБНОВЛЁННОЕ ОБРАЩЕНИЕ =====
+    const result = await pool.query(
+      `SELECT a.*, 
+              u.full_name as coordinator_name,
+              c.name as club_name,
+              r.full_name as resolved_by_name
+       FROM appeals a
+       LEFT JOIN users u ON a.coordinator_id = u.id
+       LEFT JOIN clubs c ON a.club_id = c.id
+       LEFT JOIN users r ON a.resolved_by = r.id
+       WHERE a.id = $1`,
+      [id]
+    );
+
+    res.json({
+      message: 'Ответ отправлен',
+      appeal: result.rows[0],
+      reply: replyResult.rows[0]
+    });
   } catch (error) {
-    console.error('Ошибка получения событий:', error);
-    res.status(500).json({ error: error.message });
+    console.error('❌ Ошибка ответа на обращение:', error);
+    console.error('❌ Детали:', error.detail || 'Нет деталей');
+    res.status(500).json({ error: error.message, detail: error.detail || 'Ошибка сервера' });
   }
 });
 

@@ -2090,31 +2090,117 @@ app.get('/api/news', async (req, res) => {
   }
 });
 
-// СОЗДАНИЕ НОВОСТИ
+// ===== СОЗДАНИЕ НОВОСТИ =====
 app.post('/api/news', async (req, res) => {
-  // ...
-  if (!['admin', 'movement_coordinator'].includes(decoded.role)) {
-    return res.status(403).json({ error: 'У вас нет прав' });
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);  // ← ВАЖНО: нужно определить decoded
+    
+    if (!['admin', 'movement_coordinator'].includes(decoded.role)) {
+      return res.status(403).json({ error: 'У вас нет прав' });
+    }
+
+    const { title, content, image_url } = req.body;
+
+    if (!title || !content) {
+      return res.status(400).json({ error: 'title и content обязательны' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO news (title, content, image_url, created_at)
+       VALUES ($1, $2, $3, NOW())
+       RETURNING *`,
+      [title, content, image_url || null]
+    );
+
+    console.log('✅ Создана новость:', result.rows[0].title);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания новости:', error);
+    res.status(500).json({ error: error.message });
   }
-  // ...
 });
 
-// ОБНОВЛЕНИЕ НОВОСТИ
+// ===== ОБНОВЛЕНИЕ НОВОСТИ =====
 app.put('/api/news/:id', async (req, res) => {
-  // ...
-  if (!['admin', 'movement_coordinator'].includes(decoded.role)) {
-    return res.status(403).json({ error: 'У вас нет прав' });
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);  // ← ВАЖНО
+    
+    if (!['admin', 'movement_coordinator'].includes(decoded.role)) {
+      return res.status(403).json({ error: 'У вас нет прав' });
+    }
+
+    const { id } = req.params;
+    const { title, content, image_url } = req.body;
+
+    if (!title || !content) {
+      return res.status(400).json({ error: 'title и content обязательны' });
+    }
+
+    const check = await pool.query('SELECT id FROM news WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Новость не найдена' });
+    }
+
+    const result = await pool.query(
+      `UPDATE news 
+       SET title = $1,
+           content = $2,
+           image_url = $3
+       WHERE id = $4
+       RETURNING *`,
+      [title, content, image_url || null, id]
+    );
+
+    console.log('✅ Обновлена новость:', result.rows[0].title);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка обновления новости:', error);
+    res.status(500).json({ error: error.message });
   }
-  // ...
 });
 
-// УДАЛЕНИЕ НОВОСТИ
+// ===== УДАЛЕНИЕ НОВОСТИ =====
 app.delete('/api/news/:id', async (req, res) => {
-  // ...
-  if (!['admin', 'movement_coordinator'].includes(decoded.role)) {
-    return res.status(403).json({ error: 'У вас нет прав' });
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);  // ← ВАЖНО
+    
+    if (!['admin', 'movement_coordinator'].includes(decoded.role)) {
+      return res.status(403).json({ error: 'У вас нет прав' });
+    }
+
+    const { id } = req.params;
+    
+    const check = await pool.query('SELECT id FROM news WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Новость не найдена' });
+    }
+
+    await pool.query('DELETE FROM news WHERE id = $1', [id]);
+
+    console.log('✅ Удалена новость:', id);
+    res.json({ message: 'Новость удалена' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления новости:', error);
+    res.status(500).json({ error: error.message });
   }
-  // ...
 });
 
 // ============================================================

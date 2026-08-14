@@ -14,7 +14,6 @@ export default function Appeals() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
   
-  // Для ответов
   const [selectedAppeal, setSelectedAppeal] = useState(null);
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [replyMessage, setReplyMessage] = useState('');
@@ -83,7 +82,7 @@ export default function Appeals() {
   };
 
   // ============================================================
-  // ОТВЕТ НА ОБРАЩЕНИЕ
+  // ОТВЕТ НА ОБРАЩЕНИЕ (ФРОНТЕНД)
   // ============================================================
   const handleReply = async (e) => {
     e.preventDefault();
@@ -121,7 +120,7 @@ export default function Appeals() {
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || 'Ошибка отправки ответа');
+        throw new Error(data.error || data.detail || 'Ошибка отправки ответа');
       }
 
       setMessage('✅ Ответ отправлен!');
@@ -142,9 +141,6 @@ export default function Appeals() {
     }
   };
 
-  // ============================================================
-  // УДАЛЕНИЕ ОБРАЩЕНИЯ (ТОЛЬКО ДЛЯ АДМИНА)
-  // ============================================================
   const handleDelete = async (id) => {
     const role = profile?.role;
     
@@ -240,9 +236,6 @@ export default function Appeals() {
     return colors[status] || '#F4F6F9';
   };
 
-  // ============================================================
-  // ПРОВЕРКА ПРАВ
-  // ============================================================
   const canReply = profile?.role === 'admin' || 
                    profile?.role === 'movement_coordinator' || 
                    profile?.role === 'president' || 
@@ -466,7 +459,6 @@ export default function Appeals() {
                   </div>
                 </div>
 
-                {/* ОТВЕТЫ */}
                 {showReplies && selectedAppeal?.id === appeal.id && (
                   <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E7EF' }}>
                     <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
@@ -529,7 +521,6 @@ export default function Appeals() {
         )}
       </div>
 
-      {/* МОДАЛЬНОЕ ОКНО ДЛЯ ОТВЕТА */}
       {showReplyModal && selectedAppeal && (
         <div
           style={{

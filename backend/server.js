@@ -3684,6 +3684,7 @@ app.patch('/api/clubs/:clubId/president', async (req, res) => {
       [president_id]
     );
 
+    // ===== УВЕДОМЛЕНИЕ НОВОМУ ПРЕЗИДЕНТУ =====
     await createNotification(
       president_id,
       'system',
@@ -3693,6 +3694,7 @@ app.patch('/api/clubs/:clubId/president', async (req, res) => {
       'high'
     );
 
+    // ===== УВЕДОМЛЕНИЕ КООРДИНАТОРАМ КЛУБА =====
     const coordinators = await pool.query(
       'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
       [clubId]
@@ -3717,26 +3719,6 @@ app.patch('/api/clubs/:clubId/president', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Ошибка назначения президента:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== ПОЛУЧЕНИЕ ПРЕЗИДЕНТА КЛУБА =====
-app.get('/api/clubs/:clubId/president', async (req, res) => {
-  try {
-    const { clubId } = req.params;
-
-    const result = await pool.query(
-      `SELECT u.id, u.full_name, u.email, u.phone, u.school, u.class_name, u.avatar_url
-       FROM users u
-       WHERE u.club_id = $1 AND u.is_president = true
-       LIMIT 1`,
-      [clubId]
-    );
-
-    res.json(result.rows[0] || null);
-  } catch (error) {
-    console.error('❌ Ошибка получения президента:', error);
     res.status(500).json({ error: error.message });
   }
 });

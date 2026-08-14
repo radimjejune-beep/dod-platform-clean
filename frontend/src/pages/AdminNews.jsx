@@ -35,6 +35,7 @@ export default function AdminNews() {
         return;
       }
 
+      // ===== ПРОВЕРКА ПРАВ =====
       if (userData.role !== 'admin' && userData.role !== 'movement_coordinator') {
         navigate('/dashboard');
         return;
@@ -66,6 +67,8 @@ export default function AdminNews() {
       setLoading(false);
     }
   };
+
+  const canCreate = profile && (profile.role === 'admin' || profile.role === 'movement_coordinator');
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -101,7 +104,6 @@ export default function AdminNews() {
     try {
       const token = localStorage.getItem('token');
       
-      // Загружаем изображение, если есть
       let imageUrl = form.image_url;
       if (form.image_file) {
         const reader = new FileReader();
@@ -252,16 +254,18 @@ export default function AdminNews() {
             <h1>Управление новостями</h1>
             <p>Всего новостей: {news.length}</p>
           </div>
-          <button
-            className="btn-primary"
-            style={{ marginLeft: 'auto' }}
-            onClick={() => {
-              resetForm();
-              setShowForm(!showForm);
-            }}
-          >
-            {showForm ? '✖ Закрыть' : '➕ Создать новость'}
-          </button>
+          {canCreate && (
+            <button
+              className="btn-primary"
+              style={{ marginLeft: 'auto' }}
+              onClick={() => {
+                resetForm();
+                setShowForm(!showForm);
+              }}
+            >
+              {showForm ? '✖ Закрыть' : '➕ Создать новость'}
+            </button>
+          )}
         </div>
 
         {message && (
@@ -270,7 +274,7 @@ export default function AdminNews() {
           </div>
         )}
 
-        {showForm && (
+        {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
               {editingId ? '✏️ Редактировать новость' : '📝 Создать новость'}

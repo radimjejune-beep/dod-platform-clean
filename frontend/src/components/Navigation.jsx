@@ -6,7 +6,7 @@ import Notifications from './Notifications';
 import logo from '../assets/Image.png';
 
 // ============================================================
-// ИКОНКИ (SVG) — ОСТАВЛЯЕМ БЕЗ ИЗМЕНЕНИЙ
+// ИКОНКИ (SVG)
 // ============================================================
 const Icons = {
   dashboard: (

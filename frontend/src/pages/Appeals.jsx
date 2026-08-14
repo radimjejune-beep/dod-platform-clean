@@ -55,7 +55,11 @@ export default function Appeals() {
     }
   };
 
-  // ===== СОЗДАНИЕ ОБРАЩЕНИЯ =====
+  const canCreate = profile && profile.role === 'club_coordinator';
+  const canReply = profile && ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile.role);
+  const canView = profile && ['club_coordinator', 'movement_coordinator', 'admin', 'president', 'vice_president'].includes(profile.role);
+  const canDelete = profile && profile.role === 'admin';
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSending(true);
@@ -86,7 +90,6 @@ export default function Appeals() {
     }
   };
 
-  // ===== ОТВЕТ НА ОБРАЩЕНИЕ =====
   const handleReply = async (e) => {
     e.preventDefault();
     setSending(true);
@@ -151,11 +154,8 @@ export default function Appeals() {
     }
   };
 
-  // ===== УДАЛЕНИЕ ОБРАЩЕНИЯ =====
   const handleDelete = async (id) => {
-    const role = profile?.role;
-    
-    if (role !== 'admin') {
+    if (!canDelete) {
       setMessage('❌ У вас нет прав для удаления обращений');
       setMessageType('error');
       setTimeout(() => setMessage(''), 3000);
@@ -191,7 +191,6 @@ export default function Appeals() {
     }
   };
 
-  // ===== ЗАГРУЗКА ОТВЕТОВ =====
   const loadReplies = async (appealId) => {
     try {
       setLoadingReplies(true);
@@ -214,7 +213,6 @@ export default function Appeals() {
     }
   };
 
-  // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
   const getPriorityLabel = (priority) => {
     const labels = {
       'low': '🟢 Низкий',
@@ -254,21 +252,6 @@ export default function Appeals() {
     };
     return colors[status] || '#F4F6F9';
   };
-
-  // ===== ПРОВЕРКА ПРАВ =====
-  const canReply = profile?.role === 'admin' || 
-                   profile?.role === 'movement_coordinator' || 
-                   profile?.role === 'president' || 
-                   profile?.role === 'vice_president';
-
-  const canView = profile?.role === 'club_coordinator' || 
-                  profile?.role === 'movement_coordinator' || 
-                  profile?.role === 'admin' ||
-                  profile?.role === 'president' ||
-                  profile?.role === 'vice_president';
-
-  const canCreate = profile?.role === 'club_coordinator';
-  const canDelete = profile?.role === 'admin';
 
   if (loading) {
     return (
@@ -324,7 +307,6 @@ export default function Appeals() {
           </div>
         )}
 
-        {/* ФОРМА СОЗДАНИЯ ОБРАЩЕНИЯ */}
         {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
@@ -378,7 +360,6 @@ export default function Appeals() {
           </div>
         )}
 
-        {/* СПИСОК ОБРАЩЕНИЙ */}
         {appeals.length === 0 ? (
           <div className="empty-state">
             <div className="icon">📭</div>
@@ -509,7 +490,6 @@ export default function Appeals() {
                     </div>
                   </div>
 
-                  {/* ОТВЕТЫ */}
                   {showReplies && selectedAppeal?.id === appeal.id && (
                     <div style={{ 
                       marginTop: '16px', 
@@ -599,9 +579,6 @@ export default function Appeals() {
         )}
       </div>
 
-      {/* ============================================================
-          МОДАЛЬНОЕ ОКНО: ОТВЕТ НА ОБРАЩЕНИЕ
-          ============================================================ */}
       {showReplyModal && selectedAppeal && (
         <div
           style={{

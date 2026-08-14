@@ -46,9 +46,6 @@ export default function PresidentTasks() {
       }
       setProfile(userData);
 
-      // ============================================================
-      // ЗАГРУЗКА ЗАДАНИЙ (с обработкой ошибок)
-      // ============================================================
       const token = localStorage.getItem('token');
       
       if (!token) {
@@ -85,9 +82,6 @@ export default function PresidentTasks() {
         setTasks([]);
       }
 
-      // ============================================================
-      // ЗАГРУЗКА КЛУБОВ
-      // ============================================================
       try {
         const clubsData = await api.getClubs();
         setClubs(Array.isArray(clubsData) ? clubsData : []);
@@ -96,9 +90,6 @@ export default function PresidentTasks() {
         setClubs([]);
       }
 
-      // ============================================================
-      // ЗАГРУЗКА ПРЕЗИДЕНТОВ
-      // ============================================================
       try {
         const usersData = await api.getUsers();
         const presidentsData = Array.isArray(usersData) 
@@ -120,12 +111,8 @@ export default function PresidentTasks() {
     }
   };
 
-  const canCreate = role === 'admin' || 
-                    role === 'movement_coordinator' || 
-                    role === 'vice_president' ||
-                    role === 'club_coordinator';
-
-  const isPresident = role === 'president' || role === 'vice_president';
+  const canCreate = profile && ['admin', 'movement_coordinator', 'vice_president', 'club_coordinator'].includes(profile.role);
+  const isPresident = profile?.role === 'president' || profile?.role === 'vice_president';
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
@@ -133,7 +120,6 @@ export default function PresidentTasks() {
     setLoading(true);
 
     try {
-      // Проверяем заполнение обязательных полей
       if (!form.title || form.title.trim() === '') {
         setMessage('❌ Введите заголовок задания');
         setMessageType('error');
@@ -331,13 +317,7 @@ export default function PresidentTasks() {
             <button
               className="btn-primary"
               style={{ marginLeft: 'auto' }}
-              onClick={() => {
-                console.log('🔄 Кнопка нажата, showCreateForm:', !showCreateForm);
-                setShowCreateForm(!showCreateForm);
-                if (showCreateForm) {
-                  resetForm();
-                }
-              }}
+              onClick={() => setShowCreateForm(!showCreateForm)}
             >
               {showCreateForm ? '✖ Закрыть' : '➕ Создать задание'}
             </button>
@@ -350,7 +330,6 @@ export default function PresidentTasks() {
           </div>
         )}
 
-        {/* ФОРМА СОЗДАНИЯ */}
         {showCreateForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
@@ -446,14 +425,7 @@ export default function PresidentTasks() {
                 <button type="submit" className="btn-success" disabled={loading}>
                   {loading ? '⏳ Создание...' : '✅ Создать'}
                 </button>
-                <button 
-                  type="button" 
-                  className="btn-secondary" 
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    resetForm();
-                  }}
-                >
+                <button type="button" className="btn-secondary" onClick={() => setShowCreateForm(false)}>
                   ❌ Отмена
                 </button>
               </div>
@@ -461,7 +433,6 @@ export default function PresidentTasks() {
           </div>
         )}
 
-        {/* СПИСОК ЗАДАНИЙ */}
         {tasks.length === 0 ? (
           <div className="empty-state">
             <div className="icon">📋</div>
@@ -476,8 +447,7 @@ export default function PresidentTasks() {
               const status = getStatusBadge(task.status);
               const isAssignedToMe = task.assigned_to === profile?.id || task.assigned_to === null;
               const canRespond = isPresident && isAssignedToMe && task.status !== 'completed';
-              const canManageStatus = ['admin', 'movement_coordinator', 'vice_president'].includes(role) || 
-                                     task.created_by === profile?.id;
+              const canManageStatus = ['admin', 'movement_coordinator', 'vice_president'].includes(role) || task.created_by === profile?.id;
 
               return (
                 <div key={task.id} className="card" style={{ borderLeft: `4px solid ${status.color}` }}>
@@ -614,7 +584,6 @@ export default function PresidentTasks() {
         )}
       </div>
 
-      {/* МОДАЛЬНОЕ ОКНО ОТВЕТА */}
       {showResponseModal && selectedTask && (
         <div
           style={{

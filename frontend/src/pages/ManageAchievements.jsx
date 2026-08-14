@@ -76,12 +76,7 @@ export default function ManageAchievements() {
       let filteredParticipants = [];
       let filteredAchievements = [];
 
-      // ============================================================
-      // ЛОГИКА ПО РОЛЯМ
-      // ============================================================
-
       if (role === 'club_coordinator') {
-        // КООРДИНАТОР КЮДА — видит только свой клуб
         const coordinatorClub = clubsData.find(c => 
           c.coordinator_id === userData.id || 
           c.leader_id === userData.id
@@ -94,15 +89,10 @@ export default function ManageAchievements() {
           filteredParticipants = [];
           filteredAchievements = [];
         }
-      } 
-      else if (role === 'tutor' || 
-               role === 'movement_coordinator' || 
-               role === 'admin') {
-        // ТЬЮТОР, КООРДИНАТОР, АДМИН — видят всех
+      } else if (role === 'tutor' || role === 'movement_coordinator' || role === 'admin') {
         filteredParticipants = participantsData;
         filteredAchievements = achievementsData;
-      } 
-      else {
+      } else {
         filteredParticipants = [];
         filteredAchievements = [];
       }
@@ -119,10 +109,7 @@ export default function ManageAchievements() {
     }
   };
 
-  // Фильтр по клубу (только для тех, кто видит всех)
-  const canFilterByClub = profile?.role === 'admin' || 
-                          profile?.role === 'movement_coordinator' || 
-                          profile?.role === 'tutor';
+  const canFilterByClub = profile?.role === 'admin' || profile?.role === 'movement_coordinator' || profile?.role === 'tutor';
 
   useEffect(() => {
     if (selectedClubId && canFilterByClub) {
@@ -136,6 +123,9 @@ export default function ManageAchievements() {
       setParticipants(allParticipants);
     }
   }, [selectedClubId, allAchievements, allParticipants, canFilterByClub]);
+
+  const canManage = profile && ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'].includes(profile.role);
+  const canDelete = profile && ['admin', 'movement_coordinator'].includes(profile.role);
 
   const handleSearchChange = (e) => {
     const query = e.target.value;
@@ -182,7 +172,6 @@ export default function ManageAchievements() {
 
       let result;
       if (editingAchievement) {
-        // TODO: добавить API для обновления достижения
         result = { error: 'Обновление достижений пока не реализовано' };
       } else {
         result = await api.addAchievement(data);
@@ -250,15 +239,6 @@ export default function ManageAchievements() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Кто может управлять достижениями
-  const canManage = profile?.role === 'admin' || 
-                    profile?.role === 'movement_coordinator' || 
-                    profile?.role === 'club_coordinator' ||
-                    profile?.role === 'tutor';
-
-  // Кто может удалять
-  const canDelete = profile?.role === 'admin' || profile?.role === 'movement_coordinator';
-
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
@@ -303,7 +283,6 @@ export default function ManageAchievements() {
           </div>
         )}
 
-        {/* ФИЛЬТР ПО КЮДАМ */}
         {canFilterByClub && clubs.length > 0 && (
           <div style={{
             display: 'flex',
@@ -358,7 +337,6 @@ export default function ManageAchievements() {
           </div>
         )}
 
-        {/* ФОРМА ДОБАВЛЕНИЯ */}
         {showForm && canManage && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
@@ -486,7 +464,6 @@ export default function ManageAchievements() {
           </div>
         )}
 
-        {/* СПИСОК ДОСТИЖЕНИЙ */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>

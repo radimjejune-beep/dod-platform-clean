@@ -174,7 +174,9 @@ export default function Events() {
     return false;
   };
 
-  const canCreate = ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(profile?.role);
+  // ===== ВАЖНО: ИСПРАВЛЕННАЯ СТРОКА =====
+  const canCreate = profile && ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(profile.role);
+  
   const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
   const isClubCoordinator = profile?.role === 'club_coordinator';
   const isMovementCoordinator = profile?.role === 'movement_coordinator';

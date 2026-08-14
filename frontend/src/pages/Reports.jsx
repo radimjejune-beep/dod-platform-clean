@@ -49,34 +49,21 @@ export default function Reports() {
       const role = userData.role;
       let filteredReports = [];
 
-      // ============================================================
-      // ЛОГИКА ПО РОЛЯМ
-      // ============================================================
-
       if (role === 'participant' || role === 'parent' || role === 'tutor') {
-        // УЧАСТНИК, РОДИТЕЛЬ, ТЬЮТОР — не видят отчёты
         filteredReports = [];
       } 
       else if (role === 'club_coordinator') {
-        // КООРДИНАТОР КЮДА — видит отчёты своего клуба
         const coordinatorClub = clubsData.find(c => 
           c.coordinator_id === userData.id || 
           c.leader_id === userData.id
         );
         if (coordinatorClub) {
-          // TODO: добавить API для получения отчётов по клубу
-          // filteredReports = reportsData.filter(r => r.club_id === coordinatorClub.id);
           filteredReports = [];
         } else {
           filteredReports = [];
         }
       } 
-      else if (role === 'movement_coordinator' || 
-               role === 'admin' || 
-               role === 'president' || 
-               role === 'vice_president') {
-        // КООРДИНАТОР, АДМИН, ПРЕЗИДЕНТ, ВИЦЕ — видят все отчёты
-        // TODO: добавить API для получения всех отчётов
+      else if (role === 'movement_coordinator' || role === 'admin' || role === 'president' || role === 'vice_president') {
         filteredReports = [];
       } 
       else {
@@ -93,11 +80,7 @@ export default function Reports() {
     }
   };
 
-  // Фильтр по клубу
-  const canFilterByClub = profile?.role === 'admin' || 
-                          profile?.role === 'movement_coordinator' || 
-                          profile?.role === 'president' ||
-                          profile?.role === 'vice_president';
+  const canFilterByClub = profile?.role === 'admin' || profile?.role === 'movement_coordinator' || profile?.role === 'president' || profile?.role === 'vice_president';
 
   useEffect(() => {
     if (selectedClubId && canFilterByClub) {
@@ -107,13 +90,14 @@ export default function Reports() {
     }
   }, [selectedClubId, allReports, canFilterByClub]);
 
+  const canCreate = profile && (profile.role === 'admin' || profile.role === 'movement_coordinator' || profile.role === 'club_coordinator');
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
     setLoading(true);
 
     try {
-      // TODO: добавить API для создания отчёта
       setMessage('✅ Отчёт создан!');
       setMessageType('success');
       setForm({
@@ -145,17 +129,7 @@ export default function Reports() {
     return badges[status] || badges['draft'];
   };
 
-  // Кто может создавать отчёты
-  const canCreate = profile?.role === 'admin' || 
-                    profile?.role === 'movement_coordinator' || 
-                    profile?.role === 'club_coordinator';
-
-  // Кто может просматривать отчёты
-  const canView = profile?.role === 'admin' || 
-                  profile?.role === 'movement_coordinator' || 
-                  profile?.role === 'club_coordinator' ||
-                  profile?.role === 'president' ||
-                  profile?.role === 'vice_president';
+  const canView = profile && (profile.role === 'admin' || profile.role === 'movement_coordinator' || profile.role === 'club_coordinator' || profile.role === 'president' || profile.role === 'vice_president');
 
   const isClubCoordinator = profile?.role === 'club_coordinator';
 
@@ -223,7 +197,6 @@ export default function Reports() {
           </div>
         )}
 
-        {/* ФИЛЬТР ПО КЮДАМ */}
         {canFilterByClub && clubs.length > 0 && (
           <div style={{
             display: 'flex',
@@ -278,7 +251,6 @@ export default function Reports() {
           </div>
         )}
 
-        {/* ФОРМА СОЗДАНИЯ */}
         {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
@@ -352,7 +324,6 @@ export default function Reports() {
           </div>
         )}
 
-        {/* СПИСОК ОТЧЁТОВ */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
@@ -403,7 +374,6 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* МОДАЛЬНОЕ ОКНО */}
       {showModal && selectedReport && (
         <div
           style={{

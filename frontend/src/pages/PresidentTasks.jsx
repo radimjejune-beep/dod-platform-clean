@@ -69,7 +69,6 @@ export default function PresidentTasks() {
         console.log('📥 Статус /president-tasks:', response.status);
 
         if (response.status === 404) {
-          // API ещё не реализован — показываем пустой список
           console.warn('⚠️ API /president-tasks не найден (404)');
           setTasks([]);
         } else if (!response.ok) {
@@ -134,15 +133,52 @@ export default function PresidentTasks() {
     setLoading(true);
 
     try {
+      // Проверяем заполнение обязательных полей
+      if (!form.title || form.title.trim() === '') {
+        setMessage('❌ Введите заголовок задания');
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
+
       const token = localStorage.getItem('token');
+      
+      if (!token) {
+        setMessage('❌ Нет авторизации');
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
+
+      const requestData = {
+        title: form.title.trim(),
+        description: form.description || '',
+        priority: form.priority,
+        deadline: form.deadline || null,
+        club_id: form.club_id || null,
+        assigned_to: form.assigned_to || null,
+        is_global: form.is_global || false
+      };
+
+      console.log('📤 Отправка задания:', requestData);
+
       const response = await fetch('https://dod-backend.relaxdev.ru/api/president-tasks', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(form)
+        body: JSON.stringify(requestData)
       });
+
+      console.log('📥 Статус создания задания:', response.status);
+
+      if (response.status === 404) {
+        setMessage('⚠️ API создания заданий ещё не реализован. Функция временно недоступна.');
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -159,6 +195,7 @@ export default function PresidentTasks() {
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
+      console.error('❌ Ошибка создания задания:', err);
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
@@ -294,7 +331,13 @@ export default function PresidentTasks() {
             <button
               className="btn-primary"
               style={{ marginLeft: 'auto' }}
-              onClick={() => setShowCreateForm(!showCreateForm)}
+              onClick={() => {
+                console.log('🔄 Кнопка нажата, showCreateForm:', !showCreateForm);
+                setShowCreateForm(!showCreateForm);
+                if (showCreateForm) {
+                  resetForm();
+                }
+              }}
             >
               {showCreateForm ? '✖ Закрыть' : '➕ Создать задание'}
             </button>
@@ -403,7 +446,14 @@ export default function PresidentTasks() {
                 <button type="submit" className="btn-success" disabled={loading}>
                   {loading ? '⏳ Создание...' : '✅ Создать'}
                 </button>
-                <button type="button" className="btn-secondary" onClick={() => setShowCreateForm(false)}>
+                <button 
+                  type="button" 
+                  className="btn-secondary" 
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    resetForm();
+                  }}
+                >
                   ❌ Отмена
                 </button>
               </div>

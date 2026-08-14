@@ -175,7 +175,7 @@ export default function Navigation({ profile }) {
     );
   };
 
-  const getMenuGroups = () => {
+const getMenuGroups = () => {
     const groups = {
       main: [
         { path: '/dashboard', label: 'Дашборд', icon: Icons.dashboard, roles: ['admin', 'movement_coordinator', 'president', 'vice_president'] },
@@ -198,7 +198,18 @@ export default function Navigation({ profile }) {
         { path: '/club-analytics', label: 'Аналитика КЮДов', icon: Icons.barChart, roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
       ],
       clubManagement: [
-        { path: '/club-rating', label: '🏆 Рейтинг клуба', icon: Icons.award, roles: ['club_coordinator'] },
+        { 
+          path: '/club-rating', 
+          label: '🏆 Рейтинг клуба', 
+          icon: Icons.award, 
+          roles: ['club_coordinator'] 
+        },
+        { 
+          path: profile?.club_id ? `/club/${profile.club_id}/president` : '/clubs', 
+          label: '👑 Назначить президента', 
+          icon: Icons.target, 
+          roles: ['club_coordinator'] 
+        },
       ],
       achievements: [
         { path: '/achievements', label: 'Достижения', icon: Icons.award, roles: ['admin', 'movement_coordinator', 'tutor', 'president', 'vice_president'] },
@@ -235,7 +246,6 @@ export default function Navigation({ profile }) {
         { path: '/import-participants', label: 'Импорт', icon: Icons.upload, roles: ['admin', 'movement_coordinator'] },
       ],
     };
-
     const result = {};
     for (const [key, items] of Object.entries(groups)) {
       const filtered = items.filter(item => 

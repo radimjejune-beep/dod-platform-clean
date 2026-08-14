@@ -1,13 +1,12 @@
 // frontend/src/pages/ClubPresident.jsx
 
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 
 export default function ClubPresident() {
   const { clubId } = useParams();
-  const location = useLocation();
   const [profile, setProfile] = useState(null);
   const [club, setClub] = useState(null);
   const [participants, setParticipants] = useState([]);
@@ -35,6 +34,8 @@ export default function ClubPresident() {
       }
 
       console.log('👤 Текущий пользователь:', userData);
+      console.log('🏫 club_id из профиля:', userData.club_id);
+      console.log('🏫 clubId из URL:', clubId);
 
       // 2. Проверяем роль
       if (userData.role !== 'club_coordinator' && userData.role !== 'admin') {
@@ -44,12 +45,30 @@ export default function ClubPresident() {
 
       setProfile(userData);
 
+      // ============================================================
+      // ЕСЛИ КООРДИНАТОР И club_id НЕТ В URL — БЕРЁМ ИЗ ПРОФИЛЯ
+      // ============================================================
+      let targetClubId = clubId;
+
+      if (userData.role === 'club_coordinator' && userData.club_id) {
+        // Если в URL нет clubId или он отличается — используем из профиля
+        if (!clubId || clubId !== userData.club_id) {
+          console.log('🔄 Используем club_id из профиля:', userData.club_id);
+          targetClubId = userData.club_id;
+          // Перенаправляем на правильный URL
+          if (clubId && clubId !== userData.club_id) {
+            navigate(`/club/${userData.club_id}/president`);
+            return;
+          }
+        }
+      }
+
       // 3. Получаем все клубы
       const clubsData = await api.getClubs();
       console.log('🏫 Все клубы:', clubsData);
       
-      // 4. Ищем клуб по ID из URL
-      const foundClub = clubsData.find(c => c.id === clubId);
+      // 4. Ищем клуб по ID
+      const foundClub = clubsData.find(c => c.id === targetClubId);
       console.log('🏫 Найденный клуб:', foundClub);
       
       if (!foundClub) {
@@ -59,7 +78,7 @@ export default function ClubPresident() {
         return;
       }
 
-      // 5. ПРОВЕРКА ПРАВ — через club_id из профиля
+      // 5. ПРОВЕРКА ПРАВ
       let hasAccess = false;
 
       // Админ — имеет доступ ко всем клубам
@@ -71,7 +90,7 @@ export default function ClubPresident() {
       // Координатор — проверяем привязку
       if (userData.role === 'club_coordinator') {
         // Проверка 1: club_id в профиле пользователя
-        if (userData.club_id === clubId) {
+        if (userData.club_id === targetClubId) {
           hasAccess = true;
           console.log('✅ Координатор: доступ через club_id в профиле');
         }
@@ -89,7 +108,7 @@ export default function ClubPresident() {
             
             if (coordData && coordData.length > 0) {
               for (const coord of coordData) {
-                if (coord.club_id === clubId) {
+                if (coord.club_id === targetClubId) {
                   hasAccess = true;
                   console.log('✅ Координатор: доступ через club_coordinators');
                   break;
@@ -118,8 +137,8 @@ export default function ClubPresident() {
       console.log('📥 Все участники:', participantsData?.length || 0);
       
       // Фильтруем по club_id
-      const clubParticipants = participantsData.filter(p => p.club_id === clubId);
-      console.log(`📥 Участники клуба ${clubId}:`, clubParticipants?.length || 0);
+      const clubParticipants = participantsData.filter(p => p.club_id === targetClubId);
+      console.log(`📥 Участники клуба ${targetClubId}:`, clubParticipants?.length || 0);
       console.log('📥 Список участников:', clubParticipants);
       
       setParticipants(clubParticipants);
@@ -128,7 +147,7 @@ export default function ClubPresident() {
       try {
         const token = localStorage.getItem('token');
         const response = await fetch(
-          `https://dod-backend.relaxdev.ru/api/clubs/${clubId}/president`,
+          `https://dod-backend.relaxdev.ru/api/clubs/${targetClubId}/president`,
           { headers: { 'Authorization': `Bearer ${token}` } }
         );
         const data = await response.json();
@@ -162,8 +181,10 @@ export default function ClubPresident() {
 
     try {
       const token = localStorage.getItem('token');
+      const targetClubId = club?.id || profile?.club_id;
+      
       const response = await fetch(
-        `https://dod-backend.relaxdev.ru/api/clubs/${clubId}/president`,
+        `https://dod-backend.relaxdev.ru/api/clubs/${targetClubId}/president`,
         {
           method: 'PATCH',
           headers: {

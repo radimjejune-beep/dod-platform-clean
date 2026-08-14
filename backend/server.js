@@ -38,6 +38,61 @@ pool.connect((err) => {
   }
 });
 
+
+// ============================================================
+// ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПРОВЕРКА И ПРИВЯЗКА КООРДИНАТОРА
+// ============================================================
+async function ensureCoordinatorClub(userId) {
+  try {
+    // Получаем пользователя
+    const userResult = await pool.query(
+      'SELECT id, role, club_id FROM users WHERE id = $1',
+      [userId]
+    );
+    if (userResult.rows.length === 0) return null;
+    const user = userResult.rows[0];
+    
+    // Если не координатор — выходим
+    if (user.role !== 'club_coordinator') return user;
+    
+    // Если у пользователя нет club_id — ищем в club_coordinators
+    if (!user.club_id) {
+      const coordResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      if (coordResult.rows.length > 0) {
+        const clubId = coordResult.rows[0].club_id;
+        await pool.query(
+          'UPDATE users SET club_id = $1 WHERE id = $2',
+          [clubId, userId]
+        );
+        user.club_id = clubId;
+        console.log(`✅ Координатору ${userId} присвоен клуб ${clubId} (через club_coordinators)`);
+      }
+    } else {
+      // Если club_id есть — проверяем запись в club_coordinators
+      const coordResult = await pool.query(
+        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
+        [userId, user.club_id]
+      );
+      if (coordResult.rows.length === 0) {
+        await pool.query(
+          `INSERT INTO club_coordinators (profile_id, club_id, created_at)
+           VALUES ($1, $2, NOW())`,
+          [userId, user.club_id]
+        );
+        console.log(`✅ Координатор ${userId} привязан к клубу ${user.club_id} (добавлен в club_coordinators)`);
+      }
+    }
+    
+    return user;
+  } catch (error) {
+    console.error('❌ Ошибка в ensureCoordinatorClub:', error);
+    return null;
+  }
+}
+
 // ============================================================
 // ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ УВЕДОМЛЕНИЙ
 // ============================================================
@@ -201,36 +256,31 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: 'Неверный email или пароль' });
     }
 
+    // ============================================================
+    // АВТОМАТИЧЕСКАЯ ПРИВЯЗКА КООРДИНАТОРА К КЛУБУ
+    // ============================================================
+    if (user.role === 'club_coordinator') {
+      await ensureCoordinatorClub(user.id);
+      // Обновляем user после возможной привязки
+      const updatedUser = await pool.query('SELECT * FROM users WHERE id = $1', [user.id]);
+      if (updatedUser.rows.length > 0) {
+        Object.assign(user, updatedUser.rows[0]);
+      }
+    }
+
     const token = jwt.sign(
       {
         userId: user.id,
         email: user.email,
         role: user.role,
-        full_name: user.full_name
+        full_name: user.full_name,
+        club_id: user.club_id
       },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
     console.log('✅ Успешный вход:', email);
-
-    // ============================================================
-    // АВТОМАТИЧЕСКАЯ ПРИВЯЗКА КООРДИНАТОРА ПРИ ВХОДЕ
-    // ============================================================
-    if (user.role === 'club_coordinator' && user.club_id) {
-      const existingCoord = await pool.query(
-        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-        [user.id, user.club_id]
-      );
-      if (existingCoord.rows.length === 0) {
-        await pool.query(
-          `INSERT INTO club_coordinators (profile_id, club_id, created_at)
-           VALUES ($1, $2, NOW())`,
-          [user.id, user.club_id]
-        );
-        console.log(`✅ Координатор ${user.full_name} автоматически привязан при входе`);
-      }
-    }
 
     res.json({
       token,
@@ -239,7 +289,8 @@ app.post('/api/login', async (req, res) => {
         email: user.email,
         full_name: user.full_name,
         role: user.role,
-        avatar_url: user.avatar_url || null
+        avatar_url: user.avatar_url || null,
+        club_id: user.club_id || null
       }
     });
 
@@ -262,6 +313,13 @@ app.get('/api/me', async (req, res) => {
     const token = authHeader.split(' ')[1];
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
+
+      // ============================================================
+      // АВТОМАТИЧЕСКАЯ ПРИВЯЗКА КООРДИНАТОРА К КЛУБУ
+      // ============================================================
+      if (decoded.role === 'club_coordinator') {
+        await ensureCoordinatorClub(decoded.userId);
+      }
 
       const result = await pool.query(
         `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
@@ -502,30 +560,30 @@ app.post('/api/users', async (req, res) => {
 
     const user = result.rows[0];
 
+    // ============================================================
+    // ЕСЛИ УКАЗАН КЛУБ — ПРИВЯЗЫВАЕМ
+    // ============================================================
     if (club_id) {
+      // Обновляем club_id у пользователя
       await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, user.id]);
 
+      // Если это координатор — привязываем через ensureCoordinatorClub
       if (role === 'club_coordinator') {
-        const existingCoord = await pool.query(
-          'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-          [user.id, club_id]
-        );
-        
-        if (existingCoord.rows.length === 0) {
-          await pool.query(
-            `INSERT INTO club_coordinators (profile_id, club_id, created_at)
-             VALUES ($1, $2, NOW())`,
-            [user.id, club_id]
-          );
-          console.log(`✅ Координатор ${user.full_name} привязан к клубу ${club_id}`);
-        }
+        await ensureCoordinatorClub(user.id);
+        console.log(`✅ Координатор ${user.full_name} привязан к клубу ${club_id}`);
       } else {
+        // Для участников — добавляем в club_participants
         await pool.query(
           `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
            VALUES ($1, $2, 'active', NOW())
            ON CONFLICT (profile_id, club_id) DO NOTHING`,
           [user.id, club_id]
         );
+      }
+    } else {
+      // Если клуб не указан, но это координатор — пытаемся найти привязку
+      if (role === 'club_coordinator') {
+        await ensureCoordinatorClub(user.id);
       }
     }
 
@@ -555,13 +613,15 @@ app.patch('/api/users/:id', async (req, res) => {
     const { id } = req.params;
     const { full_name, role, phone, school, class_name, club_id, status, position } = req.body;
 
-    const check = await pool.query('SELECT id, role FROM users WHERE id = $1', [id]);
+    const check = await pool.query('SELECT id, role, club_id FROM users WHERE id = $1', [id]);
     if (check.rows.length === 0) {
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
 
     const oldRole = check.rows[0].role;
+    const oldClubId = check.rows[0].club_id;
 
+    // Обновляем основные данные
     const result = await pool.query(
       `UPDATE users 
        SET full_name = COALESCE($1, full_name),
@@ -579,37 +639,41 @@ app.patch('/api/users/:id', async (req, res) => {
 
     const user = result.rows[0];
 
-    if (club_id) {
-      await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, id]);
+    // ============================================================
+    // ОБРАБОТКА ПРИВЯЗКИ К КЛУБУ
+    // ============================================================
+    const newRole = role || oldRole;
+    const newClubId = club_id || oldClubId;
 
-      if (role === 'club_coordinator') {
-        const existingCoord = await pool.query(
-          'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-          [id, club_id]
-        );
-        if (existingCoord.rows.length === 0) {
-          await pool.query(
-            `INSERT INTO club_coordinators (profile_id, club_id, created_at)
-             VALUES ($1, $2, NOW())`,
-            [id, club_id]
-          );
-          console.log(`✅ Координатор ${user.full_name} привязан к клубу ${club_id}`);
-        }
+    // Если пользователь стал координатором
+    if (newRole === 'club_coordinator') {
+      // Если есть club_id — привязываем
+      if (newClubId) {
+        await ensureCoordinatorClub(id);
+        console.log(`✅ Координатор ${user.full_name} привязан к клубу ${newClubId}`);
       } else {
-        await pool.query('DELETE FROM club_coordinators WHERE profile_id = $1', [id]);
-        await pool.query(
-          `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
-           VALUES ($1, $2, 'active', NOW())
-           ON CONFLICT (profile_id, club_id) DO NOTHING`,
-          [id, club_id]
-        );
+        // Если club_id нет — пытаемся найти через ensureCoordinatorClub
+        await ensureCoordinatorClub(id);
       }
-    }
-
-    if (oldRole === 'club_coordinator' && role !== 'club_coordinator') {
+    } 
+    // Если пользователь был координатором, а теперь не координатор
+    else if (oldRole === 'club_coordinator' && newRole !== 'club_coordinator') {
+      // Удаляем из club_coordinators
       await pool.query('DELETE FROM club_coordinators WHERE profile_id = $1', [id]);
+      console.log(`✅ Пользователь ${user.full_name} больше не координатор`);
+    }
+    // Если это участник с club_id
+    else if (newRole === 'participant' && newClubId) {
+      // Добавляем в club_participants
+      await pool.query(
+        `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
+         VALUES ($1, $2, 'active', NOW())
+         ON CONFLICT (profile_id, club_id) DO NOTHING`,
+        [id, newClubId]
+      );
     }
 
+    // Получаем обновлённого пользователя
     const userResult = await pool.query(
       `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
               u.status, u.position, u.club_id, u.avatar_url, c.name as club_name

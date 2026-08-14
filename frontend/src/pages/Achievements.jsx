@@ -11,6 +11,7 @@ export default function Achievements() {
   const [achievements, setAchievements] = useState([]);
   const [allAchievements, setAllAchievements] = useState([]);
   const [participants, setParticipants] = useState([]);
+  const [allParticipants, setAllParticipants] = useState([]);
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -21,7 +22,6 @@ export default function Achievements() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedClubId, setSelectedClubId] = useState('');
   
-  // ===== ФИЛЬТРЫ =====
   const [filters, setFilters] = useState({});
   const [filterSearch, setFilterSearch] = useState('');
   
@@ -77,7 +77,6 @@ export default function Achievements() {
       setClubs(clubsData || []);
       setAllParticipants(participantsData || []);
 
-      // Фильтрация по ролям
       let filteredParticipants = [];
       let filteredAchievements = [];
 
@@ -97,6 +96,9 @@ export default function Achievements() {
       } else if (['admin', 'movement_coordinator', 'tutor'].includes(role)) {
         filteredParticipants = participantsData;
         filteredAchievements = achievementsData;
+      } else {
+        filteredParticipants = [];
+        filteredAchievements = [];
       }
 
       setAllParticipants(filteredParticipants);
@@ -111,7 +113,6 @@ export default function Achievements() {
     }
   };
 
-  // ===== ФИЛЬТРАЦИЯ =====
   const filterConfig = [
     {
       key: 'club_id',
@@ -163,13 +164,11 @@ export default function Achievements() {
 
   const filteredAchievements = getFilteredAchievements();
 
-  // ===== ПРОВЕРКА ПРАВ =====
-  const canManage = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'].includes(profile?.role);
-  const canEdit = ['admin', 'movement_coordinator'].includes(profile?.role);
-  const canDelete = ['admin'].includes(profile?.role);
+  const canManage = profile && ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'].includes(profile.role);
+  const canEdit = profile && ['admin', 'movement_coordinator'].includes(profile.role);
+  const canDelete = profile && ['admin'].includes(profile.role);
   const isAdmin = profile?.role === 'admin';
 
-  // ===== ПОИСК УЧАСТНИКА =====
   const handleSearchChange = (e) => {
     const query = e.target.value;
     setSearchQuery(query);
@@ -193,7 +192,6 @@ export default function Achievements() {
     setShowDropdown(false);
   };
 
-  // ===== СОЗДАНИЕ/РЕДАКТИРОВАНИЕ =====
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
@@ -216,7 +214,6 @@ export default function Achievements() {
 
       let result;
       if (editingAchievement) {
-        // Обновление (только для админа)
         if (!canEdit) {
           throw new Error('У вас нет прав для редактирования');
         }
@@ -540,7 +537,6 @@ export default function Achievements() {
                     </div>
                     {a.description && <div className="meta">{a.description}</div>}
                     
-                    {/* ===== КНОПКИ ДЕЙСТВИЙ ===== */}
                     {(userCanEdit || userCanDelete) && (
                       <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
                         {userCanEdit && (

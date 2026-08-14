@@ -34,9 +34,6 @@ export default function AdminInvite() {
         return;
       }
 
-      // ============================================================
-      // ТОЛЬКО АДМИН И КООРДИНАТОР ДВИЖЕНИЯ
-      // ============================================================
       if (userData.role !== 'admin' && userData.role !== 'movement_coordinator') {
         navigate('/dashboard');
         return;
@@ -47,7 +44,6 @@ export default function AdminInvite() {
       const clubsData = await api.getClubs();
       setClubs(clubsData || []);
 
-      // TODO: добавить API для получения приглашений
       setInvitations([]);
     } catch (err) {
       console.error('Ошибка:', err);
@@ -55,6 +51,8 @@ export default function AdminInvite() {
       setLoading(false);
     }
   };
+
+  const canCreate = profile && (profile.role === 'admin' || profile.role === 'movement_coordinator');
 
   const generatePassword = () => {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
@@ -87,7 +85,6 @@ export default function AdminInvite() {
         throw new Error(result.error);
       }
 
-      // Копируем данные в буфер обмена
       const inviteText = `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   🏛️ ДОД «Дипломаты будущего»
@@ -238,14 +235,16 @@ https://dod-frontend.relaxdev.ru/login
               )}
             </div>
 
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={sending}
-              style={{ width: '100%', marginTop: '8px' }}
-            >
-              {sending ? '⏳ Создание...' : '🎫 Создать приглашение'}
-            </button>
+            {canCreate && (
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={sending}
+                style={{ width: '100%', marginTop: '8px' }}
+              >
+                {sending ? '⏳ Создание...' : '🎫 Создать приглашение'}
+              </button>
+            )}
           </form>
         </div>
       </div>

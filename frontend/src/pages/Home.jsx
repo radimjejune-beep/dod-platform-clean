@@ -1,7 +1,7 @@
 // frontend/src/pages/Home.jsx
 
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import NewsSection from '../components/NewsSection';
@@ -33,6 +33,18 @@ export default function Home() {
       }
     }
     setLoading(false);
+  };
+
+  const handleGetStarted = () => {
+    if (profile) {
+      navigate('/dashboard');
+    } else {
+      navigate('/register');
+    }
+  };
+
+  const handleLogin = () => {
+    navigate('/login');
   };
 
   if (loading) {
@@ -69,18 +81,23 @@ export default function Home() {
           </p>
           <div className="home-hero-buttons">
             {profile ? (
-              <button className="home-hero-btn-primary" onClick={() => navigate('/dashboard')}>
+              <button className="home-hero-btn-primary" onClick={handleGetStarted}>
                 📊 Перейти в кабинет
               </button>
             ) : (
-              <Link to="/login" className="home-hero-btn-primary">
-                🔑 Войти в систему
-              </Link>
+              <>
+                <button className="home-hero-btn-secondary" onClick={handleLogin}>
+                  🔑 Вход
+                </button>
+                <button className="home-hero-btn-primary" onClick={handleGetStarted}>
+                  🚀 Присоединиться
+                </button>
+              </>
             )}
           </div>
           {!profile && (
             <p className="home-hero-register">
-              Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+              Уже есть аккаунт? <Link to="/login">Войти</Link>
             </p>
           )}
           <div className="home-hero-partners">
@@ -257,13 +274,30 @@ export default function Home() {
           transition: all 0.3s ease;
           box-shadow: 0 4px 24px rgba(201, 162, 39, 0.25);
           letter-spacing: 0.3px;
-          text-decoration: none;
-          display: inline-block;
         }
 
         .home-hero-btn-primary:hover {
           transform: translateY(-4px) scale(1.02);
           box-shadow: 0 8px 40px rgba(201, 162, 39, 0.35);
+        }
+
+        .home-hero-btn-secondary {
+          padding: 14px 36px;
+          background: transparent;
+          color: white;
+          border: 2px solid rgba(255, 255, 255, 0.2);
+          border-radius: 10px;
+          font-size: 17px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          letter-spacing: 0.3px;
+        }
+
+        .home-hero-btn-secondary:hover {
+          border-color: rgba(255, 255, 255, 0.5);
+          background: rgba(255, 255, 255, 0.05);
+          transform: translateY(-4px);
         }
 
         .home-hero-register {
@@ -453,8 +487,9 @@ export default function Home() {
             font-size: 15px;
           }
 
-          .home-hero-btn-primary {
-            padding: 12px 28px;
+          .home-hero-btn-primary,
+          .home-hero-btn-secondary {
+            padding: 12px 24px;
             font-size: 15px;
           }
 
@@ -495,7 +530,13 @@ export default function Home() {
             font-size: 13px;
           }
 
-          .home-hero-btn-primary {
+          .home-hero-buttons {
+            flex-direction: column;
+            align-items: center;
+          }
+
+          .home-hero-btn-primary,
+          .home-hero-btn-secondary {
             width: 100%;
             text-align: center;
             padding: 12px 20px;

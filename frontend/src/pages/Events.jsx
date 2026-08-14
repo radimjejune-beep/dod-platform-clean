@@ -174,8 +174,7 @@ export default function Events() {
     return false;
   };
 
-  // ===== ВАЖНО: canCreate — УБЕРИ УСЛОВИЕ ДЛЯ ТЕСТА =====
-  const canCreate = true; // Временно для теста
+  const canCreate = ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(profile?.role);
   const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
   const isClubCoordinator = profile?.role === 'club_coordinator';
   const isMovementCoordinator = profile?.role === 'movement_coordinator';
@@ -357,17 +356,15 @@ export default function Events() {
             <h1>Мероприятия</h1>
             <p>Всего: {filteredEvents.length}</p>
           </div>
-          {/* ===== КНОПКА СОЗДАНИЯ — ВСЕГДА ВИДНА ===== */}
-          <button 
-            className="btn-primary" 
-            style={{ marginLeft: 'auto' }} 
-            onClick={() => { 
-              console.log('🔄 Кнопка нажата, showForm:', showForm);
-              setShowForm(!showForm); 
-            }}
-          >
-            {showForm ? '✖ Закрыть' : '➕ Создать'}
-          </button>
+          {canCreate && (
+            <button 
+              className="btn-primary" 
+              style={{ marginLeft: 'auto' }} 
+              onClick={() => setShowForm(!showForm)}
+            >
+              {showForm ? '✖ Закрыть' : '➕ Создать'}
+            </button>
+          )}
         </div>
 
         {message && (
@@ -416,7 +413,7 @@ export default function Events() {
           </div>
         </FilterBar>
 
-        {showForm && (
+        {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3>{form.id ? '✏️ Редактировать' : '📝 Создать'}</h3>
             

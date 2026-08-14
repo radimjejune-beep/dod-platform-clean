@@ -41,6 +41,26 @@ export default function Events() {
   });
   const navigate = useNavigate();
 
+  // ============================================================
+  // ПРОВЕРКА СОХРАНЁННОГО КЛУБА ДЛЯ ВНУТРЕННЕГО МЕРОПРИЯТИЯ
+  // ============================================================
+  useEffect(() => {
+    const clubId = localStorage.getItem('clubEventTarget');
+    if (clubId && clubs.length > 0) {
+      const club = clubs.find(c => c.id === clubId);
+      if (club) {
+        setForm(prev => ({ ...prev, club_id: clubId }));
+        setMessage(`📝 Создание мероприятия для клуба: "${club.name}"`);
+        setMessageType('success');
+        setShowForm(true);
+        localStorage.removeItem('clubEventTarget');
+        setTimeout(() => setMessage(''), 4000);
+      } else {
+        localStorage.removeItem('clubEventTarget');
+      }
+    }
+  }, [clubs]);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -99,6 +119,11 @@ export default function Events() {
       key: 'is_global',
       type: 'checkbox',
       label: '🌍 Глобальные'
+    },
+    {
+      key: 'is_club_event',
+      type: 'checkbox',
+      label: '🏫 Внутренние клуба'
     }
   ];
 
@@ -125,6 +150,10 @@ export default function Events() {
       filtered = filtered.filter(e => e.is_global === true);
     }
 
+    if (filters.is_club_event) {
+      filtered = filtered.filter(e => e.is_club_event === true);
+    }
+
     return filtered;
   };
 
@@ -134,39 +163,25 @@ export default function Events() {
   const canEdit = (event) => {
     const role = profile?.role;
     const userId = profile?.id;
-    // Админ и координатор движения могут редактировать всё
-    if (['admin', 'movement_coordinator'].includes(role)) {
-      return true;
-    }
-    // Президент и вице-президент могут редактировать всё
-    if (['president', 'vice_president'].includes(role)) {
-      return true;
-    }
-    // Координатор КЮДа может редактировать только свои мероприятия
+    if (['admin', 'movement_coordinator'].includes(role)) return true;
+    if (['president', 'vice_president'].includes(role)) return true;
     if (role === 'club_coordinator') {
       const userClub = clubs.find(c => c.coordinator_id === userId || c.leader_id === userId);
-      if (userClub && event.club_id === userClub.id) {
-        return true;
-      }
+      if (userClub && event.club_id === userClub.id) return true;
     }
     return false;
   };
 
   const canDelete = (event) => {
     const role = profile?.role;
-    // Только админ может удалять
-    if (role === 'admin') {
-      return true;
-    }
-    // Координатор движения может удалять
-    if (role === 'movement_coordinator') {
-      return true;
-    }
+    if (role === 'admin') return true;
+    if (role === 'movement_coordinator') return true;
     return false;
   };
 
   const canCreate = ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(profile?.role);
   const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
+  const isClubCoordinator = profile?.role === 'club_coordinator';
 
   // ===== СОЗДАНИЕ/РЕДАКТИРОВАНИЕ =====
   const handleSubmit = async (e) => {
@@ -187,7 +202,8 @@ export default function Events() {
         capacity: parseInt(form.capacity),
         club_id: form.club_id || null,
         form_url: form.form_url || null,
-        is_global: form.is_global || false
+        is_global: form.is_global || false,
+        is_club_event: !!form.club_id
       };
 
       let result;
@@ -205,7 +221,13 @@ export default function Events() {
         throw new Error(result.error);
       }
 
-      setMessage(form.id ? '✅ Мероприятие обновлено!' : '✅ Мероприятие создано!');
+      const successMessage = form.id 
+        ? '✅ Мероприятие обновлено!' 
+        : form.club_id 
+          ? '✅ Внутреннее мероприятие клуба создано!' 
+          : '✅ Мероприятие создано!';
+      
+      setMessage(successMessage);
       setMessageType('success');
       resetForm();
       loadData();
@@ -354,27 +376,64 @@ export default function Events() {
         )}
 
         <FilterBar
-  filters={filterConfig}
-  onFilterChange={setFilters}
-  onSearchChange={setSearchQuery}
-  searchPlaceholder="🔍 Поиск по названию, описанию, месту..."
->
-  <div style={{ 
-    fontSize: '14px', 
-    color: '#667085', 
-    padding: '6px 16px', 
-    background: '#F8FAFC', 
-    borderRadius: '20px',
-    border: '1px solid #E2E7EF',
-    whiteSpace: 'nowrap'
-  }}>
-    Найдено: <strong style={{ color: '#0B1F3A' }}>{filteredEvents.length}</strong>
-  </div>
-</FilterBar>
+          filters={filterConfig}
+          onFilterChange={setFilters}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="🔍 Поиск по названию, описанию, месту..."
+        >
+          <div style={{ 
+            fontSize: '14px', 
+            color: '#667085', 
+            padding: '6px 16px', 
+            background: '#F8FAFC', 
+            borderRadius: '20px',
+            border: '1px solid #E2E7EF',
+            whiteSpace: 'nowrap'
+          }}>
+            Найдено: <strong style={{ color: '#0B1F3A' }}>{filteredEvents.length}</strong>
+          </div>
+        </FilterBar>
 
         {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3>{form.id ? '✏️ Редактировать' : '📝 Создать'}</h3>
+            
+            {/* ===== ИНДИКАТОР ВНУТРЕННЕГО МЕРОПРИЯТИЯ ===== */}
+            {form.club_id && (
+              <div style={{ 
+                padding: '10px 16px', 
+                background: '#EAF2FA', 
+                borderRadius: '8px', 
+                marginBottom: '16px',
+                fontSize: '14px',
+                color: '#174A7E',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                🏫 <strong>Внутреннее мероприятие для клуба:</strong> {clubs.find(c => c.id === form.club_id)?.name || '—'}
+                <button
+                  type="button"
+                  style={{ 
+                    marginLeft: 'auto', 
+                    background: 'none', 
+                    border: 'none', 
+                    color: '#B3262E', 
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                  onClick={() => {
+                    setForm({ ...form, club_id: '' });
+                    setMessage('❌ Клуб для мероприятия очищен');
+                    setMessageType('error');
+                    setTimeout(() => setMessage(''), 3000);
+                  }}
+                >
+                  ✕ Очистить
+                </button>
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit}>
               <div className="form-group"><label>Название *</label><input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
               <div className="form-group"><label>Описание</label><textarea rows="3" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
@@ -390,10 +449,18 @@ export default function Events() {
               <div className="grid-3">
                 <div className="form-group"><label>Тип</label><select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}><option value="internal">Внутреннее</option><option value="outgoing">Выездное</option><option value="global_forum">Глобальный форум</option></select></div>
                 <div className="form-group"><label>Лимит мест</label><input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} min="1" /></div>
-                <div className="form-group"><label>Клуб</label><select value={form.club_id} onChange={(e) => setForm({ ...form, club_id: e.target.value })}><option value="">Без клуба</option>{clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+                <div className="form-group"><label>Клуб</label>
+                  <select value={form.club_id} onChange={(e) => setForm({ ...form, club_id: e.target.value })}>
+                    <option value="">Без клуба (глобальное)</option>
+                    {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                    {form.club_id ? '🏫 Это мероприятие увидят только участники этого клуба' : '🌍 Это мероприятие увидят все пользователи'}
+                  </div>
+                </div>
               </div>
               <div className="form-group"><label>Ссылка на форму</label><input type="url" value={form.form_url} onChange={(e) => setForm({ ...form, form_url: e.target.value })} /></div>
-              {profile?.role === 'club_coordinator' && (
+              {isClubCoordinator && (
                 <div className="form-group"><label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><input type="checkbox" checked={form.is_global} onChange={(e) => setForm({ ...form, is_global: e.target.checked })} /> 🌍 Глобальное мероприятие</label></div>
               )}
               <div style={{ display: 'flex', gap: '12px' }}>
@@ -421,6 +488,7 @@ export default function Events() {
                     style={{
                       borderLeftColor: event.moderation_status === 'pending' ? '#C9A227' :
                                     event.is_global ? '#6B46C1' :
+                                    event.is_club_event ? '#174A7E' :
                                     event.type === 'internal' ? '#174A7E' :
                                     event.type === 'outgoing' ? '#C9A227' : '#B3262E'
                     }}
@@ -430,6 +498,11 @@ export default function Events() {
                       {event.is_global && (
                         <span className="tag" style={{ marginLeft: '8px', background: '#EDE7F6', color: '#6B46C1', fontSize: '10px' }}>
                           🌍 Глобальное
+                        </span>
+                      )}
+                      {event.is_club_event && (
+                        <span className="tag" style={{ marginLeft: '8px', background: '#EAF2FA', color: '#174A7E', fontSize: '10px' }}>
+                          🏫 Внутреннее
                         </span>
                       )}
                       {event.moderation_status === 'pending' && (

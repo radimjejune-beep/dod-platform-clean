@@ -244,10 +244,8 @@ export default function ClubCoordinatorDashboard() {
 
   const loadRecentActivity = async (clubId) => {
     try {
-      // Собираем последние действия
       const activities = [];
       
-      // Последние участники
       const participantsData = await api.getParticipants();
       const clubParticipants = participantsData
         .filter(p => p.club_id === clubId)
@@ -265,7 +263,6 @@ export default function ClubCoordinatorDashboard() {
         });
       });
 
-      // Последние мероприятия
       const eventsData = await api.getEvents();
       const clubEvents = eventsData
         .filter(e => e.club_id === clubId)
@@ -283,7 +280,6 @@ export default function ClubCoordinatorDashboard() {
         });
       });
 
-      // Сортируем по дате и берем последние 5
       activities.sort((a, b) => new Date(b.date) - new Date(a.date));
       setRecentActivity(activities.slice(0, 5));
 
@@ -305,19 +301,6 @@ export default function ClubCoordinatorDashboard() {
   const getFilteredParticipants = () => {
     if (filterStatus === 'all') return participants;
     return participants.filter(p => p.status === filterStatus);
-  };
-
-  const getLevelName = (level) => {
-    const names = {
-      1: 'Начинающий',
-      2: 'Юный дипломат',
-      3: 'Дипломат',
-      4: 'Опытный дипломат',
-      5: 'Главный дипломат',
-      6: 'Посол',
-      7: 'Легенда'
-    };
-    return names[level] || 'Дипломат';
   };
 
   if (loading) {
@@ -591,19 +574,24 @@ export default function ClubCoordinatorDashboard() {
             ============================================================ */}
         {selectedTab === 'overview' && (
           <div>
-            {/* БЫСТРЫЕ ДЕЙСТВИЯ */}
+            {/* ===== БЫСТРЫЕ ДЕЙСТВИЯ ===== */}
             <div className="card" style={{ marginBottom: '20px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
                 ⚡ Быстрые действия
               </h3>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {/* ===== КНОПКА ДЛЯ ВНУТРЕННЕГО МЕРОПРИЯТИЯ ===== */}
                 <button
                   className="btn-primary"
                   style={{ padding: '8px 16px', fontSize: '13px' }}
-                  onClick={() => navigate('/events')}
+                  onClick={() => {
+                    localStorage.setItem('clubEventTarget', club.id);
+                    navigate('/events');
+                  }}
                 >
-                  📅 Создать мероприятие
+                  📅 Создать мероприятие для клуба
                 </button>
+                
                 <button
                   className="btn-primary"
                   style={{ padding: '8px 16px', fontSize: '13px', background: '#C9A227', color: '#0B1F3A' }}
@@ -612,25 +600,25 @@ export default function ClubCoordinatorDashboard() {
                   🏆 Добавить достижение
                 </button>
                 <button
-                  className="btn-primary"
-                  style={{ padding: '8px 16px', fontSize: '13px', background: '#6B46C1' }}
-                  onClick={() => navigate('/admin/invite')}
-                >
-                  🎫 Пригласить участника
-                </button>
-                <button
                   className="btn-secondary"
-                  style={{ padding: '8px 16px', fontSize: '13px', color: '#0B1F3A', borderColor: '#D5DCE7' }}
+                  style={{ padding: '8px 16px', fontSize: '13px', background: '#174A7E', color: 'white', border: 'none' }}
                   onClick={() => navigate('/tutor-requests')}
                 >
                   🤝 Запросить тьютора
                 </button>
                 <button
                   className="btn-secondary"
-                  style={{ padding: '8px 16px', fontSize: '13px', color: '#0B1F3A', borderColor: '#D5DCE7' }}
+                  style={{ padding: '8px 16px', fontSize: '13px', background: '#6B46C1', color: 'white', border: 'none' }}
                   onClick={() => navigate('/appeals')}
                 >
                   📨 Обратиться к руководству
+                </button>
+                <button
+                  className="btn-secondary"
+                  style={{ padding: '8px 16px', fontSize: '13px', background: '#16845B', color: 'white', border: 'none' }}
+                  onClick={() => navigate('/reports')}
+                >
+                  📋 Создать отчёт
                 </button>
               </div>
             </div>
@@ -645,10 +633,10 @@ export default function ClubCoordinatorDashboard() {
                   </h3>
                   <button
                     className="btn-secondary"
-                    style={{ padding: '4px 12px', fontSize: '11px', color: '#0B1F3A', borderColor: '#D5DCE7' }}
+                    style={{ padding: '4px 12px', fontSize: '11px', background: '#174A7E', color: 'white', border: 'none' }}
                     onClick={() => setSelectedTab('members')}
                   >
-                    Все → 
+                    Все →
                   </button>
                 </div>
                 {recentParticipants.length === 0 ? (
@@ -718,10 +706,10 @@ export default function ClubCoordinatorDashboard() {
                   </h3>
                   <button
                     className="btn-secondary"
-                    style={{ padding: '4px 12px', fontSize: '11px', color: '#0B1F3A', borderColor: '#D5DCE7' }}
+                    style={{ padding: '4px 12px', fontSize: '11px', background: '#174A7E', color: 'white', border: 'none' }}
                     onClick={() => setSelectedTab('events')}
                   >
-                    Все → 
+                    Все →
                   </button>
                 </div>
                 {upcomingEvents.length === 0 ? (
@@ -766,10 +754,10 @@ export default function ClubCoordinatorDashboard() {
                   </h3>
                   <button
                     className="btn-secondary"
-                    style={{ padding: '4px 12px', fontSize: '11px', color: '#0B1F3A', borderColor: '#D5DCE7' }}
+                    style={{ padding: '4px 12px', fontSize: '11px', background: '#174A7E', color: 'white', border: 'none' }}
                     onClick={() => setSelectedTab('achievements')}
                   >
-                    Все → 
+                    Все →
                   </button>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1027,7 +1015,7 @@ export default function ClubCoordinatorDashboard() {
                   {stats.pendingRequests > 0 && (
                     <button
                       className="btn-secondary"
-                      style={{ padding: '6px 14px', fontSize: '12px', color: '#8A6A00', borderColor: '#C9A227', background: '#FBF4DC' }}
+                      style={{ padding: '6px 14px', fontSize: '12px', background: '#C9A227', color: '#0B1F3A', border: 'none' }}
                       onClick={() => navigate('/tutor-requests')}
                     >
                       🤝 {stats.pendingRequests} запросов на тьюторов
@@ -1036,7 +1024,7 @@ export default function ClubCoordinatorDashboard() {
                   {stats.pendingAppeals > 0 && (
                     <button
                       className="btn-secondary"
-                      style={{ padding: '6px 14px', fontSize: '12px', color: '#B3262E', borderColor: '#B3262E', background: '#FCEBEC' }}
+                      style={{ padding: '6px 14px', fontSize: '12px', background: '#B3262E', color: 'white', border: 'none' }}
                       onClick={() => navigate('/appeals')}
                     >
                       📨 {stats.pendingAppeals} обращений ожидают ответа

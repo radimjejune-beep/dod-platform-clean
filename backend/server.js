@@ -922,6 +922,20 @@ app.get('/api/events', async (req, res) => {
     } else if (userRole === 'parent') {
       conditions.push('1 = 0');
     }
+      else if (userRole === 'tutor') {
+        // Тьютор видит мероприятия, на которые он назначен
+        const assignments = await pool.query(
+         'SELECT event_id FROM event_tutor_assignments WHERE tutor_id = $1 AND status = $2',
+        [userId, 'accepted']
+       );
+      if (assignments.rows.length > 0) {
+        const eventIds = assignments.rows.map(r => r.event_id);
+        conditions.push(`(e.id = ANY($${params.length + 1}::uuid[]))`);
+        params.push(eventIds);
+      } else {
+        conditions.push('1 = 0');
+      }
+    }
 
     if (conditions.length > 0) {
       query += ' AND (' + conditions.join(' OR ') + ')';
@@ -4501,6 +4515,291 @@ app.delete('/api/documents/:id', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Ошибка удаления документа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// НАЗНАЧЕНИЕ ТЬЮТОРОВ НА МЕРОПРИЯТИЯ
+// ============================================================
+
+// ===== НАЗНАЧИТЬ ТЬЮТОРА НА МЕРОПРИЯТИЕ =====
+app.post('/api/events/:eventId/tutors', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { tutor_id, role, notes } = req.body;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    // Проверка прав: админ, координатор движения, координатор КЮДа
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для назначения тьюторов' });
+    }
+
+    if (!tutor_id) {
+      return res.status(400).json({ error: 'tutor_id обязателен' });
+    }
+
+    // Проверяем, что тьютор существует
+    const tutorCheck = await pool.query(
+      'SELECT id, full_name, role FROM users WHERE id = $1 AND role = $2',
+      [tutor_id, 'tutor']
+    );
+    if (tutorCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Тьютор не найден' });
+    }
+
+    // Проверяем, что мероприятие существует
+    const eventCheck = await pool.query(
+      'SELECT id, title FROM events WHERE id = $1',
+      [eventId]
+    );
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    const event = eventCheck.rows[0];
+
+    // Проверяем, не назначен ли уже тьютор
+    const existing = await pool.query(
+      'SELECT id FROM event_tutor_assignments WHERE event_id = $1 AND tutor_id = $2',
+      [eventId, tutor_id]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Тьютор уже назначен на это мероприятие' });
+    }
+
+    // Создаём назначение
+    const result = await pool.query(
+      `INSERT INTO event_tutor_assignments (
+        event_id, tutor_id, role, status, assigned_by, assigned_at, notes
+      ) VALUES ($1, $2, $3, 'pending', $4, NOW(), $5)
+      RETURNING *`,
+      [eventId, tutor_id, role || 'tutor', userId, notes || null]
+    );
+
+    // ============================================================
+    // УВЕДОМЛЕНИЕ ТЬЮТОРУ
+    // ============================================================
+    await createNotification(
+      tutor_id,
+      'event',
+      '📅 Новое назначение на мероприятие',
+      `Вас назначили тьютором на мероприятие: "${event.title}"`,
+      `/events/${eventId}`,
+      'high'
+    );
+
+    // ============================================================
+    // УВЕДОМЛЕНИЕ СОЗДАТЕЛЮ МЕРОПРИЯТИЯ
+    // ============================================================
+    const eventCreator = await pool.query(
+      'SELECT created_by FROM events WHERE id = $1',
+      [eventId]
+    );
+    if (eventCreator.rows.length > 0 && eventCreator.rows[0].created_by !== userId) {
+      await createNotification(
+        eventCreator.rows[0].created_by,
+        'event',
+        '👤 Тьютор назначен на мероприятие',
+        `На мероприятие "${event.title}" назначен тьютор: ${tutorCheck.rows[0].full_name}`,
+        `/events/${eventId}`,
+        'medium'
+      );
+    }
+
+    res.status(201).json({
+      message: 'Тьютор назначен на мероприятие',
+      assignment: result.rows[0],
+      tutor: tutorCheck.rows[0]
+    });
+  } catch (error) {
+    console.error('❌ Ошибка назначения тьютора:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ПОЛУЧЕНИЕ ВСЕХ НАЗНАЧЕНИЙ ТЬЮТОРОВ =====
+app.get('/api/event-tutor-assignments', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+    const userId = decoded.userId;
+
+    let query = `
+      SELECT 
+        eta.*,
+        e.title as event_title,
+        e.event_date,
+        e.location,
+        u.full_name as tutor_name,
+        u2.full_name as assigned_by_name
+      FROM event_tutor_assignments eta
+      LEFT JOIN events e ON eta.event_id = e.id
+      LEFT JOIN users u ON eta.tutor_id = u.id
+      LEFT JOIN users u2 ON eta.assigned_by = u2.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    // Если тьютор — показывает только свои назначения
+    if (userRole === 'tutor') {
+      query += ' AND eta.tutor_id = $1';
+      params.push(userId);
+    }
+
+    query += ' ORDER BY eta.assigned_at DESC';
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения назначений:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ПОЛУЧЕНИЕ НАЗНАЧЕНИЙ ДЛЯ КОНКРЕТНОГО МЕРОПРИЯТИЯ =====
+app.get('/api/events/:eventId/tutors', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    const result = await pool.query(
+      `
+      SELECT 
+        eta.*,
+        u.full_name as tutor_name,
+        u.email as tutor_email,
+        u.phone as tutor_phone,
+        u2.full_name as assigned_by_name
+      FROM event_tutor_assignments eta
+      LEFT JOIN users u ON eta.tutor_id = u.id
+      LEFT JOIN users u2 ON eta.assigned_by = u2.id
+      WHERE eta.event_id = $1
+      ORDER BY eta.assigned_at DESC
+      `,
+      [eventId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения назначений:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ОБНОВЛЕНИЕ СТАТУСА НАЗНАЧЕНИЯ (ТЬЮТОР ПРИНИМАЕТ/ОТКЛОНЯЕТ) =====
+app.patch('/api/event-tutor-assignments/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+
+    const validStatuses = ['pending', 'accepted', 'declined'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Некорректный статус' });
+    }
+
+    // Проверяем, что назначение существует и принадлежит тьютору
+    const check = await pool.query(
+      'SELECT * FROM event_tutor_assignments WHERE id = $1',
+      [id]
+    );
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Назначение не найдено' });
+    }
+
+    if (check.rows[0].tutor_id !== userId) {
+      return res.status(403).json({ error: 'Вы можете менять статус только своих назначений' });
+    }
+
+    const result = await pool.query(
+      `UPDATE event_tutor_assignments 
+       SET status = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING *`,
+      [status, id]
+    );
+
+    // ============================================================
+    // УВЕДОМЛЕНИЕ СОЗДАТЕЛЮ ОТВЕТА ТЬЮТОРА
+    // ============================================================
+    const assignment = result.rows[0];
+    const eventCreator = await pool.query(
+      'SELECT created_by, title FROM events WHERE id = $1',
+      [assignment.event_id]
+    );
+    if (eventCreator.rows.length > 0) {
+      const tutor = await pool.query(
+        'SELECT full_name FROM users WHERE id = $1',
+        [userId]
+      );
+      await createNotification(
+        eventCreator.rows[0].created_by,
+        'event',
+        status === 'accepted' ? '✅ Тьютор принял назначение' : '❌ Тьютор отклонил назначение',
+        `Тьютор ${tutor.rows[0].full_name} ${status === 'accepted' ? 'принял' : 'отклонил'} назначение на "${eventCreator.rows[0].title}"`,
+        `/events/${assignment.event_id}`,
+        'medium'
+      );
+    }
+
+    res.json({
+      message: `Статус изменён на "${status}"`,
+      assignment: result.rows[0]
+    });
+  } catch (error) {
+    console.error('❌ Ошибка обновления статуса:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== УДАЛЕНИЕ НАЗНАЧЕНИЯ =====
+app.delete('/api/event-tutor-assignments/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    const allowedRoles = ['admin', 'movement_coordinator'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления назначений' });
+    }
+
+    await pool.query('DELETE FROM event_tutor_assignments WHERE id = $1', [id]);
+
+    res.json({ message: 'Назначение удалено' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления назначения:', error);
     res.status(500).json({ error: error.message });
   }
 });

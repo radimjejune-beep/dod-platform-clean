@@ -6,7 +6,6 @@ const getToken = () => {
   const token = localStorage.getItem('token');
   const sessionId = sessionStorage.getItem('sessionId');
   
-  // Если есть токен, но нет сессии — выходим
   if (token && !sessionId) {
     console.log('🔒 Сессия истекла');
     localStorage.removeItem('token');
@@ -258,6 +257,7 @@ export const addAppeal = async (data) => {
   return response.json();
 };
 
+// ===== НОВЫЙ МЕТОД: ОТВЕТ НА ОБРАЩЕНИЕ =====
 export const replyToAppeal = async (appealId, data) => {
   const response = await fetch(`${API_URL}/appeals/${appealId}/reply`, {
     method: 'POST',
@@ -494,7 +494,7 @@ export const getClubRating = async (clubId, limit = 20) => {
 };
 
 // ============================================================
-// 20. ПРИГЛАШЕНИЯ ТЬЮТОРОВ (НОВЫЕ МЕТОДЫ)
+// 20. ПРИГЛАШЕНИЯ ТЬЮТОРОВ
 // ============================================================
 export const getTutorInvitations = async () => {
   const response = await fetch(`${API_URL}/tutor-invitations`, {
@@ -531,7 +531,7 @@ export const cancelTutorInvitation = async (invitationId) => {
 };
 
 // ============================================================
-// ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ (ПО ЛОГИНУ И ПАРОЛЮ)
+// ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ
 // ============================================================
 export const parentLinkChild = async (data) => {
   const response = await fetch(`${API_URL}/parent-link-child`, {
@@ -582,7 +582,7 @@ const api = {
   // Обращения
   getAppeals,
   addAppeal,
-  replyToAppeal,
+  replyToAppeal,        // ← НОВЫЙ МЕТОД!
   getAppealReplies,
   
   // Запросы на тьюторов
@@ -629,7 +629,7 @@ const api = {
   // Рейтинг клуба
   getClubRating,
   
-  // Приглашения тьюторов (НОВЫЕ МЕТОДЫ)
+  // Приглашения тьюторов
   getTutorInvitations,
   createTutorInvitation,
   respondToTutorInvitation,

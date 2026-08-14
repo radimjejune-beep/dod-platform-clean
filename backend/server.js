@@ -1067,7 +1067,9 @@ app.post('/api/appeals', async (req, res) => {
   }
 });
 
-// ===== ОТВЕТ НА ОБРАЩЕНИЕ =====
+// ============================================================
+// ОТВЕТ НА ОБРАЩЕНИЕ (ИСПРАВЛЕННЫЙ - БЕЗ ОШИБОК)
+// ============================================================
 app.post('/api/appeals/:id/reply', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1092,9 +1094,10 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       return res.status(400).json({ error: 'Текст ответа обязателен' });
     }
 
-    // ===== 1. ПРОВЕРЯЕМ СУЩЕСТВОВАНИЕ =====
+    // ===== 1. ПРОВЕРЯЕМ СУЩЕСТВОВАНИЕ ОБРАЩЕНИЯ =====
+    // ВАЖНО: используем $1::UUID для явного приведения типа
     const appealCheck = await pool.query(
-      'SELECT id, coordinator_id FROM appeals WHERE id = $1',
+      'SELECT id, coordinator_id FROM appeals WHERE id = $1::UUID',
       [id]
     );
     if (appealCheck.rows.length === 0) {
@@ -1106,7 +1109,7 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
     // ===== 2. ВСТАВЛЯЕМ ОТВЕТ =====
     await pool.query(
       `INSERT INTO appeal_replies (appeal_id, author_id, message, created_at)
-       VALUES ($1, $2, $3, NOW())`,
+       VALUES ($1::UUID, $2::UUID, $3, NOW())`,
       [id, userId, message.trim()]
     );
 
@@ -1115,13 +1118,13 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
     await pool.query(
       `UPDATE appeals 
        SET status = $1,
-           resolved_by = $2,
+           resolved_by = $2::UUID,
            resolved_at = CASE WHEN $1 IN ('resolved', 'rejected') THEN NOW() ELSE NULL END
-       WHERE id = $3`,
+       WHERE id = $3::UUID`,
       [newStatus, userId, id]
     );
 
-    // ===== 4. УВЕДОМЛЕНИЕ ТОЛЬКО АВТОРУ ОБРАЩЕНИЯ =====
+    // ===== 4. УВЕДОМЛЕНИЕ КООРДИНАТОРУ =====
     if (appeal.coordinator_id) {
       await createNotification(
         appeal.coordinator_id,
@@ -1143,7 +1146,7 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
        LEFT JOIN users u ON a.coordinator_id = u.id
        LEFT JOIN clubs c ON a.club_id = c.id
        LEFT JOIN users r ON a.resolved_by = r.id
-       WHERE a.id = $1`,
+       WHERE a.id = $1::UUID`,
       [id]
     );
 
@@ -1154,7 +1157,10 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
   } catch (error) {
     console.error('❌ Ошибка ответа на обращение:', error);
     console.error('❌ Детали:', error.detail || 'Нет деталей');
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: 'Ошибка сервера', 
+      detail: error.message 
+    });
   }
 });
 

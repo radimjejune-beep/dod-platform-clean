@@ -1,7 +1,7 @@
 // frontend/src/components/Navigation.jsx
 
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Notifications from './Notifications';
 import logo from '../assets/Image.png';
 
@@ -133,6 +133,8 @@ export default function Navigation({ profile }) {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const dropdownTimeoutRef = useRef(null);
   
   const isActive = (path) => location.pathname === path;
   const role = profile?.role || 'participant';
@@ -255,6 +257,44 @@ export default function Navigation({ profile }) {
     return indexA - indexB;
   });
 
+  // ============================================================
+  // ПЛАВНОЕ ОТКРЫТИЕ/ЗАКРЫТИЕ ДРОПДАУНА
+  // ============================================================
+  const handleDropdownOpen = (key) => {
+    if (dropdownTimeoutRef.current) {
+      clearTimeout(dropdownTimeoutRef.current);
+    }
+    setOpenDropdown(key);
+    setIsAnimating(true);
+  };
+
+  const handleDropdownClose = () => {
+    if (dropdownTimeoutRef.current) {
+      clearTimeout(dropdownTimeoutRef.current);
+    }
+    dropdownTimeoutRef.current = setTimeout(() => {
+      setOpenDropdown(null);
+      setTimeout(() => setIsAnimating(false), 200);
+    }, 100);
+  };
+
+  const handleDropdownToggle = (key) => {
+    if (openDropdown === key) {
+      handleDropdownClose();
+    } else {
+      handleDropdownOpen(key);
+    }
+  };
+
+  // Очистка таймаута при размонтировании
+  useEffect(() => {
+    return () => {
+      if (dropdownTimeoutRef.current) {
+        clearTimeout(dropdownTimeoutRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       const dropdowns = document.querySelectorAll('.nav-new-dropdown');
@@ -266,6 +306,7 @@ export default function Navigation({ profile }) {
       });
       if (!clickedOnDropdown) {
         setOpenDropdown(null);
+        setIsAnimating(false);
       }
     };
     document.addEventListener('click', handleClickOutside);
@@ -332,36 +373,37 @@ export default function Navigation({ profile }) {
               <div 
                 key={key} 
                 className="nav-new-dropdown"
-                onMouseEnter={() => setOpenDropdown(key)}
-                onMouseLeave={() => setOpenDropdown(null)}
+                onMouseEnter={() => handleDropdownOpen(key)}
+                onMouseLeave={handleDropdownClose}
               >
                 <button 
-                  className={`nav-new-dropdown-btn ${hasActive ? 'active' : ''}`}
-                  onClick={() => setOpenDropdown(isOpen ? null : key)}
+                  className={`nav-new-dropdown-btn ${hasActive ? 'active' : ''} ${isOpen ? 'open' : ''}`}
+                  onClick={() => handleDropdownToggle(key)}
                   aria-expanded={isOpen}
                   aria-haspopup="true"
                 >
                   {label}
-                  <span className="nav-dropdown-arrow">▾</span>
+                  <span className={`nav-dropdown-arrow ${isOpen ? 'rotated' : ''}`}>▾</span>
                 </button>
-                {isOpen && (
-                  <div className="nav-dropdown-menu">
-                    {items.map((item) => (
-                      <Link
-                        key={item.path}
-                        to={item.path}
-                        className={`nav-dropdown-item ${isActive(item.path) ? 'active' : ''}`}
-                        onClick={() => {
-                          setOpenDropdown(null);
-                          setIsMobileMenuOpen(false);
-                        }}
-                      >
-                        <span className="nav-link-icon">{item.icon}</span>
-                        {item.label}
-                      </Link>
-                    ))}
-                  </div>
-                )}
+                <div 
+                  className={`nav-dropdown-menu ${isOpen ? 'open' : ''} ${isAnimating ? 'animating' : ''}`}
+                >
+                  {items.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`nav-dropdown-item ${isActive(item.path) ? 'active' : ''}`}
+                      onClick={() => {
+                        setOpenDropdown(null);
+                        setIsAnimating(false);
+                        setIsMobileMenuOpen(false);
+                      }}
+                    >
+                      <span className="nav-link-icon">{item.icon}</span>
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
               </div>
             );
           })}
@@ -504,6 +546,7 @@ export default function Navigation({ profile }) {
           width: 13px;
           height: 13px;
           opacity: 0.6;
+          transition: opacity 0.2s ease;
         }
 
         .nav-new-link.active .nav-link-icon svg,
@@ -523,7 +566,7 @@ export default function Navigation({ profile }) {
           font-size: 11.5px;
           font-weight: 500;
           color: #667085;
-          transition: all 0.15s ease;
+          transition: all 0.2s ease;
           white-space: nowrap;
           letter-spacing: 0.2px;
           background: transparent;
@@ -535,6 +578,7 @@ export default function Navigation({ profile }) {
         .nav-new-link:hover {
           background: #F4F6F9;
           color: #0B1F3A;
+          transform: translateY(-1px);
         }
 
         .nav-new-link.active {
@@ -543,7 +587,7 @@ export default function Navigation({ profile }) {
           font-weight: 600;
         }
 
-        /* ===== ДРОПДАУН ===== */
+        /* ===== ДРОПДАУН С АНИМАЦИЕЙ ===== */
         .nav-new-dropdown {
           position: relative;
         }
@@ -560,7 +604,7 @@ export default function Navigation({ profile }) {
           font-weight: 500;
           color: #667085;
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: all 0.2s ease;
           white-space: nowrap;
           letter-spacing: 0.2px;
           font-family: inherit;
@@ -569,6 +613,7 @@ export default function Navigation({ profile }) {
         .nav-new-dropdown-btn:hover {
           background: #F4F6F9;
           color: #0B1F3A;
+          transform: translateY(-1px);
         }
 
         .nav-new-dropdown-btn.active {
@@ -577,42 +622,60 @@ export default function Navigation({ profile }) {
           font-weight: 600;
         }
 
+        .nav-new-dropdown-btn.open {
+          background: #F4F6F9;
+          color: #0B1F3A;
+        }
+
         .nav-dropdown-arrow {
           font-size: 6px;
-          transition: transform 0.2s ease;
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           color: #98A2B3;
           margin-left: 1px;
         }
 
-        .nav-new-dropdown:hover .nav-dropdown-arrow {
+        .nav-dropdown-arrow.rotated {
           transform: rotate(180deg);
         }
 
+        /* ===== КРАСИВОЕ ВЫПАДАЮЩЕЕ МЕНЮ ===== */
         .nav-dropdown-menu {
           position: absolute;
-          top: calc(100% + 4px);
+          top: calc(100% + 6px);
           left: 50%;
-          transform: translateX(-50%);
+          transform: translateX(-50%) scale(0.95) translateY(-8px);
           background: white;
-          border-radius: 8px;
-          box-shadow: 0 6px 24px rgba(11, 31, 58, 0.1);
+          border-radius: 10px;
+          box-shadow: 0 8px 40px rgba(11, 31, 58, 0.12), 0 2px 8px rgba(11, 31, 58, 0.04);
           border: 1px solid #E2E7EF;
           min-width: 170px;
           padding: 4px;
           z-index: 1000;
-          animation: fadeIn 0.12s ease;
+          opacity: 0;
+          visibility: hidden;
+          pointer-events: none;
+          transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+          transform-origin: top center;
         }
 
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
-          to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .nav-dropdown-menu.open {
+          opacity: 1;
+          visibility: visible;
+          pointer-events: all;
+          transform: translateX(-50%) scale(1) translateY(0);
         }
 
+        /* Эффект "прилипания" при закрытии */
+        .nav-dropdown-menu.animating {
+          transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Элементы внутри дропдауна с анимацией появления */
         .nav-dropdown-item {
           display: flex;
           align-items: center;
           gap: 6px;
-          padding: 5px 10px;
+          padding: 6px 10px;
           border-radius: 5px;
           text-decoration: none;
           color: #667085;
@@ -620,11 +683,30 @@ export default function Navigation({ profile }) {
           font-weight: 500;
           transition: all 0.15s ease;
           white-space: nowrap;
+          opacity: 0;
+          transform: translateX(-8px);
+          transition: all 0.2s ease;
         }
+
+        .nav-dropdown-menu.open .nav-dropdown-item {
+          opacity: 1;
+          transform: translateX(0);
+        }
+
+        /* Задержка для каждого пункта */
+        .nav-dropdown-menu.open .nav-dropdown-item:nth-child(1) { transition-delay: 0.02s; }
+        .nav-dropdown-menu.open .nav-dropdown-item:nth-child(2) { transition-delay: 0.04s; }
+        .nav-dropdown-menu.open .nav-dropdown-item:nth-child(3) { transition-delay: 0.06s; }
+        .nav-dropdown-menu.open .nav-dropdown-item:nth-child(4) { transition-delay: 0.08s; }
+        .nav-dropdown-menu.open .nav-dropdown-item:nth-child(5) { transition-delay: 0.10s; }
+        .nav-dropdown-menu.open .nav-dropdown-item:nth-child(6) { transition-delay: 0.12s; }
+        .nav-dropdown-menu.open .nav-dropdown-item:nth-child(7) { transition-delay: 0.14s; }
+        .nav-dropdown-menu.open .nav-dropdown-item:nth-child(8) { transition-delay: 0.16s; }
 
         .nav-dropdown-item:hover {
           background: #F4F6F9;
           color: #0B1F3A;
+          transform: translateX(3px);
         }
 
         .nav-dropdown-item.active {
@@ -656,11 +738,12 @@ export default function Navigation({ profile }) {
           border-radius: 16px;
           text-decoration: none;
           color: #0B1F3A;
-          transition: all 0.15s ease;
+          transition: all 0.2s ease;
         }
 
         .nav-new-profile:hover {
           background: #F4F6F9;
+          transform: translateY(-1px);
         }
 
         .nav-avatar {
@@ -669,6 +752,11 @@ export default function Navigation({ profile }) {
           border-radius: 50%;
           object-fit: cover;
           border: 1.5px solid #E2E7EF;
+          transition: border-color 0.2s ease;
+        }
+
+        .nav-new-profile:hover .nav-avatar {
+          border-color: #C9A227;
         }
 
         .nav-avatar-letter {
@@ -683,6 +771,11 @@ export default function Navigation({ profile }) {
           background: linear-gradient(135deg, #0B1F3A, #174A7E);
           color: white;
           border: 1.5px solid #E2E7EF;
+          transition: border-color 0.2s ease;
+        }
+
+        .nav-new-profile:hover .nav-avatar-letter {
+          border-color: #C9A227;
         }
 
         .nav-new-profile-name {
@@ -705,7 +798,7 @@ export default function Navigation({ profile }) {
           background: transparent;
           border-radius: 5px;
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: all 0.2s ease;
           color: #98A2B3;
           padding: 0;
         }
@@ -713,6 +806,7 @@ export default function Navigation({ profile }) {
         .nav-new-logout:hover {
           background: #FCEBEC;
           color: #B3262E;
+          transform: scale(1.05);
         }
 
         .nav-new-logout svg {
@@ -729,14 +823,19 @@ export default function Navigation({ profile }) {
           cursor: pointer;
           color: #0B1F3A;
           line-height: 1;
+          transition: all 0.2s ease;
         }
 
-        /* ===== МОБИЛЬНОЕ МЕНЮ ===== */
+        .nav-new-burger:hover {
+          transform: scale(1.1);
+        }
+
+        /* ===== МОБИЛЬНОЕ МЕНЮ С АНИМАЦИЕЙ ===== */
         .nav-new-mobile {
           display: none;
           flex-direction: column;
           gap: 4px;
-          padding: 10px 14px;
+          padding: 12px 16px;
           border-top: 1px solid #E2E7EF;
           margin-top: 0;
           max-height: 70vh;
@@ -746,8 +845,20 @@ export default function Navigation({ profile }) {
           left: 0;
           right: 0;
           background: white;
-          box-shadow: 0 6px 24px rgba(11, 31, 58, 0.08);
+          box-shadow: 0 8px 32px rgba(11, 31, 58, 0.1);
           z-index: 1000;
+          animation: slideDown 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-12px) scale(0.97);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
         }
 
         .nav-new-mobile-group {
@@ -794,6 +905,7 @@ export default function Navigation({ profile }) {
         .nav-new-mobile-item:hover {
           background: #F4F6F9;
           color: #0B1F3A;
+          transform: translateX(4px);
         }
 
         .nav-new-mobile-item.active {
@@ -826,6 +938,7 @@ export default function Navigation({ profile }) {
 
         .nav-new-mobile-logout:hover {
           background: #FED7D7;
+          transform: scale(1.01);
         }
 
         .nav-new-mobile-logout svg {
@@ -900,7 +1013,7 @@ export default function Navigation({ profile }) {
           }
           .nav-new-mobile {
             top: 44px;
-            padding: 8px 10px;
+            padding: 10px 12px;
           }
           .nav-new-mobile-item {
             font-size: 11px;
@@ -938,7 +1051,7 @@ export default function Navigation({ profile }) {
           }
           .nav-new-mobile {
             top: 40px;
-            padding: 6px 8px;
+            padding: 8px 10px;
           }
           .nav-new-mobile-item {
             font-size: 10px;

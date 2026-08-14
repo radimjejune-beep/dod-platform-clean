@@ -154,7 +154,6 @@ export default function Home() {
           background: #F5F2ED;
         }
 
-        /* ===== ГЕРОЙ ===== */
         .home-hero {
           position: relative;
           min-height: 420px;
@@ -287,7 +286,6 @@ export default function Home() {
           opacity: 0.8;
         }
 
-        /* ===== СТАТИСТИКА ===== */
         .home-stats {
           margin-top: -24px;
           position: relative;
@@ -331,7 +329,6 @@ export default function Home() {
           background: #E2E7EF;
         }
 
-        /* ===== МИССИЯ ===== */
         .home-mission {
           padding: 50px 24px;
           background: linear-gradient(145deg, #0B1F3A 0%, #051224 100%);
@@ -416,7 +413,6 @@ export default function Home() {
           letter-spacing: 0.5px;
         }
 
-        /* ===== МОБИЛЬНЫЕ ===== */
         @media (max-width: 768px) {
           .home-hero {
             min-height: 340px;

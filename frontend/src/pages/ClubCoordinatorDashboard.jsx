@@ -508,16 +508,25 @@ export default function ClubCoordinatorDashboard() {
               🏆 Добавить достижение
             </button>
 
-            {/* ===== НОВАЯ КНОПКА: НАЗНАЧИТЬ ПРЕЗИДЕНТА ===== */}
+            {/* ===== КНОПКА: НАЗНАЧИТЬ ПРЕЗИДЕНТА ===== */}
             <button
               className="btn-primary"
               style={{ padding: '8px 16px', fontSize: '13px', background: '#6B46C1', color: 'white', border: 'none' }}
-              onClick={() => navigate(`/club/${club.id}/president`)}
+              onClick={() => {
+                // Используем ID клуба из состояния
+                if (club && club.id) {
+                  navigate(`/club/${club.id}/president`);
+                } else {
+                  setMessage('❌ ID клуба не найден');
+                  setMessageType('error');
+                  setTimeout(() => setMessage(''), 3000);
+                }
+              }}
             >
               👑 Назначить президента
             </button>
 
-            {/* ===== НОВАЯ КНОПКА: РЕЙТИНГ КЛУБА ===== */}
+            {/* ===== КНОПКА: РЕЙТИНГ КЛУБА ===== */}
             <button
               className="btn-primary"
               style={{ padding: '8px 16px', fontSize: '13px', background: '#C9A227', color: '#0B1F3A', border: 'none' }}

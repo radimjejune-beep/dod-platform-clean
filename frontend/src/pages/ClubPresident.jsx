@@ -1,12 +1,13 @@
 // frontend/src/pages/ClubPresident.jsx
 
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 
 export default function ClubPresident() {
   const { clubId } = useParams();
+  const location = useLocation();
   const [profile, setProfile] = useState(null);
   const [club, setClub] = useState(null);
   const [participants, setParticipants] = useState([]);
@@ -25,6 +26,8 @@ export default function ClubPresident() {
   const loadData = async () => {
     try {
       setLoading(true);
+      
+      // 1. Получаем текущего пользователя
       const userData = await api.getMe();
       if (!userData || !userData.id) {
         navigate('/login');
@@ -33,7 +36,7 @@ export default function ClubPresident() {
 
       console.log('👤 Текущий пользователь:', userData);
 
-      // Проверяем, что пользователь — координатор или админ
+      // 2. Проверяем роль
       if (userData.role !== 'club_coordinator' && userData.role !== 'admin') {
         navigate('/dashboard');
         return;
@@ -41,12 +44,11 @@ export default function ClubPresident() {
 
       setProfile(userData);
 
-      // ============================================================
-      // ЗАГРУЗКА КЛУБА
-      // ============================================================
+      // 3. Получаем все клубы
       const clubsData = await api.getClubs();
       console.log('🏫 Все клубы:', clubsData);
       
+      // 4. Ищем клуб по ID из URL
       const foundClub = clubsData.find(c => c.id === clubId);
       console.log('🏫 Найденный клуб:', foundClub);
       
@@ -57,20 +59,18 @@ export default function ClubPresident() {
         return;
       }
 
-      // ============================================================
-      // ПРОВЕРКА ПРАВ ДЛЯ КООРДИНАТОРА
-      // ============================================================
+      // 5. ПРОВЕРКА ПРАВ — через club_id из профиля
       let hasAccess = false;
 
-      // Админ имеет доступ ко всем клубам
+      // Админ — имеет доступ ко всем клубам
       if (userData.role === 'admin') {
         hasAccess = true;
         console.log('✅ Админ: доступ есть');
       }
-      
+
       // Координатор — проверяем привязку
       if (userData.role === 'club_coordinator') {
-        // Проверка 1: через club_id в профиле
+        // Проверка 1: club_id в профиле пользователя
         if (userData.club_id === clubId) {
           hasAccess = true;
           console.log('✅ Координатор: доступ через club_id в профиле');
@@ -88,23 +88,16 @@ export default function ClubPresident() {
             console.log('📋 Данные club_coordinators:', coordData);
             
             if (coordData && coordData.length > 0) {
-              const userClubId = coordData[0].club_id;
-              if (userClubId === clubId) {
-                hasAccess = true;
-                console.log('✅ Координатор: доступ через club_coordinators');
+              for (const coord of coordData) {
+                if (coord.club_id === clubId) {
+                  hasAccess = true;
+                  console.log('✅ Координатор: доступ через club_coordinators');
+                  break;
+                }
               }
             }
           } catch (e) {
             console.log('❌ Ошибка проверки координатора:', e);
-          }
-        }
-        
-        // Проверка 3: если клуб в URL совпадает с клубом координатора
-        if (!hasAccess) {
-          // Проверяем, что клуб из URL совпадает с club_id координатора
-          if (userData.club_id && userData.club_id === clubId) {
-            hasAccess = true;
-            console.log('✅ Координатор: доступ через club_id (прямая проверка)');
           }
         }
       }
@@ -120,12 +113,7 @@ export default function ClubPresident() {
 
       setClub(foundClub);
 
-      // ============================================================
-      // ЗАГРУЗКА УЧАСТНИКОВ КЛУБА
-      // ============================================================
-      const token = localStorage.getItem('token');
-      
-      // Получаем всех участников
+      // 6. ЗАГРУЗКА УЧАСТНИКОВ КЛУБА
       const participantsData = await api.getParticipants();
       console.log('📥 Все участники:', participantsData?.length || 0);
       
@@ -136,10 +124,9 @@ export default function ClubPresident() {
       
       setParticipants(clubParticipants);
 
-      // ============================================================
-      // ЗАГРУЗКА ТЕКУЩЕГО ПРЕЗИДЕНТА
-      // ============================================================
+      // 7. ЗАГРУЗКА ТЕКУЩЕГО ПРЕЗИДЕНТА
       try {
+        const token = localStorage.getItem('token');
         const response = await fetch(
           `https://dod-backend.relaxdev.ru/api/clubs/${clubId}/president`,
           { headers: { 'Authorization': `Bearer ${token}` } }
@@ -197,7 +184,7 @@ export default function ClubPresident() {
       setMessageType('success');
       setCurrentPresident(result.president);
       
-      // Обновляем список участников
+      // Обновляем список
       await loadData();
       
       setTimeout(() => setMessage(''), 3000);

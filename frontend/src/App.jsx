@@ -4,6 +4,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
+import './styles/global.css';
+import './styles/diplomatic-theme.css'; // ← ДОБАВЬТЕ
 
 // Публичные страницы
 import Home from './pages/Home';

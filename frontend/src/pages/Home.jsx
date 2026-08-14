@@ -1,4 +1,4 @@
-// frontend/src/pages/Home.jsx
+// frontend/src/pages/Home.jsx - ТОЛЬКО СТИЛИ МЕНЯЕМ!
 
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -176,12 +176,12 @@ export default function Home() {
 
         .home-hero {
           position: relative;
-          min-height: 500px;
+          min-height: 460px;
           display: flex;
           align-items: center;
           justify-content: center;
           text-align: center;
-          padding: 60px 24px;
+          padding: 50px 24px;
           overflow: hidden;
           background: linear-gradient(145deg, #0B1F3A 0%, #051224 100%);
         }
@@ -207,20 +207,20 @@ export default function Home() {
         .home-hero-content {
           position: relative;
           z-index: 1;
-          max-width: 800px;
+          max-width: 820px;
         }
 
         .home-hero-emblem {
-          width: 80px;
-          height: 80px;
-          margin: 0 auto 24px;
+          width: 72px;
+          height: 72px;
+          margin: 0 auto 20px;
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
         .home-hero-logo {
-          height: 56px;
+          height: 48px;
           width: auto;
           object-fit: contain;
           filter: drop-shadow(0 2px 20px rgba(201, 162, 39, 0.15));
@@ -228,10 +228,10 @@ export default function Home() {
 
         .home-hero h1 {
           font-family: 'Playfair Display', serif;
-          font-size: 38px;
+          font-size: 34px;
           font-weight: 700;
           color: white;
-          margin-bottom: 12px;
+          margin-bottom: 10px;
           line-height: 1.2;
         }
 
@@ -243,28 +243,28 @@ export default function Home() {
         }
 
         .home-hero-motto {
-          font-size: 17px;
+          font-size: 16px;
           color: rgba(255, 255, 255, 0.6);
           line-height: 1.7;
-          margin-bottom: 28px;
+          margin-bottom: 26px;
           font-weight: 300;
           letter-spacing: 0.3px;
         }
 
         .home-hero-buttons {
           display: flex;
-          gap: 16px;
+          gap: 14px;
           justify-content: center;
           flex-wrap: wrap;
         }
 
         .home-hero-btn-primary {
-          padding: 14px 40px;
+          padding: 12px 34px;
           background: linear-gradient(135deg, #C9A227, #B8921F);
           color: #0B1F3A;
           border: none;
           border-radius: 10px;
-          font-size: 17px;
+          font-size: 15px;
           font-weight: 700;
           cursor: pointer;
           transition: all 0.3s ease;
@@ -273,17 +273,17 @@ export default function Home() {
         }
 
         .home-hero-btn-primary:hover {
-          transform: translateY(-4px) scale(1.02);
-          box-shadow: 0 8px 40px rgba(201, 162, 39, 0.35);
+          transform: translateY(-3px);
+          box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
         }
 
         .home-hero-btn-secondary {
-          padding: 14px 36px;
+          padding: 12px 30px;
           background: transparent;
           color: white;
           border: 2px solid rgba(255, 255, 255, 0.2);
           border-radius: 10px;
-          font-size: 17px;
+          font-size: 15px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.3s ease;
@@ -293,11 +293,11 @@ export default function Home() {
         .home-hero-btn-secondary:hover {
           border-color: rgba(255, 255, 255, 0.5);
           background: rgba(255, 255, 255, 0.05);
-          transform: translateY(-4px);
+          transform: translateY(-3px);
         }
 
         .home-hero-register {
-          margin-top: 16px;
+          margin-top: 14px;
           font-size: 14px;
           color: rgba(255, 255, 255, 0.4);
         }
@@ -318,20 +318,20 @@ export default function Home() {
           align-items: center;
           justify-content: center;
           gap: 12px;
-          margin-top: 20px;
-          padding-top: 16px;
+          margin-top: 18px;
+          padding-top: 14px;
           border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .home-hero-partner-label {
-          font-size: 11px;
+          font-size: 10px;
           color: rgba(255, 255, 255, 0.3);
           letter-spacing: 1px;
           text-transform: uppercase;
         }
 
         .home-hero-ard {
-          height: 28px;
+          height: 26px;
           width: auto;
           object-fit: contain;
           opacity: 0.4;
@@ -343,20 +343,20 @@ export default function Home() {
         }
 
         .home-stats {
-          margin-top: -30px;
+          margin-top: -28px;
           position: relative;
           z-index: 2;
           padding: 0 24px;
         }
 
         .home-stats-container {
-          max-width: 900px;
+          max-width: 920px;
           margin: 0 auto;
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           background: white;
-          border-radius: 16px;
-          padding: 28px 32px;
+          border-radius: 14px;
+          padding: 24px 28px;
           box-shadow: 0 12px 48px rgba(11, 31, 58, 0.06);
           border: 1px solid #E2E7EF;
         }
@@ -368,14 +368,14 @@ export default function Home() {
         .home-stat-number {
           display: block;
           font-family: 'Playfair Display', serif;
-          font-size: 28px;
+          font-size: 26px;
           font-weight: 700;
           color: #0B1F3A;
         }
 
         .home-stat-label {
           display: block;
-          font-size: 13px;
+          font-size: 12px;
           color: #667085;
           margin-top: 2px;
         }
@@ -386,9 +386,9 @@ export default function Home() {
         }
 
         .home-mission {
-          padding: 60px 24px;
+          padding: 50px 24px;
           background: linear-gradient(145deg, #0B1F3A 0%, #051224 100%);
-          margin-top: 40px;
+          margin-top: 36px;
           position: relative;
           overflow: hidden;
         }
@@ -405,7 +405,7 @@ export default function Home() {
         }
 
         .home-mission-container {
-          max-width: 800px;
+          max-width: 820px;
           margin: 0 auto;
           text-align: center;
           position: relative;
@@ -413,37 +413,37 @@ export default function Home() {
         }
 
         .home-mission-icon {
-          font-size: 40px;
-          margin-bottom: 12px;
+          font-size: 36px;
+          margin-bottom: 10px;
         }
 
         .home-mission h2 {
           font-family: 'Playfair Display', serif;
-          font-size: 28px;
+          font-size: 26px;
           font-weight: 700;
           color: white;
-          margin-bottom: 12px;
+          margin-bottom: 10px;
         }
 
         .home-mission p {
-          font-size: 17px;
+          font-size: 15px;
           color: rgba(255, 255, 255, 0.6);
           line-height: 1.8;
-          margin-bottom: 28px;
+          margin-bottom: 24px;
           font-weight: 300;
         }
 
         .home-mission-values {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
+          gap: 14px;
           max-width: 700px;
           margin: 0 auto;
         }
 
         .home-mission-value {
           text-align: center;
-          padding: 16px 12px;
+          padding: 14px 10px;
           background: rgba(255, 255, 255, 0.03);
           border-radius: 10px;
           border: 1px solid rgba(255, 255, 255, 0.05);
@@ -452,18 +452,18 @@ export default function Home() {
 
         .home-mission-value:hover {
           background: rgba(255, 255, 255, 0.06);
-          transform: translateY(-4px);
+          transform: translateY(-3px);
           border-color: rgba(201, 162, 39, 0.15);
         }
 
         .home-mission-value span:first-child {
           display: block;
-          font-size: 24px;
+          font-size: 22px;
           margin-bottom: 4px;
         }
 
         .home-mission-value span:last-child {
-          font-size: 12px;
+          font-size: 11px;
           color: rgba(255, 255, 255, 0.5);
           font-weight: 400;
           letter-spacing: 0.5px;
@@ -471,36 +471,36 @@ export default function Home() {
 
         @media (max-width: 768px) {
           .home-hero {
-            min-height: 380px;
-            padding: 40px 20px;
+            min-height: 360px;
+            padding: 36px 20px;
           }
 
           .home-hero h1 {
-            font-size: 28px;
+            font-size: 26px;
           }
 
           .home-hero-motto {
-            font-size: 15px;
+            font-size: 14px;
           }
 
           .home-hero-btn-primary,
           .home-hero-btn-secondary {
-            padding: 12px 24px;
-            font-size: 15px;
+            padding: 10px 22px;
+            font-size: 14px;
           }
 
           .home-hero-logo {
-            height: 40px;
+            height: 38px;
           }
 
           .home-hero-ard {
-            height: 22px;
+            height: 20px;
           }
 
           .home-stats-container {
             grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-            padding: 20px;
+            gap: 14px;
+            padding: 18px;
           }
 
           .home-stat-divider:nth-child(2) {
@@ -514,16 +514,16 @@ export default function Home() {
 
         @media (max-width: 480px) {
           .home-hero {
-            min-height: 340px;
-            padding: 30px 16px;
+            min-height: 320px;
+            padding: 28px 16px;
           }
 
           .home-hero h1 {
-            font-size: 22px;
+            font-size: 20px;
           }
 
           .home-hero-motto {
-            font-size: 13px;
+            font-size: 12px;
           }
 
           .home-hero-buttons {
@@ -535,44 +535,44 @@ export default function Home() {
           .home-hero-btn-secondary {
             width: 100%;
             text-align: center;
-            padding: 12px 20px;
-            font-size: 14px;
+            padding: 10px 16px;
+            font-size: 13px;
           }
 
           .home-hero-emblem {
-            width: 60px;
-            height: 60px;
+            width: 56px;
+            height: 56px;
           }
 
           .home-hero-logo {
-            height: 34px;
+            height: 32px;
           }
 
           .home-stats-container {
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            padding: 16px;
+            gap: 10px;
+            padding: 14px;
           }
 
           .home-stat-number {
-            font-size: 22px;
+            font-size: 20px;
           }
 
           .home-mission h2 {
-            font-size: 22px;
+            font-size: 20px;
           }
 
           .home-mission p {
-            font-size: 14px;
+            font-size: 13px;
           }
 
           .home-mission-values {
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 8px;
           }
 
           .home-mission-value span:first-child {
-            font-size: 20px;
+            font-size: 18px;
           }
         }
       `}</style>

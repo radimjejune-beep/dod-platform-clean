@@ -921,21 +921,21 @@ app.get('/api/events', async (req, res) => {
     // ТЬЮТОР — ВИДИТ МЕРОПРИЯТИЯ, НА КОТОРЫЕ ОН НАЗНАЧЕН
     // ============================================================
     else if (userRole === 'tutor') {
-      const assignments = await pool.query(
-        'SELECT event_id FROM event_tutor_assignments WHERE tutor_id = $1 AND status = $2',
-        [userId, 'accepted']
-      );
-      
-      if (assignments.rows.length > 0) {
-        const eventIds = assignments.rows.map(r => r.event_id);
-        conditions.push(`(e.id = ANY($${params.length + 1}::uuid[]))`);
-        params.push(eventIds);
-        console.log(`👨‍🏫 Тьютор видит ${assignments.rows.length} мероприятий`);
+       const assignments = await pool.query(
+      'SELECT event_id FROM event_tutor_assignments WHERE tutor_id = $1 AND status = $2',
+      [userId, 'accepted']
+    );
+  
+    if (assignments.rows.length > 0) {
+      const eventIds = assignments.rows.map(r => r.event_id);
+      conditions.push(`(e.id = ANY($${params.length + 1}::uuid[]))`);
+      params.push(eventIds);
+      console.log(`👨‍🏫 Тьютор видит ${assignments.rows.length} мероприятий`);
       } else {
-        conditions.push('1 = 0');
-        console.log('👨‍🏫 Тьютор не назначен ни на одно мероприятие');
+      conditions.push('1 = 0');
+      console.log('👨‍🏫 Тьютор не назначен ни на одно мероприятие');
       }
-    } 
+    }
     else if (userRole === 'parent') {
       // Родители видят только глобальные
     } 

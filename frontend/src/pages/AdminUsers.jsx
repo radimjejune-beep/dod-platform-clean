@@ -34,6 +34,10 @@ export default function AdminUsers() {
   const [availableParents, setAvailableParents] = useState([]);
   const [availableChildren, setAvailableChildren] = useState([]);
   
+  // ===== ДЛЯ ПРИКРЕПЛЕНИЯ К КЛУБУ =====
+  const [selectedClub, setSelectedClub] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  
   const [form, setForm] = useState({
     full_name: '',
     email: '',
@@ -205,6 +209,84 @@ export default function AdminUsers() {
       const usersData = await api.getUsers();
       setAllUsers(usersData || []);
       setUsers(usersData || []);
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
+
+  // ===== СБРОС ПАРОЛЯ =====
+  const handleResetPassword = async (userId, fullName) => {
+    if (!isAdmin) {
+      setMessage('❌ У вас нет прав для сброса пароля');
+      setMessageType('error');
+      return;
+    }
+
+    if (!confirm(`Сбросить пароль для "${fullName}"?`)) return;
+
+    try {
+      const result = await api.resetUserPassword(userId);
+      if (result.error) throw new Error(result.error);
+      
+      setMessage(`✅ Пароль для "${fullName}" сброшен. Новый пароль: ${result.new_password}`);
+      setMessageType('success');
+      setTimeout(() => setMessage(''), 5000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
+
+  // ===== ПРИКРЕПЛЕНИЕ К КЛУБУ =====
+  const handleAssignToClub = async (userId, fullName) => {
+    if (!isAdmin) {
+      setMessage('❌ У вас нет прав для прикрепления к клубу');
+      setMessageType('error');
+      return;
+    }
+
+    if (!selectedClub) {
+      setMessage('❌ Выберите КЮД');
+      setMessageType('error');
+      return;
+    }
+
+    if (!confirm(`Прикрепить "${fullName}" к выбранному КЮДу?`)) return;
+
+    try {
+      const result = await api.assignUserToClub(userId, selectedClub);
+      if (result.error) throw new Error(result.error);
+      
+      setMessage(`✅ "${fullName}" прикреплён к КЮДу!`);
+      setMessageType('success');
+      setSelectedClub('');
+      loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
+
+  // ===== УДАЛЕНИЕ ПРЕЗИДЕНТА КЛУБА =====
+  const handleRemovePresident = async (clubId, clubName) => {
+    if (!isAdmin) {
+      setMessage('❌ У вас нет прав для снятия президента');
+      setMessageType('error');
+      return;
+    }
+
+    if (!confirm(`Снять президента с клуба "${clubName}"?`)) return;
+
+    try {
+      const result = await api.removeClubPresident(clubId);
+      if (result.error) throw new Error(result.error);
+      
+      setMessage(`✅ Президент снят с клуба "${clubName}"`);
+      setMessageType('success');
+      loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
@@ -923,31 +1005,64 @@ export default function AdminUsers() {
                       </span>
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button
                           style={{ padding: '4px 10px', background: '#F4F6F9', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}
                           onClick={() => navigate(`/participant/${u.id}`)}
+                          title="Просмотр профиля"
                         >
                           👁️
                         </button>
-                        {isAdmin && u.id !== profile?.id && (
-                          <button
-                            style={{
-                              padding: '4px 10px',
-                              background: '#FCEBEC',
-                              border: 'none',
-                              borderRadius: '8px',
-                              cursor: 'pointer',
-                              fontSize: '13px',
-                              color: '#B3262E',
-                              transition: 'all 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = '#FED7D7'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = '#FCEBEC'}
-                            onClick={() => handleDeleteUser(u.id, u.full_name)}
-                          >
-                            🗑️
-                          </button>
+                        
+                        {isAdmin && (
+                          <>
+                            {/* СБРОС ПАРОЛЯ */}
+                            <button
+                              style={{ padding: '4px 10px', background: '#FBF4DC', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}
+                              onClick={() => handleResetPassword(u.id, u.full_name)}
+                              title="Сбросить пароль"
+                            >
+                              🔑
+                            </button>
+
+                            {/* ПРИКРЕПЛЕНИЕ К КЛУБУ */}
+                            <select
+                              value={selectedClub}
+                              onChange={(e) => setSelectedClub(e.target.value)}
+                              style={{ padding: '4px 6px', fontSize: '11px', borderRadius: '6px', border: '1px solid #D5DCE7', maxWidth: '120px' }}
+                              title="Выберите КЮД"
+                            >
+                              <option value="">КЮД</option>
+                              {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                            <button
+                              style={{ padding: '4px 10px', background: '#EAF2FA', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}
+                              onClick={() => handleAssignToClub(u.id, u.full_name)}
+                              title="Прикрепить к КЮДу"
+                            >
+                              📌
+                            </button>
+
+                            {/* УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ */}
+                            <button
+                              style={{
+                                padding: '4px 10px',
+                                background: '#FCEBEC',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                color: '#B3262E',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = '#FED7D7'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = '#FCEBEC'}
+                              onClick={() => handleDeleteUser(u.id, u.full_name)}
+                              title="Удалить пользователя"
+                            >
+                              🗑️
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>

@@ -182,6 +182,7 @@ export default function Events() {
   const canCreate = ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(profile?.role);
   const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
   const isClubCoordinator = profile?.role === 'club_coordinator';
+  const isMovementCoordinator = profile?.role === 'movement_coordinator';
 
   // ===== СОЗДАНИЕ/РЕДАКТИРОВАНИЕ =====
   const handleSubmit = async (e) => {
@@ -207,11 +208,27 @@ export default function Events() {
       };
 
       // ============================================================
-      // ДЛЯ КООРДИНАТОРА ДВИЖЕНИЯ — ЕСЛИ НЕТ CLUB_ID, ТО ГЛОБАЛЬНОЕ
+      // ДЛЯ КООРДИНАТОРА ДВИЖЕНИЯ — СОЗДАЁТ ГЛОБАЛЬНЫЕ МЕРОПРИЯТИЯ
       // ============================================================
-      if (profile?.role === 'movement_coordinator' && !form.club_id) {
+      if (profile?.role === 'movement_coordinator') {
         eventData.is_global = true;
         eventData.is_club_event = false;
+        eventData.club_id = null;
+      }
+
+      // ============================================================
+      // ДЛЯ КООРДИНАТОРА КЛУБА — ПОДСТАВЛЯЕМ ЕГО КЛУБ
+      // ============================================================
+      if (profile?.role === 'club_coordinator' && !form.club_id) {
+        const userClub = clubs.find(c => 
+          c.coordinator_id === profile.id || 
+          c.leader_id === profile.id
+        );
+        if (userClub) {
+          eventData.club_id = userClub.id;
+          eventData.is_club_event = true;
+          eventData.is_global = false;
+        }
       }
 
       let result;
@@ -231,9 +248,11 @@ export default function Events() {
 
       const successMessage = form.id 
         ? '✅ Мероприятие обновлено!' 
-        : form.club_id 
-          ? '✅ Внутреннее мероприятие клуба создано!' 
-          : '✅ Мероприятие создано!';
+        : eventData.is_global 
+          ? '✅ Глобальное мероприятие создано!' 
+          : eventData.club_id 
+            ? '✅ Внутреннее мероприятие клуба создано!' 
+            : '✅ Мероприятие создано!';
       
       setMessage(successMessage);
       setMessageType('success');
@@ -441,6 +460,23 @@ export default function Events() {
                 </button>
               </div>
             )}
+
+            {/* ===== ДЛЯ КООРДИНАТОРА ДВИЖЕНИЯ — ИНФОРМАЦИЯ ===== */}
+            {isMovementCoordinator && (
+              <div style={{ 
+                padding: '12px 16px', 
+                background: '#EAF2FA', 
+                borderRadius: '8px', 
+                marginBottom: '16px',
+                fontSize: '14px',
+                color: '#174A7E',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                🌍 <strong>Глобальное мероприятие</strong> — будет доступно всем участникам движения
+              </div>
+            )}
             
             <form onSubmit={handleSubmit}>
               <div className="form-group">
@@ -493,16 +529,20 @@ export default function Events() {
                   <label>Лимит мест</label>
                   <input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} min="1" />
                 </div>
-                <div className="form-group">
-                  <label>Клуб</label>
-                  <select value={form.club_id} onChange={(e) => setForm({ ...form, club_id: e.target.value })}>
-                    <option value="">Без клуба (глобальное)</option>
-                    {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                    {form.club_id ? '🏫 Это мероприятие увидят только участники этого клуба' : '🌍 Это мероприятие увидят все пользователи'}
+                
+                {/* ===== ВЫБОР КЛУБА — СКРЫВАЕМ ДЛЯ КООРДИНАТОРА ДВИЖЕНИЯ ===== */}
+                {!isMovementCoordinator && (
+                  <div className="form-group">
+                    <label>Клуб</label>
+                    <select value={form.club_id} onChange={(e) => setForm({ ...form, club_id: e.target.value })}>
+                      <option value="">Без клуба (глобальное)</option>
+                      {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                      {form.club_id ? '🏫 Это мероприятие увидят только участники этого клуба' : '🌍 Это мероприятие увидят все пользователи'}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
               
               <div className="form-group">

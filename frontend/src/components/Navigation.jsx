@@ -231,6 +231,14 @@ export default function Navigation({ profile }) {
         { path: '/tutor-requests', label: 'Запросы на тьюторов', icon: Icons.mail, roles: ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'] },
         { path: '/tutor-invitations', label: 'Приглашения тьюторам', icon: Icons.mail, roles: ['tutor', 'admin', 'movement_coordinator', 'president', 'vice_president'] },
       ],
+      documents: [
+        { 
+          path: '/documents', 
+          label: '📜 Официальные документы', 
+          icon: Icons.fileText, 
+          roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'] 
+        },
+      ],
       staffCalendar: [
         { path: '/staff-calendar', label: 'Календарь сотрудников', icon: Icons.calendar, roles: ['admin', 'movement_coordinator'] },
       ],
@@ -269,12 +277,13 @@ export default function Navigation({ profile }) {
     reports: 'Отчёты',
     tasks: 'Задания',
     communication: 'Коммуникация',
+    documents: '📜 Официальные документы',
     staffCalendar: 'Календарь',
     clubEvents: 'Мой клуб',
     settings: 'Настройки',
   };
 
-  const groupOrder = ['main', 'events', 'people', 'clubs', 'clubManagement', 'achievements', 'reviews', 'reports', 'tasks', 'communication', 'staffCalendar', 'clubEvents', 'settings'];
+  const groupOrder = ['main', 'events', 'people', 'clubs', 'clubManagement', 'achievements', 'reviews', 'reports', 'tasks', 'communication', 'documents', 'staffCalendar', 'clubEvents', 'settings'];
 
   const menuGroups = getMenuGroups();
 

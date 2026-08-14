@@ -1,381 +1,168 @@
 // frontend/src/App.jsx
 
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import ProtectedRoute from './components/ProtectedRoute';
-import './styles/global.css';
-import './styles/diplomatic-theme.css'; // ← ДОБАВЬТЕ
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import api from './lib/api';
 
-// Публичные страницы
+// Страницы
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-
-// Основные страницы
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
+import Events from './pages/Events';
+import Calendar from './pages/Calendar';
 import Clubs from './pages/Clubs';
 import ClubDetail from './pages/ClubDetail';
-import Events from './pages/Events';
-import EventParticipants from './pages/EventParticipants';
-import Calendar from './pages/Calendar';
-import Analytics from './pages/Analytics';
-import ClubAnalytics from './pages/ClubAnalytics';
-import DashboardAnalytics from './pages/DashboardAnalytics';
-import Settings from './pages/Settings';
-import AdminInvite from './pages/AdminInvite';
-import AdminUsers from './pages/AdminUsers';
-import AdminNews from './pages/AdminNews';
-import ImportParticipants from './pages/ImportParticipants';
-
-// Участник
-import ParticipantDashboard from './pages/ParticipantDashboard';
-import MyAchievements from './pages/MyAchievements';
-import MyReviews from './pages/MyReviews';
-import PresidentTasks from './pages/PresidentTasks';
-
-// Родитель
-import ParentDashboard from './pages/ParentDashboard';
-
-// Координатор клуба
-import ClubCoordinatorDashboard from './pages/ClubCoordinatorDashboard';
+import ClubPresident from './pages/ClubPresident';
+import ClubRating from './pages/ClubRating';
+import Participants from './pages/Participants';
+import ParticipantProfile from './pages/ParticipantProfile';
+import ParticipantEdit from './pages/ParticipantEdit';
+import Achievements from './pages/Achievements';
 import ManageAchievements from './pages/ManageAchievements';
+import MyAchievements from './pages/MyAchievements';
 import Reports from './pages/Reports';
+import Analytics from './pages/Analytics';
+import DashboardAnalytics from './pages/DashboardAnalytics';
+import ClubAnalytics from './pages/ClubAnalytics';
 import Appeals from './pages/Appeals';
+import AdminUsers from './pages/AdminUsers';
+import AdminInvite from './pages/AdminInvite';
+import AdminNews from './pages/AdminNews';
+import Settings from './pages/Settings';
+import ImportParticipants from './pages/ImportParticipants';
+import ParentDashboard from './pages/ParentDashboard';
+import ParticipantDashboard from './pages/ParticipantDashboard';
+import ClubCoordinatorDashboard from './pages/ClubCoordinatorDashboard';
+import TutorDashboard from './pages/TutorDashboard';
+import TutorJournal from './pages/TutorJournal';
+import MyReviews from './pages/MyReviews';
+import MyJournal from './pages/MyJournal';
 import TutorRequests from './pages/TutorRequests';
 import TutorInvitations from './pages/TutorInvitations';
 import StaffManagement from './pages/StaffManagement';
 import StaffCalendar from './pages/StaffCalendar';
-
-// ===== НОВЫЕ СТРАНИЦЫ =====
-import MyClubEvents from './pages/MyClubEvents';
+import PresidentTasks from './pages/PresidentTasks';
 import ClubCalendar from './pages/ClubCalendar';
-import ClubRating from './pages/ClubRating';
-import ClubPresident from './pages/ClubPresident';
-
-// Тьютор
-import TutorDashboard from './pages/TutorDashboard';
-import MyJournal from './pages/MyJournal';
-import TutorJournal from './pages/TutorJournal';
-
-// Другие
-import ParticipantProfile from './pages/ParticipantProfile';
-import ParticipantEdit from './pages/ParticipantEdit';
+import MyClubEvents from './pages/MyClubEvents';
 import NewsDetail from './pages/NewsDetail';
-import Achievements from './pages/Achievements';
-import Participants from './pages/Participants';
+import OfficialDocuments from './pages/OfficialDocuments';
 
-// Стили
-import './styles/global.css';
-
-function AppRoutes() {
-  const navigate = useNavigate();
+function App() {
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const sessionId = sessionStorage.getItem('sessionId');
-    const currentPath = window.location.pathname;
-    
-    if (token && !sessionId) {
-      console.log('🔒 Сессия истекла (закрыта вкладка)');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      if (currentPath !== '/login' && currentPath !== '/register' && currentPath !== '/') {
-        navigate('/login');
-      }
+    if (token) {
+      api.getMe()
+        .then(user => {
+          if (user && user.id) {
+            setProfile(user);
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        })
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
-  }, [navigate]);
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+        <div className="spinner" />
+      </div>
+    );
+  }
 
   return (
-    <Routes>
-      {/* ===== ПУБЛИЧНЫЕ ===== */}
-      <Route path="/" element={<Home />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-
-      {/* ===== ЗАЩИЩЁННЫЕ ===== */}
-      <Route path="/dashboard" element={
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/profile" element={
-        <ProtectedRoute>
-          <Profile />
-        </ProtectedRoute>
-      } />
-
-      {/* ===== УЧАСТНИК ===== */}
-      <Route path="/participant-dashboard" element={
-        <ProtectedRoute>
-          <ParticipantDashboard />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/my-achievements" element={
-        <ProtectedRoute>
-          <MyAchievements />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/my-reviews" element={
-        <ProtectedRoute>
-          <MyReviews />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/president-tasks" element={
-        <ProtectedRoute>
-          <PresidentTasks />
-        </ProtectedRoute>
-      } />
-
-      {/* ===== РОДИТЕЛЬ ===== */}
-      <Route path="/parent-dashboard" element={
-        <ProtectedRoute>
-          <ParentDashboard />
-        </ProtectedRoute>
-      } />
-
-      {/* ===== КООРДИНАТОР КЛУБА ===== */}
-      <Route path="/club-coordinator-dashboard" element={
-        <ProtectedRoute>
-          <ClubCoordinatorDashboard />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/club-analytics" element={
-        <ProtectedRoute>
-          <ClubAnalytics />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/manage-achievements" element={
-        <ProtectedRoute>
-          <ManageAchievements />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/reports" element={
-        <ProtectedRoute>
-          <Reports />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/appeals" element={
-        <ProtectedRoute>
-          <Appeals />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/tutor-requests" element={
-        <ProtectedRoute>
-          <TutorRequests />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/tutor-invitations" element={
-        <ProtectedRoute>
-          <TutorInvitations />
-        </ProtectedRoute>
-      } />
-
-      {/* ===== НОВЫЕ МАРШРУТЫ ДЛЯ КООРДИНАТОРА ===== */}
-      <Route path="/club-rating" element={
-        <ProtectedRoute>
-          <ClubRating />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/club/:id/president" element={
-        <ProtectedRoute>
-          <ClubPresident />
-        </ProtectedRoute>
-      } />
-
-      {/* ===== ТЬЮТОР ===== */}
-      <Route path="/tutor-dashboard" element={
-        <ProtectedRoute>
-          <TutorDashboard />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/my-journal" element={
-        <ProtectedRoute>
-          <MyJournal />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/tutor-journal" element={
-        <ProtectedRoute>
-          <TutorJournal />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/tutor-journal/:eventId" element={
-        <ProtectedRoute>
-          <TutorJournal />
-        </ProtectedRoute>
-      } />
-
-      {/* ===== ОБЩИЕ ===== */}
-      <Route path="/clubs" element={
-        <ProtectedRoute>
-          <Clubs />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/club/:id" element={
-        <ProtectedRoute>
-          <ClubDetail />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/events" element={
-        <ProtectedRoute>
-          <Events />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/events/:eventId/participants" element={
-        <ProtectedRoute>
-          <EventParticipants />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/calendar" element={
-        <ProtectedRoute>
-          <Calendar />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/participants" element={
-        <ProtectedRoute>
-          <Participants />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/participant/:id" element={
-        <ProtectedRoute>
-          <ParticipantProfile />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/participant/:id/edit" element={
-        <ProtectedRoute>
-          <ParticipantEdit />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/achievements" element={
-        <ProtectedRoute>
-          <Achievements />
-        </ProtectedRoute>
-      } />
-
-      {/* ===== АДМИНИСТРАТИВНЫЕ ===== */}
-      <Route path="/analytics" element={
-        <ProtectedRoute>
-          <Analytics />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/dashboard-analytics" element={
-        <ProtectedRoute>
-          <DashboardAnalytics />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/settings" element={
-        <ProtectedRoute>
-          <Settings />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/admin/invite" element={
-        <ProtectedRoute>
-          <AdminInvite />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/admin/users" element={
-        <ProtectedRoute>
-          <AdminUsers />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/admin/news" element={
-        <ProtectedRoute>
-          <AdminNews />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/import-participants" element={
-        <ProtectedRoute>
-          <ImportParticipants />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/staff" element={
-        <ProtectedRoute>
-          <StaffManagement />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/staff-calendar" element={
-        <ProtectedRoute>
-          <StaffCalendar />
-        </ProtectedRoute>
-      } />
-
-      {/* ===== ВНУТРЕННИЕ МЕРОПРИЯТИЯ КЛУБА ===== */}
-      <Route path="/my-club-events" element={
-        <ProtectedRoute>
-          <MyClubEvents />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/club-calendar" element={
-        <ProtectedRoute>
-          <ClubCalendar />
-        </ProtectedRoute>
-      } />
-
-      {/* ===== НОВОСТИ ===== */}
-      <Route path="/news/:id" element={
-        <ProtectedRoute>
-          <NewsDetail />
-        </ProtectedRoute>
-      } />
-
-      {/* ===== 404 ===== */}
-      <Route path="*" element={
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '100vh',
-          flexDirection: 'column',
-          gap: '16px',
-          background: '#F4F6F9'
-        }}>
-          <span style={{ fontSize: '64px' }}>🤔</span>
-          <h1 style={{ color: '#0B1F3A' }}>Страница не найдена</h1>
-          <p style={{ color: '#667085' }}>Проверьте правильность URL</p>
-          <a href="/" style={{ color: '#C9A227', textDecoration: 'none' }}>Вернуться на главную</a>
-        </div>
-      } />
-    </Routes>
-  );
-}
-
-function App() {
-  return (
-    <Router>
-      <AppRoutes />
-    </Router>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
+        
+        {/* Мероприятия */}
+        <Route path="/events" element={<Events />} />
+        <Route path="/calendar" element={<Calendar />} />
+        
+        {/* Клубы */}
+        <Route path="/clubs" element={<Clubs />} />
+        <Route path="/club/:id" element={<ClubDetail />} />
+        <Route path="/club/:clubId/president" element={<ClubPresident />} />
+        <Route path="/club-rating" element={<ClubRating />} />
+        <Route path="/club-analytics" element={<ClubAnalytics />} />
+        
+        {/* Участники */}
+        <Route path="/participants" element={<Participants />} />
+        <Route path="/participant/:id" element={<ParticipantProfile />} />
+        <Route path="/participant/:id/edit" element={<ParticipantEdit />} />
+        
+        {/* Достижения */}
+        <Route path="/achievements" element={<Achievements />} />
+        <Route path="/manage-achievements" element={<ManageAchievements />} />
+        <Route path="/my-achievements" element={<MyAchievements />} />
+        
+        {/* Отчёты и аналитика */}
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/dashboard-analytics" element={<DashboardAnalytics />} />
+        
+        {/* Обращения */}
+        <Route path="/appeals" element={<Appeals />} />
+        
+        {/* Админка */}
+        <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/admin/invite" element={<AdminInvite />} />
+        <Route path="/admin/news" element={<AdminNews />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/import-participants" element={<ImportParticipants />} />
+        
+        {/* Родитель */}
+        <Route path="/parent-dashboard" element={<ParentDashboard />} />
+        
+        {/* Участник */}
+        <Route path="/participant-dashboard" element={<ParticipantDashboard />} />
+        
+        {/* Координатор КЮДа */}
+        <Route path="/club-coordinator-dashboard" element={<ClubCoordinatorDashboard />} />
+        
+        {/* Тьютор */}
+        <Route path="/tutor-dashboard" element={<TutorDashboard />} />
+        <Route path="/tutor-journal/:eventId" element={<TutorJournal />} />
+        <Route path="/my-reviews" element={<MyReviews />} />
+        <Route path="/my-journal" element={<MyJournal />} />
+        <Route path="/tutor-requests" element={<TutorRequests />} />
+        <Route path="/tutor-invitations" element={<TutorInvitations />} />
+        
+        {/* Сотрудники */}
+        <Route path="/staff" element={<StaffManagement />} />
+        <Route path="/staff-calendar" element={<StaffCalendar />} />
+        
+        {/* Президент */}
+        <Route path="/president-tasks" element={<PresidentTasks />} />
+        
+        {/* Клуб */}
+        <Route path="/club-calendar" element={<ClubCalendar />} />
+        <Route path="/my-club-events" element={<MyClubEvents />} />
+        
+        {/* Новости */}
+        <Route path="/news/:id" element={<NewsDetail />} />
+        
+        {/* Официальные документы */}
+        <Route path="/documents" element={<OfficialDocuments />} />
+        
+        {/* Редирект */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

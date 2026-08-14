@@ -3988,6 +3988,381 @@ app.delete('/api/clubs/:clubId/president', async (req, res) => {
 });
 
 // ============================================================
+// ОФИЦИАЛЬНЫЕ ДОКУМЕНТЫ
+// ============================================================
+
+// ===== ПОЛУЧЕНИЕ ВСЕХ ДОКУМЕНТОВ =====
+app.get('/api/documents', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+    const userId = decoded.userId;
+
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
+    
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет доступа к этому разделу' });
+    }
+
+    let query = `
+      SELECT 
+        d.*,
+        u.full_name as created_by_name,
+        u2.full_name as approved_by_name,
+        (SELECT COUNT(*) FROM document_acknowledgments da WHERE da.document_id = d.id) as read_count,
+        (SELECT COUNT(*) FROM document_acknowledgments da WHERE da.document_id = d.id AND da.user_id = $1) as is_read
+      FROM official_documents d
+      LEFT JOIN users u ON d.created_by = u.id
+      LEFT JOIN users u2 ON d.approved_by = u2.id
+      WHERE 1=1
+    `;
+    const params = [userId];
+    const conditions = [];
+
+    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
+      console.log('👑 Показываем все документы для:', userRole);
+    } else if (['club_coordinator', 'tutor'].includes(userRole)) {
+      conditions.push(`d.status = 'published'`);
+      console.log('🏫 Показываем только опубликованные документы для:', userRole);
+    }
+
+    if (conditions.length > 0) {
+      query += ' AND (' + conditions.join(' AND ') + ')';
+    }
+
+    query += ' ORDER BY d.created_at DESC';
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения документов:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== СОЗДАНИЕ ДОКУМЕНТА =====
+app.post('/api/documents', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
+    
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для создания документов' });
+    }
+
+    const { title, content, document_type, is_urgent, priority } = req.body;
+
+    if (!title || !content || !document_type) {
+      return res.status(400).json({ error: 'Заголовок, содержание и тип документа обязательны' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO official_documents (
+        title, content, document_type, is_urgent, priority, 
+        status, created_by, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, 'draft', $6, NOW(), NOW())
+      RETURNING *`,
+      [title, content, document_type, is_urgent || false, priority || 'normal', userId]
+    );
+
+    const newDocument = result.rows[0];
+
+    if (userRole !== 'president') {
+      const presidents = await pool.query(
+        "SELECT id FROM users WHERE role = 'president'"
+      );
+      for (const p of presidents.rows) {
+        await createNotification(
+          p.id,
+          'document',
+          '📜 Новый документ на согласование',
+          `Создан новый документ: "${title}"`,
+          '/documents',
+          'high'
+        );
+      }
+    }
+
+    res.status(201).json(newDocument);
+  } catch (error) {
+    console.error('❌ Ошибка создания документа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ОТПРАВКА НА СОГЛАСОВАНИЕ =====
+app.patch('/api/documents/:id/submit', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав' });
+    }
+
+    const check = await pool.query('SELECT * FROM official_documents WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Документ не найден' });
+    }
+
+    if (check.rows[0].created_by !== userId && userRole !== 'admin') {
+      return res.status(403).json({ error: 'Вы можете отправлять только свои документы' });
+    }
+
+    const result = await pool.query(
+      `UPDATE official_documents 
+       SET status = 'pending_approval', updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
+
+    const presidents = await pool.query(
+      "SELECT id FROM users WHERE role = 'president'"
+    );
+    for (const p of presidents.rows) {
+      await createNotification(
+        p.id,
+        'document',
+        '📜 Документ на согласовании',
+        `Документ "${result.rows[0].title}" отправлен на согласование`,
+        '/documents',
+        'high'
+      );
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка отправки на согласование:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ОДОБРЕНИЕ ДОКУМЕНТА (ПРЕЗИДЕНТ) =====
+app.patch('/api/documents/:id/approve', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    if (userRole !== 'president' && userRole !== 'vice_president') {
+      return res.status(403).json({ error: 'Только президент движения может одобрять документы' });
+    }
+
+    const check = await pool.query('SELECT * FROM official_documents WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Документ не найден' });
+    }
+
+    if (check.rows[0].status !== 'pending_approval') {
+      return res.status(400).json({ error: 'Документ не ожидает согласования' });
+    }
+
+    const result = await pool.query(
+      `UPDATE official_documents 
+       SET status = 'approved', 
+           approved_by = $1, 
+           approved_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $2
+       RETURNING *`,
+      [decoded.userId, id]
+    );
+
+    if (result.rows[0].created_by) {
+      await createNotification(
+        result.rows[0].created_by,
+        'document',
+        '✅ Документ одобрен',
+        `Ваш документ "${result.rows[0].title}" одобрен президентом`,
+        '/documents',
+        'high'
+      );
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка одобрения документа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ОТКЛОНЕНИЕ ДОКУМЕНТА =====
+app.patch('/api/documents/:id/reject', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    if (userRole !== 'president' && userRole !== 'vice_president') {
+      return res.status(403).json({ error: 'Только президент движения может отклонять документы' });
+    }
+
+    const check = await pool.query('SELECT * FROM official_documents WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Документ не найден' });
+    }
+
+    const result = await pool.query(
+      `UPDATE official_documents 
+       SET status = 'rejected', 
+           approved_by = $1, 
+           approved_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $2
+       RETURNING *`,
+      [decoded.userId, id]
+    );
+
+    if (result.rows[0].created_by) {
+      await createNotification(
+        result.rows[0].created_by,
+        'document',
+        '❌ Документ отклонён',
+        `Ваш документ "${result.rows[0].title}" отклонён. Причина: ${reason || 'Не указана'}`,
+        '/documents',
+        'high'
+      );
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка отклонения документа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ПУБЛИКАЦИЯ ДОКУМЕНТА =====
+app.patch('/api/documents/:id/publish', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для публикации' });
+    }
+
+    const check = await pool.query('SELECT * FROM official_documents WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Документ не найден' });
+    }
+
+    if (check.rows[0].status !== 'approved') {
+      return res.status(400).json({ error: 'Документ должен быть одобрен перед публикацией' });
+    }
+
+    const result = await pool.query(
+      `UPDATE official_documents 
+       SET status = 'published', 
+           published_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
+
+    const allowedViewers = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
+    const viewers = await pool.query(
+      "SELECT id FROM users WHERE role = ANY($1::text[])",
+      [allowedViewers]
+    );
+    
+    for (const viewer of viewers.rows) {
+      await createNotification(
+        viewer.id,
+        'document',
+        '📢 Новый официальный документ',
+        `Опубликован документ: "${result.rows[0].title}"`,
+        '/documents',
+        'normal'
+      );
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка публикации документа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ОТМЕТКА О ПРОЧТЕНИИ =====
+app.post('/api/documents/:id/read', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+
+    await pool.query(
+      `INSERT INTO document_acknowledgments (document_id, user_id, read_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (document_id, user_id) DO UPDATE SET read_at = NOW()`,
+      [id, userId]
+    );
+
+    res.json({ message: 'Документ отмечен как прочитанный' });
+  } catch (error) {
+    console.error('❌ Ошибка отметки о прочтении:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
 // ЗАПУСК СЕРВЕРА
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {

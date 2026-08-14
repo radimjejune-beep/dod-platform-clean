@@ -41,63 +41,138 @@ export default function Navigation({ profile }) {
   };
 
   const getMenuGroups = () => {
+    // ============================================================
+    // 1. ГЛАВНЫЙ РАЗДЕЛ — всегда виден
+    // ============================================================
+    const mainItems = [
+      { 
+        path: '/dashboard', 
+        label: '📊 Дашборд', 
+        roles: ['admin', 'movement_coordinator', 'president', 'vice_president'] 
+      },
+      { 
+        path: '/participant-dashboard', 
+        label: '📊 Мой кабинет', 
+        roles: ['participant'] 
+      },
+      { 
+        path: '/parent-dashboard', 
+        label: '📊 Мой кабинет', 
+        roles: ['parent'] 
+      },
+      { 
+        path: '/club-coordinator-dashboard', 
+        label: '📊 Мой кабинет', 
+        roles: ['club_coordinator'] 
+      },
+      { 
+        path: '/tutor-dashboard', 
+        label: '📊 Мой кабинет', 
+        roles: ['tutor'] 
+      },
+    ];
+
+    // ============================================================
+    // 2. МЕРОПРИЯТИЯ И КАЛЕНДАРЬ
+    // ============================================================
+    const eventsItems = [
+      { path: '/events', label: '📅 Все мероприятия', roles: ['all'] },
+      { path: '/calendar', label: '📆 Календарь', roles: ['all'] },
+    ];
+
+    // ============================================================
+    // 3. УПРАВЛЕНИЕ ЛЮДЬМИ
+    // ============================================================
+    const peopleItems = [
+      { path: '/participants', label: '👥 Участники', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'] },
+      { path: '/staff', label: '👤 Сотрудники', roles: ['admin', 'movement_coordinator'] },
+      { path: '/admin/users', label: '👤 Пользователи системы', roles: ['admin', 'movement_coordinator', 'president', 'vice_president'] },
+    ];
+
+    // ============================================================
+    // 4. КЛУБЫ (КЮДы)
+    // ============================================================
+    const clubsItems = [
+      { path: '/clubs', label: '🏫 Все КЮДы', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'] },
+      { path: '/club-analytics', label: '📊 Аналитика КЮДов', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
+    ];
+
+    // ============================================================
+    // 5. ДОСТИЖЕНИЯ
+    // ============================================================
+    const achievementsItems = [
+      { path: '/achievements', label: '🏆 Все достижения', roles: ['admin', 'movement_coordinator', 'tutor', 'president', 'vice_president'] },
+      { path: '/manage-achievements', label: '⚙️ Управление', roles: ['admin', 'movement_coordinator', 'club_coordinator'] },
+      { path: '/my-achievements', label: '🌟 Мои достижения', roles: ['participant', 'parent'] },
+    ];
+
+    // ============================================================
+    // 6. ОТЧЁТЫ И АНАЛИТИКА
+    // ============================================================
+    const reportsItems = [
+      { path: '/reports', label: '📋 Отчёты', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
+      { path: '/analytics', label: '📊 Общая аналитика', roles: ['admin', 'movement_coordinator', 'president', 'vice_president'] },
+    ];
+
+    // ============================================================
+    // 7. ЗАДАНИЯ И ЖУРНАЛЫ
+    // ============================================================
+    const tasksItems = [
+      { path: '/president-tasks', label: '👑 Задания президента', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
+      { path: '/my-journal', label: '📓 Журнал тьютора', roles: ['tutor'] },
+    ];
+
+    // ============================================================
+    // 8. КОММУНИКАЦИЯ
+    // ============================================================
+    const communicationItems = [
+      { path: '/appeals', label: '📨 Обращения', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
+      { path: '/tutor-requests', label: '🤝 Запросы на тьюторов', roles: ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'] },
+      { path: '/tutor-invitations', label: '📨 Приглашения тьюторам', roles: ['tutor', 'admin', 'movement_coordinator', 'president', 'vice_president'] },
+    ];
+
+    // ============================================================
+    // 9. НАСТРОЙКИ
+    // ============================================================
+    const settingsItems = [
+      { path: '/settings', label: '⚙️ Настройки сайта', roles: ['admin', 'movement_coordinator'] },
+      { path: '/admin/news', label: '📰 Новости', roles: ['admin', 'movement_coordinator'] },
+      { path: '/admin/invite', label: '🎫 Пригласить сотрудника', roles: ['admin', 'movement_coordinator'] },
+      { path: '/import-participants', label: '📥 Импорт участников', roles: ['admin', 'movement_coordinator'] },
+    ];
+
+    // ============================================================
+    // 10. МОИ ОЦЕНКИ
+    // ============================================================
+    const reviewsItems = [
+      { path: '/my-reviews', label: '📊 Мои оценки', roles: ['all'] },
+    ];
+
+    // ============================================================
+    // 11. КАЛЕНДАРЬ СОТРУДНИКОВ
+    // ============================================================
+    const staffCalendarItems = [
+      { path: '/staff-calendar', label: '📅 Календарь сотрудников', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'] },
+    ];
+
+    // ============================================================
+    // СБОРКА ВСЕХ ГРУПП
+    // ============================================================
     const allGroups = {
-      main: [
-        { path: '/dashboard', label: '📊 Дашборд', roles: ['admin', 'movement_coordinator', 'president', 'vice_president'] },
-        { path: '/participant-dashboard', label: '📊 Мой кабинет', roles: ['participant'] },
-        { path: '/parent-dashboard', label: '📊 Мой кабинет', roles: ['parent'] },
-        { path: '/club-coordinator-dashboard', label: '📊 Мой кабинет', roles: ['club_coordinator'] },
-        { path: '/tutor-dashboard', label: '📊 Мой кабинет', roles: ['tutor'] },
-      ],
-      events: [
-        { path: '/events', label: '📅 Мероприятия', roles: ['all'] },
-        { path: '/calendar', label: '📅 Календарь', roles: ['all'] },
-      ],
-      participants: [
-        { path: '/participants', label: '👥 Участники', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'] },
-      ],
-      clubs: [
-        { path: '/clubs', label: '🏫 КЮДы', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'] },
-        { path: '/club-analytics', label: '📊 Аналитика клубов', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
-      ],
-      achievements: [
-        { path: '/achievements', label: '🏆 Достижения', roles: ['admin', 'movement_coordinator', 'tutor', 'president', 'vice_president'] },
-        { path: '/my-achievements', label: '🏆 Мои достижения', roles: ['participant', 'parent'] },
-        { path: '/manage-achievements', label: '🏆 Управление', roles: ['admin', 'movement_coordinator', 'club_coordinator'] },
-      ],
-      reviews: [
-        { path: '/my-reviews', label: '📊 Оценки', roles: ['all'] },
-      ],
-      reports: [
-        { path: '/reports', label: '📋 Отчёты', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
-      ],
-      analytics: [
-        { path: '/analytics', label: '📊 Общая аналитика', roles: ['admin', 'movement_coordinator', 'president', 'vice_president'] },
-      ],
-      tasks: [
-        { path: '/president-tasks', label: '👑 Задания президента', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
-      ],
-      journal: [
-        { path: '/my-journal', label: '📓 Журнал', roles: ['tutor'] },
-      ],
-      staff: [
-        { path: '/staff', label: '👥 Сотрудники', roles: ['admin', 'movement_coordinator'] },
-        { path: '/staff-calendar', label: '📅 Календарь сотрудников', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'] },
-        { path: '/tutor-requests', label: '🤝 Запросы', roles: ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'] },
-        { path: '/tutor-invitations', label: '📨 Приглашения', roles: ['tutor', 'admin', 'movement_coordinator', 'president', 'vice_president'] },
-      ],
-      appeals: [
-        { path: '/appeals', label: '📨 Обращения', roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
-      ],
-      settings: [
-        { path: '/settings', label: '⚙️ Настройки', roles: ['admin', 'movement_coordinator'] },
-        { path: '/admin/news', label: '📰 Новости', roles: ['admin', 'movement_coordinator'] },
-        { path: '/admin/invite', label: '🎫 Пригласить', roles: ['admin', 'movement_coordinator'] },
-        { path: '/admin/users', label: '👥 Пользователи', roles: ['admin', 'movement_coordinator', 'president', 'vice_president'] },
-        { path: '/import-participants', label: '📥 Импорт', roles: ['admin', 'movement_coordinator'] },
-      ],
+      main: mainItems,
+      events: eventsItems,
+      people: peopleItems,
+      clubs: clubsItems,
+      achievements: achievementsItems,
+      reports: reportsItems,
+      tasks: tasksItems,
+      communication: communicationItems,
+      reviews: reviewsItems,
+      staffCalendar: staffCalendarItems,
+      settings: settingsItems,
     };
 
+    // Фильтруем по роли
     const result = {};
     for (const [key, items] of Object.entries(allGroups)) {
       const filtered = items.filter(item => 
@@ -112,22 +187,40 @@ export default function Navigation({ profile }) {
 
   const menuGroups = getMenuGroups();
 
+  // ============================================================
+  // НАЗВАНИЯ ГРУПП ДЛЯ ОТОБРАЖЕНИЯ
+  // ============================================================
   const groupLabels = {
     main: '🏠 Главная',
     events: '📅 Мероприятия',
-    participants: '👥 Участники',
-    clubs: '🏫 Клубы',
+    people: '👥 Люди',
+    clubs: '🏫 КЮДы',
     achievements: '🏆 Достижения',
-    reviews: '📊 Оценки',
-    reports: '📋 Отчёты',
-    analytics: '📊 Аналитика',
+    reports: '📋 Отчёты и аналитика',
     tasks: '👑 Задания',
-    journal: '📓 Журнал',
-    staff: '👥 Сотрудники',
-    appeals: '📨 Обращения',
+    communication: '📨 Коммуникация',
+    reviews: '📊 Оценки',
+    staffCalendar: '📅 Календарь',
     settings: '⚙️ Настройки',
   };
 
+  // ============================================================
+  // ПОРЯДОК ГРУПП В МЕНЮ
+  // ============================================================
+  const groupOrder = ['main', 'events', 'people', 'clubs', 'achievements', 'reviews', 'reports', 'tasks', 'communication', 'staffCalendar', 'settings'];
+
+  // Сортируем группы по порядку
+  const sortedGroups = Object.entries(menuGroups).sort((a, b) => {
+    const indexA = groupOrder.indexOf(a[0]);
+    const indexB = groupOrder.indexOf(b[0]);
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
+
+  // ============================================================
+  // ОБРАБОТЧИК КЛИКА ВНЕ ДРОПДАУНА
+  // ============================================================
   useEffect(() => {
     const handleClickOutside = (event) => {
       const dropdowns = document.querySelectorAll('.nav-new-dropdown');
@@ -145,6 +238,9 @@ export default function Navigation({ profile }) {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
+  // ============================================================
+  // БЛОКИРОВКА ПРОКРУТКИ ПРИ ОТКРЫТОМ МОБИЛЬНОМ МЕНЮ
+  // ============================================================
   useEffect(() => {
     if (isMobileMenuOpen) {
       document.body.style.overflow = 'hidden';
@@ -156,6 +252,9 @@ export default function Navigation({ profile }) {
     };
   }, [isMobileMenuOpen]);
 
+  // ============================================================
+  // ЕСЛИ ПРОФИЛЬ НЕ ЗАГРУЖЕН
+  // ============================================================
   if (!profile) {
     return (
       <nav className="nav-new">
@@ -175,28 +274,36 @@ export default function Navigation({ profile }) {
   return (
     <nav className="nav-new">
       <div className="nav-new-container">
+        {/* ===== ЛОГОТИП ===== */}
         <Link to="/" className="nav-new-logo">
           <img src={logo} alt="ДОД «Дипломаты будущего»" className="nav-new-logo-img" />
           <span className="nav-new-logo-text">Дипломаты будущего</span>
         </Link>
 
+        {/* ===== ДЕСКТОПНОЕ МЕНЮ ===== */}
         <div className="nav-new-menu">
-          {menuGroups.main?.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-new-link ${isActive(item.path) ? 'active' : ''}`}
-            >
-              {item.label}
-            </Link>
-          ))}
-
-          {Object.entries(menuGroups).map(([key, items]) => {
-            if (key === 'main') return null;
+          {sortedGroups.map(([key, items]) => {
+            // Пропускаем пустые группы
+            if (!items || items.length === 0) return null;
             
             const isOpen = openDropdown === key;
             const hasActive = items.some(item => isActive(item.path));
+            const label = groupLabels[key] || key;
             
+            // Для главной группы показываем ссылки напрямую
+            if (key === 'main') {
+              return items.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`nav-new-link ${isActive(item.path) ? 'active' : ''}`}
+                >
+                  {item.label}
+                </Link>
+              ));
+            }
+            
+            // Для остальных групп — дропдаун
             return (
               <div 
                 key={key} 
@@ -210,7 +317,7 @@ export default function Navigation({ profile }) {
                   aria-expanded={isOpen}
                   aria-haspopup="true"
                 >
-                  <span className="nav-new-dropdown-label">{groupLabels[key] || key}</span>
+                  <span className="nav-new-dropdown-label">{label}</span>
                   <span className="nav-new-dropdown-arrow">▾</span>
                 </button>
                 {isOpen && (
@@ -235,6 +342,7 @@ export default function Navigation({ profile }) {
           })}
         </div>
 
+        {/* ===== ПРАВАЯ ЧАСТЬ ===== */}
         <div className="nav-new-right">
           <Notifications profile={profile} />
           
@@ -264,10 +372,13 @@ export default function Navigation({ profile }) {
         </div>
       </div>
 
+      {/* ===== МОБИЛЬНОЕ МЕНЮ ===== */}
       {isMobileMenuOpen && (
         <div className="nav-new-mobile">
-          {Object.entries(menuGroups).map(([key, items]) => {
+          {sortedGroups.map(([key, items]) => {
+            if (!items || items.length === 0) return null;
             const label = groupLabels[key] || key;
+            
             return (
               <div key={key} className="nav-new-mobile-group">
                 <div className="nav-new-mobile-title">{label}</div>
@@ -284,9 +395,23 @@ export default function Navigation({ profile }) {
               </div>
             );
           })}
+          
+          {/* КНОПКА ВЫХОДА В МОБИЛЬНОМ МЕНЮ */}
+          <button 
+            className="nav-new-mobile-logout"
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              handleLogout();
+            }}
+          >
+            🚪 Выйти
+          </button>
         </div>
       )}
 
+      {/* ============================================================
+          СТИЛИ
+          ============================================================ */}
       <style>{`
         .nav-new {
           background: #FFFFFF;
@@ -311,6 +436,7 @@ export default function Navigation({ profile }) {
           height: 100%;
         }
 
+        /* ===== ЛОГОТИП ===== */
         .nav-new-logo {
           display: flex;
           align-items: center;
@@ -333,6 +459,7 @@ export default function Navigation({ profile }) {
           letter-spacing: 0.5px;
         }
 
+        /* ===== МЕНЮ ===== */
         .nav-new-menu {
           display: flex;
           align-items: center;
@@ -364,6 +491,7 @@ export default function Navigation({ profile }) {
           font-weight: 600;
         }
 
+        /* ===== ДРОПДАУН ===== */
         .nav-new-dropdown {
           position: relative;
         }
@@ -413,7 +541,7 @@ export default function Navigation({ profile }) {
           border-radius: 12px;
           box-shadow: 0 8px 30px rgba(11, 31, 58, 0.12);
           border: 1px solid #E2E7EF;
-          min-width: 200px;
+          min-width: 220px;
           padding: 6px;
           z-index: 1000;
           animation: fadeIn 0.15s ease;
@@ -446,6 +574,7 @@ export default function Navigation({ profile }) {
           font-weight: 600;
         }
 
+        /* ===== ПРАВАЯ ЧАСТЬ ===== */
         .nav-new-right {
           display: flex;
           align-items: center;
@@ -529,6 +658,7 @@ export default function Navigation({ profile }) {
           color: #0B1F3A;
         }
 
+        /* ===== МОБИЛЬНОЕ МЕНЮ ===== */
         .nav-new-mobile {
           display: none;
           flex-direction: column;
@@ -554,7 +684,7 @@ export default function Navigation({ profile }) {
         }
 
         .nav-new-mobile-title {
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 600;
           color: #98A2B3;
           text-transform: uppercase;
@@ -582,6 +712,26 @@ export default function Navigation({ profile }) {
           font-weight: 600;
         }
 
+        .nav-new-mobile-logout {
+          margin-top: 8px;
+          padding: 12px 16px;
+          border: none;
+          background: #FCEBEC;
+          border-radius: 10px;
+          color: #B3262E;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          text-align: center;
+          width: 100%;
+        }
+
+        .nav-new-mobile-logout:hover {
+          background: #FED7D7;
+        }
+
+        /* ===== АДАПТИВНОСТЬ ===== */
         @media (max-width: 1200px) {
           .nav-new-menu {
             gap: 2px;

@@ -152,7 +152,9 @@ export default function Navigation({ profile }) {
   const isActive = (path) => location.pathname === path;
   const role = profile?.role || 'participant';
 
-  
+  console.log('👤 Navigation role:', role);
+  console.log('👤 Navigation profile:', profile);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -175,7 +177,7 @@ export default function Navigation({ profile }) {
     );
   };
 
-const getMenuGroups = () => {
+  const getMenuGroups = () => {
     const groups = {
       main: [
         { path: '/dashboard', label: 'Дашборд', icon: Icons.dashboard, roles: ['admin', 'movement_coordinator', 'president', 'vice_president'] },
@@ -199,15 +201,15 @@ const getMenuGroups = () => {
       ],
       clubManagement: [
         { 
-          path: '/club-rating', 
-          label: '🏆 Рейтинг клуба', 
-          icon: Icons.award, 
-          roles: ['club_coordinator'] 
-        },
-        { 
           path: profile?.club_id ? `/club/${profile.club_id}/president` : '/clubs', 
           label: '👑 Назначить президента', 
           icon: Icons.target, 
+          roles: ['club_coordinator'] 
+        },
+        { 
+          path: '/club-rating', 
+          label: '🏆 Рейтинг клуба', 
+          icon: Icons.award, 
           roles: ['club_coordinator'] 
         },
       ],
@@ -246,6 +248,7 @@ const getMenuGroups = () => {
         { path: '/import-participants', label: 'Импорт', icon: Icons.upload, roles: ['admin', 'movement_coordinator'] },
       ],
     };
+
     const result = {};
     for (const [key, items] of Object.entries(groups)) {
       const filtered = items.filter(item => 
@@ -276,7 +279,6 @@ const getMenuGroups = () => {
 
   const groupOrder = ['main', 'events', 'people', 'clubs', 'clubManagement', 'achievements', 'reviews', 'reports', 'tasks', 'communication', 'staffCalendar', 'clubEvents', 'settings'];
 
-  // ===== ВЫЧИСЛЯЕМ MENU GROUPS =====
   const menuGroups = getMenuGroups();
 
   const sortedGroups = Object.entries(menuGroups).sort((a, b) => {

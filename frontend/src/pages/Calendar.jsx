@@ -34,9 +34,7 @@ export default function CalendarPage() {
       const eventsData = await api.getEvents();
       console.log('📅 Загружено мероприятий:', eventsData?.length || 0);
       
-      // ===== ВАЖНО: Проверяем, что eventsData - это массив =====
       if (Array.isArray(eventsData)) {
-        // Фильтруем только одобренные мероприятия
         const approvedEvents = eventsData.filter(e => 
           e.moderation_status === 'approved' || e.moderation_status === null
         );
@@ -62,7 +60,6 @@ export default function CalendarPage() {
 
   const tileContent = ({ date, view }) => {
     if (view === 'month') {
-      // ===== ВАЖНО: Проверяем, что events - это массив =====
       if (!Array.isArray(events) || events.length === 0) {
         return null;
       }

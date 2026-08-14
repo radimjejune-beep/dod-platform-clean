@@ -40,9 +40,6 @@ export default function Events() {
   });
   const navigate = useNavigate();
 
-  // ============================================================
-  // ПРОВЕРКА СОХРАНЁННОГО КЛУБА
-  // ============================================================
   useEffect(() => {
     const clubId = localStorage.getItem('clubEventTarget');
     if (clubId && clubs.length > 0) {
@@ -66,6 +63,7 @@ export default function Events() {
 
   const loadData = async () => {
     try {
+      setLoading(true);
       const userData = await api.getMe();
       if (!userData || !userData.id) {
         navigate('/login');
@@ -90,7 +88,6 @@ export default function Events() {
     }
   };
 
-  // ===== ФИЛЬТРАЦИЯ =====
   const filterConfig = [
     {
       key: 'type',
@@ -158,7 +155,6 @@ export default function Events() {
 
   const filteredEvents = getFilteredEvents();
 
-  // ===== ПРОВЕРКА ПРАВ =====
   const canEdit = (event) => {
     const role = profile?.role;
     const userId = profile?.id;
@@ -178,16 +174,12 @@ export default function Events() {
     return false;
   };
 
-  // ===== ВАЖНО: ПРОВЕРКА ПРАВ НА СОЗДАНИЕ =====
-  const canCreate = profile && ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(profile.role);
+  // ===== ВАЖНО: canCreate — УБЕРИ УСЛОВИЕ ДЛЯ ТЕСТА =====
+  const canCreate = true; // Временно для теста
   const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
   const isClubCoordinator = profile?.role === 'club_coordinator';
   const isMovementCoordinator = profile?.role === 'movement_coordinator';
 
-  console.log('👤 profile:', profile);
-  console.log('🎯 canCreate:', canCreate);
-
-  // ===== СОЗДАНИЕ/РЕДАКТИРОВАНИЕ =====
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
@@ -365,18 +357,17 @@ export default function Events() {
             <h1>Мероприятия</h1>
             <p>Всего: {filteredEvents.length}</p>
           </div>
-          {canCreate && (
-            <button 
-              className="btn-primary" 
-              style={{ marginLeft: 'auto' }} 
-              onClick={() => { 
-                console.log('🔄 Кнопка нажата, showForm:', showForm);
-                setShowForm(!showForm); 
-              }}
-            >
-              {showForm ? '✖ Закрыть' : '➕ Создать'}
-            </button>
-          )}
+          {/* ===== КНОПКА СОЗДАНИЯ — ВСЕГДА ВИДНА ===== */}
+          <button 
+            className="btn-primary" 
+            style={{ marginLeft: 'auto' }} 
+            onClick={() => { 
+              console.log('🔄 Кнопка нажата, showForm:', showForm);
+              setShowForm(!showForm); 
+            }}
+          >
+            {showForm ? '✖ Закрыть' : '➕ Создать'}
+          </button>
         </div>
 
         {message && (
@@ -425,7 +416,7 @@ export default function Events() {
           </div>
         </FilterBar>
 
-        {showForm && canCreate && (
+        {showForm && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3>{form.id ? '✏️ Редактировать' : '📝 Создать'}</h3>
             

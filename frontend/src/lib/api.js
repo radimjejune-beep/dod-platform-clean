@@ -53,6 +53,24 @@ export const getMe = async () => {
   const data = await response.json();
   console.log('📥 Ответ:', data);
   
+  // ============================================================
+  // ПРОВЕРКА РАЗМЕРА ПЕРЕД СОХРАНЕНИЕМ
+  // ============================================================
+  try {
+    const dataSize = JSON.stringify(data).length;
+    console.log(`📦 Размер данных: ${(dataSize / 1024).toFixed(2)} KB`);
+    
+    // Если размер больше 500KB — предупреждение
+    if (dataSize > 500 * 1024) {
+      console.warn('⚠️ Данные профиля слишком большие! Возможен сбой localStorage.');
+    }
+  } catch (e) {
+    console.warn('⚠️ Не удалось проверить размер данных:', e);
+  }
+  
+  // ============================================================
+  // СОХРАНЯЕМ club_id В LOCALSTORAGE
+  // ============================================================
   if (data && data.club_id) {
     localStorage.setItem('userClubId', data.club_id);
     console.log('🏫 Сохранён club_id в localStorage:', data.club_id);
@@ -60,27 +78,50 @@ export const getMe = async () => {
     localStorage.removeItem('userClubId');
   }
   
+  // ============================================================
+  // СОХРАНЯЕМ ПОЛЬЗОВАТЕЛЯ (ТОЛЬКО НУЖНЫЕ ПОЛЯ)
+  // ============================================================
   if (data && data.id) {
-    localStorage.setItem('user', JSON.stringify(data));
+    try {
+      // Сохраняем только нужные поля, чтобы уменьшить размер
+      const userData = {
+        id: data.id,
+        email: data.email,
+        full_name: data.full_name,
+        role: data.role,
+        club_id: data.club_id,
+        club_name: data.club_name,
+        phone: data.phone || '',
+        school: data.school || '',
+        class_name: data.class_name || '',
+        status: data.status || 'active',
+        avatar_url: data.avatar_url || null
+      };
+      localStorage.setItem('user', JSON.stringify(userData));
+      console.log('✅ Пользователь сохранён');
+    } catch (storageError) {
+      console.warn('⚠️ Не удалось сохранить пользователя в localStorage:', storageError);
+      // Если ошибка — пробуем без avatar_url
+      if (storageError.name === 'QuotaExceededError') {
+        console.log('🔄 Пробуем сохранить без avatar_url...');
+        const userData = {
+          id: data.id,
+          email: data.email,
+          full_name: data.full_name,
+          role: data.role,
+          club_id: data.club_id,
+          club_name: data.club_name,
+          phone: data.phone || '',
+          school: data.school || '',
+          class_name: data.class_name || '',
+          status: data.status || 'active'
+        };
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
+    }
   }
   
   return data;
-};
-
-// ============================================================
-// ПОЛУЧЕНИЕ CLUB_ID ИЗ LOCALSTORAGE
-// ============================================================
-export const getUserClubId = () => {
-  let clubId = localStorage.getItem('userClubId');
-  if (!clubId) {
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      clubId = user.club_id || null;
-    } catch (e) {
-      clubId = null;
-    }
-  }
-  return clubId;
 };
 
 // ============================================================

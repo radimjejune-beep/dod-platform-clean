@@ -937,6 +937,7 @@ app.get('/api/events', async (req, res) => {
   }
 });
 
+// ===== СОЗДАНИЕ МЕРОПРИЯТИЯ =====
 app.post('/api/events', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -955,20 +956,88 @@ app.post('/api/events', async (req, res) => {
       return res.status(400).json({ error: 'title и event_date обязательны' });
     }
 
-    let moderationStatus = 'approved';
-    let finalClubId = club_id || null;
-    let finalIsClubEvent = is_club_event || false;
-
-    if (userRole === 'club_coordinator') {
-      if (is_global) {
-        moderationStatus = 'pending';
-      }
-    } else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      moderationStatus = 'approved';
-    } else {
+    // ============================================================
+    // РАЗРЕШЁННЫЕ РОЛИ
+    // ============================================================
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'];
+    if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав для создания мероприятий' });
     }
 
+    // ============================================================
+    // ОПРЕДЕЛЯЕМ ПАРАМЕТРЫ МЕРОПРИЯТИЯ
+    // ============================================================
+    let moderationStatus = 'approved';
+    let finalClubId = club_id || null;
+    let finalIsGlobal = false;
+    let finalIsClubEvent = false;
+
+    // ============================================================
+    // ЛОГИКА ПО РОЛЯМ
+    // ============================================================
+
+    if (userRole === 'movement_coordinator') {
+      // Координатор движения — всегда глобальное
+      finalIsGlobal = true;
+      finalIsClubEvent = false;
+      finalClubId = null;
+      console.log('🌍 Координатор движения создаёт глобальное мероприятие');
+    } 
+    else if (userRole === 'club_coordinator') {
+      // Координатор КЮДа
+      if (is_global) {
+        // Если выбрал глобальное — на модерацию
+        moderationStatus = 'pending';
+        finalIsGlobal = true;
+        finalIsClubEvent = false;
+        finalClubId = null;
+        console.log('⏳ Координатор КЮДа создаёт глобальное мероприятие (на модерацию)');
+      } else {
+        // Если не выбрал клуб — подставляем его клуб
+        if (!club_id) {
+          const clubResult = await pool.query(
+            'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+            [userId]
+          );
+          if (clubResult.rows.length > 0) {
+            finalClubId = clubResult.rows[0].club_id;
+            finalIsClubEvent = true;
+            finalIsGlobal = false;
+            console.log('🏫 Координатор КЮДа создаёт мероприятие для своего клуба');
+          }
+        } else {
+          finalIsClubEvent = true;
+          finalIsGlobal = false;
+          console.log('🏫 Координатор КЮДа создаёт мероприятие для клуба');
+        }
+      }
+    } 
+    else if (['admin', 'president', 'vice_president'].includes(userRole)) {
+      // Админ, президент, вице
+      // ЕСЛИ КЛУБ НЕ ВЫБРАН — ГЛОБАЛЬНОЕ
+      if (!club_id || club_id === '' || club_id === 'null') {
+        finalIsGlobal = true;
+        finalIsClubEvent = false;
+        finalClubId = null;
+        console.log('🌍 Админ/Президент создаёт глобальное мероприятие (клуб не выбран)');
+      } else {
+        finalIsClubEvent = true;
+        finalIsGlobal = false;
+        console.log('🏫 Админ/Президент создаёт мероприятие для клуба');
+      }
+    }
+
+    console.log('📝 Итоговые параметры:', {
+      title,
+      finalIsGlobal,
+      finalIsClubEvent,
+      finalClubId,
+      moderationStatus
+    });
+
+    // ============================================================
+    // СОХРАНЯЕМ В БАЗУ
+    // ============================================================
     const result = await pool.query(
       `INSERT INTO events (
         title, description, location, event_date, end_date, 
@@ -980,56 +1049,50 @@ app.post('/api/events', async (req, res) => {
         title, description || '', location || '', event_date, end_date || event_date,
         start_time || null, end_time || null, type || 'internal', capacity || 20,
         finalClubId, form_url || null,
-        is_global || false, finalIsClubEvent, moderationStatus, userId
+        finalIsGlobal, 
+        finalIsClubEvent, 
+        moderationStatus, 
+        userId
       ]
     );
 
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Ошибка создания события:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.patch('/api/events/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { title, description, location, event_date, end_date, start_time, end_time, type, capacity, club_id, form_url } = req.body;
-
-    const result = await pool.query(
-      `UPDATE events 
-       SET title = COALESCE($1, title),
-           description = COALESCE($2, description),
-           location = COALESCE($3, location),
-           event_date = COALESCE($4, event_date),
-           end_date = COALESCE($5, end_date),
-           start_time = COALESCE($6, start_time),
-           end_time = COALESCE($7, end_time),
-           type = COALESCE($8, type),
-           capacity = COALESCE($9, capacity),
-           club_id = COALESCE($10, club_id),
-           form_url = COALESCE($11, form_url)
-       WHERE id = $12
-       RETURNING *`,
-      [title, description, location, event_date, end_date, start_time, end_time, type, capacity, club_id, form_url, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Событие не найдено' });
+    // ============================================================
+    // УВЕДОМЛЕНИЯ
+    // ============================================================
+    if (finalIsGlobal) {
+      const users = await pool.query(
+        "SELECT id FROM users WHERE role IN ('admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president')"
+      );
+      for (const u of users.rows) {
+        await createNotification(
+          u.id,
+          'event',
+          '📅 Новое глобальное мероприятие',
+          `Создано новое глобальное мероприятие: "${title}"`,
+          '/events',
+          'medium'
+        );
+      }
+    } else if (finalClubId) {
+      const participants = await pool.query(
+        'SELECT id FROM users WHERE club_id = $1',
+        [finalClubId]
+      );
+      for (const p of participants.rows) {
+        await createNotification(
+          p.id,
+          'event',
+          '📅 Новое мероприятие в клубе',
+          `В вашем клубе создано мероприятие: "${title}"`,
+          `/events`,
+          'normal'
+        );
+      }
     }
 
     res.json(result.rows[0]);
   } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.delete('/api/events/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await pool.query('DELETE FROM events WHERE id = $1', [id]);
-    res.json({ message: 'Событие удалено' });
-  } catch (error) {
+    console.error('❌ Ошибка создания события:', error);
     res.status(500).json({ error: error.message });
   }
 });

@@ -291,6 +291,18 @@ app.post('/api/login', async (req, res) => {
       console.log('❌ Неверный пароль для:', email);
       return res.status(401).json({ error: 'Неверный email или пароль' });
     }
+    const token = jwt.sign(
+  {
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+    full_name: user.full_name,
+    club_id: user.club_id,
+    is_president: user.is_president || false  // ← ДОБАВЬ ЭТО
+  },
+  JWT_SECRET,
+  { expiresIn: '7d' }
+);
 
     // ============================================================
     // АВТОМАТИЧЕСКАЯ ПРИВЯЗКА КООРДИНАТОРА К КЛУБУ
@@ -2858,6 +2870,7 @@ app.get('/api/president-tasks', async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     const userId = decoded.userId;
     const userRole = decoded.role;
+    const isPresident = decoded.is_president || false;
 
     let query = `
       SELECT 
@@ -2902,12 +2915,20 @@ app.get('/api/president-tasks', async (req, res) => {
           OR pt.is_global = true
         )`);
         params.push(userId, clubId);
-        console.log(`🏫 Координатор КЮДа (клуб ${clubId}): видит только задания своего клуба и глобальные`);
+        console.log(`🏫 Координатор клуба (клуб ${clubId}): видит только задания своего клуба и глобальные`);
       } else {
         conditions.push(`pt.created_by = $${params.length + 1}`);
         params.push(userId);
         console.log('⚠️ Координатор без клуба: видит только свои задания');
       }
+    }
+    // ============================================================
+    // ПРЕЗИДЕНТ КЛУБА — ВИДИТ СВОИ ЗАДАНИЯ И ГЛОБАЛЬНЫЕ
+    // ============================================================
+    else if (userRole === 'participant' && isPresident === true) {
+      conditions.push(`(pt.assigned_to = $${params.length + 1} OR pt.is_global = true)`);
+      params.push(userId);
+      console.log(`👑 Президент клуба: видит свои задания (${userId})`);
     }
     else {
       conditions.push('1 = 0');

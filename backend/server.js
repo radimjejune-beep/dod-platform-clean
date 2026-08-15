@@ -4257,7 +4257,7 @@ app.get('/api/documents', async (req, res) => {
       return res.status(403).json({ error: 'У вас нет прав для просмотра документов' });
     }
 
-    console.log(`✅ Просмотр документов: ${userRole}`);
+    console.log(`✅ Просмотр документов: ${userRole}, userId: ${userId}`);
 
     let query = `
       SELECT 
@@ -4271,20 +4271,39 @@ app.get('/api/documents', async (req, res) => {
     `;
     const params = [];
 
-    // Координатор КЮДа видит документы своего клуба и публичные
-    if (userRole === 'club_coordinator') {
+    // ============================================================
+    // ЛОГИКА ДЛЯ РАЗНЫХ РОЛЕЙ:
+    // ============================================================
+
+    // 1. АДМИН И КООРДИНАТОР ДВИЖЕНИЯ - видят ВСЕ документы
+    if (userRole === 'admin' || userRole === 'movement_coordinator') {
+      console.log('👑 Админ/Координатор движения: видит все документы');
+      // Никаких условий - видят всё
+    }
+    // 2. ПРЕЗИДЕНТ И ВИЦЕ-ПРЕЗИДЕНТ - видят ВСЕ документы
+    else if (userRole === 'president' || userRole === 'vice_president') {
+      console.log('👑 Президент/Вице: видит все документы');
+      // Никаких условий - видят всё
+    }
+    // 3. ТЬЮТОР - видит ВСЕ документы (и публичные, и клубные)
+    else if (userRole === 'tutor') {
+      console.log('📚 Тьютор: видит все документы');
+      // Никаких условий - видят всё
+    }
+    // 4. КООРДИНАТОР КЮДА - видит документы своего клуба И публичные И общие
+    else if (userRole === 'club_coordinator') {
       const clubResult = await pool.query(
         'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
         [userId]
       );
       if (clubResult.rows.length > 0) {
         const clubId = clubResult.rows[0].club_id;
-        query += ` AND (d.club_id = $1 OR d.is_public = true)`;
+        query += ` AND (d.club_id = $1 OR d.is_public = true OR d.club_id IS NULL)`;
         params.push(clubId);
-        console.log(`🏫 Координатор КЮДа видит документы клуба ${clubId} и публичные`);
+        console.log(`🏫 Координатор КЮДа: видит документы клуба ${clubId}, публичные и общие`);
       } else {
-        query += ` AND d.is_public = true`;
-        console.log(`📄 Координатор КЮДа видит только публичные документы`);
+        query += ` AND (d.is_public = true OR d.club_id IS NULL)`;
+        console.log(`📄 Координатор КЮДа без клуба: видит только публичные и общие документы`);
       }
     }
 
@@ -4558,6 +4577,13 @@ app.delete('/api/documents/:id', async (req, res) => {
     }
 
     await pool.query('DELETE FROM documents WHERE id = $1', [id]);
+
+    // Логируем действие
+    await pool.query(
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, 'DELETE', 'document', id, { title: check.rows[0].title }]
+    );
 
     res.json({ message: 'Документ удалён' });
   } catch (error) {

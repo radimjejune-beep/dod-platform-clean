@@ -56,7 +56,6 @@ import ConsentsManagement from './pages/ConsentsManagement';
 import DocumentsCenter from './pages/DocumentsCenter';
 import ReportsTemplates from './pages/ReportsTemplates';
 import TasksPlanner from './pages/TasksPlanner';
-import GoalsAndKPI from './pages/GoalsAndKPI';
 import ActivityLog from './pages/ActivityLog';
 import AchievementsCategories from './pages/AchievementsCategories';
 
@@ -178,7 +177,6 @@ function App() {
         <Route path="/documents-center" element={<DocumentsCenter />} />
         <Route path="/reports-templates" element={<ReportsTemplates />} />
         <Route path="/tasks-planner" element={<TasksPlanner />} />
-        <Route path="/goals-kpi" element={<GoalsAndKPI />} />
         <Route path="/activity-log" element={<ActivityLog />} />
         <Route path="/achievements-categories" element={<AchievementsCategories />} />
         

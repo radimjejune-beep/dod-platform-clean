@@ -1,4 +1,4 @@
-// frontend/src/pages/MassNotifications.jsx - ИСПРАВЛЕННЫЙ
+// frontend/src/pages/MassNotifications.jsx
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -84,10 +84,42 @@ export default function MassNotifications() {
     setMessage('');
 
     try {
-      // TODO: добавить API для массовой рассылки
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Нет авторизации');
+      }
 
-      setMessage(`✅ Уведомление отправлено ${recipientCount} получателям!`);
+      console.log('📤 Отправка массового уведомления:', {
+        title: form.title.trim(),
+        message: form.message.trim(),
+        recipients: form.recipients,
+        priority: form.priority,
+        scheduled_at: form.send_now ? null : form.schedule_date
+      });
+
+      const response = await fetch('https://dod-backend.relaxdev.ru/api/mass-notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: form.title.trim(),
+          message: form.message.trim(),
+          recipients: form.recipients,
+          priority: form.priority,
+          scheduled_at: form.send_now ? null : form.schedule_date
+        })
+      });
+
+      const data = await response.json();
+      console.log('📥 Ответ сервера:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Ошибка отправки');
+      }
+
+      setMessage(`✅ Уведомление отправлено ${data.sent_count || recipientCount} получателям!`);
       setMessageType('success');
       setForm({
         recipients: 'all',
@@ -98,8 +130,20 @@ export default function MassNotifications() {
         schedule_date: ''
       });
       setShowPreview(false);
+      
+      // Обновляем статистику
+      const users = await api.getUsers();
+      setStats({
+        totalUsers: users.length,
+        participants: users.filter(u => u.role === 'participant').length,
+        coordinators: users.filter(u => u.role === 'club_coordinator').length,
+        tutors: users.filter(u => u.role === 'tutor').length,
+        admins: users.filter(u => u.role === 'admin' || u.role === 'movement_coordinator').length
+      });
+      
       setTimeout(() => setMessage(''), 5000);
     } catch (err) {
+      console.error('❌ Ошибка:', err);
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
@@ -121,10 +165,10 @@ export default function MassNotifications() {
   const getRecipientLabel = () => {
     const labels = {
       'all': 'Все пользователи',
-      'participants': 'Участники',
-      'coordinators': 'Координаторы КЮДов',
-      'tutors': 'Тьюторы',
-      'admins': 'Администраторы'
+      'participants': '👤 Участники',
+      'coordinators': '🏫 Координаторы КЮДов',
+      'tutors': '📚 Тьюторы',
+      'admins': '🔧 Администраторы'
     };
     return labels[form.recipients] || form.recipients;
   };

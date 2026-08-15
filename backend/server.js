@@ -4745,7 +4745,7 @@ app.get('/api/achievement-categories', async (req, res) => {
 });
 
 // ============================================================
-// 36. МАССОВЫЕ УВЕДОМЛЕНИЯ
+// 36. МАССОВЫЕ УВЕДОМЛЕНИЯ (ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ)
 // ============================================================
 
 // ===== ПОЛУЧЕНИЕ ВСЕХ УВЕДОМЛЕНИЙ =====
@@ -4764,16 +4764,14 @@ app.get('/api/mass-notifications', async (req, res) => {
       return res.status(403).json({ error: 'У вас нет прав для просмотра уведомлений' });
     }
 
-    const result = await pool.query(
-      `
+    const result = await pool.query(`
       SELECT 
         mn.*,
         u.full_name as created_by_name
       FROM mass_notifications mn
       LEFT JOIN users u ON mn.created_by = u.id
       ORDER BY mn.created_at DESC
-      `
-    );
+    `);
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения уведомлений:', error);
@@ -4781,7 +4779,7 @@ app.get('/api/mass-notifications', async (req, res) => {
   }
 });
 
-// ===== СОЗДАНИЕ УВЕДОМЛЕНИЯ =====
+// ===== СОЗДАНИЕ МАССОВОГО УВЕДОМЛЕНИЯ (ИСПРАВЛЕННЫЙ) =====
 app.post('/api/mass-notifications', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -4804,26 +4802,41 @@ app.post('/api/mass-notifications', async (req, res) => {
       return res.status(400).json({ error: 'Заголовок и текст обязательны' });
     }
 
-    // Получаем количество получателей
-    let recipientCount = 0;
+    // ============================================================
+    // ПОЛУЧАЕМ ВСЕХ АКТИВНЫХ ПОЛЬЗОВАТЕЛЕЙ
+    // ============================================================
     const users = await pool.query('SELECT id, role FROM users WHERE status = $1', ['active']);
-    
+    console.log(`👥 Всего активных пользователей: ${users.rows.length}`);
+
+    // Фильтруем по ролям
+    let targetUsers = [];
+    const roleMap = {
+      'all': 'all',
+      'participants': 'participant',
+      'coordinators': 'club_coordinator',
+      'tutors': 'tutor',
+      'admins': ['admin', 'movement_coordinator']
+    };
+
+    const roles = roleMap[recipients];
     if (recipients === 'all') {
-      recipientCount = users.rows.length;
+      targetUsers = users.rows;
+    } else if (Array.isArray(roles)) {
+      targetUsers = users.rows.filter(u => roles.includes(u.role));
     } else {
-      const roles = {
-        'participants': 'participant',
-        'coordinators': 'club_coordinator',
-        'tutors': 'tutor',
-        'admins': 'admin'
-      };
-      const role = roles[recipients];
-      if (role) {
-        recipientCount = users.rows.filter(u => u.role === role || (recipients === 'admins' && u.role === 'movement_coordinator')).length;
-      }
+      targetUsers = users.rows.filter(u => u.role === roles);
     }
 
-    const status = scheduled_at ? 'scheduled' : 'pending';
+    console.log(`👥 Получателей для роли "${recipients}": ${targetUsers.length}`);
+
+    if (targetUsers.length === 0) {
+      return res.status(400).json({ error: 'Нет получателей для выбранной группы' });
+    }
+
+    // ============================================================
+    // СОХРАНЯЕМ В МАССОВЫЕ УВЕДОМЛЕНИЯ
+    // ============================================================
+    const status = scheduled_at ? 'scheduled' : 'sent';
     const sentAt = !scheduled_at ? new Date() : null;
 
     const result = await pool.query(
@@ -4840,31 +4853,62 @@ app.post('/api/mass-notifications', async (req, res) => {
         scheduled_at || null,
         sentAt,
         userId,
-        recipientCount
+        targetUsers.length
       ]
     );
 
-    // Если отправка сейчас - отправляем сразу
-    if (!scheduled_at) {
-      // TODO: Здесь можно добавить реальную отправку через уведомления
-      // Создаём уведомления для всех пользователей
-      for (const user of users.rows) {
+    const massNotification = result.rows[0];
+    console.log(`✅ Массовое уведомление сохранено: ${massNotification.id}`);
+
+    // ============================================================
+    // ОТПРАВЛЯЕМ УВЕДОМЛЕНИЯ КАЖДОМУ ПОЛЬЗОВАТЕЛЮ
+    // ============================================================
+    let sentCount = 0;
+    for (const user of targetUsers) {
+      try {
         await pool.query(
-          `INSERT INTO notifications (user_id, type, title, message, priority, created_at)
-           VALUES ($1, $2, $3, $4, $5, NOW())`,
-          [user.id, 'system', title.trim(), message.trim(), priority || 'normal']
+          `INSERT INTO notifications (user_id, type, title, message, priority, link, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+          [
+            user.id,
+            'system',
+            title.trim(),
+            message.trim(),
+            priority || 'normal',
+            '/notifications'
+          ]
         );
+        sentCount++;
+      } catch (err) {
+        console.error(`❌ Ошибка отправки уведомления пользователю ${user.id}:`, err.message);
       }
     }
 
-    // Логируем действие
+    console.log(`✅ Отправлено ${sentCount} уведомлений из ${targetUsers.length}`);
+
+    // ============================================================
+    // ЛОГИРУЕМ ДЕЙСТВИЕ
+    // ============================================================
     await pool.query(
       `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
        VALUES ($1, $2, $3, $4, $5)`,
-      [userId, 'CREATE', 'mass_notification', result.rows[0].id, { title: result.rows[0].title, recipients: result.rows[0].recipients }]
+      [
+        userId,
+        'CREATE',
+        'mass_notification',
+        massNotification.id,
+        { 
+          title: massNotification.title, 
+          recipients: massNotification.recipients,
+          count: sentCount
+        }
+      ]
     );
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({
+      ...massNotification,
+      sent_count: sentCount
+    });
   } catch (error) {
     console.error('❌ Ошибка создания уведомления:', error);
     res.status(500).json({ error: error.message });

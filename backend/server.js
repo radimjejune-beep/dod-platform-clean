@@ -4224,7 +4224,7 @@ app.delete('/api/event-tutor-assignments/:id', async (req, res) => {
 // ============================================================
 
 // ============================================================
-// 32. ДОКУМЕНТЫ (Центр документов) - ИСПРАВЛЕННЫЙ
+// 32. ДОКУМЕНТЫ (Центр документов) - ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ
 // ============================================================
 
 // ===== ПОЛУЧЕНИЕ ВСЕХ ДОКУМЕНТОВ =====
@@ -4241,12 +4241,7 @@ app.get('/api/documents', async (req, res) => {
     const userId = decoded.userId;
     const isPresident = decoded.is_president || false;
 
-    // ============================================================
     // КТО НЕ ВИДИТ ДОКУМЕНТЫ:
-    // - Участники (participant)
-    // - Родители (parent)
-    // - Президенты клубов (is_president = true)
-    // ============================================================
     if (userRole === 'participant' || userRole === 'parent' || isPresident === true) {
       console.log(`⛔ Доступ запрещён: ${userRole}, is_president: ${isPresident}`);
       return res.status(403).json({ 
@@ -4255,15 +4250,7 @@ app.get('/api/documents', async (req, res) => {
       });
     }
 
-    // ============================================================
     // КТО ВИДИТ ДОКУМЕНТЫ:
-    // - Админ (admin)
-    // - Координатор движения (movement_coordinator)
-    // - Координатор КЮДа (club_coordinator)
-    // - Тьютор (tutor)
-    // - Президент движения (president)
-    // - Вице-президент движения (vice_president)
-    // ============================================================
     const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
     if (!allowedRoles.includes(userRole)) {
       console.log(`⛔ Роль ${userRole} не в списке разрешённых`);
@@ -4311,6 +4298,275 @@ app.get('/api/documents', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ===== ПОЛУЧЕНИЕ ОДНОГО ДОКУМЕНТА =====
+app.get('/api/documents/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+    const isPresident = decoded.is_president || false;
+
+    if (userRole === 'participant' || userRole === 'parent' || isPresident === true) {
+      return res.status(403).json({ error: 'У вас нет прав для просмотра документов' });
+    }
+
+    const result = await pool.query(
+      `SELECT d.*, u.full_name as created_by_name, c.name as club_name
+       FROM documents d
+       LEFT JOIN users u ON d.created_by = u.id
+       LEFT JOIN clubs c ON d.club_id = c.id
+       WHERE d.id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Документ не найден' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка получения документа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== СОЗДАНИЕ ДОКУМЕНТА (ИСПРАВЛЕННЫЙ) =====
+app.post('/api/documents', async (req, res) => {
+  try {
+    console.log('📥 POST /api/documents - НАЧАЛО');
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      console.log('❌ Нет токена');
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    console.log('👤 Пользователь:', userId, 'Роль:', userRole);
+
+    // ============================================================
+    // КТО МОЖЕТ СОЗДАВАТЬ ДОКУМЕНТЫ:
+    // - Админ (admin)
+    // - Координатор движения (movement_coordinator)
+    // - Координатор КЮДа (club_coordinator)
+    // ============================================================
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator'];
+    if (!allowedRoles.includes(userRole)) {
+      console.log(`❌ Нет прав для создания. Роль: ${userRole}`);
+      return res.status(403).json({ error: 'У вас нет прав для создания документов' });
+    }
+
+    const { title, content, category, document_type, is_public, club_id, tags } = req.body;
+
+    console.log('📥 Данные документа:', { 
+      title, 
+      content: content?.substring(0, 50), 
+      category, 
+      is_public, 
+      club_id 
+    });
+
+    if (!title || !title.trim()) {
+      console.log('❌ Нет заголовка');
+      return res.status(400).json({ error: 'Заголовок обязателен' });
+    }
+
+    // Если координатор КЮДа создаёт документ - привязываем к его клубу
+    let finalClubId = club_id || null;
+    if (userRole === 'club_coordinator' && !finalClubId) {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      if (clubResult.rows.length > 0) {
+        finalClubId = clubResult.rows[0].club_id;
+        console.log('🏫 Привязан к клубу:', finalClubId);
+      }
+    }
+
+    const result = await pool.query(
+      `INSERT INTO documents (
+        title, content, category, document_type, is_public, club_id, tags, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *`,
+      [
+        title.trim(),
+        content || '',
+        category || 'general',
+        document_type || 'pdf',
+        is_public !== undefined ? is_public : true,
+        finalClubId,
+        tags || [],
+        userId
+      ]
+    );
+
+    console.log('✅ Документ создан! ID:', result.rows[0].id);
+
+    // ============================================================
+    // ОТПРАВКА УВЕДОМЛЕНИЙ ВСЕМ, КРОМЕ:
+    // - Участников (participant)
+    // - Родителей (parent)
+    // - Президентов клубов (is_president = true)
+    // ============================================================
+    console.log('📨 Отправка уведомлений о новом документе...');
+
+    const users = await pool.query(
+      `SELECT id, role, is_president FROM users 
+       WHERE status = 'active' 
+       AND role NOT IN ('participant', 'parent')
+       AND (role != 'participant' OR is_president != true)`
+    );
+
+    console.log(`👥 Получателей уведомления: ${users.rows.length}`);
+
+    let sentCount = 0;
+    for (const user of users.rows) {
+      try {
+        await pool.query(
+          `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+          [
+            user.id,
+            'document',
+            `📢 Новый документ: ${result.rows[0].title}`,
+            `Опубликован новый документ "${result.rows[0].title}". ${result.rows[0].category || 'Общий'}`,
+            '/documents-center',
+            'normal'
+          ]
+        );
+        sentCount++;
+      } catch (err) {
+        console.error(`❌ Ошибка отправки уведомления пользователю ${user.id}:`, err.message);
+      }
+    }
+
+    console.log(`✅ Отправлено ${sentCount} уведомлений`);
+
+    // Логируем действие
+    await pool.query(
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, 'CREATE', 'document', result.rows[0].id, { 
+        title: result.rows[0].title,
+        notifications_sent: sentCount
+      }]
+    );
+
+    res.status(201).json({
+      ...result.rows[0],
+      notifications_sent: sentCount
+    });
+  } catch (error) {
+    console.error('❌ ОШИБКА СОЗДАНИЯ ДОКУМЕНТА:', error);
+    console.error('❌ Детали:', error.detail);
+    console.error('❌ Стек:', error.stack);
+    res.status(500).json({ 
+      error: error.message,
+      detail: error.detail || 'Неизвестная ошибка'
+    });
+  }
+});
+
+// ===== ОБНОВЛЕНИЕ ДОКУМЕНТА =====
+app.put('/api/documents/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для редактирования документов' });
+    }
+
+    const { title, content, category, document_type, is_public, club_id, tags } = req.body;
+
+    const check = await pool.query('SELECT * FROM documents WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Документ не найден' });
+    }
+
+    if (userRole === 'club_coordinator' && check.rows[0].created_by !== userId) {
+      return res.status(403).json({ error: 'Вы можете редактировать только свои документы' });
+    }
+
+    const result = await pool.query(
+      `UPDATE documents 
+       SET title = $1, content = $2, category = $3, document_type = $4, 
+           is_public = $5, club_id = $6, tags = $7, updated_at = NOW()
+       WHERE id = $8
+       RETURNING *`,
+      [
+        title || check.rows[0].title,
+        content || check.rows[0].content,
+        category || check.rows[0].category,
+        document_type || check.rows[0].document_type,
+        is_public !== undefined ? is_public : check.rows[0].is_public,
+        club_id || check.rows[0].club_id,
+        tags || check.rows[0].tags,
+        id
+      ]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка обновления документа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== УДАЛЕНИЕ ДОКУМЕНТА =====
+app.delete('/api/documents/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления документов' });
+    }
+
+    const check = await pool.query('SELECT title FROM documents WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Документ не найден' });
+    }
+
+    await pool.query('DELETE FROM documents WHERE id = $1', [id]);
+
+    res.json({ message: 'Документ удалён' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления документа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+console.log('✅ API для документов загружены');
 
 // ============================================================
 // 33. ЗАДАЧИ (Планировщик задач)

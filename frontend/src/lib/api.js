@@ -689,7 +689,10 @@ export const respondToAssignment = async (assignmentId, status) => {
 // 24. НОВЫЕ API ДЛЯ КООРДИНАТОРА ДВИЖЕНИЯ
 // ============================================================
 
-// ----- 24.1. ДОКУМЕНТЫ (Центр документов) -----
+// ============================================================
+// ДОКУМЕНТЫ (Центр документов)
+// ============================================================
+
 export const getDocuments = async () => {
   const response = await fetch(`${API_URL}/documents`, {
     method: 'GET',
@@ -944,7 +947,7 @@ const api = {
   updateReportTemplate,
   deleteReportTemplate,
   useReportTemplate,
-  
+
   // Президент клуба
   setClubPresident,
   getClubPresident,

@@ -500,8 +500,9 @@ export const deleteAnnouncement = async (id) => {
 };
 
 // ============================================================
-// 17. ШАБЛОНЫ ОТЧЁТОВ (ОБНОВЛЁННЫЕ)
+// ШАБЛОНЫ ОТЧЁТОВ (ПОЛНЫЙ СПИСОК)
 // ============================================================
+
 export const getReportTemplates = async () => {
   const response = await fetch(`${API_URL}/report-templates`, {
     method: 'GET',
@@ -532,6 +533,16 @@ export const deleteReportTemplate = async (id) => {
   const response = await fetch(`${API_URL}/report-templates/${id}`, {
     method: 'DELETE',
     headers: headers()
+  });
+  return response.json();
+};
+
+// ===== ИСПОЛЬЗОВАНИЕ ШАБЛОНА ДЛЯ ОТЧЁТА =====
+export const useReportTemplate = async (templateId, reportData) => {
+  const response = await fetch(`${API_URL}/reports/from-template/${templateId}`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(reportData)
   });
   return response.json();
 };
@@ -748,7 +759,10 @@ export const deleteTask = async (id) => {
   return response.json();
 };
 
-// ===== МАССОВЫЕ УВЕДОМЛЕНИЯ =====
+// ============================================================
+// МАССОВЫЕ УВЕДОМЛЕНИЯ (ПОЛНЫЙ СПИСОК)
+// ============================================================
+
 export const getMassNotifications = async () => {
   const response = await fetch(`${API_URL}/mass-notifications`, {
     method: 'GET',
@@ -766,6 +780,7 @@ export const createMassNotification = async (data) => {
   return response.json();
 };
 
+// ===== ДОБАВЬТЕ ЭТУ ФУНКЦИЮ =====
 export const deleteMassNotification = async (id) => {
   const response = await fetch(`${API_URL}/mass-notifications/${id}`, {
     method: 'DELETE',
@@ -928,6 +943,7 @@ const api = {
   createReportTemplate,
   updateReportTemplate,
   deleteReportTemplate,
+  useReportTemplate,
   
   // Президент клуба
   setClubPresident,
@@ -972,6 +988,7 @@ const api = {
   // Массовые уведомления
   getMassNotifications,
   createMassNotification,
+  deleteMassNotification,
   
   // Цели и KPI
   getGoals,

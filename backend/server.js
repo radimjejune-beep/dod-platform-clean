@@ -4224,7 +4224,7 @@ app.delete('/api/event-tutor-assignments/:id', async (req, res) => {
 // ============================================================
 
 // ============================================================
-// 32. ДОКУМЕНТЫ (Центр документов) - ИСПРАВЛЕННЫЙ
+// 32. ДОКУМЕНТЫ (Центр документов) - ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ
 // ============================================================
 
 // ===== ПОЛУЧЕНИЕ ВСЕХ ДОКУМЕНТОВ =====
@@ -4239,31 +4239,13 @@ app.get('/api/documents', async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     const userRole = decoded.role;
     const userId = decoded.userId;
-
-    // ============================================================
-    // КТО НЕ МОЖЕТ ВИДЕТЬ ДОКУМЕНТЫ:
-    // - Участники (participant)
-    // - Родители (parent)
-    // - Президенты клубов (is_president = true)
-    // ============================================================
     const isPresident = decoded.is_president || false;
-    
+
+    // Запрещаем доступ участникам, родителям и президентам клубов
     if (userRole === 'participant' || userRole === 'parent' || isPresident === true) {
-      return res.status(403).json({ 
-        error: 'У вас нет прав для просмотра документов',
-        message: 'Документы доступны только сотрудникам движения'
-      });
+      return res.status(403).json({ error: 'У вас нет прав для просмотра документов' });
     }
 
-    // ============================================================
-    // КТО МОЖЕТ ВИДЕТЬ ДОКУМЕНТЫ:
-    // - Админ (admin)
-    // - Координатор движения (movement_coordinator)
-    // - Координатор КЮДа (club_coordinator)
-    // - Тьютор (tutor)
-    // - Президент движения (president)
-    // - Вице-президент движения (vice_president)
-    // ============================================================
     const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
     if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав для просмотра документов' });
@@ -4281,7 +4263,7 @@ app.get('/api/documents', async (req, res) => {
     `;
     const params = [];
 
-    // Координатор КЮДа видит только документы своего клуба и публичные
+    // Координатор КЮДа видит только свои и публичные документы
     if (userRole === 'club_coordinator') {
       const clubResult = await pool.query(
         'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
@@ -4320,27 +4302,16 @@ app.get('/api/documents/:id', async (req, res) => {
     const userRole = decoded.role;
     const isPresident = decoded.is_president || false;
 
-    // Проверка прав
     if (userRole === 'participant' || userRole === 'parent' || isPresident === true) {
       return res.status(403).json({ error: 'У вас нет прав для просмотра документов' });
     }
 
-    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для просмотра документов' });
-    }
-
     const result = await pool.query(
-      `
-      SELECT 
-        d.*,
-        u.full_name as created_by_name,
-        c.name as club_name
-      FROM documents d
-      LEFT JOIN users u ON d.created_by = u.id
-      LEFT JOIN clubs c ON d.club_id = c.id
-      WHERE d.id = $1
-      `,
+      `SELECT d.*, u.full_name as created_by_name, c.name as club_name
+       FROM documents d
+       LEFT JOIN users u ON d.created_by = u.id
+       LEFT JOIN clubs c ON d.club_id = c.id
+       WHERE d.id = $1`,
       [id]
     );
 
@@ -4358,8 +4329,11 @@ app.get('/api/documents/:id', async (req, res) => {
 // ===== СОЗДАНИЕ ДОКУМЕНТА =====
 app.post('/api/documents', async (req, res) => {
   try {
+    console.log('📥 POST /api/documents - НАЧАЛО');
+
     const authHeader = req.headers.authorization;
     if (!authHeader) {
+      console.log('❌ Нет токена');
       return res.status(401).json({ error: 'Нет токена' });
     }
 
@@ -4368,25 +4342,21 @@ app.post('/api/documents', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
-    // Кто может создавать документы:
-    // - Админ
-    // - Координатор движения
-    // - Координатор КЮДа
+    console.log('👤 Пользователь:', userId, 'Роль:', userRole);
+
+    // Проверка прав
     const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator'];
     if (!allowedRoles.includes(userRole)) {
+      console.log('❌ Нет прав для создания');
       return res.status(403).json({ error: 'У вас нет прав для создания документов' });
     }
 
     const { title, content, category, document_type, is_public, club_id, tags } = req.body;
 
-    console.log('📥 Получены данные для документа:');
-    console.log('  title:', title);
-    console.log('  content length:', content?.length || 0);
-    console.log('  category:', category);
-    console.log('  is_public:', is_public);
-    console.log('  club_id:', club_id);
+    console.log('📥 Данные документа:', { title, content: content?.substring(0, 50), category, is_public, club_id });
 
     if (!title || !title.trim()) {
+      console.log('❌ Нет заголовка');
       return res.status(400).json({ error: 'Заголовок обязателен' });
     }
 
@@ -4399,9 +4369,25 @@ app.post('/api/documents', async (req, res) => {
       );
       if (clubResult.rows.length > 0) {
         finalClubId = clubResult.rows[0].club_id;
-        console.log('  Автоматически привязан к клубу:', finalClubId);
+        console.log('🏫 Привязан к клубу:', finalClubId);
       }
     }
+
+    // Подготовка данных
+    const titleClean = title.trim();
+    const contentClean = content || '';
+    const categoryClean = category || 'general';
+    const documentTypeClean = document_type || 'pdf';
+    const isPublicClean = is_public !== undefined ? is_public : true;
+    const tagsClean = tags || [];
+
+    console.log('📤 Вставляем в БД:', { 
+      title: titleClean, 
+      content_length: contentClean.length,
+      category: categoryClean,
+      is_public: isPublicClean,
+      club_id: finalClubId
+    });
 
     const result = await pool.query(
       `INSERT INTO documents (
@@ -4409,13 +4395,13 @@ app.post('/api/documents', async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *`,
       [
-        title.trim(),
-        content || '',
-        category || 'general',
-        document_type || 'pdf',
-        is_public !== undefined ? is_public : true,
+        titleClean,
+        contentClean,
+        categoryClean,
+        documentTypeClean,
+        isPublicClean,
         finalClubId,
-        tags || [],
+        tagsClean,
         userId
       ]
     );
@@ -4431,8 +4417,13 @@ app.post('/api/documents', async (req, res) => {
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('❌ Ошибка создания документа:', error);
-    res.status(500).json({ error: error.message });
+    console.error('❌ ОШИБКА СОЗДАНИЯ ДОКУМЕНТА:', error);
+    console.error('❌ Детали:', error.detail);
+    console.error('❌ Стек:', error.stack);
+    res.status(500).json({ 
+      error: error.message,
+      detail: error.detail || 'Неизвестная ошибка'
+    });
   }
 });
 
@@ -4485,13 +4476,6 @@ app.put('/api/documents/:id', async (req, res) => {
       ]
     );
 
-    // Логируем действие
-    await pool.query(
-      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [userId, 'UPDATE', 'document', id, { title: result.rows[0].title }]
-    );
-
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка обновления документа:', error);
@@ -4513,7 +4497,6 @@ app.delete('/api/documents/:id', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
-    // Удалять могут только админ и координатор движения
     if (!['admin', 'movement_coordinator'].includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав для удаления документов' });
     }
@@ -4524,13 +4507,6 @@ app.delete('/api/documents/:id', async (req, res) => {
     }
 
     await pool.query('DELETE FROM documents WHERE id = $1', [id]);
-
-    // Логируем действие
-    await pool.query(
-      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [userId, 'DELETE', 'document', id, { title: check.rows[0].title }]
-    );
 
     res.json({ message: 'Документ удалён' });
   } catch (error) {

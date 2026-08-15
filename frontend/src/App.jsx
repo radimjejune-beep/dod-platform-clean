@@ -49,6 +49,16 @@ import MyClubEvents from './pages/MyClubEvents';
 import NewsDetail from './pages/NewsDetail';
 import OfficialDocuments from './pages/OfficialDocuments';
 import TutorAssignments from './pages/TutorAssignments'; // ← ДОБАВЬ ЭТУ СТРОКУ
+import CoordinatorDashboard from './pages/CoordinatorDashboard';
+import ClubsManagement from './pages/ClubsManagement';
+import MassNotifications from './pages/MassNotifications';
+import ConsentsManagement from './pages/ConsentsManagement';
+import DocumentsCenter from './pages/DocumentsCenter';
+import ReportsTemplates from './pages/ReportsTemplates';
+import TasksPlanner from './pages/TasksPlanner';
+import GoalsAndKPI from './pages/GoalsAndKPI';
+import ActivityLog from './pages/ActivityLog';
+import AchievementsCategories from './pages/AchievementsCategories';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -160,6 +170,17 @@ function App() {
         
         {/* Официальные документы */}
         <Route path="/documents" element={<OfficialDocuments />} />
+        
+        <Route path="/coordinator-dashboard" element={<CoordinatorDashboard />} />
+        <Route path="/clubs-management" element={<ClubsManagement />} />
+        <Route path="/mass-notifications" element={<MassNotifications />} />
+        <Route path="/consents-management" element={<ConsentsManagement />} />
+        <Route path="/documents-center" element={<DocumentsCenter />} />
+        <Route path="/reports-templates" element={<ReportsTemplates />} />
+        <Route path="/tasks-planner" element={<TasksPlanner />} />
+        <Route path="/goals-kpi" element={<GoalsAndKPI />} />
+        <Route path="/activity-log" element={<ActivityLog />} />
+        <Route path="/achievements-categories" element={<AchievementsCategories />} />
         
         {/* Редирект */}
         <Route path="*" element={<Navigate to="/" replace />} />

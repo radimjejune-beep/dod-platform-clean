@@ -139,6 +139,37 @@ const Icons = {
       <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
   ),
+  // ===== НОВЫЕ ИКОНКИ ДЛЯ КООРДИНАТОРА =====
+  folder: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    </svg>
+  ),
+  checkSquare: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 11l3 3L22 4" />
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+    </svg>
+  ),
+  send: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  ),
+  fileCheck: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <path d="M9 15l2 2 4-4" />
+    </svg>
+  ),
+  clock: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  ),
 };
 
 export default function Navigation({ profile }) {
@@ -195,6 +226,16 @@ export default function Navigation({ profile }) {
       clubs: [
         { path: '/clubs', label: 'КЮДы', icon: Icons.club, roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'] },
         { path: '/club-analytics', label: 'Аналитика КЮДов', icon: Icons.barChart, roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
+      ],
+      // ===== НОВАЯ ГРУППА: УПРАВЛЕНИЕ ДВИЖЕНИЕМ (ДЛЯ КООРДИНАТОРА) =====
+      coordinator: [
+        { path: '/coordinator-dashboard', label: '⭐ Дашборд координатора', icon: Icons.barChart, roles: ['movement_coordinator', 'admin'] },
+        { path: '/clubs-management', label: '🏫 Управление КЮДами', icon: Icons.club, roles: ['movement_coordinator', 'admin'] },
+        { path: '/mass-notifications', label: '📨 Массовые уведомления', icon: Icons.send, roles: ['movement_coordinator', 'admin'] },
+        { path: '/consents-management', label: '📝 Управление согласиями', icon: Icons.checkSquare, roles: ['movement_coordinator', 'admin'] },
+        { path: '/documents-center', label: '📁 Центр документов', icon: Icons.folder, roles: ['movement_coordinator', 'admin'] },
+        { path: '/reports-templates', label: '📋 Шаблоны отчётов', icon: Icons.fileCheck, roles: ['movement_coordinator', 'admin'] },
+        { path: '/tasks-planner', label: '📅 Планировщик задач', icon: Icons.clock, roles: ['movement_coordinator', 'admin'] },
       ],
       clubManagement: [
         { 
@@ -279,6 +320,7 @@ export default function Navigation({ profile }) {
     events: 'Мероприятия',
     people: 'Люди',
     clubs: 'КЮДы',
+    coordinator: '⭐ Управление движением', // НОВАЯ ГРУППА
     clubManagement: 'Управление клубом',
     achievements: 'Достижения',
     reviews: 'Оценки',
@@ -292,7 +334,7 @@ export default function Navigation({ profile }) {
     settings: 'Настройки',
   };
 
-  const groupOrder = ['main', 'events', 'people', 'clubs', 'clubManagement', 'achievements', 'reviews', 'reports', 'tasks', 'assignments', 'communication', 'documents', 'staffCalendar', 'clubEvents', 'settings'];
+  const groupOrder = ['main', 'events', 'people', 'clubs', 'coordinator', 'clubManagement', 'achievements', 'reviews', 'reports', 'tasks', 'assignments', 'communication', 'documents', 'staffCalendar', 'clubEvents', 'settings'];
 
   const menuGroups = getMenuGroups();
 

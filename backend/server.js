@@ -4141,6 +4141,1082 @@ app.delete('/api/event-tutor-assignments/:id', async (req, res) => {
 });
 
 // ============================================================
+// ============================================================
+// НОВЫЕ API ДЛЯ КООРДИНАТОРА ДВИЖЕНИЯ
+// ============================================================
+// ============================================================
+
+// ============================================================
+// 32. ДОКУМЕНТЫ (Центр документов)
+// ============================================================
+
+// ===== ПОЛУЧЕНИЕ ВСЕХ ДОКУМЕНТОВ =====
+app.get('/api/documents', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    // Проверка прав
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для просмотра документов' });
+    }
+
+    let query = `
+      SELECT 
+        d.*,
+        u.full_name as created_by_name,
+        c.name as club_name
+      FROM documents d
+      LEFT JOIN users u ON d.created_by = u.id
+      LEFT JOIN clubs c ON d.club_id = c.id
+      WHERE 1=1
+    `;
+    const params = [];
+    const conditions = [];
+
+    // Админ и координатор движения видят все
+    if (['admin', 'movement_coordinator'].includes(userRole)) {
+      // Видят всё
+    } 
+    // Остальные видят только публичные документы и документы своих клубов
+    else {
+      conditions.push(`(d.is_public = true OR d.club_id IN (
+        SELECT club_id FROM club_participants WHERE profile_id = $${params.length + 1}
+      ))`);
+      params.push(decoded.userId);
+    }
+
+    if (conditions.length > 0) {
+      query += ' AND (' + conditions.join(' OR ') + ')';
+    }
+
+    query += ' ORDER BY d.created_at DESC';
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения документов:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== СОЗДАНИЕ ДОКУМЕНТА =====
+app.post('/api/documents', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для создания документов' });
+    }
+
+    const { title, content, category, document_type, is_public, club_id, tags } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'Заголовок обязателен' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO documents (
+        title, content, category, document_type, is_public, club_id, tags, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *`,
+      [
+        title.trim(),
+        content || '',
+        category || 'general',
+        document_type || 'pdf',
+        is_public !== undefined ? is_public : true,
+        club_id || null,
+        tags || [],
+        userId
+      ]
+    );
+
+    // Логируем действие
+    await pool.query(
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, 'CREATE', 'document', result.rows[0].id, { title: result.rows[0].title }]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания документа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ОБНОВЛЕНИЕ ДОКУМЕНТА =====
+app.put('/api/documents/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для редактирования документов' });
+    }
+
+    const { title, content, category, document_type, is_public, club_id, tags } = req.body;
+
+    // Проверяем, что документ существует
+    const check = await pool.query('SELECT * FROM documents WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Документ не найден' });
+    }
+
+    // Координатор клуба может редактировать только свои документы
+    if (userRole === 'club_coordinator' && check.rows[0].created_by !== userId) {
+      return res.status(403).json({ error: 'Вы можете редактировать только свои документы' });
+    }
+
+    const result = await pool.query(
+      `UPDATE documents 
+       SET title = $1, content = $2, category = $3, document_type = $4, 
+           is_public = $5, club_id = $6, tags = $7, updated_at = NOW()
+       WHERE id = $8
+       RETURNING *`,
+      [
+        title || check.rows[0].title,
+        content || check.rows[0].content,
+        category || check.rows[0].category,
+        document_type || check.rows[0].document_type,
+        is_public !== undefined ? is_public : check.rows[0].is_public,
+        club_id || check.rows[0].club_id,
+        tags || check.rows[0].tags,
+        id
+      ]
+    );
+
+    // Логируем действие
+    await pool.query(
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, 'UPDATE', 'document', id, { title: result.rows[0].title }]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка обновления документа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== УДАЛЕНИЕ ДОКУМЕНТА =====
+app.delete('/api/documents/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления документов' });
+    }
+
+    const check = await pool.query('SELECT title FROM documents WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Документ не найден' });
+    }
+
+    await pool.query('DELETE FROM documents WHERE id = $1', [id]);
+
+    // Логируем действие
+    await pool.query(
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, 'DELETE', 'document', id, { title: check.rows[0].title }]
+    );
+
+    res.json({ message: 'Документ удалён' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления документа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 33. ЗАДАЧИ (Планировщик задач)
+// ============================================================
+
+// ===== ПОЛУЧЕНИЕ ВСЕХ ЗАДАЧ =====
+app.get('/api/tasks', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для просмотра задач' });
+    }
+
+    const result = await pool.query(
+      `
+      SELECT 
+        t.*,
+        u.full_name as assigned_to_name,
+        u2.full_name as created_by_name
+      FROM tasks t
+      LEFT JOIN users u ON t.assigned_to = u.id
+      LEFT JOIN users u2 ON t.created_by = u2.id
+      ORDER BY t.created_at DESC
+      `
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения задач:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== СОЗДАНИЕ ЗАДАЧИ =====
+app.post('/api/tasks', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для создания задач' });
+    }
+
+    const { title, description, category, priority, due_date, assigned_to, recurrence, recurrence_end } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'Заголовок задачи обязателен' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO tasks (
+        title, description, category, priority, due_date, assigned_to, 
+        recurrence, recurrence_end, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *`,
+      [
+        title.trim(),
+        description || '',
+        category || 'general',
+        priority || 'medium',
+        due_date || null,
+        assigned_to || null,
+        recurrence || 'none',
+        recurrence_end || null,
+        userId
+      ]
+    );
+
+    // Логируем действие
+    await pool.query(
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, 'CREATE', 'task', result.rows[0].id, { title: result.rows[0].title }]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания задачи:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ОБНОВЛЕНИЕ ЗАДАЧИ =====
+app.put('/api/tasks/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для редактирования задач' });
+    }
+
+    const { title, description, category, priority, status, due_date, assigned_to, recurrence, recurrence_end } = req.body;
+
+    const check = await pool.query('SELECT * FROM tasks WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Задача не найдена' });
+    }
+
+    const result = await pool.query(
+      `UPDATE tasks 
+       SET title = $1, description = $2, category = $3, priority = $4, status = $5,
+           due_date = $6, assigned_to = $7, recurrence = $8, recurrence_end = $9,
+           updated_at = NOW(),
+           completed_at = CASE WHEN $5 = 'completed' AND status != 'completed' THEN NOW() ELSE completed_at END
+       WHERE id = $10
+       RETURNING *`,
+      [
+        title || check.rows[0].title,
+        description || check.rows[0].description,
+        category || check.rows[0].category,
+        priority || check.rows[0].priority,
+        status || check.rows[0].status,
+        due_date || check.rows[0].due_date,
+        assigned_to || check.rows[0].assigned_to,
+        recurrence || check.rows[0].recurrence,
+        recurrence_end || check.rows[0].recurrence_end,
+        id
+      ]
+    );
+
+    // Логируем действие
+    await pool.query(
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, 'UPDATE', 'task', id, { title: result.rows[0].title, status: result.rows[0].status }]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка обновления задачи:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== УДАЛЕНИЕ ЗАДАЧИ =====
+app.delete('/api/tasks/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления задач' });
+    }
+
+    const check = await pool.query('SELECT title FROM tasks WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Задача не найдена' });
+    }
+
+    await pool.query('DELETE FROM tasks WHERE id = $1', [id]);
+
+    // Логируем действие
+    await pool.query(
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, 'DELETE', 'task', id, { title: check.rows[0].title }]
+    );
+
+    res.json({ message: 'Задача удалена' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления задачи:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 34. ШАБЛОНЫ ОТЧЁТОВ
+// ============================================================
+
+// ===== ПОЛУЧЕНИЕ ВСЕХ ШАБЛОНОВ =====
+app.get('/api/report-templates', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+    const userId = decoded.userId;
+
+    if (!['admin', 'movement_coordinator', 'club_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для просмотра шаблонов' });
+    }
+
+    let query = `
+      SELECT 
+        rt.*,
+        u.full_name as created_by_name,
+        c.name as club_name
+      FROM report_templates rt
+      LEFT JOIN users u ON rt.created_by = u.id
+      LEFT JOIN clubs c ON rt.club_id = c.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (userRole === 'club_coordinator') {
+      query += ' AND (rt.created_by = $1 OR rt.club_id IN (SELECT club_id FROM club_coordinators WHERE profile_id = $1))';
+      params.push(userId);
+    }
+
+    query += ' ORDER BY rt.created_at DESC';
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения шаблонов:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== СОЗДАНИЕ ШАБЛОНА =====
+app.post('/api/report-templates', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator', 'club_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для создания шаблонов' });
+    }
+
+    const { name, description, category, template_data, club_id } = req.body;
+
+    if (!name || !name.trim() || !template_data || !template_data.trim()) {
+      return res.status(400).json({ error: 'Название и шаблон обязательны' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO report_templates (
+        name, description, category, template_data, club_id, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *`,
+      [
+        name.trim(),
+        description || '',
+        category || 'general',
+        template_data,
+        club_id || null,
+        userId
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания шаблона:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ОБНОВЛЕНИЕ ШАБЛОНА =====
+app.put('/api/report-templates/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для редактирования шаблонов' });
+    }
+
+    const { name, description, category, template_data, club_id } = req.body;
+
+    const check = await pool.query('SELECT * FROM report_templates WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Шаблон не найден' });
+    }
+
+    const result = await pool.query(
+      `UPDATE report_templates 
+       SET name = $1, description = $2, category = $3, template_data = $4, club_id = $5, updated_at = NOW()
+       WHERE id = $6
+       RETURNING *`,
+      [
+        name || check.rows[0].name,
+        description || check.rows[0].description,
+        category || check.rows[0].category,
+        template_data || check.rows[0].template_data,
+        club_id || check.rows[0].club_id,
+        id
+      ]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка обновления шаблона:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== УДАЛЕНИЕ ШАБЛОНА =====
+app.delete('/api/report-templates/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления шаблонов' });
+    }
+
+    await pool.query('DELETE FROM report_templates WHERE id = $1', [id]);
+    res.json({ message: 'Шаблон удалён' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления шаблона:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 35. КАТЕГОРИИ ДОСТИЖЕНИЙ
+// ============================================================
+
+// ===== ПОЛУЧЕНИЕ ВСЕХ КАТЕГОРИЙ =====
+app.get('/api/achievement-categories', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM achievement_categories WHERE is_active = true ORDER BY points DESC'
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения категорий:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 36. МАССОВЫЕ УВЕДОМЛЕНИЯ
+// ============================================================
+
+// ===== ПОЛУЧЕНИЕ ВСЕХ УВЕДОМЛЕНИЙ =====
+app.get('/api/mass-notifications', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для просмотра уведомлений' });
+    }
+
+    const result = await pool.query(
+      `
+      SELECT 
+        mn.*,
+        u.full_name as created_by_name
+      FROM mass_notifications mn
+      LEFT JOIN users u ON mn.created_by = u.id
+      ORDER BY mn.created_at DESC
+      `
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения уведомлений:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== СОЗДАНИЕ УВЕДОМЛЕНИЯ =====
+app.post('/api/mass-notifications', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для создания уведомлений' });
+    }
+
+    const { title, message, recipients, priority, scheduled_at } = req.body;
+
+    if (!title || !title.trim() || !message || !message.trim()) {
+      return res.status(400).json({ error: 'Заголовок и текст обязательны' });
+    }
+
+    // Получаем количество получателей
+    let recipientCount = 0;
+    const users = await pool.query('SELECT id, role FROM users WHERE status = $1', ['active']);
+    
+    if (recipients === 'all') {
+      recipientCount = users.rows.length;
+    } else {
+      const roles = {
+        'participants': 'participant',
+        'coordinators': 'club_coordinator',
+        'tutors': 'tutor',
+        'admins': 'admin'
+      };
+      const role = roles[recipients];
+      if (role) {
+        recipientCount = users.rows.filter(u => u.role === role || (recipients === 'admins' && u.role === 'movement_coordinator')).length;
+      }
+    }
+
+    const status = scheduled_at ? 'scheduled' : 'pending';
+    const sentAt = !scheduled_at ? new Date() : null;
+
+    const result = await pool.query(
+      `INSERT INTO mass_notifications (
+        title, message, recipients, priority, status, scheduled_at, sent_at, created_by, recipient_count
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *`,
+      [
+        title.trim(),
+        message.trim(),
+        recipients || 'all',
+        priority || 'normal',
+        status,
+        scheduled_at || null,
+        sentAt,
+        userId,
+        recipientCount
+      ]
+    );
+
+    // Если отправка сейчас - отправляем сразу
+    if (!scheduled_at) {
+      // TODO: Здесь можно добавить реальную отправку через уведомления
+      // Создаём уведомления для всех пользователей
+      for (const user of users.rows) {
+        await pool.query(
+          `INSERT INTO notifications (user_id, type, title, message, priority, created_at)
+           VALUES ($1, $2, $3, $4, $5, NOW())`,
+          [user.id, 'system', title.trim(), message.trim(), priority || 'normal']
+        );
+      }
+    }
+
+    // Логируем действие
+    await pool.query(
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, 'CREATE', 'mass_notification', result.rows[0].id, { title: result.rows[0].title, recipients: result.rows[0].recipients }]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания уведомления:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 37. ЦЕЛИ И KPI
+// ============================================================
+
+// ===== ПОЛУЧЕНИЕ ВСЕХ ЦЕЛЕЙ =====
+app.get('/api/goals', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+    const userId = decoded.userId;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для просмотра целей' });
+    }
+
+    const result = await pool.query(
+      `
+      SELECT 
+        g.*,
+        u.full_name as assigned_to_name,
+        u2.full_name as created_by_name,
+        c.name as club_name
+      FROM goals g
+      LEFT JOIN users u ON g.assigned_to = u.id
+      LEFT JOIN users u2 ON g.created_by = u2.id
+      LEFT JOIN clubs c ON g.club_id = c.id
+      ORDER BY g.created_at DESC
+      `
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения целей:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== СОЗДАНИЕ ЦЕЛИ =====
+app.post('/api/goals', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для создания целей' });
+    }
+
+    const { title, description, category, target_value, unit, start_date, end_date, assigned_to, club_id } = req.body;
+
+    if (!title || !title.trim() || !target_value) {
+      return res.status(400).json({ error: 'Заголовок и целевое значение обязательны' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO goals (
+        title, description, category, target_value, unit, start_date, end_date, assigned_to, club_id, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING *`,
+      [
+        title.trim(),
+        description || '',
+        category || 'general',
+        parseInt(target_value),
+        unit || 'participants',
+        start_date || null,
+        end_date || null,
+        assigned_to || null,
+        club_id || null,
+        userId
+      ]
+    );
+
+    // Логируем действие
+    await pool.query(
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, 'CREATE', 'goal', result.rows[0].id, { title: result.rows[0].title, target: result.rows[0].target_value }]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания цели:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ОБНОВЛЕНИЕ ЦЕЛИ =====
+app.put('/api/goals/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для редактирования целей' });
+    }
+
+    const { title, description, category, target_value, current_value, unit, status, start_date, end_date, assigned_to, club_id } = req.body;
+
+    const check = await pool.query('SELECT * FROM goals WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Цель не найдена' });
+    }
+
+    const result = await pool.query(
+      `UPDATE goals 
+       SET title = $1, description = $2, category = $3, target_value = $4, current_value = $5,
+           unit = $6, status = $7, start_date = $8, end_date = $9, assigned_to = $10, 
+           club_id = $11, updated_at = NOW()
+       WHERE id = $12
+       RETURNING *`,
+      [
+        title || check.rows[0].title,
+        description || check.rows[0].description,
+        category || check.rows[0].category,
+        target_value || check.rows[0].target_value,
+        current_value !== undefined ? current_value : check.rows[0].current_value,
+        unit || check.rows[0].unit,
+        status || check.rows[0].status,
+        start_date || check.rows[0].start_date,
+        end_date || check.rows[0].end_date,
+        assigned_to || check.rows[0].assigned_to,
+        club_id || check.rows[0].club_id,
+        id
+      ]
+    );
+
+    // Логируем действие
+    await pool.query(
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, 'UPDATE', 'goal', id, { title: result.rows[0].title, progress: `${result.rows[0].current_value}/${result.rows[0].target_value}` }]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка обновления цели:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== УДАЛЕНИЕ ЦЕЛИ =====
+app.delete('/api/goals/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления целей' });
+    }
+
+    await pool.query('DELETE FROM goals WHERE id = $1', [id]);
+    res.json({ message: 'Цель удалена' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления цели:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 38. ЖУРНАЛ ДЕЙСТВИЙ (Activity Log)
+// ============================================================
+
+// ===== ПОЛУЧЕНИЕ ЖУРНАЛА =====
+app.get('/api/activity-log', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для просмотра журнала' });
+    }
+
+    const { limit = 100, offset = 0, user_id, entity_type } = req.query;
+
+    let query = `
+      SELECT 
+        al.*,
+        u.full_name as user_name,
+        u.role as user_role
+      FROM activity_logs al
+      LEFT JOIN users u ON al.user_id = u.id
+      WHERE 1=1
+    `;
+    const params = [];
+    let paramIndex = 1;
+
+    if (user_id) {
+      query += ` AND al.user_id = $${paramIndex}`;
+      params.push(user_id);
+      paramIndex++;
+    }
+
+    if (entity_type) {
+      query += ` AND al.entity_type = $${paramIndex}`;
+      params.push(entity_type);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY al.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    params.push(parseInt(limit), parseInt(offset));
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения журнала:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 39. СТАТИСТИКА СОГЛАСИЙ
+// ============================================================
+
+// ===== ПОЛУЧЕНИЕ СТАТИСТИКИ СОГЛАСИЙ =====
+app.get('/api/consents-stats', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для просмотра статистики' });
+    }
+
+    const { club_id } = req.query;
+
+    let query = `
+      SELECT 
+        COUNT(*) as total,
+        COUNT(CASE WHEN consent_personal_data = true THEN 1 END) as personal_data,
+        COUNT(CASE WHEN consent_photo_publication = true THEN 1 END) as photo_publication,
+        COUNT(CASE WHEN consent_event_participation = true THEN 1 END) as event_participation,
+        COUNT(CASE WHEN consent_personal_data = true AND consent_photo_publication = true AND consent_event_participation = true THEN 1 END) as all_consents,
+        COUNT(CASE WHEN consent_personal_data = false OR consent_photo_publication = false OR consent_event_participation = false THEN 1 END) as missing_consents
+      FROM users
+      WHERE role = 'participant' AND status = 'active'
+    `;
+    const params = [];
+
+    if (club_id) {
+      query += ` AND club_id = $1`;
+      params.push(club_id);
+    }
+
+    const result = await pool.query(query, params);
+    res.json(result.rows[0] || { total: 0, personal_data: 0, photo_publication: 0, event_participation: 0, all_consents: 0, missing_consents: 0 });
+  } catch (error) {
+    console.error('❌ Ошибка получения статистики согласий:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ПОЛУЧЕНИЕ СПИСКА УЧАСТНИКОВ С НЕДОСТАЮЩИМИ СОГЛАСИЯМИ =====
+app.get('/api/consents-missing', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для просмотра' });
+    }
+
+    const { club_id } = req.query;
+
+    let query = `
+      SELECT 
+        u.id,
+        u.full_name,
+        u.email,
+        u.school,
+        u.class_name,
+        u.club_id,
+        c.name as club_name,
+        u.consent_personal_data,
+        u.consent_photo_publication,
+        u.consent_event_participation
+      FROM users u
+      LEFT JOIN clubs c ON u.club_id = c.id
+      WHERE u.role = 'participant' 
+        AND u.status = 'active'
+        AND (u.consent_personal_data = false OR u.consent_photo_publication = false OR u.consent_event_participation = false)
+    `;
+    const params = [];
+
+    if (club_id) {
+      query += ` AND u.club_id = $1`;
+      params.push(club_id);
+    }
+
+    query += ' ORDER BY u.full_name';
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения списка:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+console.log('✅ API для координатора движения загружены');
+
+// ============================================================
 // ЗАПУСК СЕРВЕРА
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {

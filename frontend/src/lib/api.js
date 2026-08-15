@@ -500,7 +500,7 @@ export const deleteAnnouncement = async (id) => {
 };
 
 // ============================================================
-// 17. ШАБЛОНЫ ОТЧЁТОВ
+// 17. ШАБЛОНЫ ОТЧЁТОВ (ОБНОВЛЁННЫЕ)
 // ============================================================
 export const getReportTemplates = async () => {
   const response = await fetch(`${API_URL}/report-templates`, {
@@ -513,6 +513,15 @@ export const getReportTemplates = async () => {
 export const createReportTemplate = async (data) => {
   const response = await fetch(`${API_URL}/report-templates`, {
     method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateReportTemplate = async (id, data) => {
+  const response = await fetch(`${API_URL}/report-templates/${id}`, {
+    method: 'PUT',
     headers: headers(),
     body: JSON.stringify(data)
   });
@@ -666,6 +675,172 @@ export const respondToAssignment = async (assignmentId, status) => {
 };
 
 // ============================================================
+// 24. НОВЫЕ API ДЛЯ КООРДИНАТОРА ДВИЖЕНИЯ
+// ============================================================
+
+// ----- 24.1. ДОКУМЕНТЫ (Центр документов) -----
+export const getDocuments = async () => {
+  const response = await fetch(`${API_URL}/documents`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const createDocument = async (data) => {
+  const response = await fetch(`${API_URL}/documents`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateDocument = async (id, data) => {
+  const response = await fetch(`${API_URL}/documents/${id}`, {
+    method: 'PUT',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteDocument = async (id) => {
+  const response = await fetch(`${API_URL}/documents/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ----- 24.2. ЗАДАЧИ (Планировщик задач) -----
+export const getTasks = async () => {
+  const response = await fetch(`${API_URL}/tasks`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const createTask = async (data) => {
+  const response = await fetch(`${API_URL}/tasks`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateTask = async (id, data) => {
+  const response = await fetch(`${API_URL}/tasks/${id}`, {
+    method: 'PUT',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteTask = async (id) => {
+  const response = await fetch(`${API_URL}/tasks/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ----- 24.3. МАССОВЫЕ УВЕДОМЛЕНИЯ -----
+export const getMassNotifications = async () => {
+  const response = await fetch(`${API_URL}/mass-notifications`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const createMassNotification = async (data) => {
+  const response = await fetch(`${API_URL}/mass-notifications`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+// ----- 24.4. ЦЕЛИ И KPI -----
+export const getGoals = async () => {
+  const response = await fetch(`${API_URL}/goals`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const createGoal = async (data) => {
+  const response = await fetch(`${API_URL}/goals`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateGoal = async (id, data) => {
+  const response = await fetch(`${API_URL}/goals/${id}`, {
+    method: 'PUT',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteGoal = async (id) => {
+  const response = await fetch(`${API_URL}/goals/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ----- 24.5. КАТЕГОРИИ ДОСТИЖЕНИЙ -----
+export const getAchievementCategories = async () => {
+  const response = await fetch(`${API_URL}/achievement-categories`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ----- 24.6. ЖУРНАЛ ДЕЙСТВИЙ -----
+export const getActivityLog = async (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/activity-log?${query}` : `${API_URL}/activity-log`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ----- 24.7. СОГЛАСИЯ (статистика) -----
+export const getConsentsStats = async (clubId = null) => {
+  const url = clubId ? `${API_URL}/consents-stats?club_id=${clubId}` : `${API_URL}/consents-stats`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const getConsentsMissing = async (clubId = null) => {
+  const url = clubId ? `${API_URL}/consents-missing?club_id=${clubId}` : `${API_URL}/consents-missing`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
 // ЭКСПОРТ API ОБЪЕКТА
 // ============================================================
 const api = {
@@ -740,9 +915,10 @@ const api = {
   createAnnouncement,
   deleteAnnouncement,
   
-  // Шаблоны отчётов
+  // Шаблоны отчётов (обновлённые)
   getReportTemplates,
   createReportTemplate,
+  updateReportTemplate,
   deleteReportTemplate,
   
   // Президент клуба
@@ -767,9 +943,43 @@ const api = {
   assignUserToClub,
   removeClubPresident,
 
-  // ===== НАЗНАЧЕНИЯ ТЬЮТОРОВ (ДОБАВЬ ЭТО) =====
+  // Назначения тьюторов
   getTutorAssignments,
   respondToAssignment,
+
+  // ===== НОВЫЕ ФУНКЦИИ ДЛЯ КООРДИНАТОРА =====
+  
+  // Документы
+  getDocuments,
+  createDocument,
+  updateDocument,
+  deleteDocument,
+  
+  // Задачи
+  getTasks,
+  createTask,
+  updateTask,
+  deleteTask,
+  
+  // Массовые уведомления
+  getMassNotifications,
+  createMassNotification,
+  
+  // Цели и KPI
+  getGoals,
+  createGoal,
+  updateGoal,
+  deleteGoal,
+  
+  // Категории достижений
+  getAchievementCategories,
+  
+  // Журнал действий
+  getActivityLog,
+  
+  // Согласия
+  getConsentsStats,
+  getConsentsMissing,
 };
 
 export default api;

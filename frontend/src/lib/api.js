@@ -60,7 +60,6 @@ export const getMe = async () => {
     const dataSize = JSON.stringify(data).length;
     console.log(`📦 Размер данных: ${(dataSize / 1024).toFixed(2)} KB`);
     
-    // Если размер больше 500KB — предупреждение
     if (dataSize > 500 * 1024) {
       console.warn('⚠️ Данные профиля слишком большие! Возможен сбой localStorage.');
     }
@@ -79,11 +78,10 @@ export const getMe = async () => {
   }
   
   // ============================================================
-  // СОХРАНЯЕМ ПОЛЬЗОВАТЕЛЯ (ТОЛЬКО НУЖНЫЕ ПОЛЯ)
+  // СОХРАНЯЕМ ПОЛЬЗОВАТЕЛЯ
   // ============================================================
   if (data && data.id) {
     try {
-      // Сохраняем только нужные поля, чтобы уменьшить размер
       const userData = {
         id: data.id,
         email: data.email,
@@ -101,7 +99,6 @@ export const getMe = async () => {
       console.log('✅ Пользователь сохранён');
     } catch (storageError) {
       console.warn('⚠️ Не удалось сохранить пользователя в localStorage:', storageError);
-      // Если ошибка — пробуем без avatar_url
       if (storageError.name === 'QuotaExceededError') {
         console.log('🔄 Пробуем сохранить без avatar_url...');
         const userData = {
@@ -614,7 +611,6 @@ export const parentLinkChild = async (data) => {
 // 22. АДМИН-ФУНКЦИИ
 // ============================================================
 
-// ===== ПОЛУЧЕНИЕ ДАННЫХ ПОЛЬЗОВАТЕЛЯ (ЛОГИН) =====
 export const getUserCredentials = async (userId) => {
   const response = await fetch(`${API_URL}/users/${userId}/credentials`, {
     method: 'GET',
@@ -623,7 +619,6 @@ export const getUserCredentials = async (userId) => {
   return response.json();
 };
 
-// ===== СБРОС ПАРОЛЯ ПОЛЬЗОВАТЕЛЯ (АДМИН) =====
 export const resetUserPassword = async (userId) => {
   const response = await fetch(`${API_URL}/users/${userId}/reset-password`, {
     method: 'POST',
@@ -632,7 +627,6 @@ export const resetUserPassword = async (userId) => {
   return response.json();
 };
 
-// ===== ПРИКРЕПЛЕНИЕ УЧАСТНИКА К КЛУБУ (АДМИН) =====
 export const assignUserToClub = async (userId, clubId) => {
   const response = await fetch(`${API_URL}/users/${userId}/assign-club`, {
     method: 'PATCH',
@@ -642,7 +636,6 @@ export const assignUserToClub = async (userId, clubId) => {
   return response.json();
 };
 
-// ===== УДАЛЕНИЕ ПРЕЗИДЕНТА КЛУБА (АДМИН) =====
 export const removeClubPresident = async (clubId) => {
   const response = await fetch(`${API_URL}/clubs/${clubId}/president`, {
     method: 'DELETE',
@@ -652,7 +645,7 @@ export const removeClubPresident = async (clubId) => {
 };
 
 // ============================================================
-// НАЗНАЧЕНИЯ ТЬЮТОРОВ
+// 23. НАЗНАЧЕНИЯ ТЬЮТОРОВ
 // ============================================================
 
 export const getTutorAssignments = async () => {
@@ -773,6 +766,10 @@ const api = {
   resetUserPassword,
   assignUserToClub,
   removeClubPresident,
+
+  // ===== НАЗНАЧЕНИЯ ТЬЮТОРОВ (ДОБАВЬ ЭТО) =====
+  getTutorAssignments,
+  respondToAssignment,
 };
 
 export default api;

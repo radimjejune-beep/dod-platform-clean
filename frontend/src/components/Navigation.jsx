@@ -232,6 +232,7 @@ export default function Navigation({ profile }) {
         { path: '/coordinator-dashboard', label: '⭐ Дашборд координатора', icon: Icons.barChart, roles: ['movement_coordinator', 'admin'] },
         { path: '/clubs-management', label: '🏫 Управление КЮДами', icon: Icons.club, roles: ['movement_coordinator', 'admin'] },
         { path: '/mass-notifications', label: '📨 Массовые уведомления', icon: Icons.send, roles: ['movement_coordinator', 'admin'] },
+        { path: '/notification-history', label: '📋 История уведомлений', icon: Icons.fileText, roles: ['movement_coordinator', 'admin'] }, // НОВЫЙ ПУНКТ
         { path: '/consents-management', label: '📝 Управление согласиями', icon: Icons.checkSquare, roles: ['movement_coordinator', 'admin'] },
         { path: '/documents-center', label: '📁 Центр документов', icon: Icons.folder, roles: ['movement_coordinator', 'admin'] },
         { path: '/reports-templates', label: '📋 Шаблоны отчётов', icon: Icons.fileCheck, roles: ['movement_coordinator', 'admin'] },

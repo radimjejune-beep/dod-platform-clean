@@ -748,7 +748,7 @@ export const deleteTask = async (id) => {
   return response.json();
 };
 
-// ----- 24.3. МАССОВЫЕ УВЕДОМЛЕНИЯ -----
+// ===== МАССОВЫЕ УВЕДОМЛЕНИЯ =====
 export const getMassNotifications = async () => {
   const response = await fetch(`${API_URL}/mass-notifications`, {
     method: 'GET',
@@ -762,6 +762,14 @@ export const createMassNotification = async (data) => {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteMassNotification = async (id) => {
+  const response = await fetch(`${API_URL}/mass-notifications/${id}`, {
+    method: 'DELETE',
+    headers: headers()
   });
   return response.json();
 };

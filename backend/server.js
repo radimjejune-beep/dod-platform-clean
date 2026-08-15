@@ -1789,6 +1789,83 @@ app.delete('/api/report-templates/:id', async (req, res) => {
 });
 
 // ============================================================
+// ИСПОЛЬЗОВАНИЕ ШАБЛОНА ДЛЯ СОЗДАНИЯ ОТЧЁТА
+// ============================================================
+app.post('/api/reports/from-template/:templateId', async (req, res) => {
+  try {
+    const { templateId } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator', 'club_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для создания отчётов' });
+    }
+
+    // Получаем шаблон
+    const templateResult = await pool.query(
+      'SELECT * FROM report_templates WHERE id = $1',
+      [templateId]
+    );
+    if (templateResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Шаблон не найден' });
+    }
+
+    const template = templateResult.rows[0];
+
+    // Получаем данные из запроса
+    const { club_id, report_month, report_data } = req.body;
+
+    // Заменяем плейсхолдеры в шаблоне
+    let content = template.template_data;
+    const placeholders = {
+      '{club_name}': await getClubName(club_id),
+      '{report_month}': report_month || new Date().toISOString().slice(0, 7),
+      '{date}': new Date().toISOString().slice(0, 10),
+      '{user_name}': decoded.full_name || 'Пользователь',
+      ...report_data
+    };
+
+    for (const [key, value] of Object.entries(placeholders)) {
+      content = content.replace(new RegExp(key, 'g'), value || '');
+    }
+
+    // Создаём отчёт
+    const result = await pool.query(
+      `INSERT INTO reports (
+        club_id, created_by, title, content, report_month, status, created_at
+      ) VALUES ($1, $2, $3, $4, $5, 'draft', NOW())
+      RETURNING *`,
+      [
+        club_id || null,
+        userId,
+        `Отчёт за ${placeholders['{report_month}']}`,
+        content,
+        placeholders['{report_month}'] || new Date().toISOString().slice(0, 7)
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания отчёта из шаблона:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Вспомогательная функция
+async function getClubName(clubId) {
+  if (!clubId) return 'Все клубы';
+  const result = await pool.query('SELECT name FROM clubs WHERE id = $1', [clubId]);
+  return result.rows[0]?.name || 'Клуб';
+}
+
+// ============================================================
 // 26. НАЗНАЧЕНИЕ ПРЕЗИДЕНТА КЛУБА
 // ============================================================
 app.patch('/api/clubs/:clubId/president', async (req, res) => {
@@ -4760,7 +4837,7 @@ app.get('/api/achievement-categories', async (req, res) => {
 });
 
 // ============================================================
-// 36. МАССОВЫЕ УВЕДОМЛЕНИЯ (ПОЛНЫЙ CRUD)
+// 36. МАССОВЫЕ УВЕДОМЛЕНИЯ (РАСШИРЕННЫЙ)
 // ============================================================
 
 // ===== ПОЛУЧЕНИЕ ВСЕХ УВЕДОМЛЕНИЙ =====
@@ -4782,7 +4859,8 @@ app.get('/api/mass-notifications', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         mn.*,
-        u.full_name as created_by_name
+        u.full_name as created_by_name,
+        u.role as created_by_role
       FROM mass_notifications mn
       LEFT JOIN users u ON mn.created_by = u.id
       ORDER BY mn.created_at DESC
@@ -4794,9 +4872,10 @@ app.get('/api/mass-notifications', async (req, res) => {
   }
 });
 
-// ===== СОЗДАНИЕ МАССОВОГО УВЕДОМЛЕНИЯ =====
-app.post('/api/mass-notifications', async (req, res) => {
+// ===== УДАЛЕНИЕ МАССОВОГО УВЕДОМЛЕНИЯ =====
+app.delete('/api/mass-notifications/:id', async (req, res) => {
   try {
+    const { id } = req.params;
     const authHeader = req.headers.authorization;
     if (!authHeader) {
       return res.status(401).json({ error: 'Нет токена' });
@@ -4804,125 +4883,42 @@ app.post('/api/mass-notifications', async (req, res) => {
 
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
     const userRole = decoded.role;
 
     if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для создания уведомлений' });
+      return res.status(403).json({ error: 'У вас нет прав для удаления уведомлений' });
     }
 
-    const { title, message, recipients, priority, scheduled_at } = req.body;
-
-    if (!title || !title.trim() || !message || !message.trim()) {
-      return res.status(400).json({ error: 'Заголовок и текст обязательны' });
+    // Проверяем, что уведомление существует
+    const check = await pool.query('SELECT id, title FROM mass_notifications WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Уведомление не найдено' });
     }
 
-    console.log('📤 Создание массового уведомления:', { title, recipients, priority });
-
-    // Получаем всех активных пользователей
-    const users = await pool.query('SELECT id, role FROM users WHERE status = $1', ['active']);
-    console.log(`👥 Всего активных пользователей: ${users.rows.length}`);
-
-    // Фильтруем по ролям
-    let targetUsers = [];
-    const roleMap = {
-      'all': 'all',
-      'participants': 'participant',
-      'coordinators': 'club_coordinator',
-      'tutors': 'tutor',
-      'admins': ['admin', 'movement_coordinator']
-    };
-
-    const roles = roleMap[recipients];
-    if (recipients === 'all') {
-      targetUsers = users.rows;
-    } else if (Array.isArray(roles)) {
-      targetUsers = users.rows.filter(u => roles.includes(u.role));
-    } else {
-      targetUsers = users.rows.filter(u => u.role === roles);
-    }
-
-    console.log(`👥 Получателей для роли "${recipients}": ${targetUsers.length}`);
-
-    if (targetUsers.length === 0) {
-      return res.status(400).json({ error: 'Нет получателей для выбранной группы' });
-    }
-
-    // Сохраняем в массовые уведомления
-    const status = scheduled_at ? 'scheduled' : 'sent';
-    const sentAt = !scheduled_at ? new Date() : null;
-
-    const result = await pool.query(
-      `INSERT INTO mass_notifications (
-        title, message, recipients, priority, status, scheduled_at, sent_at, created_by, recipient_count
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *`,
-      [
-        title.trim(),
-        message.trim(),
-        recipients || 'all',
-        priority || 'normal',
-        status,
-        scheduled_at || null,
-        sentAt,
-        userId,
-        targetUsers.length
-      ]
-    );
-
-    const massNotification = result.rows[0];
-    console.log(`✅ Массовое уведомление сохранено: ${massNotification.id}`);
-
-    // Отправляем уведомления каждому пользователю
-    let sentCount = 0;
-    for (const user of targetUsers) {
-      try {
-        await pool.query(
-          `INSERT INTO notifications (user_id, type, title, message, priority, link, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-          [
-            user.id,
-            'system',
-            title.trim(),
-            message.trim(),
-            priority || 'normal',
-            '/notifications'
-          ]
-        );
-        sentCount++;
-      } catch (err) {
-        console.error(`❌ Ошибка отправки уведомления пользователю ${user.id}:`, err.message);
-      }
-    }
-
-    console.log(`✅ Отправлено ${sentCount} уведомлений из ${targetUsers.length}`);
+    // Удаляем уведомление
+    await pool.query('DELETE FROM mass_notifications WHERE id = $1', [id]);
 
     // Логируем действие
     await pool.query(
       `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
        VALUES ($1, $2, $3, $4, $5)`,
       [
-        userId,
-        'CREATE',
+        decoded.userId,
+        'DELETE',
         'mass_notification',
-        massNotification.id,
-        { 
-          title: massNotification.title, 
-          recipients: massNotification.recipients,
-          count: sentCount
-        }
+        id,
+        { title: check.rows[0].title }
       ]
     );
 
-    res.status(201).json({
-      ...massNotification,
-      sent_count: sentCount
-    });
+    res.json({ message: 'Уведомление удалено' });
   } catch (error) {
-    console.error('❌ Ошибка создания уведомления:', error);
+    console.error('❌ Ошибка удаления уведомления:', error);
     res.status(500).json({ error: error.message });
   }
 });
+
+console.log('✅ API для массовых уведомлений загружены');
 
 // ============================================================
 // 37. ЦЕЛИ И KPI

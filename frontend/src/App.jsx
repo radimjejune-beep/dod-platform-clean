@@ -58,6 +58,7 @@ import ReportsTemplates from './pages/ReportsTemplates';
 import TasksPlanner from './pages/TasksPlanner';
 import ActivityLog from './pages/ActivityLog';
 import AchievementsCategories from './pages/AchievementsCategories';
+import NotificationHistory from './pages/NotificationHistory';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -179,6 +180,7 @@ function App() {
         <Route path="/tasks-planner" element={<TasksPlanner />} />
         <Route path="/activity-log" element={<ActivityLog />} />
         <Route path="/achievements-categories" element={<AchievementsCategories />} />
+        <Route path="/notification-history" element={<NotificationHistory />} />
         
         {/* Редирект */}
         <Route path="*" element={<Navigate to="/" replace />} />

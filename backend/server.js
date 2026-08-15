@@ -4563,7 +4563,7 @@ app.delete('/api/tasks/:id', async (req, res) => {
 });
 
 // ============================================================
-// 34. ШАБЛОНЫ ОТЧЁТОВ (ПОЛНЫЙ CRUD)
+// 34. ШАБЛОНЫ ОТЧЁТОВ (ИСПРАВЛЕННЫЙ)
 // ============================================================
 
 // ===== ПОЛУЧЕНИЕ ВСЕХ ШАБЛОНОВ =====
@@ -4610,7 +4610,7 @@ app.get('/api/report-templates', async (req, res) => {
   }
 });
 
-// ===== СОЗДАНИЕ ШАБЛОНА =====
+// ===== СОЗДАНИЕ ШАБЛОНА (ИСПРАВЛЕННЫЙ) =====
 app.post('/api/report-templates', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -4629,11 +4629,14 @@ app.post('/api/report-templates', async (req, res) => {
 
     const { name, description, category, template_data, club_id } = req.body;
 
+    console.log('📥 Получены данные:', { name, description, category, club_id, template_data_length: template_data?.length });
+
     if (!name || !name.trim() || !template_data || !template_data.trim()) {
       return res.status(400).json({ error: 'Название и шаблон обязательны' });
     }
 
-    console.log('📝 Создание шаблона:', { name, category, club_id });
+    // Убеждаемся, что template_data - это строка, а не json
+    const templateDataString = typeof template_data === 'string' ? template_data : JSON.stringify(template_data);
 
     const result = await pool.query(
       `INSERT INTO report_templates (
@@ -4644,14 +4647,13 @@ app.post('/api/report-templates', async (req, res) => {
         name.trim(),
         description || '',
         category || 'general',
-        template_data,
+        templateDataString, // Теперь точно строка
         club_id || null,
         userId
       ]
     );
 
     console.log('✅ Шаблон создан:', result.rows[0].id);
-
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка создания шаблона:', error);
@@ -4684,6 +4686,8 @@ app.put('/api/report-templates/:id', async (req, res) => {
       return res.status(404).json({ error: 'Шаблон не найден' });
     }
 
+    const templateDataString = typeof template_data === 'string' ? template_data : JSON.stringify(template_data || '');
+
     const result = await pool.query(
       `UPDATE report_templates 
        SET name = $1, description = $2, category = $3, template_data = $4, club_id = $5, updated_at = NOW()
@@ -4693,7 +4697,7 @@ app.put('/api/report-templates/:id', async (req, res) => {
         name || check.rows[0].name,
         description || check.rows[0].description,
         category || check.rows[0].category,
-        template_data || check.rows[0].template_data,
+        templateDataString || check.rows[0].template_data,
         club_id || check.rows[0].club_id,
         id
       ]
@@ -4735,6 +4739,8 @@ app.delete('/api/report-templates/:id', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+console.log('✅ API для шаблонов отчётов загружены');
 
 // ============================================================
 // 35. КАТЕГОРИИ ДОСТИЖЕНИЙ

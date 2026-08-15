@@ -3052,10 +3052,12 @@ app.post('/api/president-tasks', async (req, res) => {
       return res.status(403).json({ error: 'Недостаточно прав для создания задания' });
     }
 
-    // ============================================================
+        // ============================================================
     // АВТОМАТИЧЕСКОЕ НАЗНАЧЕНИЕ ПРЕЗИДЕНТА КЛУБА (ЕСЛИ ЕСТЬ КЛУБ)
     // ============================================================
     let finalAssignedTo = assigned_to || null;
+
+    console.log(`🔍 Проверка автоматического назначения: club_id=${club_id}, assigned_to=${assigned_to}, finalAssignedTo=${finalAssignedTo}`);
 
     if (club_id && !finalAssignedTo) {
       const presidentResult = await pool.query(
@@ -3066,6 +3068,7 @@ app.post('/api/president-tasks', async (req, res) => {
         finalAssignedTo = presidentResult.rows[0].id;
         console.log(`👑 Автоматически назначено президенту клуба: ${finalAssignedTo}`);
       } else {
+        console.log(`⚠️ В клубе ${club_id} нет президента`);
         return res.status(400).json({ 
           error: 'В этом клубе нет президента. Назначьте президента клуба сначала.' 
         });
@@ -3073,10 +3076,13 @@ app.post('/api/president-tasks', async (req, res) => {
     }
 
     if (!finalAssignedTo && !is_global) {
+      console.log(`⚠️ Задание не назначено: finalAssignedTo=${finalAssignedTo}, is_global=${is_global}`);
       return res.status(400).json({ 
         error: 'Назначьте задание президенту клуба или сделайте его глобальным' 
       });
     }
+
+    console.log(`✅ Итоговое назначение: finalAssignedTo=${finalAssignedTo}, is_global=${is_global}`);
 
     // ============================================================
     // ПРОВЕРКА: ЕСЛИ НАЗНАЧЕН КОНКРЕТНЫЙ ПРЕЗИДЕНТ КЛУБА

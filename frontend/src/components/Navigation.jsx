@@ -139,7 +139,7 @@ const Icons = {
       <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
   ),
-  // ===== НОВЫЕ ИКОНКИ ДЛЯ КООРДИНАТОРА =====
+  // ===== НОВЫЕ ИКОНКИ =====
   folder: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -182,6 +182,7 @@ export default function Navigation({ profile }) {
   
   const isActive = (path) => location.pathname === path;
   const role = profile?.role || 'participant';
+  const isPresident = profile?.is_president || false;
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -205,6 +206,12 @@ export default function Navigation({ profile }) {
     );
   };
 
+  // ============================================================
+  // КТО МОЖЕТ ВИДЕТЬ ДОКУМЕНТЫ:
+  // Все, кроме участников (participant), родителей (parent) и президентов клубов (is_president = true)
+  // ============================================================
+  const canViewDocuments = !['participant', 'parent'].includes(role) && !isPresident;
+
   const getMenuGroups = () => {
     const groups = {
       main: [
@@ -227,36 +234,36 @@ export default function Navigation({ profile }) {
         { path: '/clubs', label: 'КЮДы', icon: Icons.club, roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'] },
         { path: '/club-analytics', label: 'Аналитика КЮДов', icon: Icons.barChart, roles: ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'] },
       ],
-      // ===== НОВАЯ ГРУППА: УПРАВЛЕНИЕ ДВИЖЕНИЕМ (ДЛЯ КООРДИНАТОРА) =====
+      // ===== КООРДИНАТОР ДВИЖЕНИЯ =====
       coordinator: [
         { path: '/coordinator-dashboard', label: '⭐ Дашборд координатора', icon: Icons.barChart, roles: ['movement_coordinator', 'admin'] },
         { path: '/clubs-management', label: '🏫 Управление КЮДами', icon: Icons.club, roles: ['movement_coordinator', 'admin'] },
         { path: '/mass-notifications', label: '📨 Массовые уведомления', icon: Icons.send, roles: ['movement_coordinator', 'admin'] },
-        { path: '/notification-history', label: '📋 История уведомлений', icon: Icons.fileText, roles: ['movement_coordinator', 'admin'] }, // НОВЫЙ ПУНКТ
+        { path: '/notification-history', label: '📋 История уведомлений', icon: Icons.fileText, roles: ['movement_coordinator', 'admin'] },
         { path: '/consents-management', label: '📝 Управление согласиями', icon: Icons.checkSquare, roles: ['movement_coordinator', 'admin'] },
         { path: '/documents-center', label: '📁 Центр документов', icon: Icons.folder, roles: ['movement_coordinator', 'admin'] },
         { path: '/reports-templates', label: '📋 Шаблоны отчётов', icon: Icons.fileCheck, roles: ['movement_coordinator', 'admin'] },
         { path: '/tasks-planner', label: '📅 Планировщик задач', icon: Icons.clock, roles: ['movement_coordinator', 'admin'] },
       ],
-      // В группе clubManagement добавьте:
+      // ===== УПРАВЛЕНИЕ КЛУБОМ (ДЛЯ КООРДИНАТОРА КЮДА) =====
       clubManagement: [
         { 
-         path: profile?.club_id ? `/club/${profile.club_id}/president` : '/clubs', 
-         label: '👑 Назначить президента', 
-         icon: Icons.target, 
-        roles: ['club_coordinator'] 
+          path: profile?.club_id ? `/club/${profile.club_id}/president` : '/clubs', 
+          label: '👑 Назначить президента', 
+          icon: Icons.target, 
+          roles: ['club_coordinator'] 
         },
         { 
-         path: '/club-rating', 
-         label: '🏆 Рейтинг клуба', 
-         icon: Icons.award, 
-         roles: ['club_coordinator'] 
+          path: '/club-rating', 
+          label: '🏆 Рейтинг клуба', 
+          icon: Icons.award, 
+          roles: ['club_coordinator'] 
         },
         { 
-         path: '/my-report-templates',  // ← НОВЫЙ ПУНКТ
-         label: '📋 Шаблоны отчётов', 
-         icon: Icons.fileText, 
-         roles: ['club_coordinator', 'tutor'] 
+          path: '/my-report-templates', 
+          label: '📋 Шаблоны отчётов', 
+          icon: Icons.fileText, 
+          roles: ['club_coordinator', 'tutor'] 
         },
       ],
       achievements: [
@@ -288,11 +295,21 @@ export default function Navigation({ profile }) {
         { path: '/tutor-requests', label: 'Запросы на тьюторов', icon: Icons.mail, roles: ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'] },
         { path: '/tutor-invitations', label: 'Приглашения тьюторам', icon: Icons.mail, roles: ['tutor', 'admin', 'movement_coordinator', 'president', 'vice_president'] },
       ],
-      documents: [
+      // ===== ОФИЦИАЛЬНЫЕ ДОКУМЕНТЫ (только для сотрудников) =====
+      officialDocuments: [
         { 
           path: '/documents', 
           label: '📜 Официальные документы', 
           icon: Icons.fileText, 
+          roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'] 
+        },
+      ],
+      // ===== ЦЕНТР ДОКУМЕНТОВ (для всех сотрудников) =====
+      documentsCenter: [
+        { 
+          path: '/documents-center', 
+          label: '📁 Центр документов', 
+          icon: Icons.folder, 
           roles: ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'] 
         },
       ],
@@ -328,7 +345,7 @@ export default function Navigation({ profile }) {
     events: 'Мероприятия',
     people: 'Люди',
     clubs: 'КЮДы',
-    coordinator: '⭐ Управление движением', // НОВАЯ ГРУППА
+    coordinator: '⭐ Управление движением',
     clubManagement: 'Управление клубом',
     achievements: 'Достижения',
     reviews: 'Оценки',
@@ -336,13 +353,14 @@ export default function Navigation({ profile }) {
     tasks: 'Задания',
     assignments: '📅 Мои назначения',
     communication: 'Коммуникация',
-    documents: '📜 Официальные документы',
+    officialDocuments: '📜 Официальные документы',
+    documentsCenter: '📁 Центр документов',
     staffCalendar: 'Календарь',
     clubEvents: 'Мой клуб',
     settings: 'Настройки',
   };
 
-  const groupOrder = ['main', 'events', 'people', 'clubs', 'coordinator', 'clubManagement', 'achievements', 'reviews', 'reports', 'tasks', 'assignments', 'communication', 'documents', 'staffCalendar', 'clubEvents', 'settings'];
+  const groupOrder = ['main', 'events', 'people', 'clubs', 'coordinator', 'clubManagement', 'achievements', 'reviews', 'reports', 'tasks', 'assignments', 'communication', 'officialDocuments', 'documentsCenter', 'staffCalendar', 'clubEvents', 'settings'];
 
   const menuGroups = getMenuGroups();
 
@@ -525,6 +543,7 @@ export default function Navigation({ profile }) {
         </div>
       </div>
 
+      {/* СТИЛИ (оставляем без изменений) */}
       <style>{`
         .nav-new {
           background: #FFFFFF;

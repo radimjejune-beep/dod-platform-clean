@@ -19,26 +19,29 @@ export default function TutorAssignments() {
 
   const loadData = async () => {
     try {
+      setLoading(true);
       const userData = await api.getMe();
       if (!userData || !userData.id) {
         navigate('/login');
         return;
       }
+
+      if (userData.role !== 'tutor') {
+        navigate('/dashboard');
+        return;
+      }
+
       setProfile(userData);
 
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://dod-backend.relaxdev.ru/api/event-tutor-assignments', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAssignments(data || []);
-      }
+      // ============================================================
+      // ИСПОЛЬЗУЕМ API ВМЕСТО ПРЯМОГО FETCH
+      // ============================================================
+      const data = await api.getTutorAssignments();
+      console.log('📥 Загружено назначений:', data?.length || 0);
+      setAssignments(data || []);
     } catch (err) {
-      console.error('Ошибка:', err);
+      console.error('Ошибка загрузки назначений:', err);
+      setAssignments([]);
     } finally {
       setLoading(false);
     }
@@ -46,18 +49,11 @@ export default function TutorAssignments() {
 
   const handleRespond = async (id, status) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`https://dod-backend.relaxdev.ru/api/event-tutor-assignments/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status })
-      });
-
-      const result = await response.json();
-      if (result.error) throw new Error(result.error);
+      const result = await api.respondToAssignment(id, status);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
 
       setMessage(status === 'accepted' ? '✅ Вы приняли назначение!' : '❌ Вы отклонили назначение');
       setMessageType(status === 'accepted' ? 'success' : 'error');

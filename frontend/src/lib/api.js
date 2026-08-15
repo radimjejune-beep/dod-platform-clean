@@ -652,6 +652,27 @@ export const removeClubPresident = async (clubId) => {
 };
 
 // ============================================================
+// НАЗНАЧЕНИЯ ТЬЮТОРОВ
+// ============================================================
+
+export const getTutorAssignments = async () => {
+  const response = await fetch(`${API_URL}/event-tutor-assignments`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const respondToAssignment = async (assignmentId, status) => {
+  const response = await fetch(`${API_URL}/event-tutor-assignments/${assignmentId}`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ status })
+  });
+  return response.json();
+};
+
+// ============================================================
 // ЭКСПОРТ API ОБЪЕКТА
 // ============================================================
 const api = {

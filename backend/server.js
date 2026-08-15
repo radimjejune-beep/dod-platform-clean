@@ -4563,7 +4563,7 @@ app.delete('/api/tasks/:id', async (req, res) => {
 });
 
 // ============================================================
-// 34. ШАБЛОНЫ ОТЧЁТОВ
+// 34. ШАБЛОНЫ ОТЧЁТОВ (ПОЛНЫЙ CRUD)
 // ============================================================
 
 // ===== ПОЛУЧЕНИЕ ВСЕХ ШАБЛОНОВ =====
@@ -4633,6 +4633,8 @@ app.post('/api/report-templates', async (req, res) => {
       return res.status(400).json({ error: 'Название и шаблон обязательны' });
     }
 
+    console.log('📝 Создание шаблона:', { name, category, club_id });
+
     const result = await pool.query(
       `INSERT INTO report_templates (
         name, description, category, template_data, club_id, created_by
@@ -4647,6 +4649,8 @@ app.post('/api/report-templates', async (req, res) => {
         userId
       ]
     );
+
+    console.log('✅ Шаблон создан:', result.rows[0].id);
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -4719,6 +4723,11 @@ app.delete('/api/report-templates/:id', async (req, res) => {
       return res.status(403).json({ error: 'У вас нет прав для удаления шаблонов' });
     }
 
+    const check = await pool.query('SELECT id FROM report_templates WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Шаблон не найден' });
+    }
+
     await pool.query('DELETE FROM report_templates WHERE id = $1', [id]);
     res.json({ message: 'Шаблон удалён' });
   } catch (error) {
@@ -4745,7 +4754,7 @@ app.get('/api/achievement-categories', async (req, res) => {
 });
 
 // ============================================================
-// 36. МАССОВЫЕ УВЕДОМЛЕНИЯ (ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ)
+// 36. МАССОВЫЕ УВЕДОМЛЕНИЯ (ПОЛНЫЙ CRUD)
 // ============================================================
 
 // ===== ПОЛУЧЕНИЕ ВСЕХ УВЕДОМЛЕНИЙ =====
@@ -4779,7 +4788,7 @@ app.get('/api/mass-notifications', async (req, res) => {
   }
 });
 
-// ===== СОЗДАНИЕ МАССОВОГО УВЕДОМЛЕНИЯ (ИСПРАВЛЕННЫЙ) =====
+// ===== СОЗДАНИЕ МАССОВОГО УВЕДОМЛЕНИЯ =====
 app.post('/api/mass-notifications', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -4802,9 +4811,9 @@ app.post('/api/mass-notifications', async (req, res) => {
       return res.status(400).json({ error: 'Заголовок и текст обязательны' });
     }
 
-    // ============================================================
-    // ПОЛУЧАЕМ ВСЕХ АКТИВНЫХ ПОЛЬЗОВАТЕЛЕЙ
-    // ============================================================
+    console.log('📤 Создание массового уведомления:', { title, recipients, priority });
+
+    // Получаем всех активных пользователей
     const users = await pool.query('SELECT id, role FROM users WHERE status = $1', ['active']);
     console.log(`👥 Всего активных пользователей: ${users.rows.length}`);
 
@@ -4833,9 +4842,7 @@ app.post('/api/mass-notifications', async (req, res) => {
       return res.status(400).json({ error: 'Нет получателей для выбранной группы' });
     }
 
-    // ============================================================
-    // СОХРАНЯЕМ В МАССОВЫЕ УВЕДОМЛЕНИЯ
-    // ============================================================
+    // Сохраняем в массовые уведомления
     const status = scheduled_at ? 'scheduled' : 'sent';
     const sentAt = !scheduled_at ? new Date() : null;
 
@@ -4860,9 +4867,7 @@ app.post('/api/mass-notifications', async (req, res) => {
     const massNotification = result.rows[0];
     console.log(`✅ Массовое уведомление сохранено: ${massNotification.id}`);
 
-    // ============================================================
-    // ОТПРАВЛЯЕМ УВЕДОМЛЕНИЯ КАЖДОМУ ПОЛЬЗОВАТЕЛЮ
-    // ============================================================
+    // Отправляем уведомления каждому пользователю
     let sentCount = 0;
     for (const user of targetUsers) {
       try {
@@ -4886,9 +4891,7 @@ app.post('/api/mass-notifications', async (req, res) => {
 
     console.log(`✅ Отправлено ${sentCount} уведомлений из ${targetUsers.length}`);
 
-    // ============================================================
-    // ЛОГИРУЕМ ДЕЙСТВИЕ
-    // ============================================================
+    // Логируем действие
     await pool.query(
       `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
        VALUES ($1, $2, $3, $4, $5)`,

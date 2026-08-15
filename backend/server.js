@@ -4487,6 +4487,8 @@ app.get('/api/event-tutor-assignments', async (req, res) => {
     const userRole = decoded.role;
     const userId = decoded.userId;
 
+    console.log(`👤 Запрос назначений от: ${userRole} (${userId})`);
+
     let query = `
       SELECT 
         eta.*,

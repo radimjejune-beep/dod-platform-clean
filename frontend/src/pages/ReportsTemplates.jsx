@@ -49,9 +49,12 @@ export default function ReportsTemplates() {
 
       setClubs(clubsData || []);
       setTemplates(templatesData || []);
+      console.log('📥 Загружено шаблонов:', templatesData?.length || 0);
 
     } catch (err) {
-      console.error('Ошибка:', err);
+      console.error('❌ Ошибка загрузки:', err);
+      setMessage('❌ Ошибка загрузки данных');
+      setMessageType('error');
     } finally {
       setLoading(false);
     }
@@ -70,13 +73,53 @@ export default function ReportsTemplates() {
         return;
       }
 
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Нет авторизации');
+      }
+
       const data = {
-        ...form,
-        template_data: form.template_data
+        name: form.name.trim(),
+        description: form.description || '',
+        category: form.category || 'general',
+        template_data: form.template_data,
+        club_id: form.club_id || null
       };
 
-      // TODO: добавить API для создания/обновления шаблона
-      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('📤 Отправка шаблона:', data);
+
+      let response;
+      let result;
+
+      if (editingTemplate) {
+        // Обновление шаблона
+        response = await fetch(`https://dod-backend.relaxdev.ru/api/report-templates/${editingTemplate.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(data)
+        });
+        result = await response.json();
+        console.log('📥 Ответ сервера (PUT):', result);
+      } else {
+        // Создание шаблона
+        response = await fetch('https://dod-backend.relaxdev.ru/api/report-templates', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(data)
+        });
+        result = await response.json();
+        console.log('📥 Ответ сервера (POST):', result);
+      }
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Ошибка сохранения шаблона');
+      }
 
       setMessage(editingTemplate ? '✅ Шаблон обновлён!' : '✅ Шаблон создан!');
       setMessageType('success');
@@ -84,6 +127,7 @@ export default function ReportsTemplates() {
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
+      console.error('❌ Ошибка:', err);
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
@@ -120,30 +164,54 @@ export default function ReportsTemplates() {
     if (!confirm('Удалить шаблон?')) return;
 
     try {
-      // TODO: добавить API для удаления
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setTemplates(templates.filter(t => t.id !== id));
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/report-templates/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Ошибка удаления');
+      }
+
       setMessage('✅ Шаблон удалён');
       setMessageType('success');
+      loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
+      console.error('❌ Ошибка:', err);
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
 
   const handleUseTemplate = (template) => {
-    // TODO: открыть форму отчёта с заполненным шаблоном
-    setMessage('📝 Шаблон загружен в форму отчёта');
+    // Загружаем шаблон в форму
+    setForm({
+      name: template.name || '',
+      description: template.description || '',
+      category: template.category || 'general',
+      template_data: template.template_data || '',
+      club_id: template.club_id || ''
+    });
+    setEditingTemplate(null);
+    setShowForm(true);
+    setMessage('📝 Шаблон загружен в форму. Отредактируйте и сохраните.');
     setMessageType('success');
-    setTimeout(() => setMessage(''), 3000);
+    setTimeout(() => setMessage(''), 4000);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const categories = [
     { id: 'general', label: '📄 Общий' },
     { id: 'monthly', label: '📅 Ежемесячный' },
     { id: 'event', label: '📅 Мероприятие' },
-    { id: 'achievement', label: '🏆 Достижения' }
+    { id: 'achievement', label: '🏆 Достижения' },
+    { id: 'club', label: '🏫 Клубный' }
   ];
 
   if (loading) {
@@ -162,7 +230,7 @@ export default function ReportsTemplates() {
           <span style={{ fontSize: '32px' }}>📋</span>
           <div>
             <h1>Шаблоны отчётов</h1>
-            <p>Готовые шаблоны для быстрого создания отчётов</p>
+            <p>Создание и использование шаблонов для отчётов</p>
           </div>
           <button
             className="btn-primary"
@@ -272,6 +340,9 @@ export default function ReportsTemplates() {
             <div className="empty-state">
               <div className="icon">📋</div>
               <p>Шаблонов пока нет</p>
+              <p style={{ fontSize: '13px', color: '#98A2B3' }}>
+                Создайте первый шаблон для быстрого заполнения отчётов
+              </p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -291,6 +362,12 @@ export default function ReportsTemplates() {
                     </div>
                     {template.description && <div className="subtitle">{template.description}</div>}
                     {template.club_name && <div className="meta">🏫 {template.club_name}</div>}
+                    {template.created_by_name && (
+                      <div className="meta">👤 Создал: {template.created_by_name}</div>
+                    )}
+                    <div className="meta" style={{ fontSize: '12px', color: '#98A2B3' }}>
+                      📅 {new Date(template.created_at).toLocaleDateString('ru-RU')}
+                    </div>
                     <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <button
                         className="btn-primary"

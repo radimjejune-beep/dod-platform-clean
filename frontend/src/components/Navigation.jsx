@@ -238,18 +238,25 @@ export default function Navigation({ profile }) {
         { path: '/reports-templates', label: '📋 Шаблоны отчётов', icon: Icons.fileCheck, roles: ['movement_coordinator', 'admin'] },
         { path: '/tasks-planner', label: '📅 Планировщик задач', icon: Icons.clock, roles: ['movement_coordinator', 'admin'] },
       ],
+      // В группе clubManagement добавьте:
       clubManagement: [
         { 
-          path: profile?.club_id ? `/club/${profile.club_id}/president` : '/clubs', 
-          label: '👑 Назначить президента', 
-          icon: Icons.target, 
-          roles: ['club_coordinator'] 
+         path: profile?.club_id ? `/club/${profile.club_id}/president` : '/clubs', 
+         label: '👑 Назначить президента', 
+         icon: Icons.target, 
+        roles: ['club_coordinator'] 
         },
         { 
-          path: '/club-rating', 
-          label: '🏆 Рейтинг клуба', 
-          icon: Icons.award, 
-          roles: ['club_coordinator'] 
+         path: '/club-rating', 
+         label: '🏆 Рейтинг клуба', 
+         icon: Icons.award, 
+         roles: ['club_coordinator'] 
+        },
+        { 
+         path: '/my-report-templates',  // ← НОВЫЙ ПУНКТ
+         label: '📋 Шаблоны отчётов', 
+         icon: Icons.fileText, 
+         roles: ['club_coordinator', 'tutor'] 
         },
       ],
       achievements: [

@@ -4640,7 +4640,7 @@ app.delete('/api/tasks/:id', async (req, res) => {
 });
 
 // ============================================================
-// 34. ШАБЛОНЫ ОТЧЁТОВ (ИСПРАВЛЕННЫЙ)
+// 34. ШАБЛОНЫ ОТЧЁТОВ (ДЛЯ ВСЕХ РОЛЕЙ)
 // ============================================================
 
 // ===== ПОЛУЧЕНИЕ ВСЕХ ШАБЛОНОВ =====
@@ -4656,7 +4656,8 @@ app.get('/api/report-templates', async (req, res) => {
     const userRole = decoded.role;
     const userId = decoded.userId;
 
-    if (!['admin', 'movement_coordinator', 'club_coordinator'].includes(userRole)) {
+    // Разрешаем доступ: админ, координатор движения, координатор КЮДа, тьютор
+    if (!['admin', 'movement_coordinator', 'club_coordinator', 'tutor'].includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав для просмотра шаблонов' });
     }
 
@@ -4672,9 +4673,29 @@ app.get('/api/report-templates', async (req, res) => {
     `;
     const params = [];
 
+    // Координатор КЮДа видит шаблоны:
+    // 1. Созданные им
+    // 2. Для его клуба
+    // 3. Общие (без клуба)
     if (userRole === 'club_coordinator') {
-      query += ' AND (rt.created_by = $1 OR rt.club_id IN (SELECT club_id FROM club_coordinators WHERE profile_id = $1))';
-      params.push(userId);
+      // Получаем клуб координатора
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      
+      if (clubResult.rows.length > 0) {
+        const clubId = clubResult.rows[0].club_id;
+        query += ` AND (rt.created_by = $1 OR rt.club_id = $2 OR rt.club_id IS NULL)`;
+        params.push(userId, clubId);
+      } else {
+        query += ` AND rt.created_by = $1`;
+        params.push(userId);
+      }
+    }
+    // Тьютор видит только общие шаблоны
+    else if (userRole === 'tutor') {
+      query += ` AND rt.club_id IS NULL`;
     }
 
     query += ' ORDER BY rt.created_at DESC';
@@ -4687,7 +4708,7 @@ app.get('/api/report-templates', async (req, res) => {
   }
 });
 
-// ===== СОЗДАНИЕ ШАБЛОНА (ИСПРАВЛЕННЫЙ) =====
+// ===== СОЗДАНИЕ ШАБЛОНА =====
 app.post('/api/report-templates', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -4700,6 +4721,7 @@ app.post('/api/report-templates', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
+    // Разрешаем создание: админ, координатор движения, координатор КЮДа
     if (!['admin', 'movement_coordinator', 'club_coordinator'].includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав для создания шаблонов' });
     }
@@ -4712,7 +4734,18 @@ app.post('/api/report-templates', async (req, res) => {
       return res.status(400).json({ error: 'Название и шаблон обязательны' });
     }
 
-    // Убеждаемся, что template_data - это строка, а не json
+    // Если координатор КЮДа создаёт шаблон - автоматически привязываем к его клубу
+    let finalClubId = club_id || null;
+    if (userRole === 'club_coordinator' && !finalClubId) {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      if (clubResult.rows.length > 0) {
+        finalClubId = clubResult.rows[0].club_id;
+      }
+    }
+
     const templateDataString = typeof template_data === 'string' ? template_data : JSON.stringify(template_data);
 
     const result = await pool.query(
@@ -4724,8 +4757,8 @@ app.post('/api/report-templates', async (req, res) => {
         name.trim(),
         description || '',
         category || 'general',
-        templateDataString, // Теперь точно строка
-        club_id || null,
+        templateDataString,
+        finalClubId,
         userId
       ]
     );
@@ -4737,87 +4770,6 @@ app.post('/api/report-templates', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-// ===== ОБНОВЛЕНИЕ ШАБЛОНА =====
-app.put('/api/report-templates/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для редактирования шаблонов' });
-    }
-
-    const { name, description, category, template_data, club_id } = req.body;
-
-    const check = await pool.query('SELECT * FROM report_templates WHERE id = $1', [id]);
-    if (check.rows.length === 0) {
-      return res.status(404).json({ error: 'Шаблон не найден' });
-    }
-
-    const templateDataString = typeof template_data === 'string' ? template_data : JSON.stringify(template_data || '');
-
-    const result = await pool.query(
-      `UPDATE report_templates 
-       SET name = $1, description = $2, category = $3, template_data = $4, club_id = $5, updated_at = NOW()
-       WHERE id = $6
-       RETURNING *`,
-      [
-        name || check.rows[0].name,
-        description || check.rows[0].description,
-        category || check.rows[0].category,
-        templateDataString || check.rows[0].template_data,
-        club_id || check.rows[0].club_id,
-        id
-      ]
-    );
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('❌ Ошибка обновления шаблона:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== УДАЛЕНИЕ ШАБЛОНА =====
-app.delete('/api/report-templates/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для удаления шаблонов' });
-    }
-
-    const check = await pool.query('SELECT id FROM report_templates WHERE id = $1', [id]);
-    if (check.rows.length === 0) {
-      return res.status(404).json({ error: 'Шаблон не найден' });
-    }
-
-    await pool.query('DELETE FROM report_templates WHERE id = $1', [id]);
-    res.json({ message: 'Шаблон удалён' });
-  } catch (error) {
-    console.error('❌ Ошибка удаления шаблона:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-console.log('✅ API для шаблонов отчётов загружены');
 
 // ============================================================
 // 35. КАТЕГОРИИ ДОСТИЖЕНИЙ

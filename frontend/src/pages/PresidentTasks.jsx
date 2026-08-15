@@ -1,6 +1,6 @@
 // frontend/src/pages/PresidentTasks.jsx
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
@@ -16,7 +16,16 @@ export default function PresidentTasks() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
   const [clubs, setClubs] = useState([]);
-  const [presidents, setPresidents] = useState([]);
+  
+  // ===== ДЛЯ ПОИСКА УЧАСТНИКОВ =====
+  const [allUsers, setAllUsers] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const inputRef = useRef(null);
+  const dropdownRef = useRef(null);
+  
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -29,6 +38,18 @@ export default function PresidentTasks() {
   const navigate = useNavigate();
 
   const role = profile?.role;
+
+  // ===== ЗАКРЫТИЕ ДРОПДАУНА ПРИ КЛИКЕ СНАРУЖИ =====
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
+          inputRef.current && !inputRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -55,6 +76,7 @@ export default function PresidentTasks() {
         return;
       }
 
+      // ===== ЗАГРУЗКА ЗАДАНИЙ =====
       try {
         const response = await fetch('https://dod-backend.relaxdev.ru/api/president-tasks', {
           headers: {
@@ -82,6 +104,7 @@ export default function PresidentTasks() {
         setTasks([]);
       }
 
+      // ===== ЗАГРУЗКА КЛУБОВ =====
       try {
         const clubsData = await api.getClubs();
         setClubs(Array.isArray(clubsData) ? clubsData : []);
@@ -90,15 +113,18 @@ export default function PresidentTasks() {
         setClubs([]);
       }
 
+      // ===== ЗАГРУЗКА ВСЕХ ПОЛЬЗОВАТЕЛЕЙ (ДЛЯ ПОИСКА) =====
       try {
         const usersData = await api.getUsers();
-        const presidentsData = Array.isArray(usersData) 
-          ? usersData.filter(u => u.is_president === true || u.role === 'president')
+        // Фильтруем только участников (participant) с клубом
+        const filteredUsers = Array.isArray(usersData) 
+          ? usersData.filter(u => u.role === 'participant' && u.club_id)
           : [];
-        setPresidents(presidentsData);
+        setAllUsers(filteredUsers);
+        console.log('👥 Загружено участников для выбора:', filteredUsers.length);
       } catch (usersError) {
         console.error('❌ Ошибка загрузки пользователей:', usersError);
-        setPresidents([]);
+        setAllUsers([]);
       }
 
     } catch (err) {
@@ -109,6 +135,35 @@ export default function PresidentTasks() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ===== ПОИСК УЧАСТНИКОВ =====
+  const handleSearchChange = (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    setSelectedUser(null);
+    setForm({ ...form, assigned_to: '' });
+
+    if (query.length < 2) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    const filtered = allUsers.filter(u =>
+      u.full_name?.toLowerCase().includes(query.toLowerCase()) ||
+      u.email?.toLowerCase().includes(query.toLowerCase())
+    );
+    setSearchResults(filtered);
+    setShowDropdown(filtered.length > 0);
+  };
+
+  const handleSelectUser = (user) => {
+    setSelectedUser(user);
+    setSearchQuery(user.full_name);
+    setForm({ ...form, assigned_to: user.id, club_id: user.club_id || '' });
+    setShowDropdown(false);
+    console.log('✅ Выбран участник:', user.full_name, 'клуб:', user.club_id);
   };
 
   const canCreate = profile && ['admin', 'movement_coordinator', 'vice_president', 'club_coordinator'].includes(profile.role);
@@ -122,6 +177,16 @@ export default function PresidentTasks() {
     try {
       if (!form.title || form.title.trim() === '') {
         setMessage('❌ Введите заголовок задания');
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
+
+      // ============================================================
+      // ПРОВЕРКА: ЕСЛИ НЕ ВЫБРАН ПОЛЬЗОВАТЕЛЬ И НЕ ГЛОБАЛЬНОЕ
+      // ============================================================
+      if (!form.assigned_to && !form.is_global) {
+        setMessage('❌ Выберите участника для назначения задания');
         setMessageType('error');
         setLoading(false);
         return;
@@ -199,6 +264,10 @@ export default function PresidentTasks() {
       assigned_to: '',
       is_global: false
     });
+    setSearchQuery('');
+    setSelectedUser(null);
+    setSearchResults([]);
+    setShowDropdown(false);
   };
 
   const handleSubmitResponse = async (e) => {
@@ -317,7 +386,12 @@ export default function PresidentTasks() {
             <button
               className="btn-primary"
               style={{ marginLeft: 'auto' }}
-              onClick={() => setShowCreateForm(!showCreateForm)}
+              onClick={() => {
+                setShowCreateForm(!showCreateForm);
+                if (!showCreateForm) {
+                  setTimeout(() => inputRef.current?.focus(), 100);
+                }
+              }}
             >
               {showCreateForm ? '✖ Закрыть' : '➕ Создать задание'}
             </button>
@@ -394,17 +468,90 @@ export default function PresidentTasks() {
                 </div>
               </div>
 
+              {/* ===== ПОИСК УЧАСТНИКА ===== */}
               <div className="form-group">
-                <label>Назначить президенту (если конкретному)</label>
-                <select
-                  value={form.assigned_to}
-                  onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
-                >
-                  <option value="">Всем президентам</option>
-                  {presidents.map(p => (
-                    <option key={p.id} value={p.id}>{p.full_name} ({p.club_name || 'Без клуба'})</option>
-                  ))}
-                </select>
+                <label>Назначить участнику *</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    placeholder="Начните вводить фамилию участника..."
+                    required
+                  />
+                  {showDropdown && searchResults.length > 0 && (
+                    <div
+                      ref={dropdownRef}
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 4px)',
+                        left: 0,
+                        right: 0,
+                        background: 'white',
+                        border: '1px solid #E2E7EF',
+                        borderRadius: '10px',
+                        boxShadow: '0 8px 30px rgba(11, 31, 58, 0.12)',
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        zIndex: 100
+                      }}
+                    >
+                      {searchResults.map((u) => (
+                        <div
+                          key={u.id}
+                          style={{
+                            padding: '10px 14px',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid #F4F6F9',
+                            transition: 'background 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = '#F4F6F9'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                          onClick={() => handleSelectUser(u)}
+                        >
+                          <div style={{ fontWeight: '500', fontSize: '14px', color: '#0B1F3A' }}>
+                            {u.full_name}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#667085' }}>
+                            {u.school || 'Школа не указана'} • {u.class_name || 'Класс не указан'}
+                            {u.club_name && ` • 🏫 ${u.club_name}`}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {selectedUser && (
+                  <div style={{
+                    marginTop: '6px',
+                    padding: '6px 12px',
+                    background: '#E8F5EF',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    color: '#16845B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    ✅ Выбран: <strong>{selectedUser.full_name}</strong>
+                    {selectedUser.club_name && <span style={{ color: '#98A2B3' }}>• 🏫 {selectedUser.club_name}</span>}
+                    <button
+                      type="button"
+                      style={{ background: 'none', border: 'none', color: '#B3262E', cursor: 'pointer', marginLeft: 'auto' }}
+                      onClick={() => {
+                        setSelectedUser(null);
+                        setSearchQuery('');
+                        setForm({ ...form, assigned_to: '', club_id: '' });
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+                <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                  💡 Начните вводить фамилию участника — система покажет подходящих
+                </div>
               </div>
 
               <div className="form-group">
@@ -425,7 +572,7 @@ export default function PresidentTasks() {
                 <button type="submit" className="btn-success" disabled={loading}>
                   {loading ? '⏳ Создание...' : '✅ Создать'}
                 </button>
-                <button type="button" className="btn-secondary" onClick={() => setShowCreateForm(false)}>
+                <button type="button" className="btn-secondary" onClick={resetForm}>
                   ❌ Отмена
                 </button>
               </div>
@@ -584,6 +731,7 @@ export default function PresidentTasks() {
         )}
       </div>
 
+      {/* МОДАЛЬНОЕ ОКНО ОТВЕТА */}
       {showResponseModal && selectedTask && (
         <div
           style={{

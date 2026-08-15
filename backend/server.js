@@ -4224,7 +4224,7 @@ app.delete('/api/event-tutor-assignments/:id', async (req, res) => {
 // ============================================================
 
 // ============================================================
-// 32. ДОКУМЕНТЫ (Центр документов)
+// 32. ДОКУМЕНТЫ (Центр документов) - ИСПРАВЛЕННЫЙ
 // ============================================================
 
 // ===== ПОЛУЧЕНИЕ ВСЕХ ДОКУМЕНТОВ =====
@@ -4238,8 +4238,32 @@ app.get('/api/documents', async (req, res) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET);
     const userRole = decoded.role;
+    const userId = decoded.userId;
 
-    // Проверка прав
+    // ============================================================
+    // КТО НЕ МОЖЕТ ВИДЕТЬ ДОКУМЕНТЫ:
+    // - Участники (participant)
+    // - Родители (parent)
+    // - Президенты клубов (is_president = true)
+    // ============================================================
+    const isPresident = decoded.is_president || false;
+    
+    if (userRole === 'participant' || userRole === 'parent' || isPresident === true) {
+      return res.status(403).json({ 
+        error: 'У вас нет прав для просмотра документов',
+        message: 'Документы доступны только сотрудникам движения'
+      });
+    }
+
+    // ============================================================
+    // КТО МОЖЕТ ВИДЕТЬ ДОКУМЕНТЫ:
+    // - Админ (admin)
+    // - Координатор движения (movement_coordinator)
+    // - Координатор КЮДа (club_coordinator)
+    // - Тьютор (tutor)
+    // - Президент движения (president)
+    // - Вице-президент движения (vice_president)
+    // ============================================================
     const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
     if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав для просмотра документов' });
@@ -4256,22 +4280,20 @@ app.get('/api/documents', async (req, res) => {
       WHERE 1=1
     `;
     const params = [];
-    const conditions = [];
 
-    // Админ и координатор движения видят все
-    if (['admin', 'movement_coordinator'].includes(userRole)) {
-      // Видят всё
-    } 
-    // Остальные видят только публичные документы и документы своих клубов
-    else {
-      conditions.push(`(d.is_public = true OR d.club_id IN (
-        SELECT club_id FROM club_participants WHERE profile_id = $${params.length + 1}
-      ))`);
-      params.push(decoded.userId);
-    }
-
-    if (conditions.length > 0) {
-      query += ' AND (' + conditions.join(' OR ') + ')';
+    // Координатор КЮДа видит только документы своего клуба и публичные
+    if (userRole === 'club_coordinator') {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      if (clubResult.rows.length > 0) {
+        const clubId = clubResult.rows[0].club_id;
+        query += ` AND (d.club_id = $1 OR d.is_public = true)`;
+        params.push(clubId);
+      } else {
+        query += ` AND d.is_public = true`;
+      }
     }
 
     query += ' ORDER BY d.created_at DESC';
@@ -4280,6 +4302,55 @@ app.get('/api/documents', async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения документов:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ПОЛУЧЕНИЕ ОДНОГО ДОКУМЕНТА =====
+app.get('/api/documents/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+    const isPresident = decoded.is_president || false;
+
+    // Проверка прав
+    if (userRole === 'participant' || userRole === 'parent' || isPresident === true) {
+      return res.status(403).json({ error: 'У вас нет прав для просмотра документов' });
+    }
+
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для просмотра документов' });
+    }
+
+    const result = await pool.query(
+      `
+      SELECT 
+        d.*,
+        u.full_name as created_by_name,
+        c.name as club_name
+      FROM documents d
+      LEFT JOIN users u ON d.created_by = u.id
+      LEFT JOIN clubs c ON d.club_id = c.id
+      WHERE d.id = $1
+      `,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Документ не найден' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка получения документа:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -4297,6 +4368,10 @@ app.post('/api/documents', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
+    // Кто может создавать документы:
+    // - Админ
+    // - Координатор движения
+    // - Координатор КЮДа
     const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator'];
     if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав для создания документов' });
@@ -4304,8 +4379,28 @@ app.post('/api/documents', async (req, res) => {
 
     const { title, content, category, document_type, is_public, club_id, tags } = req.body;
 
+    console.log('📥 Получены данные для документа:');
+    console.log('  title:', title);
+    console.log('  content length:', content?.length || 0);
+    console.log('  category:', category);
+    console.log('  is_public:', is_public);
+    console.log('  club_id:', club_id);
+
     if (!title || !title.trim()) {
       return res.status(400).json({ error: 'Заголовок обязателен' });
+    }
+
+    // Если координатор КЮДа создаёт документ - привязываем к его клубу
+    let finalClubId = club_id || null;
+    if (userRole === 'club_coordinator' && !finalClubId) {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      if (clubResult.rows.length > 0) {
+        finalClubId = clubResult.rows[0].club_id;
+        console.log('  Автоматически привязан к клубу:', finalClubId);
+      }
     }
 
     const result = await pool.query(
@@ -4319,11 +4414,13 @@ app.post('/api/documents', async (req, res) => {
         category || 'general',
         document_type || 'pdf',
         is_public !== undefined ? is_public : true,
-        club_id || null,
+        finalClubId,
         tags || [],
         userId
       ]
     );
+
+    console.log('✅ Документ создан! ID:', result.rows[0].id);
 
     // Логируем действие
     await pool.query(
@@ -4360,13 +4457,12 @@ app.put('/api/documents/:id', async (req, res) => {
 
     const { title, content, category, document_type, is_public, club_id, tags } = req.body;
 
-    // Проверяем, что документ существует
     const check = await pool.query('SELECT * FROM documents WHERE id = $1', [id]);
     if (check.rows.length === 0) {
       return res.status(404).json({ error: 'Документ не найден' });
     }
 
-    // Координатор клуба может редактировать только свои документы
+    // Координатор КЮДа может редактировать только свои документы
     if (userRole === 'club_coordinator' && check.rows[0].created_by !== userId) {
       return res.status(403).json({ error: 'Вы можете редактировать только свои документы' });
     }
@@ -4417,6 +4513,7 @@ app.delete('/api/documents/:id', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
+    // Удалять могут только админ и координатор движения
     if (!['admin', 'movement_coordinator'].includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав для удаления документов' });
     }
@@ -4441,6 +4538,8 @@ app.delete('/api/documents/:id', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+console.log('✅ API для документов загружены');
 
 // ============================================================
 // 33. ЗАДАЧИ (Планировщик задач)

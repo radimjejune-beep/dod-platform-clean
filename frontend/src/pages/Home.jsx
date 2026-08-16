@@ -42,7 +42,7 @@ export default function Home() {
     if (profile) {
       navigate('/dashboard');
     } else {
-      navigate('/register');
+      navigate('/login');
     }
   };
 
@@ -95,22 +95,11 @@ export default function Home() {
                 📊 Перейти в кабинет
               </button>
             ) : (
-              <>
-                <button className="home-hero-btn-secondary" onClick={handleLogin}>
-                  🔑 Вход
-                </button>
-                <button className="home-hero-btn-primary" onClick={handleGetStarted}>
-                  🚀 Присоединиться
-                </button>
-              </>
+              <button className="home-hero-btn-secondary" onClick={handleLogin}>
+                🔑 Вход
+              </button>
             )}
           </div>
-          
-          {!profile && (
-            <p className="home-hero-register">
-              Уже есть аккаунт? <Link to="/login">Войти</Link>
-            </p>
-          )}
 
           <div className="home-hero-partners">
             <span className="home-hero-partner-label">При поддержке</span>
@@ -378,23 +367,6 @@ export default function Home() {
           border-color: rgba(201, 162, 39, 0.4);
           background: rgba(255, 255, 255, 0.08);
           transform: translateY(-3px);
-        }
-
-        .home-hero-register {
-          margin-top: 14px;
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.35);
-        }
-
-        .home-hero-register a {
-          color: #C9A227;
-          text-decoration: none;
-          font-weight: 600;
-          transition: all 0.2s ease;
-        }
-
-        .home-hero-register a:hover {
-          color: #E8D9A8;
         }
 
         .home-hero-partners {

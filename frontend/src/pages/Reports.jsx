@@ -43,7 +43,8 @@ export default function Reports() {
       const role = userData.role;
       
       // Проверка прав доступа
-      if (!['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(role)) {
+      const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'];
+      if (!allowedRoles.includes(role)) {
         navigate('/dashboard');
         return;
       }
@@ -57,14 +58,18 @@ export default function Reports() {
 
       let filteredReports = [];
 
-      // Координатор КЮДа видит только отчёты своего клуба
+      // ============================================================
+      // КООРДИНАТОР КЮДА - ТОЛЬКО СВОЙ КЛУБ
+      // ============================================================
       if (role === 'club_coordinator') {
-        // Получаем клуб координатора
         let coordinatorClubId = userData.club_id;
         
         if (!coordinatorClubId) {
           try {
-            const coordResponse = await fetch(`https://dod-backend.relaxdev.ru/api/club-coordinators?profile_id=${userData.id}`);
+            const coordResponse = await fetch(
+              `https://dod-backend.relaxdev.ru/api/club-coordinators?profile_id=${userData.id}`,
+              { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+            );
             const coordData = await coordResponse.json();
             if (coordData && coordData.length > 0) {
               coordinatorClubId = coordData[0].club_id;
@@ -76,21 +81,33 @@ export default function Reports() {
 
         if (coordinatorClubId) {
           filteredReports = reportsData.filter(r => r.club_id === coordinatorClubId);
+          console.log(`🏫 Координатор КЮДа: показано ${filteredReports.length} отчётов для клуба ${coordinatorClubId}`);
         } else {
           filteredReports = [];
+          console.log('❌ Клуб координатора не найден');
         }
       } 
-      // Админ, координатор движения, президент, вице-президент видят все отчёты
+      // ============================================================
+      // АДМИН, КООРДИНАТОР ДВИЖЕНИЯ, ПРЕЗИДЕНТ, ВИЦЕ-ПРЕЗИДЕНТ - ВСЕ ОТЧЁТЫ
+      // ============================================================
       else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
         filteredReports = reportsData || [];
+        console.log(`👑 ${role}: показано ${filteredReports.length} отчётов`);
       } 
       else {
         filteredReports = [];
       }
 
-      console.log('📥 Загружено отчётов:', filteredReports.length);
       setAllReports(filteredReports);
       setReports(filteredReports);
+
+      // Для координатора КЮДа предзаполняем клуб в форме
+      if (role === 'club_coordinator') {
+        const coordClubId = userData.club_id || filteredReports[0]?.club_id;
+        if (coordClubId) {
+          setForm(prev => ({ ...prev, club_id: coordClubId }));
+        }
+      }
 
     } catch (err) {
       console.error('Ошибка загрузки:', err);
@@ -153,7 +170,6 @@ export default function Reports() {
       let result;
 
       if (form.id) {
-        // Обновление отчёта
         response = await fetch(`https://dod-backend.relaxdev.ru/api/reports/${form.id}`, {
           method: 'PUT',
           headers: {
@@ -164,7 +180,6 @@ export default function Reports() {
         });
         result = await response.json();
       } else {
-        // Создание отчёта
         response = await fetch('https://dod-backend.relaxdev.ru/api/reports', {
           method: 'POST',
           headers: {
@@ -184,7 +199,7 @@ export default function Reports() {
       setMessageType('success');
       setForm({
         id: null,
-        club_id: '',
+        club_id: profile?.role === 'club_coordinator' ? profile?.club_id || '' : '',
         report_month: '',
         report_text: '',
         events_count: 0,
@@ -371,6 +386,11 @@ export default function Reports() {
     );
   }
 
+  // Получаем клуб координатора для отображения в заголовке
+  const coordinatorClubName = isClubCoordinator 
+    ? clubs.find(c => c.id === profile?.club_id)?.name || 'вашего клуба'
+    : '';
+
   return (
     <div className="page-background">
       <Navigation profile={profile} />
@@ -378,7 +398,7 @@ export default function Reports() {
         <div className="page-header">
           <span style={{ fontSize: '32px' }}>📋</span>
           <div>
-            <h1>{isClubCoordinator ? 'Отчёты моего клуба' : 'Отчёты КЮДов'}</h1>
+            <h1>{isClubCoordinator ? `Отчёты ${coordinatorClubName}` : 'Отчёты КЮДов'}</h1>
             <p>
               {isClubCoordinator 
                 ? `Ежемесячные отчёты вашего клуба (${reports.length})` 
@@ -478,12 +498,18 @@ export default function Reports() {
                   value={form.club_id}
                   onChange={(e) => setForm({ ...form, club_id: e.target.value })}
                   required
+                  disabled={isClubCoordinator}
                 >
                   <option value="">Выберите клуб</option>
                   {clubs.map((club) => (
                     <option key={club.id} value={club.id}>{club.name}</option>
                   ))}
                 </select>
+                {isClubCoordinator && (
+                  <div style={{ fontSize: '12px', color: '#98A2B3', marginTop: '4px' }}>
+                    🔒 Вы можете создавать отчёты только для своего клуба
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
@@ -542,7 +568,7 @@ export default function Reports() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
-              {isClubCoordinator ? 'Отчёты вашего клуба' : 'Все отчёты'}
+              {isClubCoordinator ? `Отчёты ${coordinatorClubName}` : 'Все отчёты'}
             </h3>
             <span style={{ fontSize: '13px', color: '#667085' }}>
               Всего: {reports.length}
@@ -552,7 +578,7 @@ export default function Reports() {
           {reports.length === 0 ? (
             <div className="empty-state">
               <div className="icon">📄</div>
-              <p>Отчётов пока нет</p>
+              <p>{isClubCoordinator ? 'У вашего клуба пока нет отчётов' : 'Отчётов пока нет'}</p>
               {canCreate && (
                 <p style={{ fontSize: '13px', color: '#98A2B3' }}>
                   Создайте первый отчёт или используйте шаблон
@@ -567,6 +593,7 @@ export default function Reports() {
                 const isSubmitted = report.status === 'submitted';
                 const isApproved = report.status === 'approved';
                 const isRejected = report.status === 'rejected';
+                const canEdit = isClubCoordinator || profile?.role === 'admin' || profile?.role === 'movement_coordinator';
                 
                 return (
                   <div
@@ -623,7 +650,7 @@ export default function Reports() {
                         👁️ Открыть
                       </button>
                       
-                      {canCreate && isDraft && (
+                      {canCreate && isDraft && canEdit && (
                         <>
                           <button
                             className="btn-secondary"

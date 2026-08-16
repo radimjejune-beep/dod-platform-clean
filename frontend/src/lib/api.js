@@ -867,7 +867,7 @@ export const getConsentsMissing = async (clubId = null) => {
 };
 
 // ============================================================
-// ОТЧЁТЫ
+// ОТЧЁТЫ (ДОБАВИТЬ В КОНЕЦ ФАЙЛА)
 // ============================================================
 
 export const getReports = async () => {
@@ -1071,6 +1071,14 @@ const api = {
   // Согласия
   getConsentsStats,
   getConsentsMissing,
+  // ===== ОТЧЁТЫ =====
+  getReports,
+  createReport,
+  updateReport,
+  deleteReport,
+  submitReport,
+  approveReport,
+  rejectReport,
 };
 
 export default api;

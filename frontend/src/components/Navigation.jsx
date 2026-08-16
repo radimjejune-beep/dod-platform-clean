@@ -1,6 +1,6 @@
 // frontend/src/components/Navigation.jsx
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/Image.png';
 
@@ -10,11 +10,13 @@ export default function Navigation({ profile }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const profileRef = useRef(null);
   const notificationRef = useRef(null);
   const menuRef = useRef(null);
+  const notificationLoadedRef = useRef(false);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -33,15 +35,17 @@ export default function Navigation({ profile }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Загружаем уведомления только один раз при монтировании
   useEffect(() => {
-    if (profile) {
+    if (profile && !notificationLoadedRef.current) {
+      notificationLoadedRef.current = true;
       loadNotifications();
-      const interval = setInterval(loadNotifications, 30000);
-      return () => clearInterval(interval);
     }
   }, [profile]);
 
   const loadNotifications = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -57,6 +61,8 @@ export default function Navigation({ profile }) {
       }
     } catch (error) {
       console.error('Ошибка загрузки уведомлений:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -76,7 +82,11 @@ export default function Navigation({ profile }) {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      loadNotifications();
+      // Обновляем локально без перезагрузки
+      setNotifications(prev => prev.map(n => 
+        n.id === id ? { ...n, read: true } : n
+      ));
+      setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Ошибка:', error);
     }
@@ -89,7 +99,8 @@ export default function Navigation({ profile }) {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      loadNotifications();
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
     } catch (error) {
       console.error('Ошибка:', error);
     }
@@ -130,7 +141,6 @@ export default function Navigation({ profile }) {
     const isPresident = profile?.is_president || false;
     const items = [];
 
-    // Базовые пункты для всех
     items.push({ path: '/dashboard', label: '📊 Дашборд' });
 
     if (role === 'participant' || role === 'parent') {
@@ -209,7 +219,7 @@ export default function Navigation({ profile }) {
 
   const menuItems = getMenuItems();
 
-  // Если нет профиля — показываем только логотип и вход
+  // Если нет профиля
   if (!profile) {
     return (
       <nav className="nav">
@@ -274,18 +284,15 @@ export default function Navigation({ profile }) {
   return (
     <nav className="nav">
       <div className="nav-container">
-        {/* ЛОГО */}
         <Link to="/" className="nav-logo">
           <img src={logo} alt="ДОД" />
           <span>Дипломаты будущего</span>
         </Link>
 
-        {/* ГАМБУРГЕР (на всех размерах) */}
         <button className="nav-mobile-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)}>
           ☰
         </button>
 
-        {/* ДЕСКТОПНОЕ МЕНЮ */}
         <div className="nav-desktop-menu">
           {menuItems.map((item) => (
             <Link
@@ -298,9 +305,7 @@ export default function Navigation({ profile }) {
           ))}
         </div>
 
-        {/* ПРАВАЯ ЧАСТЬ */}
         <div className="nav-right">
-          {/* УВЕДОМЛЕНИЯ */}
           <div className="nav-notifications" ref={notificationRef}>
             <button
               className="nav-notif-btn"
@@ -348,7 +353,6 @@ export default function Navigation({ profile }) {
             )}
           </div>
 
-          {/* ПРОФИЛЬ */}
           <div className="nav-profile" ref={profileRef}>
             <button
               className="nav-profile-btn"
@@ -400,7 +404,6 @@ export default function Navigation({ profile }) {
         </div>
       </div>
 
-      {/* МОБИЛЬНОЕ МЕНЮ (РАСКРЫВАЮЩЕЕСЯ) */}
       {isMenuOpen && (
         <div className="nav-mobile-menu" ref={menuRef}>
           {menuItems.map((item) => (
@@ -456,7 +459,6 @@ export default function Navigation({ profile }) {
           color: #0B1F3A;
           flex-shrink: 0;
         }
-
         .nav-logo img { height: 32px; width: auto; }
 
         .nav-desktop-menu {
@@ -478,7 +480,6 @@ export default function Navigation({ profile }) {
           transition: all 0.2s ease;
           white-space: nowrap;
         }
-
         .nav-link:hover { background: #F4F6F9; color: #0B1F3A; }
         .nav-link.active { background: #FBF4DC; color: #8A6A00; }
 
@@ -505,7 +506,6 @@ export default function Navigation({ profile }) {
           align-items: center;
           justify-content: center;
         }
-
         .nav-notif-btn:hover { background: #F4F6F9; }
 
         .nav-notif-badge {
@@ -569,7 +569,6 @@ export default function Navigation({ profile }) {
           cursor: pointer;
           transition: background 0.2s ease;
         }
-
         .nav-notif-item:hover { background: #F8FAFC; }
         .nav-notif-item.unread { background: #FBF4DC; border-left: 3px solid #C9A227; }
 
@@ -761,7 +760,6 @@ export default function Navigation({ profile }) {
         }
         .nav-mobile-logout:hover { background: #FCEBEC; }
 
-        /* ГАМБУРГЕР ВСЕГДА ВИДЕН НА МОБИЛКЕ */
         @media (max-width: 1024px) {
           .nav-desktop-menu { display: none; }
           .nav-mobile-toggle { display: block; }
@@ -770,7 +768,6 @@ export default function Navigation({ profile }) {
           .nav-profile-arrow { display: none; }
         }
 
-        /* НА МАЛЕНЬКИХ ЭКРАНАХ */
         @media (max-width: 768px) {
           .nav { padding: 0 16px; }
           .nav-logo span { display: none; }

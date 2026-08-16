@@ -1,6 +1,6 @@
 // frontend/src/components/Navigation.jsx
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/Image.png';
 
@@ -10,12 +10,17 @@ export default function Navigation({ profile }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationsLoaded, setNotificationsLoaded] = useState(false);
+  
   const navigate = useNavigate();
   const location = useLocation();
   const profileRef = useRef(null);
   const notificationRef = useRef(null);
   const menuRef = useRef(null);
 
+  // ============================================================
+  // ЗАКРЫТИЕ ПОПАПОВ ПРИ КЛИКЕ ВНЕ
+  // ============================================================
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
@@ -33,13 +38,12 @@ export default function Navigation({ profile }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (profile) {
-      loadNotifications();
-    }
-  }, [profile]);
-
-  const loadNotifications = async () => {
+  // ============================================================
+  // ЗАГРУЗКА УВЕДОМЛЕНИЙ — ТОЛЬКО 1 РАЗ
+  // ============================================================
+  const loadNotifications = useCallback(async () => {
+    if (notificationsLoaded) return; // ✅ Уже загружены
+    
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -52,21 +56,32 @@ export default function Navigation({ profile }) {
         const data = await response.json();
         setNotifications(data || []);
         setUnreadCount(data.filter(n => !n.read).length);
+        setNotificationsLoaded(true); // ✅ Помечаем как загруженные
       }
     } catch (error) {
       console.error('Ошибка загрузки уведомлений:', error);
     }
-  };
+  }, [notificationsLoaded]);
 
+  // ✅ Загружаем уведомления ТОЛЬКО при первом появлении profile
+  useEffect(() => {
+    if (profile && !notificationsLoaded) {
+      loadNotifications();
+    }
+  }, [profile, notificationsLoaded, loadNotifications]);
+
+  // ============================================================
+  // ВЫХОД
+  // ============================================================
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    sessionStorage.removeItem('sessionId');
-    sessionStorage.removeItem('userId');
-    sessionStorage.removeItem('userRole');
     navigate('/login');
   };
 
+  // ============================================================
+  // ОТМЕТКА О ПРОЧТЕНИИ
+  // ============================================================
   const handleNotificationClick = async (id) => {
     try {
       const token = localStorage.getItem('token');
@@ -74,12 +89,20 @@ export default function Navigation({ profile }) {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      loadNotifications();
+      
+      // Обновляем локально
+      setNotifications(prev => 
+        prev.map(n => n.id === id ? { ...n, read: true } : n)
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Ошибка:', error);
     }
   };
 
+  // ============================================================
+  // ОТМЕТКА ВСЕХ КАК ПРОЧИТАННЫХ
+  // ============================================================
   const markAllRead = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -87,12 +110,17 @@ export default function Navigation({ profile }) {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      loadNotifications();
+      
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
     } catch (error) {
       console.error('Ошибка:', error);
     }
   };
 
+  // ============================================================
+  // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+  // ============================================================
   const getRoleLabel = (role) => {
     const labels = {
       'participant': '👤 Участник',
@@ -141,6 +169,7 @@ export default function Navigation({ profile }) {
     }
 
     if (role === 'club_coordinator') {
+      items.push({ path: '/club-coordinator-dashboard', label: '🏫 Дашборд КЮДа' });
       items.push({ path: '/clubs', label: '🏫 Мой КЮД' });
       items.push({ path: '/events', label: '📅 Мероприятия' });
       items.push({ path: '/participants', label: '👥 Участники' });
@@ -152,6 +181,7 @@ export default function Navigation({ profile }) {
     }
 
     if (role === 'tutor') {
+      items.push({ path: '/tutor-dashboard', label: '📚 Дашборд тьютора' });
       items.push({ path: '/clubs', label: '🏫 КЮДы' });
       items.push({ path: '/events', label: '📅 Мероприятия' });
       items.push({ path: '/participants', label: '👥 Участники' });
@@ -164,31 +194,33 @@ export default function Navigation({ profile }) {
     }
 
     if (role === 'movement_coordinator' || role === 'admin') {
+      items.push({ path: '/coordinator-dashboard', label: '⭐ Дашборд' });
       items.push({ path: '/clubs', label: '🏫 КЮДы' });
       items.push({ path: '/clubs-management', label: '⚙️ Управление КЮДами' });
       items.push({ path: '/events', label: '📅 Мероприятия' });
       items.push({ path: '/participants', label: '👥 Участники' });
       items.push({ path: '/achievements', label: '🏆 Достижения' });
-      items.push({ path: '/achievements-categories', label: '🏷️ Категории достижений' });
+      items.push({ path: '/achievements-categories', label: '🏷️ Категории' });
       items.push({ path: '/reports', label: '📋 Отчёты' });
       items.push({ path: '/analytics', label: '📊 Аналитика' });
       items.push({ path: '/appeals', label: '📨 Обращения' });
-      items.push({ path: '/documents-center', label: '📁 Центр документов' });
-      items.push({ path: '/mass-notifications', label: '📨 Массовые уведомления' });
-      items.push({ path: '/notification-history', label: '📋 История уведомлений' });
-      items.push({ path: '/activity-log', label: '📋 Журнал действий' });
+      items.push({ path: '/documents-center', label: '📁 Документы' });
+      items.push({ path: '/mass-notifications', label: '📨 Уведомления' });
+      items.push({ path: '/notification-history', label: '📋 История' });
+      items.push({ path: '/activity-log', label: '📋 Журнал' });
       items.push({ path: '/consents-management', label: '📝 Согласия' });
       items.push({ path: '/goals', label: '🎯 Цели и KPI' });
-      items.push({ path: '/tasks-planner', label: '📅 Планировщик задач' });
+      items.push({ path: '/tasks-planner', label: '📅 Планировщик' });
       items.push({ path: '/admin/users', label: '👥 Пользователи' });
       if (role === 'admin') {
         items.push({ path: '/admin/invite', label: '🎫 Пригласить' });
-        items.push({ path: '/import-participants', label: '📥 Импорт участников' });
+        items.push({ path: '/import-participants', label: '📥 Импорт' });
         items.push({ path: '/settings', label: '⚙️ Настройки' });
       }
     }
 
     if (role === 'president' || role === 'vice_president') {
+      items.push({ path: '/dashboard', label: '📊 Дашборд' });
       items.push({ path: '/clubs', label: '🏫 КЮДы' });
       items.push({ path: '/events', label: '📅 Мероприятия' });
       items.push({ path: '/participants', label: '👥 Участники' });
@@ -196,7 +228,7 @@ export default function Navigation({ profile }) {
       items.push({ path: '/reports', label: '📋 Отчёты' });
       items.push({ path: '/analytics', label: '📊 Аналитика' });
       items.push({ path: '/appeals', label: '📨 Обращения' });
-      items.push({ path: '/documents-center', label: '📁 Центр документов' });
+      items.push({ path: '/documents-center', label: '📁 Документы' });
       items.push({ path: '/president-tasks', label: '👑 Задания' });
       items.push({ path: '/club-rating', label: '🏆 Рейтинг' });
     }
@@ -206,6 +238,9 @@ export default function Navigation({ profile }) {
 
   const menuItems = getMenuItems();
 
+  // ============================================================
+  // НЕ АВТОРИЗОВАН
+  // ============================================================
   if (!profile) {
     return (
       <nav className="nav">
@@ -267,6 +302,9 @@ export default function Navigation({ profile }) {
     );
   }
 
+  // ============================================================
+  // АВТОРИЗОВАН
+  // ============================================================
   return (
     <nav className="nav">
       <div className="nav-container">

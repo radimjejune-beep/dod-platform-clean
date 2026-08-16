@@ -17,7 +17,8 @@ export default function MyReportTemplates() {
   const [clubs, setClubs] = useState([]);
   const [form, setForm] = useState({
     club_id: '',
-    report_month: ''
+    report_month: '',
+    report_text: ''
   });
   const navigate = useNavigate();
 
@@ -45,7 +46,6 @@ export default function MyReportTemplates() {
         api.getClubs()
       ]);
 
-      console.log('📥 Загружено шаблонов:', templatesData?.length || 0);
       setTemplates(templatesData || []);
       setClubs(clubsData || []);
 
@@ -69,9 +69,11 @@ export default function MyReportTemplates() {
 
   const handleUseTemplate = (template) => {
     setSelectedTemplate(template);
+    // Загружаем текст шаблона в форму
     setForm({
       club_id: profile?.club_id || '',
-      report_month: ''
+      report_month: '',
+      report_text: template.template_data || ''
     });
     setShowUseModal(true);
   };
@@ -106,10 +108,9 @@ export default function MyReportTemplates() {
         return;
       }
 
-      // Проверяем формат месяца
       const monthRegex = /^\d{4}-\d{2}$/;
       if (!monthRegex.test(form.report_month)) {
-        setMessage('❌ Неверный формат месяца. Используйте YYYY-MM (например: 2026-08)');
+        setMessage('❌ Неверный формат месяца. Используйте YYYY-MM');
         setMessageType('error');
         setLoading(false);
         return;
@@ -136,7 +137,7 @@ export default function MyReportTemplates() {
       console.log('📥 Ответ сервера:', result);
 
       if (!response.ok) {
-        throw new Error(result.error || 'Ошибка создания отчёта');
+        throw new Error(result.error || result.detail || 'Ошибка создания отчёта');
       }
 
       setMessage('✅ Отчёт создан из шаблона!');
@@ -145,7 +146,8 @@ export default function MyReportTemplates() {
       setSelectedTemplate(null);
       setForm({
         club_id: profile?.club_id || '',
-        report_month: ''
+        report_month: '',
+        report_text: ''
       });
       
       setTimeout(() => setMessage(''), 3000);
@@ -170,17 +172,6 @@ export default function MyReportTemplates() {
     return labels[category] || category;
   };
 
-  const getRoleSpecificMessage = () => {
-    const role = profile?.role;
-    if (role === 'club_coordinator') {
-      return 'Используйте готовые шаблоны для отчётов вашего клуба';
-    }
-    if (role === 'tutor') {
-      return 'Используйте готовые шаблоны для отчётов';
-    }
-    return 'Используйте готовые шаблоны для быстрого создания отчётов';
-  };
-
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
@@ -197,7 +188,7 @@ export default function MyReportTemplates() {
           <span style={{ fontSize: '32px' }}>📋</span>
           <div>
             <h1>Шаблоны отчётов</h1>
-            <p>{getRoleSpecificMessage()}</p>
+            <p>Используйте готовые шаблоны для быстрого создания отчётов</p>
           </div>
         </div>
 
@@ -211,11 +202,6 @@ export default function MyReportTemplates() {
           <div className="empty-state">
             <div className="icon">📋</div>
             <p>Шаблонов пока нет</p>
-            <p style={{ fontSize: '13px', color: '#98A2B3' }}>
-              {profile?.role === 'club_coordinator' 
-                ? 'Координатор движения создаст шаблоны, которые появятся здесь'
-                : 'Обратитесь к координатору движения для создания шаблонов'}
-            </p>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '16px' }}>
@@ -287,7 +273,7 @@ export default function MyReportTemplates() {
         )}
       </div>
 
-      {/* ===== МОДАЛЬНОЕ ОКНО ДЛЯ ПРОСМОТРА ШАБЛОНА ===== */}
+      {/* МОДАЛЬНОЕ ОКНО ДЛЯ ПРОСМОТРА ШАБЛОНА */}
       {showModal && selectedTemplate && (
         <div
           style={{
@@ -317,8 +303,7 @@ export default function MyReportTemplates() {
               padding: '32px',
               maxHeight: '80vh',
               overflow: 'auto',
-              position: 'relative',
-              animation: 'modalSlideIn 0.3s ease'
+              position: 'relative'
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -335,11 +320,8 @@ export default function MyReportTemplates() {
                 border: 'none',
                 fontSize: '24px',
                 color: '#98A2B3',
-                cursor: 'pointer',
-                transition: 'color 0.2s ease'
+                cursor: 'pointer'
               }}
-              onMouseEnter={(e) => e.target.style.color = '#0B1F3A'}
-              onMouseLeave={(e) => e.target.style.color = '#98A2B3'}
             >
               ✕
             </button>
@@ -404,7 +386,7 @@ export default function MyReportTemplates() {
         </div>
       )}
 
-      {/* ===== МОДАЛЬНОЕ ОКНО ДЛЯ СОЗДАНИЯ ОТЧЁТА ИЗ ШАБЛОНА ===== */}
+      {/* МОДАЛЬНОЕ ОКНО ДЛЯ СОЗДАНИЯ ОТЧЁТА ИЗ ШАБЛОНА */}
       {showUseModal && selectedTemplate && (
         <div
           style={{
@@ -429,13 +411,12 @@ export default function MyReportTemplates() {
           <div
             className="card"
             style={{
-              maxWidth: '500px',
+              maxWidth: '600px',
               width: '100%',
               padding: '32px',
               maxHeight: '90vh',
               overflow: 'auto',
-              position: 'relative',
-              animation: 'modalSlideIn 0.3s ease'
+              position: 'relative'
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -452,11 +433,8 @@ export default function MyReportTemplates() {
                 border: 'none',
                 fontSize: '24px',
                 color: '#98A2B3',
-                cursor: 'pointer',
-                transition: 'color 0.2s ease'
+                cursor: 'pointer'
               }}
-              onMouseEnter={(e) => e.target.style.color = '#0B1F3A'}
-              onMouseLeave={(e) => e.target.style.color = '#98A2B3'}
             >
               ✕
             </button>
@@ -497,26 +475,31 @@ export default function MyReportTemplates() {
                   required
                 />
                 <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                  📅 Формат: YYYY-MM (например: 2026-08)
+                  📅 Формат: YYYY-MM
                 </div>
               </div>
 
-              <div style={{
-                padding: '12px',
-                background: '#F8FAFC',
-                borderRadius: '8px',
-                fontSize: '13px',
-                color: '#667085',
-                border: '1px solid #E2E7EF',
-                marginBottom: '16px',
-                maxHeight: '100px',
-                overflow: 'auto',
-                whiteSpace: 'pre-wrap'
-              }}>
-                <strong>📋 Предпросмотр шаблона:</strong>
-                <div style={{ marginTop: '4px', fontSize: '13px', lineHeight: '1.5' }}>
-                  {selectedTemplate.template_data?.substring(0, 150) || 'Нет данных'}
-                  {selectedTemplate.template_data?.length > 150 && '...'}
+              <div className="form-group">
+                <label>Текст отчёта (из шаблона)</label>
+                <textarea
+                  rows="6"
+                  value={form.report_text}
+                  onChange={(e) => setForm({ ...form, report_text: e.target.value })}
+                  placeholder="Текст отчёта будет подставлен из шаблона"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '1.5px solid #D5DCE7',
+                    borderRadius: '10px',
+                    fontSize: '14px',
+                    resize: 'vertical',
+                    minHeight: '120px',
+                    fontFamily: 'monospace',
+                    background: '#F8FAFC'
+                  }}
+                />
+                <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                  📝 Шаблон загружен. Вы можете отредактировать текст перед созданием отчёта.
                 </div>
               </div>
 
@@ -539,19 +522,6 @@ export default function MyReportTemplates() {
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes modalSlideIn {
-          from {
-            opacity: 0;
-            transform: translateY(30px) scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-      `}</style>
     </div>
   );
 }

@@ -2,184 +2,186 @@
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import api from './lib/api';
 
-// Страницы
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
-import Events from './pages/Events';
-import Calendar from './pages/Calendar';
-import Clubs from './pages/Clubs';
-import ClubDetail from './pages/ClubDetail';
-import ClubPresident from './pages/ClubPresident';
-import ClubRating from './pages/ClubRating';
-import Participants from './pages/Participants';
-import ParticipantProfile from './pages/ParticipantProfile';
-import ParticipantEdit from './pages/ParticipantEdit';
-import Achievements from './pages/Achievements';
-import ManageAchievements from './pages/ManageAchievements';
-import MyAchievements from './pages/MyAchievements';
-import Reports from './pages/Reports';
-import Analytics from './pages/Analytics';
-import DashboardAnalytics from './pages/DashboardAnalytics';
-import ClubAnalytics from './pages/ClubAnalytics';
-import Appeals from './pages/Appeals';
-import AdminUsers from './pages/AdminUsers';
-import AdminInvite from './pages/AdminInvite';
-import AdminNews from './pages/AdminNews';
-import Settings from './pages/Settings';
-import ImportParticipants from './pages/ImportParticipants';
-import ParentDashboard from './pages/ParentDashboard';
-import ParticipantDashboard from './pages/ParticipantDashboard';
-import ClubCoordinatorDashboard from './pages/ClubCoordinatorDashboard';
-import TutorDashboard from './pages/TutorDashboard';
-import TutorJournal from './pages/TutorJournal';
-import MyReviews from './pages/MyReviews';
-import MyJournal from './pages/MyJournal';
-import TutorRequests from './pages/TutorRequests';
-import TutorInvitations from './pages/TutorInvitations';
-import StaffManagement from './pages/StaffManagement';
-import StaffCalendar from './pages/StaffCalendar';
-import PresidentTasks from './pages/PresidentTasks';
-import ClubCalendar from './pages/ClubCalendar';
-import MyClubEvents from './pages/MyClubEvents';
-import NewsDetail from './pages/NewsDetail';
-import OfficialDocuments from './pages/OfficialDocuments';
-import TutorAssignments from './pages/TutorAssignments';
-import CoordinatorDashboard from './pages/CoordinatorDashboard';
-import ClubsManagement from './pages/ClubsManagement';
-import MassNotifications from './pages/MassNotifications';
-import ConsentsManagement from './pages/ConsentsManagement';
-import DocumentsCenter from './pages/DocumentsCenter';
-import TasksPlanner from './pages/TasksPlanner';
-import ActivityLog from './pages/ActivityLog';
-import AchievementsCategories from './pages/AchievementsCategories';
-import NotificationHistory from './pages/NotificationHistory';
-
-function App() {
+// МИНИМАЛЬНАЯ СТРАНИЦА
+function MinimalDashboard() {
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      api.getMe()
-        .then(user => {
-          if (user && user.id) {
-            setProfile(user);
-          }
-        })
-        .catch(() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
+    if (!token) {
+      window.location.href = '/login';
+      return;
     }
+
+    fetch('https://dod-backend.relaxdev.ru/api/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Unauthorized');
+        return res.json();
+      })
+      .then(data => {
+        console.log('✅ ПОЛЬЗОВАТЕЛЬ ЗАГРУЖЕН:', data);
+        setUser(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('❌ ОШИБКА:', err);
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      });
   }, []);
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
-        <div className="spinner" />
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div>
+          <h2>⏳ Загрузка...</h2>
+          <p style={{ color: '#667085' }}>Проверка авторизации...</p>
+        </div>
       </div>
     );
   }
 
   return (
+    <div style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
+      <h1>✅ СТРАНИЦА РАБОТАЕТ!</h1>
+      <div style={{ background: '#F8FAFC', padding: '20px', borderRadius: '8px' }}>
+        <p><strong>👤 Пользователь:</strong> {user?.full_name}</p>
+        <p><strong>📧 Email:</strong> {user?.email}</p>
+        <p><strong>🎭 Роль:</strong> {user?.role}</p>
+        <p><strong>🏫 Клуб:</strong> {user?.club_id || 'Не указан'}</p>
+      </div>
+      <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+        <button 
+          onClick={() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+          }}
+          style={{ padding: '10px 20px', background: '#B3262E', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+        >
+          🚪 Выйти
+        </button>
+        <button 
+          onClick={() => window.location.reload()}
+          style={{ padding: '10px 20px', background: '#174A7E', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+        >
+          🔄 Обновить
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// МИНИМАЛЬНЫЙ ЛОГИН
+function MinimalLogin() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('https://dod-backend.relaxdev.ru/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Ошибка входа');
+      }
+
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        window.location.href = '/dashboard';
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ maxWidth: '400px', margin: '100px auto', padding: '40px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+      <h1 style={{ textAlign: 'center', marginBottom: '8px' }}>🔐 Вход</h1>
+      <p style={{ textAlign: 'center', color: '#667085', marginBottom: '24px' }}>Войдите в систему</p>
+
+      {error && (
+        <div style={{ padding: '12px', background: '#FCEBEC', color: '#B3262E', borderRadius: '8px', marginBottom: '16px' }}>
+          ❌ {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Введите email"
+            required
+            style={{ width: '100%', padding: '10px', border: '1px solid #E2E7EF', borderRadius: '8px', fontSize: '14px' }}
+          />
+        </div>
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>Пароль</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Введите пароль"
+            required
+            style={{ width: '100%', padding: '10px', border: '1px solid #E2E7EF', borderRadius: '8px', fontSize: '14px' }}
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #C9A227, #B8921F)', color: '#0B1F3A', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: 'pointer' }}
+        >
+          {loading ? '⏳ Вход...' : '🔑 Войти'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// ============================================================
+// APP
+// ============================================================
+function App() {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Просто проверяем токен
+    const token = localStorage.getItem('token');
+    setLoading(false);
+  }, []);
+
+  if (loading) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>⏳</div>;
+  }
+
+  return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/profile" element={<Profile />} />
-        
-        {/* Мероприятия */}
-        <Route path="/events" element={<Events />} />
-        <Route path="/calendar" element={<Calendar />} />
-        
-        {/* Клубы */}
-        <Route path="/clubs" element={<Clubs />} />
-        <Route path="/club/:id" element={<ClubDetail />} />
-        <Route path="/club/:clubId/president" element={<ClubPresident />} />
-        <Route path="/club-rating" element={<ClubRating />} />
-        <Route path="/club-analytics" element={<ClubAnalytics />} />
-        
-        {/* Участники */}
-        <Route path="/participants" element={<Participants />} />
-        <Route path="/participant/:id" element={<ParticipantProfile />} />
-        <Route path="/participant/:id/edit" element={<ParticipantEdit />} />
-        
-        {/* Достижения */}
-        <Route path="/achievements" element={<Achievements />} />
-        <Route path="/manage-achievements" element={<ManageAchievements />} />
-        <Route path="/my-achievements" element={<MyAchievements />} />
-        
-        {/* Отчёты и аналитика */}
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/dashboard-analytics" element={<DashboardAnalytics />} />
-        
-        {/* Обращения */}
-        <Route path="/appeals" element={<Appeals />} />
-        
-        {/* Админка */}
-        <Route path="/admin/users" element={<AdminUsers />} />
-        <Route path="/admin/invite" element={<AdminInvite />} />
-        <Route path="/admin/news" element={<AdminNews />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/import-participants" element={<ImportParticipants />} />
-        
-        {/* Родитель */}
-        <Route path="/parent-dashboard" element={<ParentDashboard />} />
-        
-        {/* Участник */}
-        <Route path="/participant-dashboard" element={<ParticipantDashboard />} />
-        
-        {/* Координатор КЮДа */}
-        <Route path="/club-coordinator-dashboard" element={<ClubCoordinatorDashboard />} />
-        
-        {/* Тьютор */}
-        <Route path="/tutor-dashboard" element={<TutorDashboard />} />
-        <Route path="/tutor-journal/:eventId" element={<TutorJournal />} />
-        <Route path="/my-reviews" element={<MyReviews />} />
-        <Route path="/my-journal" element={<MyJournal />} />
-        <Route path="/tutor-requests" element={<TutorRequests />} />
-        <Route path="/tutor-invitations" element={<TutorInvitations />} />
-        <Route path="/tutor-assignments" element={<TutorAssignments />} />
-        
-        {/* Сотрудники */}
-        <Route path="/staff" element={<StaffManagement />} />
-        <Route path="/staff-calendar" element={<StaffCalendar />} />
-        
-        {/* Президент */}
-        <Route path="/president-tasks" element={<PresidentTasks />} />
-        
-        {/* Клуб */}
-        <Route path="/club-calendar" element={<ClubCalendar />} />
-        <Route path="/my-club-events" element={<MyClubEvents />} />
-        
-        {/* Новости */}
-        <Route path="/news/:id" element={<NewsDetail />} />
-        
-        {/* Официальные документы */}
-        <Route path="/documents" element={<OfficialDocuments />} />
-        
-        <Route path="/coordinator-dashboard" element={<CoordinatorDashboard />} />
-        <Route path="/clubs-management" element={<ClubsManagement />} />
-        <Route path="/mass-notifications" element={<MassNotifications />} />
-        <Route path="/consents-management" element={<ConsentsManagement />} />
-        <Route path="/documents-center" element={<DocumentsCenter />} />
-        <Route path="/tasks-planner" element={<TasksPlanner />} />
-        <Route path="/activity-log" element={<ActivityLog />} />
-        <Route path="/achievements-categories" element={<AchievementsCategories />} />
-        <Route path="/notification-history" element={<NotificationHistory />} />
-
-        {/* Редирект */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/login" element={<MinimalLogin />} />
+        <Route path="/dashboard" element={<MinimalDashboard />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );

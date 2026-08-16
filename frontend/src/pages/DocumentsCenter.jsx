@@ -16,6 +16,8 @@ export default function DocumentsCenter() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [clubs, setClubs] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState(null);
   const [form, setForm] = useState({
     title: '',
     content: '',
@@ -40,7 +42,6 @@ export default function DocumentsCenter() {
         return;
       }
 
-      // Проверка прав - участники, родители и президенты клубов не видят документы
       const isPresident = userData.is_president || false;
       if (userData.role === 'participant' || userData.role === 'parent' || isPresident) {
         navigate('/dashboard');
@@ -52,7 +53,6 @@ export default function DocumentsCenter() {
       const clubsData = await api.getClubs();
       setClubs(clubsData || []);
 
-      // Загружаем документы
       const token = localStorage.getItem('token');
       console.log('📥 Загрузка документов...');
       
@@ -215,6 +215,27 @@ export default function DocumentsCenter() {
       console.error('❌ Ошибка:', err);
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
+    }
+  };
+
+  const handleOpenModal = (doc) => {
+    setSelectedDocument(doc);
+    setShowModal(true);
+    // Отметка о прочтении
+    markAsRead(doc.id);
+  };
+
+  const markAsRead = async (docId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`https://dod-backend.relaxdev.ru/api/documents/${docId}/read`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+    } catch (err) {
+      console.error('Ошибка отметки о прочтении:', err);
     }
   };
 
@@ -418,6 +439,7 @@ export default function DocumentsCenter() {
           </div>
         </div>
 
+        {/* СПИСОК ДОКУМЕНТОВ */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
@@ -451,7 +473,20 @@ export default function DocumentsCenter() {
                   <div
                     key={doc.id}
                     className="list-item"
-                    style={{ borderLeftColor: doc.is_public ? '#174A7E' : '#C9A227' }}
+                    style={{ 
+                      borderLeftColor: doc.is_public ? '#174A7E' : '#C9A227',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onClick={() => handleOpenModal(doc)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#F8FAFC';
+                      e.currentTarget.style.transform = 'translateX(4px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.transform = 'translateX(0)';
+                    }}
                   >
                     <div className="title">
                       {doc.title}
@@ -477,15 +512,28 @@ export default function DocumentsCenter() {
                     </div>
                     {doc.content && (
                       <div className="meta">
-                        {doc.content.length > 200 ? doc.content.substring(0, 200) + '...' : doc.content}
+                        {doc.content.length > 150 ? doc.content.substring(0, 150) + '...' : doc.content}
                       </div>
                     )}
                     <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <button
+                        className="btn-primary"
+                        style={{ padding: '4px 12px', fontSize: '12px' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenModal(doc);
+                        }}
+                      >
+                        👁️ Открыть
+                      </button>
                       {canEdit && (
                         <button
                           className="btn-secondary"
                           style={{ padding: '4px 12px', fontSize: '12px' }}
-                          onClick={() => handleEdit(doc)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(doc);
+                          }}
                         >
                           ✏️ Редактировать
                         </button>
@@ -494,7 +542,10 @@ export default function DocumentsCenter() {
                         <button
                           className="btn-danger"
                           style={{ padding: '4px 12px', fontSize: '12px' }}
-                          onClick={() => handleDelete(doc.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(doc.id);
+                          }}
                         >
                           🗑️ Удалить
                         </button>
@@ -507,6 +558,174 @@ export default function DocumentsCenter() {
           )}
         </div>
       </div>
+
+      {/* ===== МОДАЛЬНОЕ ОКНО ПРОСМОТРА ДОКУМЕНТА ===== */}
+      {showModal && selectedDocument && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(11, 31, 58, 0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className="card"
+            style={{
+              maxWidth: '700px',
+              width: '100%',
+              padding: '32px',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              position: 'relative',
+              animation: 'modalSlideIn 0.3s ease'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowModal(false)}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '16px',
+                background: 'none',
+                border: 'none',
+                fontSize: '28px',
+                color: '#98A2B3',
+                cursor: 'pointer',
+                transition: 'color 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.target.style.color = '#0B1F3A'}
+              onMouseLeave={(e) => e.target.style.color = '#98A2B3'}
+            >
+              ✕
+            </button>
+
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '28px' }}>📄</span>
+                <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0B1F3A', margin: 0 }}>
+                  {selectedDocument.title}
+                </h2>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                <span className="tag" style={{ background: '#F4F6F9', color: '#667085' }}>
+                  {categories.find(c => c.id === selectedDocument.category)?.label || selectedDocument.category}
+                </span>
+                <span className="tag" style={{ background: '#F4F6F9', color: '#667085' }}>
+                  📄 {selectedDocument.document_type}
+                </span>
+                {selectedDocument.is_public && (
+                  <span className="tag" style={{ background: '#EDE7F6', color: '#6B46C1' }}>
+                    🌍 Общий
+                  </span>
+                )}
+                {selectedDocument.club_name && (
+                  <span className="tag" style={{ background: '#EAF2FA', color: '#174A7E' }}>
+                    🏫 {selectedDocument.club_name}
+                  </span>
+                )}
+                {selectedDocument.tags && selectedDocument.tags.length > 0 && (
+                  <span className="tag" style={{ background: '#F4F6F9', color: '#667085' }}>
+                    🏷️ {selectedDocument.tags.join(', ')}
+                  </span>
+                )}
+              </div>
+
+              <div style={{ fontSize: '13px', color: '#98A2B3', marginTop: '8px' }}>
+                👤 {selectedDocument.created_by_name || 'Неизвестно'}
+                {' • '}
+                📅 {new Date(selectedDocument.created_at).toLocaleDateString('ru-RU', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric'
+                })}
+                {selectedDocument.updated_at && selectedDocument.updated_at !== selectedDocument.created_at && (
+                  <> • ✏️ Обновлён: {new Date(selectedDocument.updated_at).toLocaleDateString('ru-RU')}</>
+                )}
+              </div>
+            </div>
+
+            <div style={{
+              padding: '20px',
+              background: '#F8FAFC',
+              borderRadius: '12px',
+              borderLeft: '4px solid #C9A227',
+              marginBottom: '16px',
+              maxHeight: '300px',
+              overflow: 'auto'
+            }}>
+              <p style={{ 
+                fontSize: '15px', 
+                color: '#0B1F3A', 
+                lineHeight: '1.8', 
+                whiteSpace: 'pre-wrap',
+                margin: 0
+              }}>
+                {selectedDocument.content || 'Содержание документа отсутствует'}
+              </p>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              flexWrap: 'wrap',
+              justifyContent: 'flex-end',
+              borderTop: '1px solid #E2E7EF',
+              paddingTop: '16px'
+            }}>
+              {canManage && (
+                <>
+                  <button
+                    className="btn-secondary"
+                    onClick={() => {
+                      setShowModal(false);
+                      handleEdit(selectedDocument);
+                    }}
+                  >
+                    ✏️ Редактировать
+                  </button>
+                  <button
+                    className="btn-danger"
+                    onClick={() => {
+                      setShowModal(false);
+                      handleDelete(selectedDocument.id);
+                    }}
+                  >
+                    🗑️ Удалить
+                  </button>
+                </>
+              )}
+              <button className="btn-primary" onClick={() => setShowModal(false)}>
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes modalSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+      `}</style>
     </div>
   );
 }

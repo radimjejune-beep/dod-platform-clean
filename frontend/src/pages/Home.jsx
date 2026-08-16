@@ -68,9 +68,6 @@ export default function Home() {
     <div className="home-page">
       <Navigation profile={profile} />
 
-      {/* ============================================================
-          ГЕРОЙ-СЕКЦИЯ — КОМПАКТНАЯ
-          ============================================================ */}
       <section className="home-hero">
         <div className="home-hero-bg" />
         <div className="home-hero-content">
@@ -126,9 +123,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ============================================================
-          СЕКЦИЯ: О ДВИЖЕНИИ
-          ============================================================ */}
       <section className="home-about">
         <div className="home-about-container">
           <div className="home-about-grid">
@@ -179,9 +173,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ============================================================
-          СЕКЦИЯ: ЦИФРЫ
-          ============================================================ */}
       <section className="home-numbers">
         <div className="home-numbers-container">
           <div className="home-numbers-item">
@@ -203,14 +194,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ============================================================
-          НОВОСТИ
-          ============================================================ */}
       <NewsSection limit={3} />
 
-      {/* ============================================================
-          СЕКЦИЯ: КОНТАКТЫ
-          ============================================================ */}
       <section className="home-contacts-section">
         <div className="home-contacts-container">
           <div className="home-contacts-header">
@@ -245,16 +230,12 @@ export default function Home() {
 
       <Footer />
 
-      {/* ============================================================
-          СТИЛИ
-          ============================================================ */}
       <style>{`
         .home-page {
           min-height: 100vh;
           background: #F5F2ED;
         }
 
-        /* ===== ГЕРОЙ ===== */
         .home-hero {
           position: relative;
           min-height: 70vh;
@@ -445,7 +426,6 @@ export default function Home() {
           opacity: 0.7;
         }
 
-        /* ===== О ДВИЖЕНИИ ===== */
         .home-about {
           padding: 60px 24px;
           background: #FFFFFF;
@@ -562,7 +542,6 @@ export default function Home() {
           background: radial-gradient(circle, rgba(201, 162, 39, 0.05), transparent 70%);
         }
 
-        /* ===== ЦИФРЫ ===== */
         .home-numbers {
           padding: 50px 24px;
           background: linear-gradient(135deg, #0B1F3A, #07152B);
@@ -597,7 +576,6 @@ export default function Home() {
           font-weight: 300;
         }
 
-        /* ===== КОНТАКТЫ ===== */
         .home-contacts-section {
           padding: 60px 24px;
           background: #FFFFFF;
@@ -689,7 +667,6 @@ export default function Home() {
           color: #C9A227;
         }
 
-        /* ===== АДАПТИВНОСТЬ ===== */
         @media (max-width: 992px) {
           .home-hero {
             min-height: 60vh;

@@ -280,6 +280,11 @@ export default function Navigation({ profile }) {
           <span>Дипломаты будущего</span>
         </Link>
 
+        {/* ГАМБУРГЕР (на всех размерах) */}
+        <button className="nav-mobile-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+          ☰
+        </button>
+
         {/* ДЕСКТОПНОЕ МЕНЮ */}
         <div className="nav-desktop-menu">
           {menuItems.map((item) => (
@@ -392,11 +397,6 @@ export default function Navigation({ profile }) {
               </div>
             )}
           </div>
-
-          {/* МОБИЛЬНОЕ МЕНЮ */}
-          <button className="nav-mobile-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-            ☰
-          </button>
         </div>
       </div>
 
@@ -442,6 +442,7 @@ export default function Navigation({ profile }) {
           justify-content: space-between;
           height: 64px;
           gap: 16px;
+          position: relative;
         }
 
         .nav-logo {
@@ -708,7 +709,8 @@ export default function Navigation({ profile }) {
           font-size: 24px;
           cursor: pointer;
           color: #0B1F3A;
-          padding: 4px;
+          padding: 8px 4px;
+          order: -1;
         }
 
         .nav-mobile-menu {
@@ -725,7 +727,9 @@ export default function Navigation({ profile }) {
           box-shadow: 0 8px 24px rgba(11, 31, 58, 0.08);
           max-height: calc(100vh - 64px);
           overflow-y: auto;
+          z-index: 999;
         }
+
         .nav-mobile-menu.open { display: flex; }
 
         .nav-mobile-link {
@@ -757,6 +761,7 @@ export default function Navigation({ profile }) {
         }
         .nav-mobile-logout:hover { background: #FCEBEC; }
 
+        /* ГАМБУРГЕР ВСЕГДА ВИДЕН НА МОБИЛКЕ */
         @media (max-width: 1024px) {
           .nav-desktop-menu { display: none; }
           .nav-mobile-toggle { display: block; }
@@ -765,12 +770,14 @@ export default function Navigation({ profile }) {
           .nav-profile-arrow { display: none; }
         }
 
+        /* НА МАЛЕНЬКИХ ЭКРАНАХ */
         @media (max-width: 768px) {
           .nav { padding: 0 16px; }
           .nav-logo span { display: none; }
           .nav-profile-name { display: none; }
           .nav-notif-dropdown { width: 320px; right: -60px; }
           .nav-mobile-menu { padding: 12px 16px 20px; }
+          .nav-mobile-toggle { font-size: 28px; padding: 4px 8px; }
         }
 
         @media (max-width: 480px) {
@@ -778,6 +785,7 @@ export default function Navigation({ profile }) {
           .nav-notif-dropdown { width: 290px; right: -80px; }
           .nav-profile-btn { padding: 4px; }
           .nav-avatar { width: 32px; height: 32px; font-size: 12px; }
+          .nav-mobile-toggle { font-size: 24px; }
         }
       `}</style>
     </nav>

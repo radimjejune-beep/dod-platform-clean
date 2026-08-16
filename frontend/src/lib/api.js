@@ -4,16 +4,6 @@ const API_URL = 'https://dod-backend.relaxdev.ru/api';
 
 const getToken = () => {
   const token = localStorage.getItem('token');
-  const sessionId = sessionStorage.getItem('sessionId');
-  
-  if (token && !sessionId) {
-    console.log('🔒 Сессия истекла');
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
-    return null;
-  }
-  
   return token ? token.trim() : null;
 };
 
@@ -92,11 +82,6 @@ export const login = async (email, password) => {
   if (data.token) {
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
-    
-    const sessionId = Date.now().toString() + '_' + Math.random().toString(36).slice(2, 6);
-    sessionStorage.setItem('sessionId', sessionId);
-    sessionStorage.setItem('userId', data.user.id);
-    sessionStorage.setItem('userRole', data.user.role);
   }
   
   return data;
@@ -114,9 +99,6 @@ export const changePassword = async (data) => {
 export const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
-  sessionStorage.removeItem('sessionId');
-  sessionStorage.removeItem('userId');
-  sessionStorage.removeItem('userRole');
   window.location.href = '/login';
 };
 

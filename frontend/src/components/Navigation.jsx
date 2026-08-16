@@ -42,7 +42,7 @@ export default function Navigation({ profile }) {
   // ЗАГРУЗКА УВЕДОМЛЕНИЙ — ТОЛЬКО 1 РАЗ
   // ============================================================
   const loadNotifications = useCallback(async () => {
-    if (notificationsLoaded) return; // ✅ Уже загружены
+    if (notificationsLoaded) return;
     
     try {
       const token = localStorage.getItem('token');
@@ -56,14 +56,13 @@ export default function Navigation({ profile }) {
         const data = await response.json();
         setNotifications(data || []);
         setUnreadCount(data.filter(n => !n.read).length);
-        setNotificationsLoaded(true); // ✅ Помечаем как загруженные
+        setNotificationsLoaded(true);
       }
     } catch (error) {
       console.error('Ошибка загрузки уведомлений:', error);
     }
   }, [notificationsLoaded]);
 
-  // ✅ Загружаем уведомления ТОЛЬКО при первом появлении profile
   useEffect(() => {
     if (profile && !notificationsLoaded) {
       loadNotifications();
@@ -90,7 +89,6 @@ export default function Navigation({ profile }) {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      // Обновляем локально
       setNotifications(prev => 
         prev.map(n => n.id === id ? { ...n, read: true } : n)
       );
@@ -100,9 +98,6 @@ export default function Navigation({ profile }) {
     }
   };
 
-  // ============================================================
-  // ОТМЕТКА ВСЕХ КАК ПРОЧИТАННЫХ
-  // ============================================================
   const markAllRead = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -156,6 +151,7 @@ export default function Navigation({ profile }) {
     const isPresident = profile?.is_president || false;
     const items = [];
 
+    // ✅ ДАШБОРД — ОДИН ДЛЯ ВСЕХ
     items.push({ path: '/dashboard', label: '📊 Дашборд' });
 
     if (role === 'participant' || role === 'parent') {
@@ -169,7 +165,8 @@ export default function Navigation({ profile }) {
     }
 
     if (role === 'club_coordinator') {
-      items.push({ path: '/club-coordinator-dashboard', label: '🏫 Дашборд КЮДа' });
+      // ❌ УБРАЛ ДУБЛИРУЮЩИЙ ПУНКТ /club-coordinator-dashboard
+      // ✅ Оставляем только /dashboard — он и так ведёт на дашборд координатора
       items.push({ path: '/clubs', label: '🏫 Мой КЮД' });
       items.push({ path: '/events', label: '📅 Мероприятия' });
       items.push({ path: '/participants', label: '👥 Участники' });
@@ -181,7 +178,6 @@ export default function Navigation({ profile }) {
     }
 
     if (role === 'tutor') {
-      items.push({ path: '/tutor-dashboard', label: '📚 Дашборд тьютора' });
       items.push({ path: '/clubs', label: '🏫 КЮДы' });
       items.push({ path: '/events', label: '📅 Мероприятия' });
       items.push({ path: '/participants', label: '👥 Участники' });
@@ -194,7 +190,6 @@ export default function Navigation({ profile }) {
     }
 
     if (role === 'movement_coordinator' || role === 'admin') {
-      items.push({ path: '/coordinator-dashboard', label: '⭐ Дашборд' });
       items.push({ path: '/clubs', label: '🏫 КЮДы' });
       items.push({ path: '/clubs-management', label: '⚙️ Управление КЮДами' });
       items.push({ path: '/events', label: '📅 Мероприятия' });
@@ -220,7 +215,6 @@ export default function Navigation({ profile }) {
     }
 
     if (role === 'president' || role === 'vice_president') {
-      items.push({ path: '/dashboard', label: '📊 Дашборд' });
       items.push({ path: '/clubs', label: '🏫 КЮДы' });
       items.push({ path: '/events', label: '📅 Мероприятия' });
       items.push({ path: '/participants', label: '👥 Участники' });

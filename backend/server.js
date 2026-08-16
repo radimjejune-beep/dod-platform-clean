@@ -5164,8 +5164,10 @@ app.delete('/api/documents/:id', async (req, res) => {
 console.log('✅ API для документов загружены');
 
 // ============================================================
-// ОТЧЁТЫ - ПОЛУЧЕНИЕ ВСЕХ ОТЧЁТОВ
+// ОТЧЁТЫ - ПОЛНЫЙ CRUD
 // ============================================================
+
+// ===== ПОЛУЧЕНИЕ ВСЕХ ОТЧЁТОВ =====
 app.get('/api/reports', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -5179,12 +5181,10 @@ app.get('/api/reports', async (req, res) => {
     const userId = decoded.userId;
     const isPresident = decoded.is_president || false;
 
-    // КТО НЕ ВИДИТ ОТЧЁТЫ:
     if (userRole === 'participant' || userRole === 'parent' || isPresident === true) {
       return res.status(403).json({ error: 'У вас нет прав для просмотра отчётов' });
     }
 
-    // КТО ВИДИТ ОТЧЁТЫ:
     const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
     if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав для просмотра отчётов' });
@@ -5206,7 +5206,6 @@ app.get('/api/reports', async (req, res) => {
     `;
     const params = [];
 
-    // Координатор КЮДа видит только отчёты своего клуба
     if (userRole === 'club_coordinator') {
       const clubResult = await pool.query(
         'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
@@ -5228,6 +5227,276 @@ app.get('/api/reports', async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения отчётов:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== СОЗДАНИЕ ОТЧЁТА =====
+app.post('/api/reports', async (req, res) => {
+  try {
+    console.log('📥 POST /api/reports');
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для создания отчётов' });
+    }
+
+    const { club_id, report_month, report_text, events_count, participants_count } = req.body;
+
+    if (!club_id) {
+      return res.status(400).json({ error: 'Выберите клуб' });
+    }
+
+    if (!report_month) {
+      return res.status(400).json({ error: 'Выберите месяц отчёта' });
+    }
+
+    const monthRegex = /^\d{4}-\d{2}$/;
+    if (!monthRegex.test(report_month)) {
+      return res.status(400).json({ error: 'Неверный формат месяца. Используйте YYYY-MM' });
+    }
+
+    if (userRole === 'club_coordinator') {
+      const clubCheck = await pool.query(
+        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
+        [userId, club_id]
+      );
+      if (clubCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'У вас нет доступа к этому клубу' });
+      }
+    }
+
+    const clubNameResult = await pool.query('SELECT name FROM clubs WHERE id = $1', [club_id]);
+    const clubName = clubNameResult.rows[0]?.name || 'Клуб';
+
+    const result = await pool.query(
+      `INSERT INTO reports (
+        club_id, created_by, title, content, report_month, events_count, participants_count, 
+        status, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft', NOW(), NOW())
+      RETURNING *`,
+      [
+        club_id,
+        userId,
+        `Отчёт за ${report_month} (${clubName})`,
+        report_text || '',
+        report_month,
+        parseInt(events_count) || 0,
+        parseInt(participants_count) || 0
+      ]
+    );
+
+    console.log('✅ Отчёт создан! ID:', result.rows[0].id);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания отчёта:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ОБНОВЛЕНИЕ ОТЧЁТА =====
+app.put('/api/reports/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    console.log(`📥 PUT /api/reports/${id}, роль: ${userRole}`);
+
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для редактирования отчётов' });
+    }
+
+    const { club_id, report_month, report_text, events_count, participants_count } = req.body;
+
+    const check = await pool.query('SELECT * FROM reports WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Отчёт не найден' });
+    }
+
+    const report = check.rows[0];
+
+    if (userRole === 'club_coordinator' && report.created_by !== userId) {
+      return res.status(403).json({ error: 'Вы можете редактировать только свои отчёты' });
+    }
+
+    let finalClubId = club_id || report.club_id;
+    if (userRole === 'club_coordinator' && club_id && club_id !== report.club_id) {
+      return res.status(403).json({ error: 'Вы не можете изменить клуб в отчёте' });
+    }
+
+    const clubNameResult = await pool.query('SELECT name FROM clubs WHERE id = $1', [finalClubId]);
+    const clubName = clubNameResult.rows[0]?.name || 'Клуб';
+
+    const result = await pool.query(
+      `UPDATE reports 
+       SET club_id = $1, 
+           title = $2, 
+           content = $3, 
+           report_month = $4, 
+           events_count = $5, 
+           participants_count = $6, 
+           updated_at = NOW()
+       WHERE id = $7
+       RETURNING *`,
+      [
+        finalClubId,
+        `Отчёт за ${report_month || report.report_month} (${clubName})`,
+        report_text || report.content,
+        report_month || report.report_month,
+        parseInt(events_count) || report.events_count || 0,
+        parseInt(participants_count) || report.participants_count || 0,
+        id
+      ]
+    );
+
+    console.log(`✅ Отчёт обновлён! ID: ${result.rows[0].id}`);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка обновления отчёта:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== УДАЛЕНИЕ ОТЧЁТА =====
+app.delete('/api/reports/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления отчётов' });
+    }
+
+    await pool.query('DELETE FROM reports WHERE id = $1', [id]);
+    res.json({ message: 'Отчёт удалён' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления отчёта:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ОТПРАВКА ОТЧЁТА НА ПРОВЕРКУ =====
+app.patch('/api/reports/:id/submit', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+
+    const check = await pool.query('SELECT * FROM reports WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Отчёт не найден' });
+    }
+
+    const result = await pool.query(
+      `UPDATE reports 
+       SET status = 'submitted', submitted_by = $1, submitted_at = NOW(), updated_at = NOW()
+       WHERE id = $2
+       RETURNING *`,
+      [userId, id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка отправки отчёта:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== УТВЕРЖДЕНИЕ ОТЧЁТА =====
+app.patch('/api/reports/:id/approve', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для утверждения отчётов' });
+    }
+
+    const result = await pool.query(
+      `UPDATE reports 
+       SET status = 'approved', approved_by = $1, approved_at = NOW(), updated_at = NOW()
+       WHERE id = $2
+       RETURNING *`,
+      [userId, id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка утверждения отчёта:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ОТКЛОНЕНИЕ ОТЧЁТА =====
+app.patch('/api/reports/:id/reject', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { comment } = req.body;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для отклонения отчётов' });
+    }
+
+    const result = await pool.query(
+      `UPDATE reports 
+       SET status = 'rejected', approved_by = $1, approved_at = NOW(), reviewer_comment = $2, updated_at = NOW()
+       WHERE id = $3
+       RETURNING *`,
+      [userId, comment || 'Без комментария', id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка отклонения отчёта:', error);
     res.status(500).json({ error: error.message });
   }
 });

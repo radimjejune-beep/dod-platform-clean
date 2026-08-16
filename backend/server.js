@@ -4741,6 +4741,185 @@ app.get('/api/consents-missing', async (req, res) => {
 console.log('✅ API для координатора движения загружены');
 
 // ============================================================
+// ДОКУМЕНТЫ (Центр документов) - API
+// ============================================================
+
+// ===== ПОЛУЧЕНИЕ ВСЕХ ДОКУМЕНТОВ =====
+app.get('/api/documents', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+    const userId = decoded.userId;
+    const isPresident = decoded.is_president || false;
+
+    // КТО НЕ ВИДИТ
+    if (userRole === 'participant' || userRole === 'parent' || isPresident === true) {
+      return res.status(403).json({ error: 'У вас нет прав для просмотра документов' });
+    }
+
+    // КТО ВИДИТ
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для просмотра документов' });
+    }
+
+    let query = `
+      SELECT 
+        d.*,
+        u.full_name as created_by_name,
+        c.name as club_name
+      FROM documents d
+      LEFT JOIN users u ON d.created_by = u.id
+      LEFT JOIN clubs c ON d.club_id = c.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    // Координатор КЮДа - видит свои, публичные и общие
+    if (userRole === 'club_coordinator') {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      if (clubResult.rows.length > 0) {
+        const clubId = clubResult.rows[0].club_id;
+        query += ` AND (d.club_id = $1 OR d.is_public = true OR d.club_id IS NULL)`;
+        params.push(clubId);
+      } else {
+        query += ` AND (d.is_public = true OR d.club_id IS NULL)`;
+      }
+    }
+
+    query += ' ORDER BY d.created_at DESC';
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения документов:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== СОЗДАНИЕ ДОКУМЕНТА =====
+app.post('/api/documents', async (req, res) => {
+  try {
+    console.log('📥 POST /api/documents');
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    // КТО МОЖЕТ СОЗДАВАТЬ
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для создания документов' });
+    }
+
+    const { title, content, category, document_type, is_public, club_id, tags } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'Заголовок обязателен' });
+    }
+
+    let finalClubId = club_id || null;
+    if (userRole === 'club_coordinator' && !finalClubId) {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      if (clubResult.rows.length > 0) {
+        finalClubId = clubResult.rows[0].club_id;
+      }
+    }
+
+    const result = await pool.query(
+      `INSERT INTO documents (
+        title, content, category, document_type, is_public, club_id, tags, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *`,
+      [
+        title.trim(),
+        content || '',
+        category || 'general',
+        document_type || 'pdf',
+        is_public !== undefined ? is_public : true,
+        finalClubId,
+        tags || [],
+        userId
+      ]
+    );
+
+    console.log('✅ Документ сохранён! ID:', result.rows[0].id);
+
+    // УВЕДОМЛЕНИЯ
+    const users = await pool.query(
+      `SELECT id FROM users 
+       WHERE status = 'active' 
+       AND role NOT IN ('participant', 'parent')
+       AND (role != 'participant' OR is_president != true)`
+    );
+
+    for (const user of users.rows) {
+      await pool.query(
+        `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+        [
+          user.id,
+          'document',
+          `📢 Новый документ: ${result.rows[0].title}`,
+          `Опубликован новый документ "${result.rows[0].title}"`,
+          '/documents-center',
+          'normal'
+        ]
+      );
+    }
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания документа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== УДАЛЕНИЕ ДОКУМЕНТА =====
+app.delete('/api/documents/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления документов' });
+    }
+
+    await pool.query('DELETE FROM documents WHERE id = $1', [id]);
+    res.json({ message: 'Документ удалён' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления документа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+console.log('✅ API для документов загружены');
+
+// ============================================================
 // ЗАПУСК СЕРВЕРА
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {

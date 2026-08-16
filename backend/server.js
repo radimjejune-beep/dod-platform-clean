@@ -1983,7 +1983,6 @@ app.post('/api/reports/from-template/:templateId', async (req, res) => {
       return res.status(403).json({ error: 'У вас нет прав для создания отчётов' });
     }
 
-    // Получаем шаблон
     const templateResult = await pool.query(
       'SELECT * FROM report_templates WHERE id = $1',
       [templateId]
@@ -2005,7 +2004,12 @@ app.post('/api/reports/from-template/:templateId', async (req, res) => {
       return res.status(400).json({ error: 'Выберите месяц отчёта' });
     }
 
-    // Проверяем доступ к клубу (для координатора КЮДа)
+    // Проверяем формат месяца (должен быть YYYY-MM)
+    const monthRegex = /^\d{4}-\d{2}$/;
+    if (!monthRegex.test(report_month)) {
+      return res.status(400).json({ error: 'Неверный формат месяца. Используйте YYYY-MM' });
+    }
+
     if (userRole === 'club_coordinator') {
       const clubCheck = await pool.query(
         'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
@@ -2051,7 +2055,6 @@ app.post('/api/reports/from-template/:templateId', async (req, res) => {
 
     console.log(`✅ Отчёт создан из шаблона! ID: ${result.rows[0].id}`);
 
-    // Уведомление
     await createNotification(
       userId,
       'system',

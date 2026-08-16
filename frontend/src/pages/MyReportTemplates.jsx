@@ -106,6 +106,15 @@ export default function MyReportTemplates() {
         return;
       }
 
+      // Проверяем формат месяца
+      const monthRegex = /^\d{4}-\d{2}$/;
+      if (!monthRegex.test(form.report_month)) {
+        setMessage('❌ Неверный формат месяца. Используйте YYYY-MM (например: 2026-08)');
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
+
       const data = {
         club_id: finalClubId,
         report_month: form.report_month,
@@ -487,6 +496,9 @@ export default function MyReportTemplates() {
                   onChange={(e) => setForm({ ...form, report_month: e.target.value })}
                   required
                 />
+                <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                  📅 Формат: YYYY-MM (например: 2026-08)
+                </div>
               </div>
 
               <div style={{

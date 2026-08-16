@@ -16,7 +16,15 @@ import morgan from 'morgan';
 
 import { authenticate, requireRole, requireAdmin, requireAdminOrCoordinator } from './middleware/auth.js';
 import { logActivity, initLogger, getActivityLogs } from './lib/logger.js';
-
+import { 
+  collectReportData, 
+  replacePlaceholders, 
+  exportToPDF, 
+  exportToDOCX, 
+  exportToHTML, 
+  exportToCSV,
+  initReportGenerator 
+} from './lib/reportGenerator.js';
 dotenv.config();
 
 const app = express();
@@ -31,6 +39,22 @@ const pool = new Pool({
 });
 
 initLogger(pool);
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+initLogger(pool);
+initReportGenerator(pool);  // ← ДОБАВЬ ЭТУ СТРОКУ
+
+pool.connect((err) => {
+  if (err) {
+    console.error('❌ Ошибка подключения к базе данных:', err.message);
+  } else {
+    console.log('✅ Подключение к PostgreSQL установлено');
+  }
+});
 
 pool.connect((err) => {
   if (err) {

@@ -7,14 +7,15 @@ import logo from '../assets/Image.png';
 import ardLogo from '../assets/АРДЛОГО.png';
 
 export default function Login() {
-  const [email, setEmail] = useState('newadmin@dod.ru');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,19 +29,42 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setMustChangePassword(false);
 
     try {
-      const result = await login(email, password);
-      
-      if (result.must_change_password) {
+      const response = await fetch('https://dod-backend.relaxdev.ru/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      // Проверяем, нужно ли сменить пароль
+      if (response.status === 403 && data.must_change_password === true) {
         setMustChangePassword(true);
-        setResetToken(result.reset_token);
+        setResetToken(data.reset_token);
         setError('');
         setLoading(false);
         return;
       }
-      
-      redirectByRole(result.user.role);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Ошибка входа');
+      }
+
+      // Успешный вход
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        const sessionId = Date.now().toString() + '_' + Math.random().toString(36).slice(2, 6);
+        sessionStorage.setItem('sessionId', sessionId);
+        sessionStorage.setItem('userId', data.user.id);
+        sessionStorage.setItem('userRole', data.user.role);
+        
+        redirectByRole(data.user.role);
+      }
       
     } catch (err) {
       console.error('❌ Ошибка входа:', err);
@@ -52,16 +76,36 @@ export default function Login() {
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setPasswordError('');
     setError('');
 
+    // Проверка сложности пароля
     if (newPassword.length < 8) {
-      setError('Пароль должен содержать минимум 8 символов');
+      setPasswordError('Пароль должен содержать минимум 8 символов');
+      setLoading(false);
+      return;
+    }
+
+    if (!/[A-Z]/.test(newPassword)) {
+      setPasswordError('Пароль должен содержать заглавную букву');
+      setLoading(false);
+      return;
+    }
+
+    if (!/[a-z]/.test(newPassword)) {
+      setPasswordError('Пароль должен содержать строчную букву');
+      setLoading(false);
+      return;
+    }
+
+    if (!/[0-9]/.test(newPassword)) {
+      setPasswordError('Пароль должен содержать цифру');
       setLoading(false);
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Пароли не совпадают');
+      setPasswordError('Пароли не совпадают');
       setLoading(false);
       return;
     }
@@ -82,6 +126,7 @@ export default function Login() {
         throw new Error(data.error || 'Ошибка смены пароля');
       }
 
+      // Пароль изменён успешно
       if (data.token) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
@@ -92,6 +137,13 @@ export default function Login() {
         sessionStorage.setItem('userRole', data.user.role);
         
         redirectByRole(data.user.role);
+      } else {
+        // Если токен не пришёл — перенаправляем на логин
+        setMustChangePassword(false);
+        setError('Пароль изменён! Войдите снова.');
+        setNewPassword('');
+        setConfirmPassword('');
+        setLoading(false);
       }
     } catch (err) {
       setError(err.message);
@@ -135,6 +187,12 @@ export default function Login() {
               </div>
             )}
 
+            {passwordError && (
+              <div className="login-error" style={{ borderLeftColor: '#C9A227', background: '#FBF4DC', color: '#8A6A00' }}>
+                {passwordError}
+              </div>
+            )}
+
             <form onSubmit={handleChangePassword} className="login-form">
               <div className="form-group">
                 <label>Новый пароль</label>
@@ -144,6 +202,7 @@ export default function Login() {
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Минимум 8 символов"
                   required
+                  autoFocus
                 />
               </div>
 
@@ -402,6 +461,7 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="example@mail.com"
                 required
+                autoFocus
               />
             </div>
 

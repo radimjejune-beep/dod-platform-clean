@@ -1,6 +1,6 @@
 // frontend/src/components/Navigation.jsx
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/Image.png';
 
@@ -10,13 +10,11 @@ export default function Navigation({ profile }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const profileRef = useRef(null);
   const notificationRef = useRef(null);
   const menuRef = useRef(null);
-  const notificationLoadedRef = useRef(false);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -35,17 +33,13 @@ export default function Navigation({ profile }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Загружаем уведомления только один раз при монтировании
   useEffect(() => {
-    if (profile && !notificationLoadedRef.current) {
-      notificationLoadedRef.current = true;
+    if (profile) {
       loadNotifications();
     }
   }, [profile]);
 
   const loadNotifications = async () => {
-    if (isLoading) return;
-    setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -61,8 +55,6 @@ export default function Navigation({ profile }) {
       }
     } catch (error) {
       console.error('Ошибка загрузки уведомлений:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -82,11 +74,7 @@ export default function Navigation({ profile }) {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      // Обновляем локально без перезагрузки
-      setNotifications(prev => prev.map(n => 
-        n.id === id ? { ...n, read: true } : n
-      ));
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      loadNotifications();
     } catch (error) {
       console.error('Ошибка:', error);
     }
@@ -99,8 +87,7 @@ export default function Navigation({ profile }) {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-      setUnreadCount(0);
+      loadNotifications();
     } catch (error) {
       console.error('Ошибка:', error);
     }
@@ -134,7 +121,7 @@ export default function Navigation({ profile }) {
   };
 
   // ============================================================
-  // МЕНЮ В ЗАВИСИМОСТИ ОТ РОЛИ (БЕЗ ШАБЛОНОВ)
+  // МЕНЮ В ЗАВИСИМОСТИ ОТ РОЛИ
   // ============================================================
   const getMenuItems = () => {
     const role = profile?.role;
@@ -219,7 +206,6 @@ export default function Navigation({ profile }) {
 
   const menuItems = getMenuItems();
 
-  // Если нет профиля
   if (!profile) {
     return (
       <nav className="nav">
@@ -288,10 +274,6 @@ export default function Navigation({ profile }) {
           <img src={logo} alt="ДОД" />
           <span>Дипломаты будущего</span>
         </Link>
-
-        <button className="nav-mobile-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-          ☰
-        </button>
 
         <div className="nav-desktop-menu">
           {menuItems.map((item) => (
@@ -401,6 +383,10 @@ export default function Navigation({ profile }) {
               </div>
             )}
           </div>
+
+          <button className="nav-mobile-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+            ☰
+          </button>
         </div>
       </div>
 
@@ -445,7 +431,6 @@ export default function Navigation({ profile }) {
           justify-content: space-between;
           height: 64px;
           gap: 16px;
-          position: relative;
         }
 
         .nav-logo {
@@ -709,7 +694,6 @@ export default function Navigation({ profile }) {
           cursor: pointer;
           color: #0B1F3A;
           padding: 8px 4px;
-          order: -1;
         }
 
         .nav-mobile-menu {
@@ -774,7 +758,6 @@ export default function Navigation({ profile }) {
           .nav-profile-name { display: none; }
           .nav-notif-dropdown { width: 320px; right: -60px; }
           .nav-mobile-menu { padding: 12px 16px 20px; }
-          .nav-mobile-toggle { font-size: 28px; padding: 4px 8px; }
         }
 
         @media (max-width: 480px) {
@@ -782,7 +765,6 @@ export default function Navigation({ profile }) {
           .nav-notif-dropdown { width: 290px; right: -80px; }
           .nav-profile-btn { padding: 4px; }
           .nav-avatar { width: 32px; height: 32px; font-size: 12px; }
-          .nav-mobile-toggle { font-size: 24px; }
         }
       `}</style>
     </nav>

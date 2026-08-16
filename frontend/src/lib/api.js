@@ -2,55 +2,61 @@
 
 const API_URL = 'https://dod-backend.relaxdev.ru/api';
 
+// ============================================================
+// ПРОСТАЯ И БЫСТРАЯ ПРОВЕРКА ТОКЕНА
+// ============================================================
 const getToken = () => {
-  const token = localStorage.getItem('token');
-  const sessionId = sessionStorage.getItem('sessionId');
-  
-  if (token && !sessionId) {
-    console.log('🔒 Сессия истекла');
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    return token.trim();
+  } catch (e) {
     return null;
   }
-  
-  return token ? token.trim() : null;
 };
 
-const headers = () => ({
-  'Content-Type': 'application/json',
-  ...(getToken() && { Authorization: `Bearer ${getToken()}` })
-});
+// ============================================================
+// ЗАГОЛОВКИ ДЛЯ ЗАПРОСОВ
+// ============================================================
+const getHeaders = () => {
+  const token = getToken();
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
 
 // ============================================================
 // 1. АУТЕНТИФИКАЦИЯ
 // ============================================================
 export const getMe = async () => {
   const token = getToken();
-  
   if (!token) {
     throw new Error('Нет токена');
   }
-  
+
   const response = await fetch(`${API_URL}/me`, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    }
+    headers: getHeaders()
   });
-  
+
+  if (response.status === 401 || response.status === 403) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('sessionId');
+    window.location.href = '/login';
+    throw new Error('Сессия истекла');
+  }
+
   if (!response.ok) {
-    if (response.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
     throw new Error(`Ошибка ${response.status}`);
   }
-  
+
   const data = await response.json();
-  
+
   if (data && data.id) {
     try {
       const userData = {
@@ -68,11 +74,11 @@ export const getMe = async () => {
         must_change_password: data.must_change_password || false
       };
       localStorage.setItem('user', JSON.stringify(userData));
-    } catch (storageError) {
-      console.warn('⚠️ Не удалось сохранить пользователя в localStorage');
+    } catch (e) {
+      console.warn('⚠️ Не удалось сохранить пользователя');
     }
   }
-  
+
   return data;
 };
 
@@ -82,23 +88,23 @@ export const login = async (email, password) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
   });
-  
+
   const data = await response.json();
-  
+
   if (!response.ok) {
     throw new Error(data.error || 'Ошибка входа');
   }
-  
+
   if (data.token) {
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
-    
+
     const sessionId = Date.now().toString() + '_' + Math.random().toString(36).slice(2, 6);
     sessionStorage.setItem('sessionId', sessionId);
     sessionStorage.setItem('userId', data.user.id);
     sessionStorage.setItem('userRole', data.user.role);
   }
-  
+
   return data;
 };
 
@@ -126,7 +132,7 @@ export const logout = () => {
 export const updateProfile = async (data) => {
   const response = await fetch(`${API_URL}/profile`, {
     method: 'PATCH',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -138,23 +144,31 @@ export const updateProfile = async (data) => {
 export const getUsers = async () => {
   const response = await fetch(`${API_URL}/users`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
+  if (response.status === 401 || response.status === 403) {
+    logout();
+    throw new Error('Сессия истекла');
+  }
   return response.json();
 };
 
 export const getParticipants = async () => {
   const response = await fetch(`${API_URL}/participants`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
+  if (response.status === 401 || response.status === 403) {
+    logout();
+    throw new Error('Сессия истекла');
+  }
   return response.json();
 };
 
 export const createUser = async (data) => {
   const response = await fetch(`${API_URL}/users`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -163,7 +177,7 @@ export const createUser = async (data) => {
 export const updateUser = async (userId, data) => {
   const response = await fetch(`${API_URL}/users/${userId}`, {
     method: 'PATCH',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -172,7 +186,7 @@ export const updateUser = async (userId, data) => {
 export const deleteUser = async (userId) => {
   const response = await fetch(`${API_URL}/users/${userId}`, {
     method: 'DELETE',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -180,7 +194,7 @@ export const deleteUser = async (userId) => {
 export const resetUserPassword = async (userId) => {
   const response = await fetch(`${API_URL}/users/${userId}/reset-password`, {
     method: 'POST',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -188,7 +202,7 @@ export const resetUserPassword = async (userId) => {
 export const assignUserToClub = async (userId, clubId) => {
   const response = await fetch(`${API_URL}/users/${userId}/assign-club`, {
     method: 'PATCH',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify({ club_id: clubId })
   });
   return response.json();
@@ -200,8 +214,12 @@ export const assignUserToClub = async (userId, clubId) => {
 export const getClubs = async () => {
   const response = await fetch(`${API_URL}/clubs`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
+  if (response.status === 401 || response.status === 403) {
+    logout();
+    throw new Error('Сессия истекла');
+  }
   return response.json();
 };
 
@@ -211,15 +229,19 @@ export const getClubs = async () => {
 export const getAchievements = async () => {
   const response = await fetch(`${API_URL}/achievements`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
+  if (response.status === 401 || response.status === 403) {
+    logout();
+    throw new Error('Сессия истекла');
+  }
   return response.json();
 };
 
 export const addAchievement = async (data) => {
   const response = await fetch(`${API_URL}/achievements`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -228,7 +250,7 @@ export const addAchievement = async (data) => {
 export const deleteAchievement = async (id) => {
   const response = await fetch(`${API_URL}/achievements/${id}`, {
     method: 'DELETE',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -240,8 +262,13 @@ export const getEvents = async () => {
   try {
     const response = await fetch(`${API_URL}/events`, {
       method: 'GET',
-      headers: headers()
+      headers: getHeaders()
     });
+    
+    if (response.status === 401 || response.status === 403) {
+      logout();
+      return [];
+    }
     
     if (!response.ok) {
       console.error('❌ Ошибка получения событий:', response.status);
@@ -259,7 +286,7 @@ export const getEvents = async () => {
 export const createEvent = async (data) => {
   const response = await fetch(`${API_URL}/events`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -268,7 +295,7 @@ export const createEvent = async (data) => {
 export const updateEvent = async (id, data) => {
   const response = await fetch(`${API_URL}/events/${id}`, {
     method: 'PATCH',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -277,7 +304,7 @@ export const updateEvent = async (id, data) => {
 export const deleteEvent = async (id) => {
   const response = await fetch(`${API_URL}/events/${id}`, {
     method: 'DELETE',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -288,7 +315,7 @@ export const deleteEvent = async (id) => {
 export const getRegistrations = async () => {
   const response = await fetch(`${API_URL}/registrations`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -296,7 +323,7 @@ export const getRegistrations = async () => {
 export const addRegistration = async (data) => {
   const response = await fetch(`${API_URL}/registrations`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -308,7 +335,7 @@ export const addRegistration = async (data) => {
 export const getAppeals = async () => {
   const response = await fetch(`${API_URL}/appeals`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -316,7 +343,7 @@ export const getAppeals = async () => {
 export const addAppeal = async (data) => {
   const response = await fetch(`${API_URL}/appeals`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -325,7 +352,7 @@ export const addAppeal = async (data) => {
 export const replyToAppeal = async (appealId, data) => {
   const response = await fetch(`${API_URL}/appeals/${appealId}/reply`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -334,7 +361,7 @@ export const replyToAppeal = async (appealId, data) => {
 export const getAppealReplies = async (appealId) => {
   const response = await fetch(`${API_URL}/appeals/${appealId}/replies`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -345,7 +372,7 @@ export const getAppealReplies = async (appealId) => {
 export const getReports = async () => {
   const response = await fetch(`${API_URL}/reports`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -353,7 +380,7 @@ export const getReports = async () => {
 export const createReport = async (data) => {
   const response = await fetch(`${API_URL}/reports`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -362,7 +389,7 @@ export const createReport = async (data) => {
 export const updateReport = async (id, data) => {
   const response = await fetch(`${API_URL}/reports/${id}`, {
     method: 'PUT',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -371,7 +398,7 @@ export const updateReport = async (id, data) => {
 export const deleteReport = async (id) => {
   const response = await fetch(`${API_URL}/reports/${id}`, {
     method: 'DELETE',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -379,7 +406,7 @@ export const deleteReport = async (id) => {
 export const submitReport = async (id) => {
   const response = await fetch(`${API_URL}/reports/${id}/submit`, {
     method: 'PATCH',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -387,7 +414,7 @@ export const submitReport = async (id) => {
 export const approveReport = async (id) => {
   const response = await fetch(`${API_URL}/reports/${id}/approve`, {
     method: 'PATCH',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -395,7 +422,7 @@ export const approveReport = async (id) => {
 export const rejectReport = async (id, comment) => {
   const response = await fetch(`${API_URL}/reports/${id}/reject`, {
     method: 'PATCH',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify({ comment })
   });
   return response.json();
@@ -407,7 +434,7 @@ export const rejectReport = async (id, comment) => {
 export const getDocuments = async () => {
   const response = await fetch(`${API_URL}/documents`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -415,7 +442,7 @@ export const getDocuments = async () => {
 export const createDocument = async (data) => {
   const response = await fetch(`${API_URL}/documents`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -424,7 +451,7 @@ export const createDocument = async (data) => {
 export const deleteDocument = async (id) => {
   const response = await fetch(`${API_URL}/documents/${id}`, {
     method: 'DELETE',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -435,7 +462,7 @@ export const deleteDocument = async (id) => {
 export const getNews = async () => {
   const response = await fetch(`${API_URL}/news`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -443,7 +470,7 @@ export const getNews = async () => {
 export const createNews = async (data) => {
   const response = await fetch(`${API_URL}/news`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -452,7 +479,7 @@ export const createNews = async (data) => {
 export const updateNews = async (id, data) => {
   const response = await fetch(`${API_URL}/news/${id}`, {
     method: 'PUT',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -461,7 +488,7 @@ export const updateNews = async (id, data) => {
 export const deleteNews = async (id) => {
   const response = await fetch(`${API_URL}/news/${id}`, {
     method: 'DELETE',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -472,7 +499,7 @@ export const deleteNews = async (id) => {
 export const getNotifications = async () => {
   const response = await fetch(`${API_URL}/notifications`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -480,7 +507,7 @@ export const getNotifications = async () => {
 export const markNotificationRead = async (id) => {
   const response = await fetch(`${API_URL}/notifications/${id}/read`, {
     method: 'PATCH',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -488,7 +515,7 @@ export const markNotificationRead = async (id) => {
 export const markAllNotificationsRead = async () => {
   const response = await fetch(`${API_URL}/notifications/read-all`, {
     method: 'PATCH',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -499,7 +526,7 @@ export const markAllNotificationsRead = async () => {
 export const uploadAvatar = async (avatarBase64) => {
   const response = await fetch(`${API_URL}/upload-avatar`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify({ avatar_base64: avatarBase64 })
   });
   return response.json();
@@ -511,7 +538,7 @@ export const uploadAvatar = async (avatarBase64) => {
 export const getParentChildren = async () => {
   const response = await fetch(`${API_URL}/parent-children`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -519,7 +546,7 @@ export const getParentChildren = async () => {
 export const parentLinkChild = async (data) => {
   const response = await fetch(`${API_URL}/parent-link-child`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -531,7 +558,7 @@ export const parentLinkChild = async (data) => {
 export const getPresidentTasks = async () => {
   const response = await fetch(`${API_URL}/president-tasks`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -539,7 +566,7 @@ export const getPresidentTasks = async () => {
 export const createPresidentTask = async (data) => {
   const response = await fetch(`${API_URL}/president-tasks`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -548,7 +575,7 @@ export const createPresidentTask = async (data) => {
 export const respondToPresidentTask = async (id, response) => {
   const result = await fetch(`${API_URL}/president-tasks/${id}/respond`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify({ response })
   });
   return result.json();
@@ -560,7 +587,7 @@ export const respondToPresidentTask = async (id, response) => {
 export const getParticipantStats = async (userId) => {
   const response = await fetch(`${API_URL}/participant-stats/${userId}`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -568,7 +595,7 @@ export const getParticipantStats = async (userId) => {
 export const getClubPresident = async (clubId) => {
   const response = await fetch(`${API_URL}/clubs/${clubId}/president`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -576,7 +603,7 @@ export const getClubPresident = async (clubId) => {
 export const setClubPresident = async (clubId, presidentId) => {
   const response = await fetch(`${API_URL}/clubs/${clubId}/president`, {
     method: 'PATCH',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify({ president_id: presidentId })
   });
   return response.json();
@@ -588,7 +615,7 @@ export const setClubPresident = async (clubId, presidentId) => {
 export const getTutorRequests = async () => {
   const response = await fetch(`${API_URL}/tutor-requests`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -596,7 +623,7 @@ export const getTutorRequests = async () => {
 export const createTutorRequest = async (data) => {
   const response = await fetch(`${API_URL}/tutor-requests`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -605,7 +632,7 @@ export const createTutorRequest = async (data) => {
 export const updateTutorRequest = async (id, data) => {
   const response = await fetch(`${API_URL}/tutor-requests/${id}`, {
     method: 'PATCH',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -617,7 +644,7 @@ export const updateTutorRequest = async (id, data) => {
 export const getTutorAssignments = async () => {
   const response = await fetch(`${API_URL}/event-tutor-assignments`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -625,7 +652,7 @@ export const getTutorAssignments = async () => {
 export const respondToAssignment = async (assignmentId, status) => {
   const response = await fetch(`${API_URL}/event-tutor-assignments/${assignmentId}`, {
     method: 'PATCH',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify({ status })
   });
   return response.json();
@@ -637,7 +664,7 @@ export const respondToAssignment = async (assignmentId, status) => {
 export const getTutorInvitations = async () => {
   const response = await fetch(`${API_URL}/tutor-invitations`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -645,7 +672,7 @@ export const getTutorInvitations = async () => {
 export const createTutorInvitation = async (data) => {
   const response = await fetch(`${API_URL}/tutor-invitations`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -654,7 +681,7 @@ export const createTutorInvitation = async (data) => {
 export const respondToTutorInvitation = async (invitationId, status) => {
   const response = await fetch(`${API_URL}/tutor-invitations/${invitationId}/respond`, {
     method: 'PATCH',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify({ status })
   });
   return response.json();
@@ -663,7 +690,7 @@ export const respondToTutorInvitation = async (invitationId, status) => {
 export const cancelTutorInvitation = async (invitationId) => {
   const response = await fetch(`${API_URL}/tutor-invitations/${invitationId}`, {
     method: 'DELETE',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -674,7 +701,7 @@ export const cancelTutorInvitation = async (invitationId) => {
 export const getMassNotifications = async () => {
   const response = await fetch(`${API_URL}/mass-notifications`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -682,7 +709,7 @@ export const getMassNotifications = async () => {
 export const createMassNotification = async (data) => {
   const response = await fetch(`${API_URL}/mass-notifications`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -691,7 +718,7 @@ export const createMassNotification = async (data) => {
 export const deleteMassNotification = async (id) => {
   const response = await fetch(`${API_URL}/mass-notifications/${id}`, {
     method: 'DELETE',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -702,7 +729,7 @@ export const deleteMassNotification = async (id) => {
 export const getGoals = async () => {
   const response = await fetch(`${API_URL}/goals`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -710,7 +737,7 @@ export const getGoals = async () => {
 export const createGoal = async (data) => {
   const response = await fetch(`${API_URL}/goals`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -719,7 +746,7 @@ export const createGoal = async (data) => {
 export const updateGoal = async (id, data) => {
   const response = await fetch(`${API_URL}/goals/${id}`, {
     method: 'PUT',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -728,7 +755,7 @@ export const updateGoal = async (id, data) => {
 export const deleteGoal = async (id) => {
   const response = await fetch(`${API_URL}/goals/${id}`, {
     method: 'DELETE',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -741,7 +768,7 @@ export const getActivityLog = async (params = {}) => {
   const url = query ? `${API_URL}/activity-log?${query}` : `${API_URL}/activity-log`;
   const response = await fetch(url, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -752,19 +779,19 @@ export const getActivityLog = async (params = {}) => {
 export const getAchievementCategories = async () => {
   const response = await fetch(`${API_URL}/achievement-categories`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
 
 // ============================================================
-// 24. СОГЛАСИЯ (СТАТИСТИКА)
+// 24. СОГЛАСИЯ
 // ============================================================
 export const getConsentsStats = async (clubId = null) => {
   const url = clubId ? `${API_URL}/consents-stats?club_id=${clubId}` : `${API_URL}/consents-stats`;
   const response = await fetch(url, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -773,7 +800,7 @@ export const getConsentsMissing = async (clubId = null) => {
   const url = clubId ? `${API_URL}/consents-missing?club_id=${clubId}` : `${API_URL}/consents-missing`;
   const response = await fetch(url, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -784,18 +811,18 @@ export const getConsentsMissing = async (clubId = null) => {
 export const getParticipantEvents = async (userId) => {
   const response = await fetch(`${API_URL}/participant-events/${userId}`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
 
 // ============================================================
-// 26. ЗАДАЧИ (ПЛАНИРОВЩИК)
+// 26. ЗАДАЧИ
 // ============================================================
 export const getTasks = async () => {
   const response = await fetch(`${API_URL}/tasks`, {
     method: 'GET',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -803,7 +830,7 @@ export const getTasks = async () => {
 export const createTask = async (data) => {
   const response = await fetch(`${API_URL}/tasks`, {
     method: 'POST',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -812,7 +839,7 @@ export const createTask = async (data) => {
 export const updateTask = async (id, data) => {
   const response = await fetch(`${API_URL}/tasks/${id}`, {
     method: 'PUT',
-    headers: headers(),
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   return response.json();
@@ -821,7 +848,7 @@ export const updateTask = async (id, data) => {
 export const deleteTask = async (id) => {
   const response = await fetch(`${API_URL}/tasks/${id}`, {
     method: 'DELETE',
-    headers: headers()
+    headers: getHeaders()
   });
   return response.json();
 };
@@ -835,10 +862,10 @@ const api = {
   logout,
   getMe,
   changePassword,
-  
+
   // Профиль
   updateProfile,
-  
+
   // Пользователи
   getUsers,
   getParticipants,
@@ -847,31 +874,31 @@ const api = {
   deleteUser,
   resetUserPassword,
   assignUserToClub,
-  
+
   // Клубы
   getClubs,
-  
+
   // Достижения
   getAchievements,
   addAchievement,
   deleteAchievement,
-  
+
   // События
   getEvents,
   createEvent,
   updateEvent,
   deleteEvent,
-  
+
   // Регистрации
   getRegistrations,
   addRegistration,
-  
+
   // Обращения
   getAppeals,
   addAppeal,
   replyToAppeal,
   getAppealReplies,
-  
+
   // Отчёты
   getReports,
   createReport,
@@ -880,40 +907,40 @@ const api = {
   submitReport,
   approveReport,
   rejectReport,
-  
+
   // Документы
   getDocuments,
   createDocument,
   deleteDocument,
-  
+
   // Новости
   getNews,
   createNews,
   updateNews,
   deleteNews,
-  
+
   // Уведомления
   getNotifications,
   markNotificationRead,
   markAllNotificationsRead,
-  
+
   // Аватар
   uploadAvatar,
-  
+
   // Дети
   getParentChildren,
   parentLinkChild,
-  
+
   // Президент
   getPresidentTasks,
   createPresidentTask,
   respondToPresidentTask,
-  
+
   // Статистика
   getParticipantStats,
   getClubPresident,
   setClubPresident,
-  
+
   // Тьюторы
   getTutorRequests,
   createTutorRequest,
@@ -924,31 +951,31 @@ const api = {
   createTutorInvitation,
   respondToTutorInvitation,
   cancelTutorInvitation,
-  
+
   // Массовые уведомления
   getMassNotifications,
   createMassNotification,
   deleteMassNotification,
-  
+
   // Цели и KPI
   getGoals,
   createGoal,
   updateGoal,
   deleteGoal,
-  
+
   // Журнал действий
   getActivityLog,
-  
+
   // Категории достижений
   getAchievementCategories,
-  
+
   // Согласия
   getConsentsStats,
   getConsentsMissing,
-  
+
   // История
   getParticipantEvents,
-  
+
   // Задачи
   getTasks,
   createTask,

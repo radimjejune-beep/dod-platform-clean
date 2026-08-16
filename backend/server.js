@@ -1692,8 +1692,10 @@ app.delete('/api/announcements/:id', async (req, res) => {
 });
 
 // ============================================================
-// 25. ШАБЛОНЫ ОТЧЁТОВ
+// 25. ШАБЛОНЫ ОТЧЁТОВ (ИСПРАВЛЕННЫЙ - ВСЕ СОТРУДНИКИ ВИДЯТ)
 // ============================================================
+
+// ===== ПОЛУЧЕНИЕ ВСЕХ ШАБЛОНОВ =====
 app.get('/api/report-templates', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -1705,36 +1707,90 @@ app.get('/api/report-templates', async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     const userRole = decoded.role;
     const userId = decoded.userId;
+    const isPresident = decoded.is_president || false;
+
+    // КТО НЕ ВИДИТ ШАБЛОНЫ:
+    if (userRole === 'participant' || userRole === 'parent' || isPresident === true) {
+      console.log(`⛔ Доступ запрещён: ${userRole}, is_president: ${isPresident}`);
+      return res.status(403).json({ 
+        error: 'У вас нет прав для просмотра шаблонов',
+        message: 'Шаблоны доступны только сотрудникам движения'
+      });
+    }
+
+    // КТО ВИДИТ ШАБЛОНЫ:
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
+    if (!allowedRoles.includes(userRole)) {
+      console.log(`⛔ Роль ${userRole} не в списке разрешённых`);
+      return res.status(403).json({ error: 'У вас нет прав для просмотра шаблонов' });
+    }
+
+    console.log(`✅ Просмотр шаблонов: ${userRole}, userId: ${userId}`);
 
     let query = `
-      SELECT rt.*, 
-             u.full_name as created_by_name,
-             c.name as club_name
+      SELECT 
+        rt.*,
+        u.full_name as created_by_name,
+        c.name as club_name
       FROM report_templates rt
       LEFT JOIN users u ON rt.created_by = u.id
       LEFT JOIN clubs c ON rt.club_id = c.id
+      WHERE 1=1
     `;
     const params = [];
 
-    if (userRole === 'club_coordinator') {
-      query += ' WHERE rt.created_by = $1';
-      params.push(userId);
-    } else if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      query += ' WHERE 1 = 0';
+    // ============================================================
+    // ЛОГИКА ДЛЯ РАЗНЫХ РОЛЕЙ:
+    // ============================================================
+
+    // 1. АДМИН И КООРДИНАТОР ДВИЖЕНИЯ - видят ВСЕ шаблоны
+    if (userRole === 'admin' || userRole === 'movement_coordinator') {
+      console.log('👑 Админ/Координатор движения: видит все шаблоны');
+      // Никаких условий - видят всё
+    }
+    // 2. ПРЕЗИДЕНТ И ВИЦЕ-ПРЕЗИДЕНТ - видят ВСЕ шаблоны
+    else if (userRole === 'president' || userRole === 'vice_president') {
+      console.log('👑 Президент/Вице: видит все шаблоны');
+      // Никаких условий - видят всё
+    }
+    // 3. ТЬЮТОР - видят ВСЕ шаблоны
+    else if (userRole === 'tutor') {
+      console.log('📚 Тьютор: видит все шаблоны');
+      // Никаких условий - видят всё
+    }
+    // 4. КООРДИНАТОР КЮДА - видит шаблоны своего клуба И общие
+    else if (userRole === 'club_coordinator') {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      if (clubResult.rows.length > 0) {
+        const clubId = clubResult.rows[0].club_id;
+        query += ` AND (rt.club_id = $1 OR rt.club_id IS NULL)`;
+        params.push(clubId);
+        console.log(`🏫 Координатор КЮДа: видит шаблоны клуба ${clubId} и общие`);
+      } else {
+        query += ` AND rt.club_id IS NULL`;
+        console.log(`📄 Координатор КЮДа без клуба: видит только общие шаблоны`);
+      }
     }
 
     query += ' ORDER BY rt.created_at DESC';
 
     const result = await pool.query(query, params);
+    console.log(`📥 Загружено шаблонов: ${result.rows.length}`);
     res.json(result.rows);
   } catch (error) {
-    console.error('Ошибка получения шаблонов:', error);
+    console.error('❌ Ошибка получения шаблонов:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
+// ===== СОЗДАНИЕ ШАБЛОНА =====
 app.post('/api/report-templates', async (req, res) => {
   try {
+    console.log('📥 POST /api/report-templates');
+
     const authHeader = req.headers.authorization;
     if (!authHeader) {
       return res.status(401).json({ error: 'Нет токена' });
@@ -1745,45 +1801,162 @@ app.post('/api/report-templates', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
+    // КТО МОЖЕТ СОЗДАВАТЬ ШАБЛОНЫ:
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator'];
+    if (!allowedRoles.includes(userRole)) {
+      console.log(`❌ Нет прав для создания. Роль: ${userRole}`);
+      return res.status(403).json({ error: 'У вас нет прав для создания шаблонов' });
+    }
+
     const { club_id, name, description, template_data, category = 'general' } = req.body;
 
-    if (!name || !template_data) {
-      return res.status(400).json({ error: 'name и template_data обязательны' });
+    console.log('📥 Данные шаблона:', { 
+      name, 
+      description, 
+      category, 
+      club_id,
+      template_data_length: template_data?.length 
+    });
+
+    if (!name || !name.trim() || !template_data || !template_data.trim()) {
+      return res.status(400).json({ error: 'Название и шаблон обязательны' });
     }
 
-    if (userRole === 'club_coordinator') {
-      const clubCheck = await pool.query(
-        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-        [userId, club_id]
+    // Если координатор КЮДа создаёт шаблон - привязываем к его клубу
+    let finalClubId = club_id || null;
+    if (userRole === 'club_coordinator' && !finalClubId) {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
       );
-      if (clubCheck.rows.length === 0) {
-        return res.status(403).json({ error: 'У вас нет прав для этого клуба' });
+      if (clubResult.rows.length > 0) {
+        finalClubId = clubResult.rows[0].club_id;
+        console.log('🏫 Привязан к клубу:', finalClubId);
       }
-    } else if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав' });
     }
+
+    const templateDataString = typeof template_data === 'string' ? template_data : JSON.stringify(template_data);
 
     const result = await pool.query(
       `INSERT INTO report_templates (club_id, created_by, name, description, template_data, category, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, NOW())
        RETURNING *`,
-      [club_id || null, userId, name, description || '', template_data, category]
+      [finalClubId, userId, name.trim(), description || '', templateDataString, category || 'general']
     );
 
-    res.json(result.rows[0]);
+    console.log('✅ Шаблон создан! ID:', result.rows[0].id);
+
+    // ============================================================
+    // УВЕДОМЛЕНИЯ О НОВОМ ШАБЛОНЕ
+    // ============================================================
+    const users = await pool.query(
+      `SELECT id FROM users 
+       WHERE status = 'active' 
+       AND role NOT IN ('participant', 'parent')
+       AND (role != 'participant' OR is_president != true)`
+    );
+
+    console.log(`👥 Отправка уведомлений ${users.rows.length} пользователям`);
+
+    for (const user of users.rows) {
+      await pool.query(
+        `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+        [
+          user.id,
+          'system',
+          `📋 Новый шаблон: ${result.rows[0].name}`,
+          `Создан новый шаблон отчёта "${result.rows[0].name}"`,
+          '/reports-templates',
+          'normal'
+        ]
+      );
+    }
+
+    res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Ошибка создания шаблона:', error);
+    console.error('❌ Ошибка создания шаблона:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
+// ===== ОБНОВЛЕНИЕ ШАБЛОНА =====
+app.put('/api/report-templates/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для редактирования шаблонов' });
+    }
+
+    const { club_id, name, description, template_data, category = 'general' } = req.body;
+
+    const check = await pool.query('SELECT * FROM report_templates WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Шаблон не найден' });
+    }
+
+    const templateDataString = typeof template_data === 'string' 
+      ? template_data 
+      : JSON.stringify(template_data || '');
+
+    const result = await pool.query(
+      `UPDATE report_templates 
+       SET club_id = $1, name = $2, description = $3, template_data = $4, category = $5, updated_at = NOW()
+       WHERE id = $6
+       RETURNING *`,
+      [
+        club_id || check.rows[0].club_id,
+        name || check.rows[0].name,
+        description || check.rows[0].description,
+        templateDataString || check.rows[0].template_data,
+        category || check.rows[0].category,
+        id
+      ]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка обновления шаблона:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== УДАЛЕНИЕ ШАБЛОНА =====
 app.delete('/api/report-templates/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления шаблонов' });
+    }
+
+    const check = await pool.query('SELECT id FROM report_templates WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Шаблон не найден' });
+    }
+
     await pool.query('DELETE FROM report_templates WHERE id = $1', [id]);
     res.json({ message: 'Шаблон удалён' });
   } catch (error) {
-    console.error('Ошибка удаления шаблона:', error);
+    console.error('❌ Ошибка удаления шаблона:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1852,6 +2025,8 @@ app.post('/api/reports/from-template/:templateId', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+console.log('✅ API для шаблонов отчётов загружены');
 
 // ============================================================
 // 26. НАЗНАЧЕНИЕ ПРЕЗИДЕНТА КЛУБА

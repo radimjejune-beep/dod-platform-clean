@@ -1,9 +1,4 @@
-// ============================================================
-// ПОЛНАЯ ВЕРСИЯ server.js — ЧАСТЬ 1
-// ============================================================
-// ВНИМАНИЕ: Это только первая половина!
-// После неё нужно вставить ЧАСТЬ 2
-// ============================================================
+// backend/server.js
 
 import express from 'express';
 import cors from 'cors';
@@ -25,6 +20,7 @@ import {
   exportToCSV,
   initReportGenerator 
 } from './lib/reportGenerator.js';
+
 dotenv.config();
 
 const app = express();
@@ -33,20 +29,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dod-platform-
 
 console.log('🚀 ЗАПУСК БЭКЕНДА');
 
+// ============================================================
+// БАЗА ДАННЫХ — ТОЛЬКО ОДИН РАЗ!
+// ============================================================
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 initLogger(pool);
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
-
-initLogger(pool);
-initReportGenerator(pool);  // ← ДОБАВЬ ЭТУ СТРОКУ
+initReportGenerator(pool);
 
 pool.connect((err) => {
   if (err) {
@@ -56,14 +48,9 @@ pool.connect((err) => {
   }
 });
 
-pool.connect((err) => {
-  if (err) {
-    console.error('❌ Ошибка подключения к базе данных:', err.message);
-  } else {
-    console.log('✅ Подключение к PostgreSQL установлено');
-  }
-});
-
+// ============================================================
+// CORS
+// ============================================================
 const allowedOrigins = [
   'https://dod-frontend.relaxdev.ru',
   'https://dod-platform-clean.relaxdev.ru',
@@ -87,6 +74,9 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// ============================================================
+// RATE LIMITING
+// ============================================================
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
@@ -422,12 +412,6 @@ app.get('/api/me', authenticate, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-// ============================================================
-// ПОЛНАЯ ВЕРСИЯ server.js — ЧАСТЬ 2
-// ============================================================
-// ВНИМАНИЕ: Это вторая половина!
-// Добавь её в конец файла после части 1
-// ============================================================
 
 // ============================================================
 // СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ (ТОЛЬКО АДМИН) — С ПРИВЯЗКОЙ К КЛУБУ
@@ -900,7 +884,7 @@ app.delete('/api/achievements/:id', authenticate, async (req, res) => {
 });
 
 // ============================================================
-// СОБЫТИЯ (ПОЛНЫЙ СПИСОК)
+// СОБЫТИЯ
 // ============================================================
 app.get('/api/events', authenticate, async (req, res) => {
   try {
@@ -2225,7 +2209,7 @@ app.patch('/api/event-tutor-assignments/:id', authenticate, async (req, res) => 
 });
 
 // ============================================================
-// ОТЧЁТЫ
+// ОТЧЁТЫ (ПОЛНЫЙ СПИСОК)
 // ============================================================
 app.get('/api/reports', authenticate, async (req, res) => {
   try {
@@ -2321,17 +2305,12 @@ app.patch('/api/reports/:id/submit', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Отчёт уже отправлен' });
     }
 
-    // Обновляем статус
     const result = await pool.query(
       `UPDATE reports SET status = 'submitted', submitted_by = $1, submitted_at = NOW(), updated_at = NOW() 
        WHERE id = $2 RETURNING *`,
       [userId, id]
     );
 
-    // ============================================================
-    // УВЕДОМЛЕНИЕ: ОТПРАВЛЕН НА ПРОВЕРКУ
-    // ============================================================
-    // Уведомляем автора
     await createNotification(
       userId,
       'report',
@@ -2341,7 +2320,6 @@ app.patch('/api/reports/:id/submit', authenticate, async (req, res) => {
       'normal'
     );
 
-    // Уведомляем администраторов и координаторов движения
     const admins = await pool.query(
       "SELECT id FROM users WHERE role IN ('admin', 'movement_coordinator', 'president', 'vice_president')"
     );
@@ -2394,10 +2372,6 @@ app.patch('/api/reports/:id/approve', authenticate, async (req, res) => {
       [userId, id]
     );
 
-    // ============================================================
-    // УВЕДОМЛЕНИЕ: ОТЧЁТ УТВЕРЖДЁН
-    // ============================================================
-    // Уведомляем автора
     if (report.created_by) {
       await createNotification(
         report.created_by,
@@ -2409,7 +2383,6 @@ app.patch('/api/reports/:id/approve', authenticate, async (req, res) => {
       );
     }
 
-    // Уведомляем координаторов клуба
     const coordinators = await pool.query(
       'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
       [report.club_id]
@@ -2465,9 +2438,6 @@ app.patch('/api/reports/:id/reject', authenticate, async (req, res) => {
       [userId, comment || 'Без комментария', id]
     );
 
-    // ============================================================
-    // УВЕДОМЛЕНИЕ: ОТЧЁТ ОТКЛОНЁН
-    // ============================================================
     if (report.created_by) {
       await createNotification(
         report.created_by,
@@ -3103,7 +3073,6 @@ app.get('/api/my-club-events', authenticate, async (req, res) => {
     const userId = req.user.userId;
     const userRole = req.user.role;
 
-    // Проверяем, есть ли у пользователя клуб
     const userCheck = await pool.query('SELECT club_id FROM users WHERE id = $1', [userId]);
     if (userCheck.rows.length === 0 || !userCheck.rows[0].club_id) {
       console.log('❌ У пользователя нет клуба');
@@ -3175,52 +3144,8 @@ app.get('/api/activity-log', authenticate, async (req, res) => {
 });
 
 // ============================================================
-// СОЗДАНИЕ ТЕСТОВОГО ПОЛЬЗОВАТЕЛЯ
+// ГЕНЕРАЦИЯ ОТЧЁТА ИЗ ШАБЛОНА
 // ============================================================
-app.post('/api/create-test-user', async (req, res) => {
-  try {
-    const email = 'newadmin@dod.ru';
-    const password = '123456';
-    const full_name = 'Администратор';
-    const role = 'admin';
-
-    await pool.query('DELETE FROM users WHERE email = $1', [email]);
-    console.log('🗑️ Старый пользователь удалён');
-
-    const password_hash = await bcrypt.hash(password, 10);
-
-    const result = await pool.query(
-      `INSERT INTO users (email, password_hash, full_name, role, birth_date, registration_status, must_change_password, status)
-       VALUES ($1, $2, $3, $4, '2000-01-01', 'active', false, 'active')
-       RETURNING id, email, full_name, role, registration_status`,
-      [email, password_hash, full_name, role]
-    );
-
-    console.log('✅ Тестовый пользователь создан');
-    res.json({ message: 'Пользователь создан!', user: result.rows[0] });
-
-  } catch (error) {
-    console.error('❌ Ошибка:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// ГЕНЕРАЦИЯ ОТЧЁТА ИЗ ШАБЛОНА С ДИНАМИЧЕСКИМИ ДАННЫМИ
-// ============================================================
-
-import { 
-  collectReportData, 
-  replacePlaceholders, 
-  exportToPDF, 
-  exportToDOCX, 
-  exportToHTML, 
-  exportToCSV 
-} from './lib/reportGenerator.js';
-
-// Инициализируем генератор отчётов
-initReportGenerator(pool);
-
 app.post('/api/reports/generate/:templateId', authenticate, async (req, res) => {
   try {
     const { templateId } = req.params;
@@ -3233,7 +3158,6 @@ app.post('/api/reports/generate/:templateId', authenticate, async (req, res) => 
     console.log(`  🏫 Клуб: ${club_id}`);
     console.log(`  📅 Месяц: ${report_month}`);
     console.log(`  📄 Формат: ${format}`);
-    console.log(`  👤 Пользователь: ${userId}`);
 
     if (!club_id) {
       return res.status(400).json({ error: 'Выберите клуб' });
@@ -3248,7 +3172,6 @@ app.post('/api/reports/generate/:templateId', authenticate, async (req, res) => 
       return res.status(400).json({ error: 'Неверный формат месяца. Используйте YYYY-MM' });
     }
 
-    // Проверка прав
     if (userRole === 'club_coordinator') {
       const clubCheck = await pool.query(
         'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
@@ -3259,7 +3182,6 @@ app.post('/api/reports/generate/:templateId', authenticate, async (req, res) => 
       }
     }
 
-    // Получаем шаблон
     const templateResult = await pool.query(
       'SELECT * FROM report_templates WHERE id = $1',
       [templateId]
@@ -3269,13 +3191,9 @@ app.post('/api/reports/generate/:templateId', authenticate, async (req, res) => 
     }
     const template = templateResult.rows[0];
 
-    // Собираем данные
     const reportData = await collectReportData(club_id, report_month);
-
-    // Заменяем плейсхолдеры
     const content = replacePlaceholders(template.template_data, reportData);
 
-    // Создаём отчёт в БД
     const reportResult = await pool.query(
       `INSERT INTO reports (club_id, created_by, title, content, report_month, status, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, 'draft', NOW(), NOW()) RETURNING *`,
@@ -3284,9 +3202,6 @@ app.post('/api/reports/generate/:templateId', authenticate, async (req, res) => 
 
     const report = reportResult.rows[0];
 
-    // ============================================================
-    // УВЕДОМЛЕНИЕ: ОТЧЁТ СОЗДАН
-    // ============================================================
     await createNotification(
       userId,
       'report',
@@ -3296,7 +3211,6 @@ app.post('/api/reports/generate/:templateId', authenticate, async (req, res) => 
       'normal'
     );
 
-    // Уведомляем координаторов клуба
     const coordinators = await pool.query(
       'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
       [club_id]
@@ -3314,9 +3228,6 @@ app.post('/api/reports/generate/:templateId', authenticate, async (req, res) => 
       }
     }
 
-    // ============================================================
-    // ЭКСПОРТ В ВЫБРАННОМ ФОРМАТЕ
-    // ============================================================
     let resultData = { report, content };
 
     switch (format) {
@@ -3337,7 +3248,6 @@ app.post('/api/reports/generate/:templateId', authenticate, async (req, res) => 
         resultData = { report, content, csv };
         break;
       default:
-        // JSON — возвращаем данные
         resultData = { report, content, data: reportData };
     }
 
@@ -3360,7 +3270,6 @@ app.get('/api/reports/:id/export/:format', authenticate, async (req, res) => {
 
     console.log(`📤 ЭКСПОРТ ОТЧЁТА ${id} в ${format}`);
 
-    // Проверяем, что отчёт существует
     const reportResult = await pool.query(
       `SELECT r.*, c.name as club_name FROM reports r 
        LEFT JOIN clubs c ON r.club_id = c.id 
@@ -3372,7 +3281,6 @@ app.get('/api/reports/:id/export/:format', authenticate, async (req, res) => {
     }
     const report = reportResult.rows[0];
 
-    // Проверка прав
     if (userRole === 'club_coordinator') {
       const clubCheck = await pool.query(
         'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
@@ -3383,7 +3291,6 @@ app.get('/api/reports/:id/export/:format', authenticate, async (req, res) => {
       }
     }
 
-    // Собираем данные для отчёта (если нужно)
     const reportData = await collectReportData(report.club_id, report.report_month);
     const content = replacePlaceholders(report.content, reportData);
 
@@ -3422,6 +3329,37 @@ app.get('/api/reports/:id/export/:format', authenticate, async (req, res) => {
 
   } catch (error) {
     console.error('❌ Ошибка экспорта отчёта:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// СОЗДАНИЕ ТЕСТОВОГО ПОЛЬЗОВАТЕЛЯ
+// ============================================================
+app.post('/api/create-test-user', async (req, res) => {
+  try {
+    const email = 'newadmin@dod.ru';
+    const password = '123456';
+    const full_name = 'Администратор';
+    const role = 'admin';
+
+    await pool.query('DELETE FROM users WHERE email = $1', [email]);
+    console.log('🗑️ Старый пользователь удалён');
+
+    const password_hash = await bcrypt.hash(password, 10);
+
+    const result = await pool.query(
+      `INSERT INTO users (email, password_hash, full_name, role, birth_date, registration_status, must_change_password, status)
+       VALUES ($1, $2, $3, $4, '2000-01-01', 'active', false, 'active')
+       RETURNING id, email, full_name, role, registration_status`,
+      [email, password_hash, full_name, role]
+    );
+
+    console.log('✅ Тестовый пользователь создан');
+    res.json({ message: 'Пользователь создан!', user: result.rows[0] });
+
+  } catch (error) {
+    console.error('❌ Ошибка:', error);
     res.status(500).json({ error: error.message });
   }
 });

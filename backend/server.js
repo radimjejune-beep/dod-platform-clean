@@ -5830,6 +5830,56 @@ app.get('/api/events/:eventId/available-participants', async (req, res) => {
 console.log('✅ API для управления участниками мероприятий загружены');
 
 // ============================================================
+// УДАЛЕНИЕ МЕРОПРИЯТИЯ
+// ============================================================
+app.delete('/api/events/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRole = decoded.role;
+    const userId = decoded.userId;
+
+    console.log(`🗑️ Удаление мероприятия ${id}, роль: ${userRole}`);
+
+    const eventCheck = await pool.query('SELECT * FROM events WHERE id = $1', [id]);
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    const event = eventCheck.rows[0];
+
+    let canDelete = false;
+
+    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
+      canDelete = true;
+    } else if (userRole === 'club_coordinator' && event.created_by === userId) {
+      canDelete = true;
+    }
+
+    if (!canDelete) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления мероприятия' });
+    }
+
+    // Удаляем связанные данные
+    await pool.query('DELETE FROM event_participants WHERE event_id = $1', [id]);
+    await pool.query('DELETE FROM event_tutor_assignments WHERE event_id = $1', [id]);
+    await pool.query('DELETE FROM registrations WHERE event_id = $1', [id]);
+    await pool.query('DELETE FROM events WHERE id = $1', [id]);
+
+    res.json({ message: 'Мероприятие удалено', deleted_event: event.title });
+  } catch (error) {
+    console.error('❌ Ошибка удаления мероприятия:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
 // ЗАПУСК СЕРВЕРА
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {

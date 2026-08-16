@@ -1,22 +1,24 @@
 // backend/lib/reportGenerator.js
 
-import { Pool } from 'pg';
 import PDFDocument from 'pdfkit';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
-import fs from 'fs';
 
 let poolInstance = null;
 
+// ============================================================
+// 1. ИНИЦИАЛИЗАЦИЯ
+// ============================================================
 export const initReportGenerator = (pool) => {
   poolInstance = pool;
+  console.log('✅ Генератор отчётов инициализирован');
 };
 
 // ============================================================
-// 1. СБОР ДАННЫХ ДЛЯ ОТЧЁТА
+// 2. СБОР ДАННЫХ ДЛЯ ОТЧЁТА
 // ============================================================
 export const collectReportData = async (clubId, reportMonth) => {
   if (!poolInstance) {
-    throw new Error('Report generator not initialized');
+    throw new Error('❌ Генератор отчётов не инициализирован');
   }
 
   const [month, year] = reportMonth.split('-');
@@ -183,7 +185,7 @@ export const collectReportData = async (clubId, reportMonth) => {
 };
 
 // ============================================================
-// 2. ЗАМЕНА ПЛЕЙСХОЛДЕРОВ В ТЕКСТЕ
+// 3. ЗАМЕНА ПЛЕЙСХОЛДЕРОВ В ТЕКСТЕ
 // ============================================================
 export const replacePlaceholders = (template, data) => {
   let result = template;
@@ -264,151 +266,158 @@ export const replacePlaceholders = (template, data) => {
 };
 
 // ============================================================
-// 3. ЭКСПОРТ В PDF
+// 4. ЭКСПОРТ В PDF
 // ============================================================
 export const exportToPDF = async (content, title) => {
-  const doc = new PDFDocument({
-    size: 'A4',
-    margin: 50,
-    info: { Title: title }
-  });
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({
+        size: 'A4',
+        margin: 50,
+        info: { Title: title }
+      });
 
-  const chunks = [];
-  doc.on('data', chunk => chunks.push(chunk));
-  doc.on('end', () => {});
+      const chunks = [];
+      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('end', () => {
+        resolve(Buffer.concat(chunks));
+      });
+      doc.on('error', reject);
 
-  // Заголовок
-  doc.fontSize(24).font('Helvetica-Bold').text(title, { align: 'center' });
-  doc.moveDown();
+      // Заголовок
+      doc.fontSize(24).font('Helvetica-Bold').text(title, { align: 'center' });
+      doc.moveDown();
 
-  // Линия
-  doc.strokeColor('#C9A227').lineWidth(2).moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-  doc.moveDown();
+      // Линия
+      doc.strokeColor('#C9A227').lineWidth(2).moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+      doc.moveDown();
 
-  // Дата генерации
-  doc.fontSize(10).font('Helvetica').text(`Сгенерировано: ${new Date().toLocaleString('ru-RU')}`, { align: 'right' });
-  doc.moveDown();
+      // Дата генерации
+      doc.fontSize(10).font('Helvetica').text(`Сгенерировано: ${new Date().toLocaleString('ru-RU')}`, { align: 'right' });
+      doc.moveDown();
 
-  // Контент
-  const lines = content.split('\n');
-  for (const line of lines) {
-    if (line.trim() === '') {
-      doc.moveDown(0.5);
-      continue;
-    }
-
-    // Заголовки (начинаются с ###)
-    if (line.trim().startsWith('###')) {
-      doc.fontSize(14).font('Helvetica-Bold').text(line.trim().replace('###', '').trim());
-      doc.moveDown(0.5);
-      continue;
-    }
-
-    // Жирный текст (**текст**)
-    if (line.includes('**')) {
-      const parts = line.split('**');
-      let formattedLine = '';
-      for (let i = 0; i < parts.length; i++) {
-        if (i % 2 === 1) {
-          formattedLine += parts[i];
-        } else {
-          formattedLine += parts[i];
+      // Контент
+      const lines = content.split('\n');
+      for (const line of lines) {
+        if (line.trim() === '') {
+          doc.moveDown(0.5);
+          continue;
         }
+
+        // Заголовки (начинаются с ###)
+        if (line.trim().startsWith('###')) {
+          doc.fontSize(14).font('Helvetica-Bold').text(line.trim().replace('###', '').trim());
+          doc.moveDown(0.5);
+          continue;
+        }
+
+        // Жирный текст (**текст**)
+        if (line.includes('**')) {
+          const parts = line.split('**');
+          let formattedLine = '';
+          for (let i = 0; i < parts.length; i++) {
+            if (i % 2 === 1) {
+              formattedLine += parts[i];
+            } else {
+              formattedLine += parts[i];
+            }
+          }
+          doc.fontSize(12).font('Helvetica').text(formattedLine);
+          doc.moveDown(0.5);
+          continue;
+        }
+
+        // Обычный текст
+        doc.fontSize(12).font('Helvetica').text(line);
+        doc.moveDown(0.5);
       }
-      doc.fontSize(12).font('Helvetica').text(formattedLine);
-      doc.moveDown(0.5);
-      continue;
+
+      // Подпись внизу
+      doc.moveDown();
+      doc.strokeColor('#C9A227').lineWidth(1).moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+      doc.fontSize(10).font('Helvetica').text('ДОД «Дипломаты будущего» • Официальный отчёт', { align: 'center' });
+
+      doc.end();
+    } catch (error) {
+      reject(error);
     }
-
-    // Обычный текст
-    doc.fontSize(12).font('Helvetica').text(line);
-    doc.moveDown(0.5);
-  }
-
-  // Подпись внизу
-  doc.moveDown();
-  doc.strokeColor('#C9A227').lineWidth(1).moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-  doc.fontSize(10).font('Helvetica').text('ДОД «Дипломаты будущего» • Официальный отчёт', { align: 'center' });
-
-  doc.end();
-
-  return new Promise((resolve) => {
-    doc.on('end', () => {
-      resolve(Buffer.concat(chunks));
-    });
   });
 };
 
 // ============================================================
-// 4. ЭКСПОРТ В DOCX
+// 5. ЭКСПОРТ В DOCX
 // ============================================================
 export const exportToDOCX = async (content, title) => {
-  const doc = new Document({
-    sections: [{
-      properties: {},
-      children: [
-        new Paragraph({
-          text: title,
-          heading: HeadingLevel.TITLE,
-          alignment: AlignmentType.CENTER,
-          spacing: { after: 200 }
-        }),
-        new Paragraph({
-          text: `Сгенерировано: ${new Date().toLocaleString('ru-RU')}`,
-          alignment: AlignmentType.RIGHT,
-          spacing: { after: 200 }
-        })
-      ]
-    }]
-  });
+  try {
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: [
+          new Paragraph({
+            text: title,
+            heading: HeadingLevel.TITLE,
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200 }
+          }),
+          new Paragraph({
+            text: `Сгенерировано: ${new Date().toLocaleString('ru-RU')}`,
+            alignment: AlignmentType.RIGHT,
+            spacing: { after: 200 }
+          })
+        ]
+      }]
+    });
 
-  const lines = content.split('\n');
-  for (const line of lines) {
-    if (line.trim() === '') {
-      doc.addSection({
-        children: [new Paragraph({ text: ' ', spacing: { after: 100 } })]
-      });
-      continue;
-    }
+    const lines = content.split('\n');
+    const sectionChildren = [];
 
-    if (line.trim().startsWith('###')) {
-      doc.addSection({
-        children: [new Paragraph({
+    for (const line of lines) {
+      if (line.trim() === '') {
+        sectionChildren.push(new Paragraph({ text: ' ', spacing: { after: 100 } }));
+        continue;
+      }
+
+      if (line.trim().startsWith('###')) {
+        sectionChildren.push(new Paragraph({
           text: line.trim().replace('###', '').trim(),
           heading: HeadingLevel.HEADING_3,
           spacing: { after: 100 }
-        })]
-      });
-      continue;
-    }
-
-    // Обработка жирного текста
-    if (line.includes('**')) {
-      const parts = line.split('**');
-      const children = [];
-      for (let i = 0; i < parts.length; i++) {
-        if (i % 2 === 1) {
-          children.push(new TextRun({ text: parts[i], bold: true }));
-        } else if (parts[i]) {
-          children.push(new TextRun({ text: parts[i] }));
-        }
+        }));
+        continue;
       }
-      doc.addSection({
-        children: [new Paragraph({ children, spacing: { after: 100 } })]
-      });
-      continue;
+
+      // Обработка жирного текста
+      if (line.includes('**')) {
+        const parts = line.split('**');
+        const children = [];
+        for (let i = 0; i < parts.length; i++) {
+          if (i % 2 === 1) {
+            children.push(new TextRun({ text: parts[i], bold: true }));
+          } else if (parts[i]) {
+            children.push(new TextRun({ text: parts[i] }));
+          }
+        }
+        sectionChildren.push(new Paragraph({ children, spacing: { after: 100 } }));
+        continue;
+      }
+
+      sectionChildren.push(new Paragraph({ text: line, spacing: { after: 100 } }));
     }
 
+    // Добавляем все параграфы в секцию
     doc.addSection({
-      children: [new Paragraph({ text: line, spacing: { after: 100 } })]
+      children: sectionChildren
     });
-  }
 
-  return await Packer.toBuffer(doc);
+    return await Packer.toBuffer(doc);
+  } catch (error) {
+    console.error('❌ Ошибка экспорта в DOCX:', error);
+    throw error;
+  }
 };
 
 // ============================================================
-// 5. ЭКСПОРТ В HTML
+// 6. ЭКСПОРТ В HTML
 // ============================================================
 export const exportToHTML = (content, title) => {
   let html = `
@@ -440,29 +449,63 @@ export const exportToHTML = (content, title) => {
   `;
 
   const lines = content.split('\n');
+  let inList = false;
+
   for (const line of lines) {
     if (line.trim() === '') {
+      if (inList) {
+        html += '</ul>';
+        inList = false;
+      }
       html += '<br>';
       continue;
     }
 
     if (line.trim().startsWith('###')) {
+      if (inList) {
+        html += '</ul>';
+        inList = false;
+      }
       html += `<h3>${line.trim().replace('###', '').trim()}</h3>`;
       continue;
     }
 
     if (line.includes('**')) {
       let processed = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      html += `<p>${processed}</p>`;
+      if (line.trim().startsWith('•')) {
+        if (!inList) {
+          html += '<ul>';
+          inList = true;
+        }
+        html += `<li>${processed.trim().replace('•', '').trim()}</li>`;
+      } else {
+        if (inList) {
+          html += '</ul>';
+          inList = false;
+        }
+        html += `<p>${processed}</p>`;
+      }
       continue;
     }
 
     if (line.trim().startsWith('•')) {
+      if (!inList) {
+        html += '<ul>';
+        inList = true;
+      }
       html += `<li>${line.trim().replace('•', '').trim()}</li>`;
       continue;
     }
 
+    if (inList) {
+      html += '</ul>';
+      inList = false;
+    }
     html += `<p>${line}</p>`;
+  }
+
+  if (inList) {
+    html += '</ul>';
   }
 
   html += `
@@ -478,7 +521,7 @@ export const exportToHTML = (content, title) => {
 };
 
 // ============================================================
-// 6. ЭКСПОРТ В CSV
+// 7. ЭКСПОРТ В CSV
 // ============================================================
 export const exportToCSV = (data, title) => {
   const rows = [

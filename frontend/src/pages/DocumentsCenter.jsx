@@ -40,7 +40,7 @@ export default function DocumentsCenter() {
         return;
       }
 
-      // Проверка прав - участники и родители не видят документы
+      // Проверка прав - участники, родители и президенты клубов не видят документы
       const isPresident = userData.is_president || false;
       if (userData.role === 'participant' || userData.role === 'parent' || isPresident) {
         navigate('/dashboard');

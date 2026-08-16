@@ -874,12 +874,15 @@ app.delete('/api/achievements/:id', authenticate, async (req, res) => {
 });
 
 // ============================================================
-// СОБЫТИЯ
+// СОБЫТИЯ — ПОЛНАЯ ИСПРАВЛЕННАЯ ВЕРСИЯ
 // ============================================================
+
 app.get('/api/events', authenticate, async (req, res) => {
   try {
     const userId = req.user.userId;
     const userRole = req.user.role;
+
+    console.log(`📋 Запрос событий: userId=${userId}, role=${userRole}`);
 
     let query = `
       SELECT e.*, 
@@ -889,34 +892,47 @@ app.get('/api/events', authenticate, async (req, res) => {
       FROM events e
       LEFT JOIN clubs c ON e.club_id = c.id
       LEFT JOIN users u ON e.created_by = u.id
-      WHERE (e.moderation_status = 'approved' OR e.moderation_status IS NULL)
+      WHERE 1=1
     `;
     const params = [];
     const conditions = [];
 
-    conditions.push('(e.is_global = true)');
-
+    // --- АДМИН/ДВИЖЕНИЕ/ПРЕЗИДЕНТ ---
     if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      conditions.push('(e.is_club_event = true)');
-    } else if (userRole === 'club_coordinator') {
-      const clubResult = await pool.query('SELECT club_id FROM club_coordinators WHERE profile_id = $1', [userId]);
+      // Видят всё
+      console.log('👑 Пользователь с высокими правами видит все события');
+    } 
+    // --- КООРДИНАТОР КЛУБА ---
+    else if (userRole === 'club_coordinator') {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      
       if (clubResult.rows.length > 0) {
         const clubId = clubResult.rows[0].club_id;
-        conditions.push(`(e.is_club_event = true AND e.club_id = $${params.length + 1})`);
+        // 🔥 ГЛАВНОЕ ИСПРАВЛЕНИЕ: видит ВСЕ события СВОЕГО клуба
+        conditions.push(`(e.club_id = $${params.length + 1})`);
         params.push(clubId);
+        console.log(`🏫 Координатор КЮДа ${userId} видит события клуба ${clubId}`);
       } else {
         conditions.push('1 = 0');
+        console.log(`⚠️ Координатор ${userId} не привязан к клубу`);
       }
-    } else if (userRole === 'participant') {
+    } 
+    // --- УЧАСТНИК ---
+    else if (userRole === 'participant') {
       const user = await pool.query('SELECT club_id FROM users WHERE id = $1', [userId]);
       if (user.rows.length > 0 && user.rows[0].club_id) {
         const clubId = user.rows[0].club_id;
-        conditions.push(`(e.is_club_event = true AND e.club_id = $${params.length + 1})`);
+        conditions.push(`(e.club_id = $${params.length + 1} OR e.is_global = true)`);
         params.push(clubId);
       } else {
-        conditions.push('1 = 0');
+        conditions.push(`e.is_global = true`);
       }
-    } else if (userRole === 'tutor') {
+    } 
+    // --- ТЬЮТОР ---
+    else if (userRole === 'tutor') {
       const assignments = await pool.query(
         'SELECT event_id FROM event_tutor_assignments WHERE tutor_id = $1 AND status = $2',
         [userId, 'accepted']
@@ -928,7 +944,9 @@ app.get('/api/events', authenticate, async (req, res) => {
       } else {
         conditions.push('1 = 0');
       }
-    } else if (userRole === 'parent') {
+    } 
+    // --- РОДИТЕЛЬ ---
+    else if (userRole === 'parent') {
       const children = await pool.query(
         'SELECT child_id FROM child_parent WHERE parent_id = $1 AND status = $2',
         [userId, 'active']
@@ -940,7 +958,9 @@ app.get('/api/events', authenticate, async (req, res) => {
       } else {
         conditions.push('1 = 0');
       }
-    } else {
+    } 
+    // --- ОСТАЛЬНЫЕ ---
+    else {
       conditions.push('1 = 0');
     }
 
@@ -950,52 +970,100 @@ app.get('/api/events', authenticate, async (req, res) => {
 
     query += ' ORDER BY e.event_date ASC';
 
+    console.log('📋 Выполняется запрос с условиями:', conditions);
+    console.log('📋 Параметры:', params);
+
     const result = await pool.query(query, params);
+    
+    console.log(`✅ Найдено ${result.rows.length} событий для пользователя ${userId}`);
     res.json(result.rows);
   } catch (error) {
-    console.error('Ошибка получения событий:', error);
+    console.error('❌ Ошибка получения событий:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
+// ============================================================
+// СОЗДАНИЕ СОБЫТИЯ
+// ============================================================
 app.post('/api/events', authenticate, async (req, res) => {
   try {
     const userId = req.user.userId;
     const userRole = req.user.role;
 
-    const { title, description, location, event_date, end_date, start_time, end_time, type, capacity, club_id, form_url, is_global } = req.body;
+    const { 
+      title, 
+      description, 
+      location, 
+      event_date, 
+      end_date, 
+      start_time, 
+      end_time, 
+      type, 
+      capacity, 
+      club_id, 
+      form_url, 
+      is_global,
+      is_club_event
+    } = req.body;
 
     if (!title || !event_date) {
       return res.status(400).json({ error: 'Название и дата обязательны' });
     }
 
     let finalClubId = club_id || null;
-    let isGlobal = is_global || false;
-    let isClubEvent = false;
+    let finalIsGlobal = is_global || false;
+    let finalIsClubEvent = is_club_event || false;
 
-    if (userRole === 'movement_coordinator' || userRole === 'admin') {
-      if (is_global) {
-        isGlobal = true;
-        finalClubId = null;
-      }
-    }
+    console.log(`📝 СОЗДАНИЕ СОБЫТИЯ:`);
+    console.log(`  📌 Название: ${title}`);
+    console.log(`  👤 Пользователь: ${userId} (${userRole})`);
+    console.log(`  🏫 Клуб: ${finalClubId}`);
+    console.log(`  🌍 Глобальное: ${finalIsGlobal}`);
 
+    // Если координатор клуба — проверяем доступ к клубу
     if (userRole === 'club_coordinator') {
       if (!finalClubId) {
-        const clubResult = await pool.query('SELECT club_id FROM club_coordinators WHERE profile_id = $1', [userId]);
+        // Если клуб не указан, берём из привязки
+        const clubResult = await pool.query(
+          'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+          [userId]
+        );
         if (clubResult.rows.length > 0) {
           finalClubId = clubResult.rows[0].club_id;
-          isClubEvent = true;
-          isGlobal = false;
+          finalIsClubEvent = true;
+          finalIsGlobal = false;
+          console.log(`  🏫 Автоматически привязан к клубу: ${finalClubId}`);
+        } else {
+          return res.status(400).json({ error: 'Вы не привязаны ни к одному КЮДу' });
         }
       } else {
-        const clubCheck = await pool.query('SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2', [userId, finalClubId]);
+        // Проверяем, что координатор имеет доступ к указанному клубу
+        const clubCheck = await pool.query(
+          'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
+          [userId, finalClubId]
+        );
         if (clubCheck.rows.length === 0) {
           return res.status(403).json({ error: 'У вас нет доступа к этому клубу' });
         }
-        isClubEvent = true;
-        isGlobal = false;
+        finalIsClubEvent = true;
+        finalIsGlobal = false;
       }
+    }
+
+    // Админ может создавать глобальные события
+    if (['admin', 'movement_coordinator'].includes(userRole)) {
+      if (finalIsGlobal) {
+        finalIsGlobal = true;
+        finalClubId = null;
+        finalIsClubEvent = false;
+        console.log(`  🌍 Создаётся глобальное событие`);
+      }
+    }
+
+    // Участник не может создавать события
+    if (userRole === 'participant') {
+      return res.status(403).json({ error: 'Участники не могут создавать мероприятия' });
     }
 
     const result = await pool.query(
@@ -1005,26 +1073,57 @@ app.post('/api/events', authenticate, async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
       RETURNING *`,
       [
-        title, description || '', location || '', event_date,
-        end_date || event_date, start_time || null, end_time || null,
-        type || 'internal', capacity || 20, finalClubId,
-        form_url || null, isGlobal, isClubEvent, userId
+        title.trim(), 
+        description || '', 
+        location || '', 
+        event_date,
+        end_date || event_date, 
+        start_time || null, 
+        end_time || null,
+        type || 'internal', 
+        capacity || 20, 
+        finalClubId,
+        form_url || null, 
+        finalIsGlobal, 
+        finalIsClubEvent, 
+        userId
       ]
     );
 
+    console.log(`✅ Событие создано: ${result.rows[0].id}`);
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Ошибка создания события:', error);
+    console.error('❌ Ошибка создания события:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
+// ============================================================
+// ОБНОВЛЕНИЕ СОБЫТИЯ
+// ============================================================
 app.patch('/api/events/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.userId;
     const userRole = req.user.role;
-    const { title, description, location, event_date, end_date, start_time, end_time, type, capacity, form_url } = req.body;
+    const { 
+      title, 
+      description, 
+      location, 
+      event_date, 
+      end_date, 
+      start_time, 
+      end_time, 
+      type, 
+      capacity, 
+      form_url,
+      is_global,
+      is_club_event,
+      club_id
+    } = req.body;
+
+    console.log(`📝 ОБНОВЛЕНИЕ СОБЫТИЯ ${id}`);
+    console.log(`  👤 Пользователь: ${userId} (${userRole})`);
 
     const check = await pool.query('SELECT * FROM events WHERE id = $1', [id]);
     if (check.rows.length === 0) {
@@ -1034,14 +1133,56 @@ app.patch('/api/events/:id', authenticate, async (req, res) => {
     const event = check.rows[0];
 
     let canEdit = false;
+
+    // Админ, координатор движения, президент — могут редактировать всё
     if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
       canEdit = true;
-    } else if (userRole === 'club_coordinator' && event.created_by === userId) {
-      canEdit = true;
+      console.log('  ✅ Высокие права — можно редактировать');
+    } 
+    // Координатор клуба — может редактировать события своего клуба
+    else if (userRole === 'club_coordinator') {
+      const clubCheck = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
+        [userId, event.club_id]
+      );
+      if (clubCheck.rows.length > 0) {
+        canEdit = true;
+        console.log('  ✅ Координатор клуба — можно редактировать');
+      } else {
+        console.log('  ❌ Нет доступа к этому клубу');
+      }
     }
 
     if (!canEdit) {
       return res.status(403).json({ error: 'У вас нет прав для редактирования' });
+    }
+
+    // Проверяем, может ли пользователь менять клуб/глобальность
+    let finalClubId = club_id !== undefined ? club_id : event.club_id;
+    let finalIsGlobal = is_global !== undefined ? is_global : event.is_global;
+    let finalIsClubEvent = is_club_event !== undefined ? is_club_event : event.is_club_event;
+
+    // Если координатор клуба — нельзя делать событие глобальным
+    if (userRole === 'club_coordinator') {
+      finalIsGlobal = false;
+      if (finalClubId !== event.club_id && finalClubId) {
+        const clubCheck = await pool.query(
+          'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
+          [userId, finalClubId]
+        );
+        if (clubCheck.rows.length === 0) {
+          return res.status(403).json({ error: 'У вас нет доступа к этому клубу' });
+        }
+      }
+    }
+
+    // Только админ может делать глобальные события
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      if (event.is_global === true && finalIsGlobal === false) {
+        // Можно убрать глобальность
+      } else if (event.is_global === false && finalIsGlobal === true) {
+        return res.status(403).json({ error: 'Только администратор может делать событие глобальным' });
+      }
     }
 
     const result = await pool.query(
@@ -1055,29 +1196,49 @@ app.patch('/api/events/:id', authenticate, async (req, res) => {
            end_time = $7,
            type = COALESCE($8, type),
            capacity = COALESCE($9, capacity),
-           form_url = $10
-       WHERE id = $11
+           form_url = $10,
+           club_id = $11,
+           is_global = $12,
+           is_club_event = $13
+       WHERE id = $14
        RETURNING *`,
-      [title, description, location, event_date, end_date, start_time, end_time, type, capacity, form_url, id]
+      [
+        title, 
+        description, 
+        location, 
+        event_date, 
+        end_date, 
+        start_time, 
+        end_time, 
+        type, 
+        capacity, 
+        form_url,
+        finalClubId,
+        finalIsGlobal,
+        finalIsClubEvent,
+        id
+      ]
     );
 
+    console.log(`✅ Событие ${id} обновлено`);
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Ошибка обновления события:', error);
+    console.error('❌ Ошибка обновления события:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // ============================================================
-// УДАЛЕНИЕ МЕРОПРИЯТИЯ
+// УДАЛЕНИЕ СОБЫТИЯ
 // ============================================================
 app.delete('/api/events/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const userRole = req.user.role;
     const userId = req.user.userId;
+    const userRole = req.user.role;
 
-    console.log(`🗑️ Удаление мероприятия ${id}, роль: ${userRole}`);
+    console.log(`🗑️ УДАЛЕНИЕ МЕРОПРИЯТИЯ ${id}`);
+    console.log(`  👤 Пользователь: ${userId} (${userRole})`);
 
     const eventCheck = await pool.query('SELECT * FROM events WHERE id = $1', [id]);
     if (eventCheck.rows.length === 0) {
@@ -1085,27 +1246,95 @@ app.delete('/api/events/:id', authenticate, async (req, res) => {
     }
 
     const event = eventCheck.rows[0];
-
     let canDelete = false;
 
+    // Админ, координатор движения, президент — могут удалять всё
     if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
       canDelete = true;
-    } else if (userRole === 'club_coordinator' && event.created_by === userId) {
-      canDelete = true;
+      console.log('  ✅ Высокие права — можно удалить');
+    } 
+    // Координатор клуба — может удалять события своего клуба
+    else if (userRole === 'club_coordinator') {
+      const clubCheck = await pool.query(
+        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
+        [userId, event.club_id]
+      );
+      if (clubCheck.rows.length > 0) {
+        canDelete = true;
+        console.log('  ✅ Координатор клуба — можно удалить');
+      } else {
+        console.log('  ❌ Нет доступа к этому клубу');
+      }
     }
 
     if (!canDelete) {
       return res.status(403).json({ error: 'У вас нет прав для удаления мероприятия' });
     }
 
+    // Удаляем связанные данные
     await pool.query('DELETE FROM event_participants WHERE event_id = $1', [id]);
     await pool.query('DELETE FROM event_tutor_assignments WHERE event_id = $1', [id]);
     await pool.query('DELETE FROM registrations WHERE event_id = $1', [id]);
     await pool.query('DELETE FROM events WHERE id = $1', [id]);
 
-    res.json({ message: 'Мероприятие удалено', deleted_event: event.title });
+    console.log(`✅ Событие "${event.title}" удалено`);
+    res.json({ 
+      message: 'Мероприятие удалено', 
+      deleted_event: event.title 
+    });
   } catch (error) {
     console.error('❌ Ошибка удаления мероприятия:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// ПОЛУЧЕНИЕ МЕРОПРИЯТИЙ КЛУБА ПОЛЬЗОВАТЕЛЯ
+// ============================================================
+app.get('/api/my-club-events', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+
+    console.log(`📋 Запрос мероприятий клуба: userId=${userId}, role=${userRole}`);
+
+    let clubId = null;
+
+    // Определяем club_id пользователя
+    if (userRole === 'club_coordinator') {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      if (clubResult.rows.length > 0) {
+        clubId = clubResult.rows[0].club_id;
+      }
+    } else {
+      const userCheck = await pool.query('SELECT club_id FROM users WHERE id = $1', [userId]);
+      if (userCheck.rows.length > 0) {
+        clubId = userCheck.rows[0].club_id;
+      }
+    }
+
+    if (!clubId) {
+      console.log('❌ У пользователя нет клуба');
+      return res.json([]);
+    }
+
+    const result = await pool.query(
+      `SELECT e.*, c.name as club_name, u.full_name as proposed_by_name
+       FROM events e
+       LEFT JOIN clubs c ON e.club_id = c.id
+       LEFT JOIN users u ON e.proposed_by = u.id
+       WHERE e.club_id = $1
+       ORDER BY e.event_date ASC`,
+      [clubId]
+    );
+
+    console.log(`✅ Найдено ${result.rows.length} мероприятий клуба ${clubId}`);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения мероприятий клуба:', error);
     res.status(500).json({ error: error.message });
   }
 });

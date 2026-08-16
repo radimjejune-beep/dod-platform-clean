@@ -1962,7 +1962,7 @@ app.delete('/api/report-templates/:id', async (req, res) => {
 });
 
 // ============================================================
-// ИСПОЛЬЗОВАНИЕ ШАБЛОНА ДЛЯ СОЗДАНИЯ ОТЧЁТА
+// ИСПОЛЬЗОВАНИЕ ШАБЛОНА ДЛЯ СОЗДАНИЯ ОТЧЁТА (ИСПРАВЛЕННЫЙ)
 // ============================================================
 app.post('/api/reports/from-template/:templateId', async (req, res) => {
   try {
@@ -1977,10 +1977,13 @@ app.post('/api/reports/from-template/:templateId', async (req, res) => {
     const userId = decoded.userId;
     const userRole = decoded.role;
 
-    if (!['admin', 'movement_coordinator', 'club_coordinator'].includes(userRole)) {
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'];
+    if (!allowedRoles.includes(userRole)) {
+      console.log(`❌ Нет прав для создания отчёта. Роль: ${userRole}`);
       return res.status(403).json({ error: 'У вас нет прав для создания отчётов' });
     }
 
+    // Получаем шаблон
     const templateResult = await pool.query(
       'SELECT * FROM report_templates WHERE id = $1',
       [templateId]
@@ -1990,12 +1993,38 @@ app.post('/api/reports/from-template/:templateId', async (req, res) => {
     }
 
     const template = templateResult.rows[0];
+    console.log(`📋 Использование шаблона: ${template.name} (${userRole})`);
+
     const { club_id, report_month, report_data } = req.body;
 
+    if (!club_id) {
+      return res.status(400).json({ error: 'Выберите клуб для отчёта' });
+    }
+
+    if (!report_month) {
+      return res.status(400).json({ error: 'Выберите месяц отчёта' });
+    }
+
+    // Проверяем доступ к клубу (для координатора КЮДа)
+    if (userRole === 'club_coordinator') {
+      const clubCheck = await pool.query(
+        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
+        [userId, club_id]
+      );
+      if (clubCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'У вас нет доступа к этому клубу' });
+      }
+    }
+
+    // Получаем название клуба
+    const clubNameResult = await pool.query('SELECT name FROM clubs WHERE id = $1', [club_id]);
+    const clubName = clubNameResult.rows[0]?.name || 'Клуб';
+
+    // Заменяем плейсхолдеры в шаблоне
     let content = template.template_data;
     const placeholders = {
-      '{club_name}': await getClubName(club_id),
-      '{report_month}': report_month || new Date().toISOString().slice(0, 7),
+      '{club_name}': clubName,
+      '{report_month}': report_month,
       '{date}': new Date().toISOString().slice(0, 10),
       '{user_name}': decoded.full_name || 'Пользователь',
       ...report_data
@@ -2005,18 +2034,31 @@ app.post('/api/reports/from-template/:templateId', async (req, res) => {
       content = content.replace(new RegExp(key, 'g'), value || '');
     }
 
+    // Создаём отчёт
     const result = await pool.query(
       `INSERT INTO reports (
-        club_id, created_by, title, content, report_month, status, created_at
-      ) VALUES ($1, $2, $3, $4, $5, 'draft', NOW())
+        club_id, created_by, title, content, report_month, status, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, 'draft', NOW(), NOW())
       RETURNING *`,
       [
-        club_id || null,
+        club_id,
         userId,
-        `Отчёт за ${placeholders['{report_month}']}`,
+        `Отчёт за ${report_month}`,
         content,
-        placeholders['{report_month}'] || new Date().toISOString().slice(0, 7)
+        report_month
       ]
+    );
+
+    console.log(`✅ Отчёт создан из шаблона! ID: ${result.rows[0].id}`);
+
+    // Уведомление
+    await createNotification(
+      userId,
+      'system',
+      '📋 Отчёт создан из шаблона',
+      `Вы создали отчёт из шаблона "${template.name}" за ${report_month}`,
+      '/reports',
+      'normal'
     );
 
     res.status(201).json(result.rows[0]);

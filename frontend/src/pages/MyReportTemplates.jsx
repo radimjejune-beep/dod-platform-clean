@@ -12,7 +12,7 @@ export default function MyReportTemplates() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
   const [showModal, setShowModal] = useState(false);
-  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showUseModal, setShowUseModal] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [clubs, setClubs] = useState([]);
   const [form, setForm] = useState({
@@ -49,7 +49,6 @@ export default function MyReportTemplates() {
       setTemplates(templatesData || []);
       setClubs(clubsData || []);
 
-      // Если координатор КЮДа - предзаполняем его клуб
       if (userData.role === 'club_coordinator' && userData.club_id) {
         setForm(prev => ({ ...prev, club_id: userData.club_id }));
       }
@@ -63,14 +62,18 @@ export default function MyReportTemplates() {
     }
   };
 
-  const handleUseTemplate = (template) => {
-    setSelectedTemplate(template);
-    setShowTemplateModal(true);
-  };
-
   const handleOpenTemplate = (template) => {
     setSelectedTemplate(template);
     setShowModal(true);
+  };
+
+  const handleUseTemplate = (template) => {
+    setSelectedTemplate(template);
+    setForm({
+      club_id: profile?.club_id || '',
+      report_month: ''
+    });
+    setShowUseModal(true);
   };
 
   const handleSubmitReport = async (e) => {
@@ -84,10 +87,7 @@ export default function MyReportTemplates() {
         throw new Error('Нет авторизации');
       }
 
-      // Проверяем, что выбран клуб
       let finalClubId = form.club_id;
-      
-      // Если координатор КЮДа и клуб не выбран - берём из профиля
       if (!finalClubId && profile?.role === 'club_coordinator' && profile?.club_id) {
         finalClubId = profile.club_id;
       }
@@ -132,7 +132,7 @@ export default function MyReportTemplates() {
 
       setMessage('✅ Отчёт создан из шаблона!');
       setMessageType('success');
-      setShowTemplateModal(false);
+      setShowUseModal(false);
       setSelectedTemplate(null);
       setForm({
         club_id: profile?.club_id || '',
@@ -140,8 +140,6 @@ export default function MyReportTemplates() {
       });
       
       setTimeout(() => setMessage(''), 3000);
-      
-      // Перенаправляем на страницу отчётов
       navigate('/reports');
     } catch (err) {
       console.error('❌ Ошибка:', err);
@@ -310,6 +308,7 @@ export default function MyReportTemplates() {
               padding: '32px',
               maxHeight: '80vh',
               overflow: 'auto',
+              position: 'relative',
               animation: 'modalSlideIn 0.3s ease'
             }}
             onClick={(e) => e.stopPropagation()}
@@ -327,8 +326,11 @@ export default function MyReportTemplates() {
                 border: 'none',
                 fontSize: '24px',
                 color: '#98A2B3',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'color 0.2s ease'
               }}
+              onMouseEnter={(e) => e.target.style.color = '#0B1F3A'}
+              onMouseLeave={(e) => e.target.style.color = '#98A2B3'}
             >
               ✕
             </button>
@@ -394,7 +396,7 @@ export default function MyReportTemplates() {
       )}
 
       {/* ===== МОДАЛЬНОЕ ОКНО ДЛЯ СОЗДАНИЯ ОТЧЁТА ИЗ ШАБЛОНА ===== */}
-      {showTemplateModal && selectedTemplate && (
+      {showUseModal && selectedTemplate && (
         <div
           style={{
             position: 'fixed',
@@ -411,7 +413,7 @@ export default function MyReportTemplates() {
             padding: '20px'
           }}
           onClick={() => {
-            setShowTemplateModal(false);
+            setShowUseModal(false);
             setSelectedTemplate(null);
           }}
         >
@@ -423,13 +425,14 @@ export default function MyReportTemplates() {
               padding: '32px',
               maxHeight: '90vh',
               overflow: 'auto',
+              position: 'relative',
               animation: 'modalSlideIn 0.3s ease'
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => {
-                setShowTemplateModal(false);
+                setShowUseModal(false);
                 setSelectedTemplate(null);
               }}
               style={{
@@ -440,8 +443,11 @@ export default function MyReportTemplates() {
                 border: 'none',
                 fontSize: '24px',
                 color: '#98A2B3',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'color 0.2s ease'
               }}
+              onMouseEnter={(e) => e.target.style.color = '#0B1F3A'}
+              onMouseLeave={(e) => e.target.style.color = '#98A2B3'}
             >
               ✕
             </button>
@@ -495,8 +501,8 @@ export default function MyReportTemplates() {
                 overflow: 'auto',
                 whiteSpace: 'pre-wrap'
               }}>
-                <strong>📋 Предпросмотр:</strong>
-                <div style={{ marginTop: '4px' }}>
+                <strong>📋 Предпросмотр шаблона:</strong>
+                <div style={{ marginTop: '4px', fontSize: '13px', lineHeight: '1.5' }}>
                   {selectedTemplate.template_data?.substring(0, 150) || 'Нет данных'}
                   {selectedTemplate.template_data?.length > 150 && '...'}
                 </div>
@@ -510,7 +516,7 @@ export default function MyReportTemplates() {
                   type="button"
                   className="btn-secondary"
                   onClick={() => {
-                    setShowTemplateModal(false);
+                    setShowUseModal(false);
                     setSelectedTemplate(null);
                   }}
                 >

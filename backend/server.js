@@ -11,15 +11,6 @@ import morgan from 'morgan';
 
 import { authenticate, requireRole, requireAdmin, requireAdminOrCoordinator } from './middleware/auth.js';
 import { logActivity, initLogger, getActivityLogs } from './lib/logger.js';
-import { 
-  collectReportData, 
-  replacePlaceholders, 
-  exportToPDF, 
-  exportToDOCX, 
-  exportToHTML, 
-  exportToCSV,
-  initReportGenerator 
-} from './lib/reportGenerator.js';
 
 dotenv.config();
 
@@ -30,7 +21,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dod-platform-
 console.log('🚀 ЗАПУСК БЭКЕНДА');
 
 // ============================================================
-// БАЗА ДАННЫХ — ТОЛЬКО ОДИН РАЗ!
+// БАЗА ДАННЫХ
 // ============================================================
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -38,7 +29,6 @@ const pool = new Pool({
 });
 
 initLogger(pool);
-initReportGenerator(pool);
 
 pool.connect((err) => {
   if (err) {
@@ -414,7 +404,7 @@ app.get('/api/me', authenticate, async (req, res) => {
 });
 
 // ============================================================
-// СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ (ТОЛЬКО АДМИН) — С ПРИВЯЗКОЙ К КЛУБУ
+// СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ (ТОЛЬКО АДМИН)
 // ============================================================
 app.post('/api/users', authenticate, requireAdmin, async (req, res) => {
   try {
@@ -2209,7 +2199,7 @@ app.patch('/api/event-tutor-assignments/:id', authenticate, async (req, res) => 
 });
 
 // ============================================================
-// ОТЧЁТЫ (ПОЛНЫЙ СПИСОК)
+// ОТЧЁТЫ
 // ============================================================
 app.get('/api/reports', authenticate, async (req, res) => {
   try {
@@ -2285,9 +2275,6 @@ app.post('/api/reports', authenticate, async (req, res) => {
   }
 });
 
-// ============================================================
-// ОТПРАВКА ОТЧЁТА НА ПРОВЕРКУ С УВЕДОМЛЕНИЕМ
-// ============================================================
 app.patch('/api/reports/:id/submit', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
@@ -2342,9 +2329,6 @@ app.patch('/api/reports/:id/submit', authenticate, async (req, res) => {
   }
 });
 
-// ============================================================
-// УТВЕРЖДЕНИЕ ОТЧЁТА С УВЕДОМЛЕНИЕМ
-// ============================================================
 app.patch('/api/reports/:id/approve', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
@@ -2407,9 +2391,6 @@ app.patch('/api/reports/:id/approve', authenticate, async (req, res) => {
   }
 });
 
-// ============================================================
-// ОТКЛОНЕНИЕ ОТЧЁТА С УВЕДОМЛЕНИЕМ
-// ============================================================
 app.patch('/api/reports/:id/reject', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
@@ -2469,119 +2450,6 @@ app.delete('/api/reports/:id', authenticate, async (req, res) => {
     res.json({ message: 'Отчёт удалён' });
   } catch (error) {
     console.error('❌ Ошибка удаления отчёта:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// ШАБЛОНЫ ОТЧЁТОВ
-// ============================================================
-app.get('/api/report-templates', authenticate, async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const userRole = req.user.role;
-
-    let query = `
-      SELECT rt.*, u.full_name as created_by_name, c.name as club_name
-      FROM report_templates rt
-      LEFT JOIN users u ON rt.created_by = u.id
-      LEFT JOIN clubs c ON rt.club_id = c.id
-      WHERE 1=1
-    `;
-    const params = [];
-
-    if (userRole === 'club_coordinator') {
-      const clubResult = await pool.query('SELECT club_id FROM club_coordinators WHERE profile_id = $1', [userId]);
-      if (clubResult.rows.length > 0) {
-        const clubId = clubResult.rows[0].club_id;
-        query += ` AND (rt.club_id = $1 OR rt.club_id IS NULL)`;
-        params.push(clubId);
-      } else {
-        query += ` AND rt.club_id IS NULL`;
-      }
-    }
-
-    query += ' ORDER BY rt.created_at DESC';
-
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('❌ Ошибка получения шаблонов:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/report-templates', authenticate, async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const userRole = req.user.role;
-    const { club_id, name, description, template_data, category = 'general' } = req.body;
-
-    if (!name || !name.trim() || !template_data || !template_data.trim()) {
-      return res.status(400).json({ error: 'Название и шаблон обязательны' });
-    }
-
-    let finalClubId = club_id || null;
-    if (userRole === 'club_coordinator' && !finalClubId) {
-      const clubResult = await pool.query('SELECT club_id FROM club_coordinators WHERE profile_id = $1', [userId]);
-      if (clubResult.rows.length > 0) {
-        finalClubId = clubResult.rows[0].club_id;
-      }
-    }
-
-    const result = await pool.query(
-      `INSERT INTO report_templates (club_id, created_by, name, description, template_data, category, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`,
-      [finalClubId, userId, name.trim(), description || '', template_data, category || 'general']
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('❌ Ошибка создания шаблона:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.put('/api/report-templates/:id', authenticate, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userRole = req.user.role;
-    const { club_id, name, description, template_data, category = 'general' } = req.body;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для редактирования шаблонов' });
-    }
-
-    const check = await pool.query('SELECT * FROM report_templates WHERE id = $1', [id]);
-    if (check.rows.length === 0) {
-      return res.status(404).json({ error: 'Шаблон не найден' });
-    }
-
-    const result = await pool.query(
-      `UPDATE report_templates SET club_id = $1, name = $2, description = $3, template_data = $4, category = $5, updated_at = NOW() WHERE id = $6 RETURNING *`,
-      [club_id || check.rows[0].club_id, name || check.rows[0].name, description || check.rows[0].description, template_data || check.rows[0].template_data, category || check.rows[0].category, id]
-    );
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('❌ Ошибка обновления шаблона:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.delete('/api/report-templates/:id', authenticate, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userRole = req.user.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для удаления шаблонов' });
-    }
-
-    await pool.query('DELETE FROM report_templates WHERE id = $1', [id]);
-    res.json({ message: 'Шаблон удалён' });
-  } catch (error) {
-    console.error('❌ Ошибка удаления шаблона:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -3139,196 +3007,6 @@ app.get('/api/activity-log', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения журнала:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// ГЕНЕРАЦИЯ ОТЧЁТА ИЗ ШАБЛОНА
-// ============================================================
-app.post('/api/reports/generate/:templateId', authenticate, async (req, res) => {
-  try {
-    const { templateId } = req.params;
-    const { club_id, report_month, format = 'html' } = req.body;
-    const userId = req.user.userId;
-    const userRole = req.user.role;
-
-    console.log('📊 ГЕНЕРАЦИЯ ОТЧЁТА:');
-    console.log(`  📋 Шаблон: ${templateId}`);
-    console.log(`  🏫 Клуб: ${club_id}`);
-    console.log(`  📅 Месяц: ${report_month}`);
-    console.log(`  📄 Формат: ${format}`);
-
-    if (!club_id) {
-      return res.status(400).json({ error: 'Выберите клуб' });
-    }
-
-    if (!report_month) {
-      return res.status(400).json({ error: 'Выберите месяц отчёта' });
-    }
-
-    const monthRegex = /^\d{4}-\d{2}$/;
-    if (!monthRegex.test(report_month)) {
-      return res.status(400).json({ error: 'Неверный формат месяца. Используйте YYYY-MM' });
-    }
-
-    if (userRole === 'club_coordinator') {
-      const clubCheck = await pool.query(
-        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-        [userId, club_id]
-      );
-      if (clubCheck.rows.length === 0) {
-        return res.status(403).json({ error: 'У вас нет доступа к этому клубу' });
-      }
-    }
-
-    const templateResult = await pool.query(
-      'SELECT * FROM report_templates WHERE id = $1',
-      [templateId]
-    );
-    if (templateResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Шаблон не найден' });
-    }
-    const template = templateResult.rows[0];
-
-    const reportData = await collectReportData(club_id, report_month);
-    const content = replacePlaceholders(template.template_data, reportData);
-
-    const reportResult = await pool.query(
-      `INSERT INTO reports (club_id, created_by, title, content, report_month, status, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, 'draft', NOW(), NOW()) RETURNING *`,
-      [club_id, userId, `Отчёт за ${reportData.report_month_name}`, content, report_month]
-    );
-
-    const report = reportResult.rows[0];
-
-    await createNotification(
-      userId,
-      'report',
-      '📝 Отчёт создан',
-      `Вы создали отчёт "${report.title}"`,
-      '/reports',
-      'normal'
-    );
-
-    const coordinators = await pool.query(
-      'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
-      [club_id]
-    );
-    for (const coord of coordinators.rows) {
-      if (coord.profile_id !== userId) {
-        await createNotification(
-          coord.profile_id,
-          'report',
-          '📝 Новый отчёт в клубе',
-          `В вашем клубе создан отчёт "${report.title}"`,
-          '/reports',
-          'normal'
-        );
-      }
-    }
-
-    let resultData = { report, content };
-
-    switch (format) {
-      case 'pdf':
-        const pdfBuffer = await exportToPDF(content, report.title);
-        resultData = { report, content, pdfBuffer };
-        break;
-      case 'docx':
-        const docxBuffer = await exportToDOCX(content, report.title);
-        resultData = { report, content, docxBuffer };
-        break;
-      case 'html':
-        const html = exportToHTML(content, report.title);
-        resultData = { report, content, html };
-        break;
-      case 'csv':
-        const csv = exportToCSV(reportData, report.title);
-        resultData = { report, content, csv };
-        break;
-      default:
-        resultData = { report, content, data: reportData };
-    }
-
-    res.status(201).json(resultData);
-
-  } catch (error) {
-    console.error('❌ Ошибка генерации отчёта:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// ЭКСПОРТ ОТЧЁТА В ФАЙЛ
-// ============================================================
-app.get('/api/reports/:id/export/:format', authenticate, async (req, res) => {
-  try {
-    const { id, format } = req.params;
-    const userId = req.user.userId;
-    const userRole = req.user.role;
-
-    console.log(`📤 ЭКСПОРТ ОТЧЁТА ${id} в ${format}`);
-
-    const reportResult = await pool.query(
-      `SELECT r.*, c.name as club_name FROM reports r 
-       LEFT JOIN clubs c ON r.club_id = c.id 
-       WHERE r.id = $1`,
-      [id]
-    );
-    if (reportResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Отчёт не найден' });
-    }
-    const report = reportResult.rows[0];
-
-    if (userRole === 'club_coordinator') {
-      const clubCheck = await pool.query(
-        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-        [userId, report.club_id]
-      );
-      if (clubCheck.rows.length === 0 && report.created_by !== userId) {
-        return res.status(403).json({ error: 'У вас нет доступа к этому отчёту' });
-      }
-    }
-
-    const reportData = await collectReportData(report.club_id, report.report_month);
-    const content = replacePlaceholders(report.content, reportData);
-
-    switch (format.toLowerCase()) {
-      case 'pdf':
-        const pdfBuffer = await exportToPDF(content, report.title);
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${report.title}.pdf"`);
-        res.send(pdfBuffer);
-        break;
-
-      case 'docx':
-        const docxBuffer = await exportToDOCX(content, report.title);
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-        res.setHeader('Content-Disposition', `attachment; filename="${report.title}.docx"`);
-        res.send(docxBuffer);
-        break;
-
-      case 'html':
-        const html = exportToHTML(content, report.title);
-        res.setHeader('Content-Type', 'text/html');
-        res.setHeader('Content-Disposition', `attachment; filename="${report.title}.html"`);
-        res.send(html);
-        break;
-
-      case 'csv':
-        const csv = exportToCSV(reportData, report.title);
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename="${report.title}.csv"`);
-        res.send(csv);
-        break;
-
-      default:
-        return res.status(400).json({ error: 'Неизвестный формат экспорта. Доступно: pdf, docx, html, csv' });
-    }
-
-  } catch (error) {
-    console.error('❌ Ошибка экспорта отчёта:', error);
     res.status(500).json({ error: error.message });
   }
 });

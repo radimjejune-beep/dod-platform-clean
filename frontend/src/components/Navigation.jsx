@@ -123,7 +123,7 @@ export default function Navigation({ profile }) {
   };
 
   // ============================================================
-  // ПОЛНОЕ МЕНЮ ДЛЯ ВСЕХ РОЛЕЙ
+  // МЕНЮ В ЗАВИСИМОСТИ ОТ РОЛИ (БЕЗ ШАБЛОНОВ)
   // ============================================================
   const getMenuItems = () => {
     const role = profile?.role;
@@ -149,7 +149,6 @@ export default function Navigation({ profile }) {
       items.push({ path: '/participants', label: '👥 Участники' });
       items.push({ path: '/manage-achievements', label: '🏆 Достижения' });
       items.push({ path: '/reports', label: '📋 Отчёты' });
-      items.push({ path: '/reports-templates', label: '📝 Шаблоны отчётов' });
       items.push({ path: '/appeals', label: '📨 Обращения' });
       items.push({ path: '/staff', label: '👥 Сотрудники' });
       items.push({ path: '/calendar', label: '📅 Календарь' });
@@ -165,7 +164,6 @@ export default function Navigation({ profile }) {
       items.push({ path: '/staff-calendar', label: '📅 Календарь' });
       items.push({ path: '/tutor-assignments', label: '📋 Назначения' });
       items.push({ path: '/reports', label: '📋 Отчёты' });
-      items.push({ path: '/reports-templates', label: '📝 Шаблоны отчётов' });
     }
 
     if (role === 'movement_coordinator' || role === 'admin') {
@@ -176,7 +174,6 @@ export default function Navigation({ profile }) {
       items.push({ path: '/achievements', label: '🏆 Достижения' });
       items.push({ path: '/achievements-categories', label: '🏷️ Категории достижений' });
       items.push({ path: '/reports', label: '📋 Отчёты' });
-      items.push({ path: '/reports-templates', label: '📝 Шаблоны отчётов' });
       items.push({ path: '/analytics', label: '📊 Аналитика' });
       items.push({ path: '/appeals', label: '📨 Обращения' });
       items.push({ path: '/documents-center', label: '📁 Центр документов' });
@@ -200,7 +197,6 @@ export default function Navigation({ profile }) {
       items.push({ path: '/participants', label: '👥 Участники' });
       items.push({ path: '/achievements', label: '🏆 Достижения' });
       items.push({ path: '/reports', label: '📋 Отчёты' });
-      items.push({ path: '/reports-templates', label: '📝 Шаблоны отчётов' });
       items.push({ path: '/analytics', label: '📊 Аналитика' });
       items.push({ path: '/appeals', label: '📨 Обращения' });
       items.push({ path: '/documents-center', label: '📁 Центр документов' });
@@ -213,7 +209,7 @@ export default function Navigation({ profile }) {
 
   const menuItems = getMenuItems();
 
-  // Если нет профиля — показываем только логотип
+  // Если нет профиля — показываем только логотип и вход
   if (!profile) {
     return (
       <nav className="nav">
@@ -278,11 +274,13 @@ export default function Navigation({ profile }) {
   return (
     <nav className="nav">
       <div className="nav-container">
+        {/* ЛОГО */}
         <Link to="/" className="nav-logo">
           <img src={logo} alt="ДОД" />
           <span>Дипломаты будущего</span>
         </Link>
 
+        {/* ДЕСКТОПНОЕ МЕНЮ */}
         <div className="nav-desktop-menu">
           {menuItems.map((item) => (
             <Link
@@ -295,7 +293,9 @@ export default function Navigation({ profile }) {
           ))}
         </div>
 
+        {/* ПРАВАЯ ЧАСТЬ */}
         <div className="nav-right">
+          {/* УВЕДОМЛЕНИЯ */}
           <div className="nav-notifications" ref={notificationRef}>
             <button
               className="nav-notif-btn"
@@ -306,6 +306,7 @@ export default function Navigation({ profile }) {
                 <span className="nav-notif-badge">{unreadCount}</span>
               )}
             </button>
+
             {showNotifications && (
               <div className="nav-notif-dropdown">
                 <div className="nav-notif-header">
@@ -342,6 +343,7 @@ export default function Navigation({ profile }) {
             )}
           </div>
 
+          {/* ПРОФИЛЬ */}
           <div className="nav-profile" ref={profileRef}>
             <button
               className="nav-profile-btn"
@@ -357,6 +359,7 @@ export default function Navigation({ profile }) {
               <span className="nav-profile-name">{profile?.full_name}</span>
               <span className="nav-profile-arrow">▾</span>
             </button>
+
             {isProfileOpen && (
               <div className="nav-profile-dropdown">
                 <div className="nav-profile-header">
@@ -390,12 +393,14 @@ export default function Navigation({ profile }) {
             )}
           </div>
 
+          {/* МОБИЛЬНОЕ МЕНЮ */}
           <button className="nav-mobile-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)}>
             ☰
           </button>
         </div>
       </div>
 
+      {/* МОБИЛЬНОЕ МЕНЮ (РАСКРЫВАЮЩЕЕСЯ) */}
       {isMenuOpen && (
         <div className="nav-mobile-menu" ref={menuRef}>
           {menuItems.map((item) => (
@@ -553,13 +558,9 @@ export default function Navigation({ profile }) {
           cursor: pointer;
           font-weight: 500;
         }
-
         .nav-notif-markall:hover { text-decoration: underline; }
 
-        .nav-notif-list {
-          overflow-y: auto;
-          flex: 1;
-        }
+        .nav-notif-list { overflow-y: auto; flex: 1; }
 
         .nav-notif-item {
           padding: 12px 18px;
@@ -593,7 +594,6 @@ export default function Navigation({ profile }) {
           font-weight: 500;
           flex-shrink: 0;
         }
-
         .nav-notif-all:hover { background: #F8FAFC; }
 
         .nav-profile { position: relative; }
@@ -610,7 +610,6 @@ export default function Navigation({ profile }) {
           transition: background 0.2s ease;
           font-family: inherit;
         }
-
         .nav-profile-btn:hover { background: #F4F6F9; }
 
         .nav-avatar {
@@ -627,7 +626,6 @@ export default function Navigation({ profile }) {
           flex-shrink: 0;
           overflow: hidden;
         }
-
         .nav-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
         .nav-profile-name {
@@ -639,7 +637,6 @@ export default function Navigation({ profile }) {
           text-overflow: ellipsis;
           white-space: nowrap;
         }
-
         .nav-profile-arrow { font-size: 12px; color: #98A2B3; }
 
         .nav-profile-dropdown {
@@ -676,7 +673,6 @@ export default function Navigation({ profile }) {
           flex-shrink: 0;
           overflow: hidden;
         }
-
         .nav-profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
         .nav-profile-fullname { font-weight: 600; color: #0B1F3A; font-size: 14px; }
@@ -700,7 +696,6 @@ export default function Navigation({ profile }) {
           font-family: inherit;
           text-align: left;
         }
-
         .nav-profile-item:hover { background: #F4F6F9; }
 
         .nav-profile-logout { color: #B3262E; }
@@ -731,7 +726,6 @@ export default function Navigation({ profile }) {
           max-height: calc(100vh - 64px);
           overflow-y: auto;
         }
-
         .nav-mobile-menu.open { display: flex; }
 
         .nav-mobile-link {
@@ -743,7 +737,6 @@ export default function Navigation({ profile }) {
           font-weight: 500;
           transition: background 0.2s ease;
         }
-
         .nav-mobile-link:hover { background: #F4F6F9; }
         .nav-mobile-link.active { background: #FBF4DC; color: #8A6A00; }
 
@@ -762,7 +755,6 @@ export default function Navigation({ profile }) {
           font-family: inherit;
           transition: background 0.2s ease;
         }
-
         .nav-mobile-logout:hover { background: #FCEBEC; }
 
         @media (max-width: 1024px) {

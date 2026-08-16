@@ -53,12 +53,10 @@ import ClubsManagement from './pages/ClubsManagement';
 import MassNotifications from './pages/MassNotifications';
 import ConsentsManagement from './pages/ConsentsManagement';
 import DocumentsCenter from './pages/DocumentsCenter';
-import ReportsTemplates from './pages/ReportsTemplates';
 import TasksPlanner from './pages/TasksPlanner';
 import ActivityLog from './pages/ActivityLog';
 import AchievementsCategories from './pages/AchievementsCategories';
 import NotificationHistory from './pages/NotificationHistory';
-import MyReportTemplates from './pages/MyReportTemplates';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -175,12 +173,10 @@ function App() {
         <Route path="/mass-notifications" element={<MassNotifications />} />
         <Route path="/consents-management" element={<ConsentsManagement />} />
         <Route path="/documents-center" element={<DocumentsCenter />} />
-        <Route path="/reports-templates" element={<ReportsTemplates />} />
         <Route path="/tasks-planner" element={<TasksPlanner />} />
         <Route path="/activity-log" element={<ActivityLog />} />
         <Route path="/achievements-categories" element={<AchievementsCategories />} />
         <Route path="/notification-history" element={<NotificationHistory />} />
-        <Route path="/my-report-templates" element={<MyReportTemplates />} />
 
         {/* Редирект */}
         <Route path="*" element={<Navigate to="/" replace />} />

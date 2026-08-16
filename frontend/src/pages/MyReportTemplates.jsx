@@ -11,6 +11,14 @@ export default function MyReportTemplates() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
+  const [showModal, setShowModal] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [clubs, setClubs] = useState([]);
+  const [form, setForm] = useState({
+    club_id: '',
+    report_month: ''
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,17 +33,26 @@ export default function MyReportTemplates() {
         return;
       }
 
-      // Координатор КЮДа или тьютор
-      if (!['club_coordinator', 'tutor'].includes(userData.role)) {
+      if (!['club_coordinator', 'tutor', 'movement_coordinator', 'admin'].includes(userData.role)) {
         navigate('/dashboard');
         return;
       }
 
       setProfile(userData);
 
-      const data = await api.getReportTemplates();
-      console.log('📥 Загружено шаблонов:', data?.length || 0);
-      setTemplates(data || []);
+      const [templatesData, clubsData] = await Promise.all([
+        api.getReportTemplates(),
+        api.getClubs()
+      ]);
+
+      console.log('📥 Загружено шаблонов:', templatesData?.length || 0);
+      setTemplates(templatesData || []);
+      setClubs(clubsData || []);
+
+      // Если координатор КЮДа - предзаполняем его клуб
+      if (userData.role === 'club_coordinator' && userData.club_id) {
+        setForm(prev => ({ ...prev, club_id: userData.club_id }));
+      }
 
     } catch (err) {
       console.error('❌ Ошибка:', err);
@@ -46,12 +63,93 @@ export default function MyReportTemplates() {
     }
   };
 
-  const handleUseTemplate = async (template) => {
-    // Переход на страницу создания отчёта с шаблоном
-    navigate(`/reports?template=${template.id}`);
-    setMessage(`📝 Шаблон "${template.name}" загружен в форму отчёта`);
-    setMessageType('success');
-    setTimeout(() => setMessage(''), 3000);
+  const handleUseTemplate = (template) => {
+    setSelectedTemplate(template);
+    setShowTemplateModal(true);
+  };
+
+  const handleOpenTemplate = (template) => {
+    setSelectedTemplate(template);
+    setShowModal(true);
+  };
+
+  const handleSubmitReport = async (e) => {
+    e.preventDefault();
+    setMessage('');
+    setLoading(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Нет авторизации');
+      }
+
+      // Проверяем, что выбран клуб
+      let finalClubId = form.club_id;
+      
+      // Если координатор КЮДа и клуб не выбран - берём из профиля
+      if (!finalClubId && profile?.role === 'club_coordinator' && profile?.club_id) {
+        finalClubId = profile.club_id;
+      }
+
+      if (!finalClubId) {
+        setMessage('❌ Выберите клуб для отчёта');
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
+
+      if (!form.report_month) {
+        setMessage('❌ Выберите месяц отчёта');
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
+
+      const data = {
+        club_id: finalClubId,
+        report_month: form.report_month,
+        report_data: {}
+      };
+
+      console.log('📤 Отправка отчёта из шаблона:', data);
+
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/reports/from-template/${selectedTemplate.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+      console.log('📥 Ответ сервера:', result);
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Ошибка создания отчёта');
+      }
+
+      setMessage('✅ Отчёт создан из шаблона!');
+      setMessageType('success');
+      setShowTemplateModal(false);
+      setSelectedTemplate(null);
+      setForm({
+        club_id: profile?.club_id || '',
+        report_month: ''
+      });
+      
+      setTimeout(() => setMessage(''), 3000);
+      
+      // Перенаправляем на страницу отчётов
+      navigate('/reports');
+    } catch (err) {
+      console.error('❌ Ошибка:', err);
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getCategoryLabel = (category) => {
@@ -63,6 +161,17 @@ export default function MyReportTemplates() {
       'club': '🏫 Клубный'
     };
     return labels[category] || category;
+  };
+
+  const getRoleSpecificMessage = () => {
+    const role = profile?.role;
+    if (role === 'club_coordinator') {
+      return 'Используйте готовые шаблоны для отчётов вашего клуба';
+    }
+    if (role === 'tutor') {
+      return 'Используйте готовые шаблоны для отчётов';
+    }
+    return 'Используйте готовые шаблоны для быстрого создания отчётов';
   };
 
   if (loading) {
@@ -81,7 +190,7 @@ export default function MyReportTemplates() {
           <span style={{ fontSize: '32px' }}>📋</span>
           <div>
             <h1>Шаблоны отчётов</h1>
-            <p>Используйте готовые шаблоны для быстрого создания отчётов</p>
+            <p>{getRoleSpecificMessage()}</p>
           </div>
         </div>
 
@@ -97,7 +206,7 @@ export default function MyReportTemplates() {
             <p>Шаблонов пока нет</p>
             <p style={{ fontSize: '13px', color: '#98A2B3' }}>
               {profile?.role === 'club_coordinator' 
-                ? 'Вы можете создать свой шаблон в разделе "Шаблоны отчётов" у координатора движения'
+                ? 'Координатор движения создаст шаблоны, которые появятся здесь'
                 : 'Обратитесь к координатору движения для создания шаблонов'}
             </p>
           </div>
@@ -121,21 +230,23 @@ export default function MyReportTemplates() {
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
-                onClick={() => handleUseTemplate(template)}
+                onClick={() => handleOpenTemplate(template)}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <h3 style={{ fontSize: '17px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
                       {template.name}
                     </h3>
-                    <span className="tag" style={{ marginTop: '4px', background: '#F4F6F9', color: '#667085', fontSize: '11px' }}>
-                      {getCategoryLabel(template.category)}
-                    </span>
-                    {template.club_name && (
-                      <span className="tag" style={{ marginLeft: '4px', background: '#EAF2FA', color: '#174A7E', fontSize: '11px' }}>
-                        🏫 {template.club_name}
+                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
+                      <span className="tag" style={{ background: '#F4F6F9', color: '#667085', fontSize: '11px' }}>
+                        {getCategoryLabel(template.category)}
                       </span>
-                    )}
+                      {template.club_name && (
+                        <span className="tag" style={{ background: '#EAF2FA', color: '#174A7E', fontSize: '11px' }}>
+                          🏫 {template.club_name}
+                        </span>
+                      )}
+                    </div>
                     {template.created_by_name && (
                       <div style={{ fontSize: '12px', color: '#98A2B3', marginTop: '4px' }}>
                         👤 {template.created_by_name}
@@ -168,6 +279,261 @@ export default function MyReportTemplates() {
           </div>
         )}
       </div>
+
+      {/* ===== МОДАЛЬНОЕ ОКНО ДЛЯ ПРОСМОТРА ШАБЛОНА ===== */}
+      {showModal && selectedTemplate && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(11, 31, 58, 0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => {
+            setShowModal(false);
+            setSelectedTemplate(null);
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              maxWidth: '600px',
+              width: '100%',
+              padding: '32px',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              animation: 'modalSlideIn 0.3s ease'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => {
+                setShowModal(false);
+                setSelectedTemplate(null);
+              }}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '16px',
+                background: 'none',
+                border: 'none',
+                fontSize: '24px',
+                color: '#98A2B3',
+                cursor: 'pointer'
+              }}
+            >
+              ✕
+            </button>
+
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0B1F3A', marginBottom: '4px' }}>
+              📋 {selectedTemplate.name}
+            </h3>
+            
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+              <span className="tag" style={{ background: '#F4F6F9', color: '#667085' }}>
+                {getCategoryLabel(selectedTemplate.category)}
+              </span>
+              {selectedTemplate.club_name && (
+                <span className="tag" style={{ background: '#EAF2FA', color: '#174A7E' }}>
+                  🏫 {selectedTemplate.club_name}
+                </span>
+              )}
+            </div>
+
+            {selectedTemplate.description && (
+              <p style={{ color: '#667085', marginBottom: '12px' }}>
+                {selectedTemplate.description}
+              </p>
+            )}
+
+            <div style={{
+              padding: '16px',
+              background: '#F8FAFC',
+              borderRadius: '8px',
+              border: '1px solid #E2E7EF',
+              maxHeight: '200px',
+              overflow: 'auto',
+              whiteSpace: 'pre-wrap',
+              fontSize: '14px',
+              lineHeight: '1.6'
+            }}>
+              {selectedTemplate.template_data || 'Нет данных'}
+            </div>
+
+            <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
+              <button
+                className="btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => {
+                  setShowModal(false);
+                  handleUseTemplate(selectedTemplate);
+                }}
+              >
+                📝 Использовать
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setShowModal(false);
+                  setSelectedTemplate(null);
+                }}
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== МОДАЛЬНОЕ ОКНО ДЛЯ СОЗДАНИЯ ОТЧЁТА ИЗ ШАБЛОНА ===== */}
+      {showTemplateModal && selectedTemplate && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(11, 31, 58, 0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => {
+            setShowTemplateModal(false);
+            setSelectedTemplate(null);
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              maxWidth: '500px',
+              width: '100%',
+              padding: '32px',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              animation: 'modalSlideIn 0.3s ease'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => {
+                setShowTemplateModal(false);
+                setSelectedTemplate(null);
+              }}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '16px',
+                background: 'none',
+                border: 'none',
+                fontSize: '24px',
+                color: '#98A2B3',
+                cursor: 'pointer'
+              }}
+            >
+              ✕
+            </button>
+
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0B1F3A', marginBottom: '4px' }}>
+              📝 Создать отчёт из шаблона
+            </h3>
+            <p style={{ color: '#667085', marginBottom: '16px' }}>
+              Шаблон: <strong>{selectedTemplate.name}</strong>
+            </p>
+
+            <form onSubmit={handleSubmitReport}>
+              <div className="form-group">
+                <label>Клуб *</label>
+                <select
+                  value={form.club_id}
+                  onChange={(e) => setForm({ ...form, club_id: e.target.value })}
+                  required
+                >
+                  <option value="">Выберите клуб</option>
+                  {clubs.map((club) => (
+                    <option key={club.id} value={club.id}>{club.name}</option>
+                  ))}
+                </select>
+                {profile?.role === 'club_coordinator' && profile?.club_id && (
+                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                    💡 Ваш клуб: {clubs.find(c => c.id === profile.club_id)?.name || 'не найден'}
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label>Отчётный месяц *</label>
+                <input
+                  type="month"
+                  value={form.report_month}
+                  onChange={(e) => setForm({ ...form, report_month: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div style={{
+                padding: '12px',
+                background: '#F8FAFC',
+                borderRadius: '8px',
+                fontSize: '13px',
+                color: '#667085',
+                border: '1px solid #E2E7EF',
+                marginBottom: '16px',
+                maxHeight: '100px',
+                overflow: 'auto',
+                whiteSpace: 'pre-wrap'
+              }}>
+                <strong>📋 Предпросмотр:</strong>
+                <div style={{ marginTop: '4px' }}>
+                  {selectedTemplate.template_data?.substring(0, 150) || 'Нет данных'}
+                  {selectedTemplate.template_data?.length > 150 && '...'}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button type="submit" className="btn-success" disabled={loading} style={{ flex: 1 }}>
+                  {loading ? '⏳ Создание...' : '✅ Создать отчёт'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setShowTemplateModal(false);
+                    setSelectedTemplate(null);
+                  }}
+                >
+                  ❌ Отмена
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes modalSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+      `}</style>
     </div>
   );
 }

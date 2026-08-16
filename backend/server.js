@@ -3012,6 +3012,71 @@ app.post('/api/create-test-user', async (req, res) => {
 });
 
 // ============================================================
+// ПРИКРЕПЛЕНИЕ ПОЛЬЗОВАТЕЛЯ К КЛУБУ
+// ============================================================
+app.patch('/api/users/:id/assign-club', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { club_id } = req.body;
+    
+    const userRole = req.user.role;
+    
+    // Только админ или координатор движения могут прикреплять к клубу
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+    
+    // Проверяем, существует ли пользователь
+    const userCheck = await pool.query('SELECT id, full_name FROM users WHERE id = $1', [id]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    // Если club_id не передан или пустой — открепляем от клуба
+    if (!club_id) {
+      await pool.query('UPDATE users SET club_id = NULL WHERE id = $1', [id]);
+      return res.json({ 
+        message: 'Пользователь откреплён от клуба',
+        user: userCheck.rows[0],
+        club_id: null
+      });
+    }
+    
+    // Проверяем, существует ли клуб
+    const clubCheck = await pool.query('SELECT id, name FROM clubs WHERE id = $1', [club_id]);
+    if (clubCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Клуб не найден' });
+    }
+    
+    // Прикрепляем пользователя к клубу
+    await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, id]);
+    
+    // Добавляем в club_participants
+    await pool.query(
+      `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
+       VALUES ($1, $2, 'active', NOW())
+       ON CONFLICT (profile_id, club_id) DO NOTHING`,
+      [id, club_id]
+    );
+    
+    // Логируем действие
+    await logActivity(req.user.userId, 'ASSIGN_CLUB', 'user', id, {
+      user: userCheck.rows[0].full_name,
+      club: clubCheck.rows[0].name
+    });
+    
+    res.json({
+      message: 'Пользователь прикреплён к клубу',
+      user: userCheck.rows[0],
+      club: clubCheck.rows[0]
+    });
+  } catch (error) {
+    console.error('❌ Ошибка прикрепления к клубу:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
 // ЗАПУСК СЕРВЕРА
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {

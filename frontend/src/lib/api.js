@@ -566,6 +566,18 @@ export const setClubPresident = async (clubId, presidentId) => {
 };
 
 // ============================================================
+// ПРИКРЕПЛЕНИЕ ПОЛЬЗОВАТЕЛЯ К КЛУБУ
+// ============================================================
+export const assignUserToClub = async (userId, clubId) => {
+  const response = await fetch(`${API_URL}/users/${userId}/assign-club`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ club_id: clubId })
+  });
+  return response.json();
+};
+
+// ============================================================
 // ЭКСПОРТ API ОБЪЕКТА
 // ============================================================
 const api = {

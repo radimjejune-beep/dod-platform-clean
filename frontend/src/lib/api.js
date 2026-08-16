@@ -3,7 +3,7 @@
 const API_URL = 'https://dod-backend.relaxdev.ru/api';
 
 // ============================================================
-// ПРОСТАЯ И БЫСТРАЯ ПРОВЕРКА ТОКЕНА
+// ПРОСТАЯ ПРОВЕРКА ТОКЕНА
 // ============================================================
 const getToken = () => {
   try {
@@ -146,10 +146,6 @@ export const getUsers = async () => {
     method: 'GET',
     headers: getHeaders()
   });
-  if (response.status === 401 || response.status === 403) {
-    logout();
-    throw new Error('Сессия истекла');
-  }
   return response.json();
 };
 
@@ -158,10 +154,6 @@ export const getParticipants = async () => {
     method: 'GET',
     headers: getHeaders()
   });
-  if (response.status === 401 || response.status === 403) {
-    logout();
-    throw new Error('Сессия истекла');
-  }
   return response.json();
 };
 
@@ -216,10 +208,6 @@ export const getClubs = async () => {
     method: 'GET',
     headers: getHeaders()
   });
-  if (response.status === 401 || response.status === 403) {
-    logout();
-    throw new Error('Сессия истекла');
-  }
   return response.json();
 };
 
@@ -231,10 +219,6 @@ export const getAchievements = async () => {
     method: 'GET',
     headers: getHeaders()
   });
-  if (response.status === 401 || response.status === 403) {
-    logout();
-    throw new Error('Сессия истекла');
-  }
   return response.json();
 };
 
@@ -264,11 +248,6 @@ export const getEvents = async () => {
       method: 'GET',
       headers: getHeaders()
     });
-    
-    if (response.status === 401 || response.status === 403) {
-      logout();
-      return [];
-    }
     
     if (!response.ok) {
       console.error('❌ Ошибка получения событий:', response.status);
@@ -857,16 +836,11 @@ export const deleteTask = async (id) => {
 // ЭКСПОРТ API ОБЪЕКТА
 // ============================================================
 const api = {
-  // Аутентификация
   login,
   logout,
   getMe,
   changePassword,
-
-  // Профиль
   updateProfile,
-
-  // Пользователи
   getUsers,
   getParticipants,
   createUser,
@@ -874,32 +848,20 @@ const api = {
   deleteUser,
   resetUserPassword,
   assignUserToClub,
-
-  // Клубы
   getClubs,
-
-  // Достижения
   getAchievements,
   addAchievement,
   deleteAchievement,
-
-  // События
   getEvents,
   createEvent,
   updateEvent,
   deleteEvent,
-
-  // Регистрации
   getRegistrations,
   addRegistration,
-
-  // Обращения
   getAppeals,
   addAppeal,
   replyToAppeal,
   getAppealReplies,
-
-  // Отчёты
   getReports,
   createReport,
   updateReport,
@@ -907,41 +869,25 @@ const api = {
   submitReport,
   approveReport,
   rejectReport,
-
-  // Документы
   getDocuments,
   createDocument,
   deleteDocument,
-
-  // Новости
   getNews,
   createNews,
   updateNews,
   deleteNews,
-
-  // Уведомления
   getNotifications,
   markNotificationRead,
   markAllNotificationsRead,
-
-  // Аватар
   uploadAvatar,
-
-  // Дети
   getParentChildren,
   parentLinkChild,
-
-  // Президент
   getPresidentTasks,
   createPresidentTask,
   respondToPresidentTask,
-
-  // Статистика
   getParticipantStats,
   getClubPresident,
   setClubPresident,
-
-  // Тьюторы
   getTutorRequests,
   createTutorRequest,
   updateTutorRequest,
@@ -951,32 +897,18 @@ const api = {
   createTutorInvitation,
   respondToTutorInvitation,
   cancelTutorInvitation,
-
-  // Массовые уведомления
   getMassNotifications,
   createMassNotification,
   deleteMassNotification,
-
-  // Цели и KPI
   getGoals,
   createGoal,
   updateGoal,
   deleteGoal,
-
-  // Журнал действий
   getActivityLog,
-
-  // Категории достижений
   getAchievementCategories,
-
-  // Согласия
   getConsentsStats,
   getConsentsMissing,
-
-  // История
   getParticipantEvents,
-
-  // Задачи
   getTasks,
   createTask,
   updateTask,

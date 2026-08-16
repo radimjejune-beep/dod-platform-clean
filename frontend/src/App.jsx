@@ -7,7 +7,6 @@ import api from './lib/api';
 // Страницы
 import Home from './pages/Home';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Events from './pages/Events';
@@ -48,7 +47,7 @@ import ClubCalendar from './pages/ClubCalendar';
 import MyClubEvents from './pages/MyClubEvents';
 import NewsDetail from './pages/NewsDetail';
 import OfficialDocuments from './pages/OfficialDocuments';
-import TutorAssignments from './pages/TutorAssignments'; // ← ДОБАВЬ ЭТУ СТРОКУ
+import TutorAssignments from './pages/TutorAssignments';
 import CoordinatorDashboard from './pages/CoordinatorDashboard';
 import ClubsManagement from './pages/ClubsManagement';
 import MassNotifications from './pages/MassNotifications';
@@ -97,7 +96,6 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
         
@@ -153,7 +151,7 @@ function App() {
         <Route path="/my-journal" element={<MyJournal />} />
         <Route path="/tutor-requests" element={<TutorRequests />} />
         <Route path="/tutor-invitations" element={<TutorInvitations />} />
-        <Route path="/tutor-assignments" element={<TutorAssignments />} /> {/* ← ДОБАВЬ ЭТУ СТРОКУ */}
+        <Route path="/tutor-assignments" element={<TutorAssignments />} />
         
         {/* Сотрудники */}
         <Route path="/staff" element={<StaffManagement />} />
@@ -183,7 +181,6 @@ function App() {
         <Route path="/achievements-categories" element={<AchievementsCategories />} />
         <Route path="/notification-history" element={<NotificationHistory />} />
         <Route path="/my-report-templates" element={<MyReportTemplates />} />
-        <Route path="/documents" element={<DocumentsCenter />} />
 
         {/* Редирект */}
         <Route path="*" element={<Navigate to="/" replace />} />

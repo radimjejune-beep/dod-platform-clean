@@ -6,6 +6,12 @@ import { Pool } from 'pg';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
+import morgan from 'morgan';
+
+// Импортируем наши middleware и логгер
+import { authenticate, requireRole, requireAdmin, requireAdminOrCoordinator } from './middleware/auth.js';
+import { logActivity, initLogger, getActivityLogs } from './lib/logger.js';
 
 dotenv.config();
 
@@ -16,54 +22,15 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dod-platform-
 console.log('🚀 ЗАПУСК БЭКЕНДА');
 
 // ============================================================
-// CORS НАСТРОЙКА
+// 1. БАЗА ДАННЫХ
 // ============================================================
-app.use(cors({
-  origin: [
-    '*',
-    'https://dod-frontend.relaxdev.ru',
-    'https://dod-platform-clean.relaxdev.ru',
-    'http://localhost:5173',
-    'http://localhost:3000'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
-}));
-app.options('*', cors());
-
-app.use((req, res, next) => {
-  const allowedOrigins = [
-    'https://dod-frontend.relaxdev.ru',
-    'https://dod-platform-clean.relaxdev.ru',
-    'http://localhost:5173',
-    'http://localhost:3000'
-  ];
-  
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin) || !origin) {
-    res.header('Access-Control-Allow-Origin', origin || '*');
-  } else {
-    res.header('Access-Control-Allow-Origin', '*');
-  }
-  
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
-
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
+
+// Инициализируем логгер
+initLogger(pool);
 
 pool.connect((err) => {
   if (err) {
@@ -74,80 +41,80 @@ pool.connect((err) => {
 });
 
 // ============================================================
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// 2. CORS НАСТРОЙКА (БЕЗОПАСНАЯ)
 // ============================================================
-async function ensureCoordinatorClub(userId) {
-  try {
-    const userResult = await pool.query(
-      'SELECT id, role, club_id FROM users WHERE id = $1',
-      [userId]
-    );
-    if (userResult.rows.length === 0) return null;
-    const user = userResult.rows[0];
-    
-    if (user.role !== 'club_coordinator') return user;
-    
-    if (!user.club_id) {
-      const coordResult = await pool.query(
-        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
-        [userId]
-      );
-      if (coordResult.rows.length > 0) {
-        const clubId = coordResult.rows[0].club_id;
-        await pool.query(
-          'UPDATE users SET club_id = $1 WHERE id = $2',
-          [clubId, userId]
-        );
-        user.club_id = clubId;
-        console.log(`✅ Координатору ${userId} присвоен клуб ${clubId}`);
-      }
-    } else {
-      const coordResult = await pool.query(
-        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-        [userId, user.club_id]
-      );
-      if (coordResult.rows.length === 0) {
-        await pool.query(
-          `INSERT INTO club_coordinators (profile_id, club_id, created_at)
-           VALUES ($1, $2, NOW())`,
-          [userId, user.club_id]
-        );
-        console.log(`✅ Координатор ${userId} привязан к клубу ${user.club_id}`);
-      }
+const allowedOrigins = [
+  'https://dod-frontend.relaxdev.ru',
+  'https://dod-platform-clean.relaxdev.ru',
+  'http://localhost:5173',
+  'http://localhost:3000'
+];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    if (!origin) {
+      return callback(null, true);
     }
-    
-    return user;
-  } catch (error) {
-    console.error('❌ Ошибка в ensureCoordinatorClub:', error);
-    return null;
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    console.log(`⚠️ CORS: запрос от ${origin} отклонён`);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+}));
+
+// ============================================================
+// 3. ЛОГИРОВАНИЕ ЗАПРОСОВ (morgan)
+// ============================================================
+app.use(morgan('dev'));
+
+// ============================================================
+// 4. ПАРСЕРЫ
+// ============================================================
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// ============================================================
+// 5. RATE LIMITING ДЛЯ ВХОДА
+// ============================================================
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { 
+    error: 'Слишком много попыток входа. Попробуйте через 15 минут.',
+    code: 'RATE_LIMIT_EXCEEDED'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// ============================================================
+// 6. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ============================================================
+
+function generatePassword() {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+  let password = '';
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
   }
+  return password;
 }
 
-async function createNotification(userId, type, title, message, link = null, priority = 'normal') {
-  try {
-    if (!userId) {
-      console.log('⚠️ Попытка создать уведомление без userId');
-      return null;
-    }
-    
-    const result = await pool.query(
-      `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())
-       RETURNING *`,
-      [userId, type, title, message, link, priority]
-    );
-    
-    return result.rows[0];
-  } catch (error) {
-    console.error('❌ Ошибка создания уведомления:', error.message);
-    return null;
-  }
+function isPasswordStrong(password) {
+  if (password.length < 8) return { valid: false, message: 'Пароль должен содержать минимум 8 символов' };
+  if (!/[A-Z]/.test(password)) return { valid: false, message: 'Пароль должен содержать заглавную букву' };
+  if (!/[a-z]/.test(password)) return { valid: false, message: 'Пароль должен содержать строчную букву' };
+  if (!/[0-9]/.test(password)) return { valid: false, message: 'Пароль должен содержать цифру' };
+  return { valid: true };
 }
 
 function generateEmailFromName(fullName) {
   const parts = fullName.trim().split(' ');
   let login = '';
-  
   if (parts.length >= 2) {
     const firstName = parts[0].toLowerCase();
     const lastName = parts[parts.length - 1].toLowerCase();
@@ -177,13 +144,20 @@ function generateEmailFromName(fullName) {
   return `${result}@dod.local`;
 }
 
-function generatePassword() {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-  let password = '';
-  for (let i = 0; i < 10; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
+async function createNotification(userId, type, title, message, link = null, priority = 'normal') {
+  try {
+    if (!userId) return null;
+    const result = await pool.query(
+      `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       RETURNING *`,
+      [userId, type, title, message, link, priority]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка создания уведомления:', error.message);
+    return null;
   }
-  return password;
 }
 
 async function getClubName(clubId) {
@@ -193,71 +167,19 @@ async function getClubName(clubId) {
 }
 
 // ============================================================
-// 1. ТЕСТ
+// 7. ТЕСТОВЫЙ ЭНДПОИНТ
 // ============================================================
 app.get('/api/test', (req, res) => {
   res.json({ status: 'ok', message: 'Сервер работает' });
 });
 
 // ============================================================
-// 2. РЕГИСТРАЦИЯ
+// 8. ВХОД (С ПРОВЕРКОЙ ВРЕМЕННОГО ПАРОЛЯ)
 // ============================================================
-app.post('/api/register', async (req, res) => {
-  try {
-    const { email, password, full_name, role, phone, school, class_name, birth_date, club_id } = req.body;
-
-    if (!email || !password || !full_name || !birth_date) {
-      return res.status(400).json({ error: 'Email, пароль, ФИО и дата рождения обязательны' });
-    }
-
-    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
-    if (existing.rows.length > 0) {
-      return res.status(400).json({ error: 'Пользователь уже существует' });
-    }
-
-    const password_hash = await bcrypt.hash(password, 10);
-
-    const result = await pool.query(
-      `INSERT INTO users (email, password_hash, full_name, role, phone, school, class_name, birth_date, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active')
-       RETURNING id, email, full_name, role`,
-      [email, password_hash, full_name, role || 'participant', phone || '', school || '', class_name || '', birth_date]
-    );
-
-    const user = result.rows[0];
-
-    if (club_id) {
-      await pool.query(
-        `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
-         VALUES ($1, $2, 'active', NOW())`,
-        [user.id, club_id]
-      );
-      await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, user.id]);
-    }
-
-    res.status(201).json({
-      message: 'Регистрация успешна!',
-      user: {
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        role: user.role
-      }
-    });
-
-  } catch (error) {
-    console.error('Ошибка регистрации:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 3. ВХОД
-// ============================================================
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log('🔐 Вход:', email);
+    console.log(`🔐 Попытка входа: ${email}`);
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email и пароль обязательны' });
@@ -267,29 +189,74 @@ app.post('/api/login', async (req, res) => {
     const user = result.rows[0];
 
     if (!user) {
-      console.log('❌ Пользователь не найден:', email);
+      console.log(`❌ Пользователь не найден: ${email}`);
       return res.status(401).json({ error: 'Неверный email или пароль' });
     }
 
-    if (!user.password_hash || !user.password_hash.startsWith('$2')) {
-      console.log('⚠️ Хешируем пароль для:', email);
-      const newHash = await bcrypt.hash(password, 10);
-      await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, user.id]);
-      user.password_hash = newHash;
+    if (user.locked_until && new Date(user.locked_until) > new Date()) {
+      const waitTime = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
+      return res.status(403).json({
+        error: `Аккаунт заблокирован на ${waitTime} минут`,
+        code: 'ACCOUNT_LOCKED',
+        locked_until: user.locked_until
+      });
     }
 
     const valid = await bcrypt.compare(password, user.password_hash);
+    
     if (!valid) {
-      console.log('❌ Неверный пароль для:', email);
+      const attempts = (user.login_attempts || 0) + 1;
+      
+      if (attempts >= 5) {
+        await pool.query(
+          `UPDATE users 
+           SET login_attempts = $1, locked_until = $2 
+           WHERE id = $3`,
+          [attempts, new Date(Date.now() + 30 * 60 * 1000), user.id]
+        );
+        await logActivity(user.id, 'ACCOUNT_LOCKED', 'user', user.id, {
+          reason: 'Слишком много неудачных попыток входа',
+          attempts: attempts
+        });
+        return res.status(403).json({
+          error: 'Аккаунт заблокирован на 30 минут из-за множества неудачных попыток',
+          code: 'ACCOUNT_LOCKED'
+        });
+      }
+      
+      await pool.query(
+        'UPDATE users SET login_attempts = $1 WHERE id = $2',
+        [attempts, user.id]
+      );
+      
+      console.log(`❌ Неверный пароль для: ${email} (попытка ${attempts})`);
       return res.status(401).json({ error: 'Неверный email или пароль' });
     }
 
-    if (user.role === 'club_coordinator') {
-      await ensureCoordinatorClub(user.id);
-      const updatedUser = await pool.query('SELECT * FROM users WHERE id = $1', [user.id]);
-      if (updatedUser.rows.length > 0) {
-        Object.assign(user, updatedUser.rows[0]);
-      }
+    await pool.query(
+      'UPDATE users SET login_attempts = 0, locked_until = NULL WHERE id = $1',
+      [user.id]
+    );
+
+    if (user.must_change_password === true) {
+      console.log(`⚠️ Пользователь ${email} должен сменить временный пароль`);
+      
+      const resetToken = jwt.sign(
+        { 
+          userId: user.id, 
+          mustChange: true,
+          email: user.email
+        },
+        JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+      
+      return res.status(403).json({
+        error: 'Необходимо изменить временный пароль',
+        code: 'MUST_CHANGE_PASSWORD',
+        must_change_password: true,
+        reset_token: resetToken
+      });
     }
 
     const token = jwt.sign(
@@ -305,9 +272,13 @@ app.post('/api/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    console.log('✅ Успешный вход:', email);
-    console.log('👑 is_president в токене:', user.is_president || false);
+    await logActivity(user.id, 'LOGIN', 'user', user.id, {
+      email: user.email,
+      role: user.role
+    });
 
+    console.log(`✅ Успешный вход: ${email}`);
+    
     res.json({
       token,
       user: {
@@ -327,165 +298,319 @@ app.post('/api/login', async (req, res) => {
 });
 
 // ============================================================
-// 4. ПОЛУЧЕНИЕ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ
+// 9. СМЕНА ПАРОЛЯ
 // ============================================================
-app.get('/api/me', async (req, res) => {
+app.post('/api/change-password', async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-
-      if (decoded.role === 'club_coordinator') {
-        await ensureCoordinatorClub(decoded.userId);
+    const { current_password, new_password, reset_token } = req.body;
+    
+    let userId;
+    let isFirstLogin = false;
+    
+    if (reset_token) {
+      try {
+        const decoded = jwt.verify(reset_token, JWT_SECRET);
+        userId = decoded.userId;
+        isFirstLogin = decoded.mustChange === true;
+      } catch (error) {
+        return res.status(401).json({
+          error: 'Ссылка для смены пароля недействительна или истекла',
+          code: 'INVALID_RESET_TOKEN'
+        });
+      }
+    } else {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ error: 'Требуется авторизация' });
       }
 
-      const result = await pool.query(
-        `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
-                u.birth_date, u.is_minor, u.registration_status, u.interests, u.bio, u.city, 
-                u.position, u.status, u.club_id, u.created_at, u.avatar_url, u.is_president,
-                u.social_links, u.skills, u.education, u.achievements, u.telegram, u.vk,
-                c.name as club_name
-         FROM users u
-         LEFT JOIN clubs c ON u.club_id = c.id
-         WHERE u.id = $1`,
-        [decoded.userId]
-      );
-
-      if (result.rows.length === 0) {
+      const token = authHeader.split(' ')[1];
+      const decoded = jwt.verify(token, JWT_SECRET);
+      userId = decoded.userId;
+      
+      const user = await pool.query('SELECT password_hash FROM users WHERE id = $1', [userId]);
+      if (user.rows.length === 0) {
         return res.status(404).json({ error: 'Пользователь не найден' });
       }
-
-      res.json(result.rows[0]);
-    } catch (jwtError) {
-      console.error('❌ Ошибка JWT:', jwtError.message);
-      return res.status(401).json({ error: 'Неверный токен' });
+      
+      const valid = await bcrypt.compare(current_password, user.rows[0].password_hash);
+      if (!valid) {
+        return res.status(401).json({ error: 'Неверный текущий пароль' });
+      }
     }
-
+    
+    const strength = isPasswordStrong(new_password);
+    if (!strength.valid) {
+      return res.status(400).json({ 
+        error: strength.message,
+        code: 'WEAK_PASSWORD'
+      });
+    }
+    
+    const hashedPassword = await bcrypt.hash(new_password, 10);
+    
+    await pool.query(
+      `UPDATE users 
+       SET password_hash = $1, 
+           must_change_password = false, 
+           last_password_change = NOW(),
+           login_attempts = 0,
+           locked_until = NULL
+       WHERE id = $2`,
+      [hashedPassword, userId]
+    );
+    
+    await logActivity(userId, 'PASSWORD_CHANGED', 'user', userId, {
+      is_first_login: isFirstLogin
+    });
+    
+    if (isFirstLogin) {
+      const user = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+      const userData = user.rows[0];
+      
+      const token = jwt.sign(
+        {
+          userId: userData.id,
+          email: userData.email,
+          role: userData.role,
+          full_name: userData.full_name,
+          club_id: userData.club_id,
+          is_president: userData.is_president || false
+        },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+      
+      return res.json({
+        message: 'Пароль успешно изменён! Добро пожаловать в систему.',
+        token: token,
+        user: {
+          id: userData.id,
+          email: userData.email,
+          full_name: userData.full_name,
+          role: userData.role,
+          avatar_url: userData.avatar_url || null,
+          club_id: userData.club_id || null
+        },
+        is_first_login: true
+      });
+    }
+    
+    res.json({
+      message: 'Пароль успешно изменён',
+      is_first_login: false
+    });
+    
   } catch (error) {
-    console.error('❌ Ошибка /api/me:', error);
-    res.status(401).json({ error: 'Неверный токен' });
+    console.error('❌ Ошибка смены пароля:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
 // ============================================================
-// 5. /api/me2 - ЗАПАСНОЙ
+// 10. ЗАКРЫТАЯ РЕГИСТРАЦИЯ (ОТКЛЮЧЕНА)
 // ============================================================
-app.get('/api/me2', async (req, res) => {
-  console.log('🔓 /api/me2 (без проверки токена - ЗАПАСНОЙ)');
-  
+app.post('/api/register', async (req, res) => {
+  return res.status(403).json({
+    error: 'Регистрация закрыта. Аккаунты создаются только администрацией.',
+    code: 'REGISTRATION_CLOSED'
+  });
+});
+
+// ============================================================
+// 11. ПОЛУЧЕНИЕ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ
+// ============================================================
+app.get('/api/me', authenticate, async (req, res) => {
   try {
+    const userId = req.user.userId;
+    
     const result = await pool.query(
       `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
               u.birth_date, u.is_minor, u.registration_status, u.interests, u.bio, u.city, 
               u.position, u.status, u.club_id, u.created_at, u.avatar_url, u.is_president,
               u.social_links, u.skills, u.education, u.achievements, u.telegram, u.vk,
+              u.must_change_password,
               c.name as club_name
        FROM users u
        LEFT JOIN clubs c ON u.club_id = c.id
-       WHERE u.email = $1`,
-      ['newadmin@dod.ru']
+       WHERE u.id = $1`,
+      [userId]
     );
-    
+
     if (result.rows.length === 0) {
-      console.log('❌ Пользователь не найден');
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
-    
-    console.log('✅ Пользователь найден через /api/me2 (запасной):', result.rows[0].email);
+
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('❌ Ошибка /api/me2:', error.message);
+    console.error('❌ Ошибка /api/me:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // ============================================================
-// 6. ОБНОВЛЕНИЕ ПРОФИЛЯ
+// 12. СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ (ТОЛЬКО АДМИН)
 // ============================================================
-app.patch('/api/profile', async (req, res) => {
+app.post('/api/users', authenticate, requireAdmin, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-
     const { 
-      full_name, phone, school, class_name, interests, bio, city, position,
-      birth_date, social_links, skills, education, achievements, telegram, vk,
-      parent_full_name, parent_phone, parent_email,
-      consent_personal_data, consent_photo_publication, consent_event_participation,
-      consent_agreement_date, charter_acceptance_date
+      email, full_name, role, phone, school, class_name, club_id, 
+      birth_date, password 
     } = req.body;
 
-    console.log('📥 Обновление профиля для:', decoded.email);
-
-    const result = await pool.query(
-      `UPDATE users 
-       SET full_name = COALESCE($1, full_name),
-           phone = COALESCE($2, phone),
-           school = COALESCE($3, school),
-           class_name = COALESCE($4, class_name),
-           interests = COALESCE($5, interests),
-           bio = COALESCE($6, bio),
-           city = COALESCE($7, city),
-           position = COALESCE($8, position),
-           birth_date = $9,
-           social_links = COALESCE($10, social_links),
-           skills = COALESCE($11, skills),
-           education = COALESCE($12, education),
-           achievements = COALESCE($13, achievements),
-           telegram = COALESCE($14, telegram),
-           vk = COALESCE($15, vk),
-           parent_full_name = COALESCE($16, parent_full_name),
-           parent_phone = COALESCE($17, parent_phone),
-           parent_email = COALESCE($18, parent_email),
-           consent_personal_data = COALESCE($19, consent_personal_data),
-           consent_photo_publication = COALESCE($20, consent_photo_publication),
-           consent_event_participation = COALESCE($21, consent_event_participation),
-           consent_agreement_date = $22,
-           charter_acceptance_date = $23
-       WHERE id = $24
-       RETURNING *`,
-      [
-        full_name, phone, school, class_name, interests, bio, city, position,
-        birth_date || null, social_links, skills, education, achievements, telegram, vk,
-        parent_full_name, parent_phone, parent_email,
-        consent_personal_data, consent_photo_publication, consent_event_participation,
-        consent_agreement_date || null, charter_acceptance_date || null,
-        decoded.userId
-      ]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
+    if (!full_name) {
+      return res.status(400).json({ error: 'full_name обязателен' });
     }
 
-    console.log('✅ Профиль обновлён');
-    res.json(result.rows[0]);
+    let finalEmail = email;
+    let isAutoGenerated = false;
+    
+    if (!finalEmail) {
+      finalEmail = generateEmailFromName(full_name);
+      isAutoGenerated = true;
+      console.log(`📧 Сгенерирован email: ${finalEmail}`);
+    }
+
+    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [finalEmail]);
+    if (existing.rows.length > 0) {
+      const randomSuffix = Math.floor(Math.random() * 10000);
+      const baseEmail = finalEmail.split('@')[0];
+      const domain = finalEmail.split('@')[1] || 'dod.local';
+      finalEmail = `${baseEmail}${randomSuffix}@${domain}`;
+      isAutoGenerated = true;
+      console.log(`📧 Email занят, сгенерирован новый: ${finalEmail}`);
+    }
+
+    const tempPassword = password || generatePassword();
+    const password_hash = await bcrypt.hash(tempPassword, 10);
+
+    const result = await pool.query(
+      `INSERT INTO users (
+        email, password_hash, full_name, role, phone, school, class_name, 
+        birth_date, status, must_change_password, created_by, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active', true, $9, NOW())
+      RETURNING id, email, full_name, role`,
+      [finalEmail, password_hash, full_name, role || 'participant', phone || '', school || '', class_name || '', birth_date || null, req.user.userId]
+    );
+
+    const user = result.rows[0];
+
+    if (club_id) {
+      const clubCheck = await pool.query('SELECT id FROM clubs WHERE id = $1', [club_id]);
+      if (clubCheck.rows.length > 0) {
+        await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, user.id]);
+        
+        if (role === 'club_coordinator') {
+          await pool.query(
+            `INSERT INTO club_coordinators (profile_id, club_id, created_at)
+             VALUES ($1, $2, NOW())
+             ON CONFLICT (profile_id, club_id) DO NOTHING`,
+            [user.id, club_id]
+          );
+        } else {
+          await pool.query(
+            `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
+             VALUES ($1, $2, 'active', NOW())
+             ON CONFLICT (profile_id, club_id) DO NOTHING`,
+            [user.id, club_id]
+          );
+        }
+      }
+    }
+
+    await logActivity(req.user.userId, 'CREATE_USER', 'user', user.id, {
+      full_name: user.full_name,
+      email: user.email,
+      role: user.role,
+      temp_password: tempPassword,
+      is_auto_generated: isAutoGenerated
+    });
+
+    res.status(201).json({
+      message: 'Пользователь создан!',
+      user: {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role
+      },
+      temp_password: tempPassword,
+      is_auto_generated: isAutoGenerated,
+      must_change_password: true
+    });
+
   } catch (error) {
-    console.error('❌ Ошибка обновления профиля:', error);
+    console.error('❌ Ошибка создания пользователя:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // ============================================================
-// 7. ПОЛУЧЕНИЕ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ
+// 13. СБРОС ПАРОЛЯ (ТОЛЬКО АДМИН)
 // ============================================================
-app.get('/api/users', async (req, res) => {
+app.post('/api/users/:id/reset-password', authenticate, requireAdmin, async (req, res) => {
   try {
+    const { id } = req.params;
+
+    const userCheck = await pool.query('SELECT id, full_name, email FROM users WHERE id = $1', [id]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    const user = userCheck.rows[0];
+    
+    const newPassword = generatePassword();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    await pool.query(
+      `UPDATE users 
+       SET password_hash = $1, 
+           must_change_password = true,
+           last_password_change = NOW(),
+           login_attempts = 0,
+           locked_until = NULL
+       WHERE id = $2`,
+      [hashedPassword, id]
+    );
+
+    await logActivity(req.user.userId, 'RESET_PASSWORD', 'user', id, {
+      user: user.full_name,
+      email: user.email
+    });
+
+    res.json({
+      message: 'Пароль сброшен',
+      temp_password: newPassword,
+      must_change_password: true,
+      user: {
+        id: user.id,
+        full_name: user.full_name,
+        email: user.email
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Ошибка сброса пароля:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 14. ПОЛУЧЕНИЕ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ
+// ============================================================
+app.get('/api/users', authenticate, async (req, res) => {
+  try {
+    const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
     const result = await pool.query(
       `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
               u.birth_date, u.is_minor, u.registration_status, u.interests, u.bio, u.city, 
               u.position, u.status, u.club_id, u.created_at, u.avatar_url,
               u.social_links, u.skills, u.education, u.achievements, u.telegram, u.vk,
+              u.must_change_password,
               c.name as club_name
        FROM users u
        LEFT JOIN clubs c ON u.club_id = c.id
@@ -498,133 +623,51 @@ app.get('/api/users', async (req, res) => {
 });
 
 // ============================================================
-// 8. ПОЛУЧЕНИЕ УЧАСТНИКОВ
+// 15. ПОЛУЧЕНИЕ УЧАСТНИКОВ
 // ============================================================
-app.get('/api/participants', async (req, res) => {
+app.get('/api/participants', authenticate, async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school,
-              u.class_name, u.birth_date, u.created_at, u.status, u.avatar_url,
-              u.club_id, c.name as club_name
-       FROM users u
-       LEFT JOIN clubs c ON u.club_id = c.id
-       WHERE u.role = 'participant'
-       ORDER BY u.full_name`
-    );
-    res.json(result.rows);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 9. ПОЛУЧЕНИЕ КЛУБОВ
-// ============================================================
-app.get('/api/clubs', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT c.*, 
-              COUNT(DISTINCT cp.profile_id) as participants_count
-       FROM clubs c
-       LEFT JOIN club_participants cp ON c.id = cp.club_id AND cp.status = 'active'
-       GROUP BY c.id
-       ORDER BY c.name`
-    );
-    res.json(result.rows);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 10. СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ
-// ============================================================
-app.post('/api/users', async (req, res) => {
-  try {
-    let { email, full_name, role, phone, school, class_name, club_id, password } = req.body;
-
-    if (!full_name) {
-      return res.status(400).json({ error: 'full_name обязателен' });
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
     }
 
-    let isAutoGenerated = false;
-    
-    if (!email) {
-      email = generateEmailFromName(full_name);
-      isAutoGenerated = true;
-      console.log('📧 Сгенерирован email:', email);
-    }
+    let query = `
+      SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school,
+             u.class_name, u.birth_date, u.created_at, u.status, u.avatar_url,
+             u.club_id, c.name as club_name
+      FROM users u
+      LEFT JOIN clubs c ON u.club_id = c.id
+      WHERE u.role = 'participant'
+    `;
+    const params = [];
 
-    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
-    if (existing.rows.length > 0) {
-      const randomSuffix = Math.floor(Math.random() * 10000);
-      const baseEmail = email.split('@')[0];
-      const domain = email.split('@')[1] || 'dod.local';
-      email = `${baseEmail}${randomSuffix}@${domain}`;
-      isAutoGenerated = true;
-      console.log('📧 Email занят, сгенерирован новый:', email);
-    }
-
-    let generatedPassword = password;
-    if (!generatedPassword) {
-      generatedPassword = generatePassword();
-      isAutoGenerated = true;
-      console.log('🔑 Сгенерирован пароль:', generatedPassword);
-    }
-
-    const password_hash = await bcrypt.hash(generatedPassword, 10);
-
-    const result = await pool.query(
-      `INSERT INTO users (email, password_hash, full_name, role, phone, school, class_name, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')
-       RETURNING id, email, full_name, role`,
-      [email, password_hash, full_name, role || 'participant', phone || '', school || '', class_name || '']
-    );
-
-    const user = result.rows[0];
-
-    if (club_id) {
-      await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, user.id]);
-
-      if (role === 'club_coordinator') {
-        await ensureCoordinatorClub(user.id);
-        console.log(`✅ Координатор ${user.full_name} привязан к клубу ${club_id}`);
+    if (req.user.role === 'club_coordinator') {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [req.user.userId]
+      );
+      if (clubResult.rows.length > 0) {
+        query += ' AND u.club_id = $1';
+        params.push(clubResult.rows[0].club_id);
       } else {
-        await pool.query(
-          `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
-           VALUES ($1, $2, 'active', NOW())
-           ON CONFLICT (profile_id, club_id) DO NOTHING`,
-          [user.id, club_id]
-        );
-      }
-    } else {
-      if (role === 'club_coordinator') {
-        await ensureCoordinatorClub(user.id);
+        return res.json([]);
       }
     }
 
-    res.status(201).json({
-      message: 'Пользователь создан!',
-      user: {
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        role: user.role
-      },
-      generated_password: generatedPassword,
-      is_auto_generated: isAutoGenerated
-    });
-
+    query += ' ORDER BY u.full_name';
+    
+    const result = await pool.query(query, params);
+    res.json(result.rows);
   } catch (error) {
-    console.error('❌ Ошибка создания пользователя:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // ============================================================
-// 11. ОБНОВЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
+// 16. ОБНОВЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
 // ============================================================
-app.patch('/api/users/:id', async (req, res) => {
+app.patch('/api/users/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { full_name, role, phone, school, class_name, club_id, status, position } = req.body;
@@ -636,6 +679,11 @@ app.patch('/api/users/:id', async (req, res) => {
 
     const oldRole = check.rows[0].role;
     const oldClubId = check.rows[0].club_id;
+
+    // Проверка прав: только админ может менять роль
+    if (role && role !== oldRole && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Только администратор может изменять роль' });
+    }
 
     const result = await pool.query(
       `UPDATE users 
@@ -653,24 +701,13 @@ app.patch('/api/users/:id', async (req, res) => {
     );
 
     const user = result.rows[0];
-
     const newRole = role || oldRole;
     const newClubId = club_id || oldClubId;
 
-    if (newRole === 'club_coordinator') {
-      if (newClubId) {
-        await ensureCoordinatorClub(id);
-        console.log(`✅ Координатор ${user.full_name} привязан к клубу ${newClubId}`);
-      } else {
-        await ensureCoordinatorClub(id);
-      }
-    } else if (oldRole === 'club_coordinator' && newRole !== 'club_coordinator') {
-      await pool.query('DELETE FROM club_coordinators WHERE profile_id = $1', [id]);
-      console.log(`✅ Пользователь ${user.full_name} больше не координатор`);
-    } else if (newRole === 'participant' && newClubId) {
+    if (newRole === 'club_coordinator' && newClubId) {
       await pool.query(
-        `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
-         VALUES ($1, $2, 'active', NOW())
+        `INSERT INTO club_coordinators (profile_id, club_id, created_at)
+         VALUES ($1, $2, NOW())
          ON CONFLICT (profile_id, club_id) DO NOTHING`,
         [id, newClubId]
       );
@@ -693,9 +730,9 @@ app.patch('/api/users/:id', async (req, res) => {
 });
 
 // ============================================================
-// 12. УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
+// 17. УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ (ТОЛЬКО АДМИН)
 // ============================================================
-app.delete('/api/users/:id', async (req, res) => {
+app.delete('/api/users/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -705,7 +742,6 @@ app.delete('/api/users/:id', async (req, res) => {
     }
 
     await pool.query('DELETE FROM users WHERE id = $1', [id]);
-
     res.json({ message: 'Пользователь удалён' });
   } catch (error) {
     console.error('❌ Ошибка удаления пользователя:', error);
@@ -714,65 +750,28 @@ app.delete('/api/users/:id', async (req, res) => {
 });
 
 // ============================================================
-// 13. ОБНОВЛЕНИЕ РОЛИ
+// 18. КЛУБЫ
 // ============================================================
-app.patch('/api/users/:id/role', async (req, res) => {
+app.get('/api/clubs', authenticate, async (req, res) => {
   try {
-    const { id } = req.params;
-    const { role } = req.body;
-
-    if (!role) {
-      return res.status(400).json({ error: 'role обязателен' });
-    }
-
     const result = await pool.query(
-      'UPDATE users SET role = $1 WHERE id = $2 RETURNING id, email, full_name, role',
-      [role, id]
+      `SELECT c.*, 
+              COUNT(DISTINCT cp.profile_id) as participants_count
+       FROM clubs c
+       LEFT JOIN club_participants cp ON c.id = cp.club_id AND cp.status = 'active'
+       GROUP BY c.id
+       ORDER BY c.name`
     );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 14. ПОЛУЧЕНИЕ КООРДИНАТОРОВ
-// ============================================================
-app.get('/api/club-coordinators', async (req, res) => {
-  try {
-    const { profile_id } = req.query;
-    let query = `
-      SELECT cc.*, 
-             u.full_name as user_name,
-             c.name as club_name
-      FROM club_coordinators cc
-      LEFT JOIN users u ON cc.profile_id = u.id
-      LEFT JOIN clubs c ON cc.club_id = c.id
-    `;
-    const params = [];
-    
-    if (profile_id) {
-      query += ' WHERE cc.profile_id = $1';
-      params.push(profile_id);
-    }
-    
-    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (error) {
-    console.error('Ошибка получения координаторов:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // ============================================================
-// 15. ДОСТИЖЕНИЯ
+// 19. ДОСТИЖЕНИЯ
 // ============================================================
-app.get('/api/achievements', async (req, res) => {
+app.get('/api/achievements', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT a.*, u.full_name as participant_name
@@ -786,7 +785,7 @@ app.get('/api/achievements', async (req, res) => {
   }
 });
 
-app.post('/api/achievements', async (req, res) => {
+app.post('/api/achievements', authenticate, async (req, res) => {
   try {
     const { participant_id, title, description, achievement_date } = req.body;
 
@@ -807,7 +806,7 @@ app.post('/api/achievements', async (req, res) => {
   }
 });
 
-app.delete('/api/achievements/:id', async (req, res) => {
+app.delete('/api/achievements/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query('DELETE FROM achievements WHERE id = $1', [id]);
@@ -818,19 +817,12 @@ app.delete('/api/achievements/:id', async (req, res) => {
 });
 
 // ============================================================
-// 16. СОБЫТИЯ
+// 20. СОБЫТИЯ
 // ============================================================
-app.get('/api/events', async (req, res) => {
+app.get('/api/events', authenticate, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
 
     let query = `
       SELECT e.*, 
@@ -849,8 +841,7 @@ app.get('/api/events', async (req, res) => {
 
     if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
       conditions.push('(e.is_club_event = true)');
-    } 
-    else if (userRole === 'club_coordinator') {
+    } else if (userRole === 'club_coordinator') {
       const clubResult = await pool.query(
         'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
         [userId]
@@ -862,8 +853,7 @@ app.get('/api/events', async (req, res) => {
       } else {
         conditions.push('1 = 0');
       }
-    } 
-    else if (userRole === 'participant') {
+    } else if (userRole === 'participant') {
       const user = await pool.query(
         'SELECT club_id FROM users WHERE id = $1',
         [userId]
@@ -875,26 +865,32 @@ app.get('/api/events', async (req, res) => {
       } else {
         conditions.push('1 = 0');
       }
-    } 
-    else if (userRole === 'tutor') {
+    } else if (userRole === 'tutor') {
       const assignments = await pool.query(
         'SELECT event_id FROM event_tutor_assignments WHERE tutor_id = $1 AND status = $2',
         [userId, 'accepted']
       );
-    
       if (assignments.rows.length > 0) {
         const eventIds = assignments.rows.map(r => r.event_id);
         conditions.push(`(e.id = ANY($${params.length + 1}::uuid[]))`);
         params.push(eventIds);
-        console.log(`👨‍🏫 Тьютор видит ${assignments.rows.length} мероприятий`);
       } else {
         conditions.push('1 = 0');
-        console.log('👨‍🏫 Тьютор не назначен ни на одно мероприятие');
       }
-    }
-    else if (userRole === 'parent') {
-    } 
-    else {
+    } else if (userRole === 'parent') {
+      // Родитель видит мероприятия, на которые записаны его дети
+      const children = await pool.query(
+        'SELECT child_id FROM child_parent WHERE parent_id = $1 AND status = $2',
+        [userId, 'active']
+      );
+      if (children.rows.length > 0) {
+        const childIds = children.rows.map(r => r.child_id);
+        conditions.push(`(e.id IN (SELECT event_id FROM registrations WHERE user_id = ANY($${params.length + 1}::uuid[])))`);
+        params.push(childIds);
+      } else {
+        conditions.push('1 = 0');
+      }
+    } else {
       conditions.push('1 = 0');
     }
 
@@ -912,10 +908,168 @@ app.get('/api/events', async (req, res) => {
   }
 });
 
+app.post('/api/events', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+
+    const { title, description, location, event_date, end_date, start_time, end_time, type, capacity, club_id, form_url, is_global } = req.body;
+
+    if (!title || !event_date) {
+      return res.status(400).json({ error: 'Название и дата обязательны' });
+    }
+
+    let finalClubId = club_id || null;
+    let isGlobal = is_global || false;
+    let isClubEvent = false;
+
+    if (userRole === 'movement_coordinator' || userRole === 'admin') {
+      if (is_global) {
+        isGlobal = true;
+        finalClubId = null;
+      }
+    }
+
+    if (userRole === 'club_coordinator') {
+      if (!finalClubId) {
+        const clubResult = await pool.query(
+          'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+          [userId]
+        );
+        if (clubResult.rows.length > 0) {
+          finalClubId = clubResult.rows[0].club_id;
+          isClubEvent = true;
+          isGlobal = false;
+        }
+      } else {
+        const clubCheck = await pool.query(
+          'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
+          [userId, finalClubId]
+        );
+        if (clubCheck.rows.length === 0) {
+          return res.status(403).json({ error: 'У вас нет доступа к этому клубу' });
+        }
+        isClubEvent = true;
+        isGlobal = false;
+      }
+    }
+
+    const result = await pool.query(
+      `INSERT INTO events (
+        title, description, location, event_date, end_date, start_time, end_time,
+        type, capacity, club_id, form_url, is_global, is_club_event, created_by, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+      RETURNING *`,
+      [
+        title, description || '', location || '', event_date,
+        end_date || event_date, start_time || null, end_time || null,
+        type || 'internal', capacity || 20, finalClubId,
+        form_url || null, isGlobal, isClubEvent, userId
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Ошибка создания события:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.patch('/api/events/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+    const { title, description, location, event_date, end_date, start_time, end_time, type, capacity, form_url } = req.body;
+
+    const check = await pool.query('SELECT * FROM events WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    const event = check.rows[0];
+
+    let canEdit = false;
+    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
+      canEdit = true;
+    } else if (userRole === 'club_coordinator' && event.created_by === userId) {
+      canEdit = true;
+    }
+
+    if (!canEdit) {
+      return res.status(403).json({ error: 'У вас нет прав для редактирования' });
+    }
+
+    const result = await pool.query(
+      `UPDATE events 
+       SET title = COALESCE($1, title),
+           description = COALESCE($2, description),
+           location = COALESCE($3, location),
+           event_date = COALESCE($4, event_date),
+           end_date = COALESCE($5, end_date),
+           start_time = $6,
+           end_time = $7,
+           type = COALESCE($8, type),
+           capacity = COALESCE($9, capacity),
+           form_url = $10
+       WHERE id = $11
+       RETURNING *`,
+      [title, description, location, event_date, end_date, start_time, end_time, type, capacity, form_url, id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Ошибка обновления события:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ============================================================
-// 17. РЕГИСТРАЦИИ
+// 21. УДАЛЕНИЕ МЕРОПРИЯТИЯ
 // ============================================================
-app.get('/api/registrations', async (req, res) => {
+app.delete('/api/events/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userRole = req.user.role;
+    const userId = req.user.userId;
+
+    console.log(`🗑️ Удаление мероприятия ${id}, роль: ${userRole}`);
+
+    const eventCheck = await pool.query('SELECT * FROM events WHERE id = $1', [id]);
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    const event = eventCheck.rows[0];
+
+    let canDelete = false;
+
+    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
+      canDelete = true;
+    } else if (userRole === 'club_coordinator' && event.created_by === userId) {
+      canDelete = true;
+    }
+
+    if (!canDelete) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления мероприятия' });
+    }
+
+    await pool.query('DELETE FROM event_participants WHERE event_id = $1', [id]);
+    await pool.query('DELETE FROM event_tutor_assignments WHERE event_id = $1', [id]);
+    await pool.query('DELETE FROM registrations WHERE event_id = $1', [id]);
+    await pool.query('DELETE FROM events WHERE id = $1', [id]);
+
+    res.json({ message: 'Мероприятие удалено', deleted_event: event.title });
+  } catch (error) {
+    console.error('❌ Ошибка удаления мероприятия:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 22. РЕГИСТРАЦИИ
+// ============================================================
+app.get('/api/registrations', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT r.*, u.full_name as user_name, e.title as event_title
@@ -930,7 +1084,7 @@ app.get('/api/registrations', async (req, res) => {
   }
 });
 
-app.post('/api/registrations', async (req, res) => {
+app.post('/api/registrations', authenticate, async (req, res) => {
   try {
     const { user_id, event_id } = req.body;
 
@@ -952,19 +1106,12 @@ app.post('/api/registrations', async (req, res) => {
 });
 
 // ============================================================
-// 18. ОБРАЩЕНИЯ
+// 23. ОБРАЩЕНИЯ
 // ============================================================
-app.get('/api/appeals', async (req, res) => {
+app.get('/api/appeals', authenticate, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-    const userId = decoded.userId;
+    const userRole = req.user.role;
+    const userId = req.user.userId;
 
     let query = `
       SELECT a.*, 
@@ -995,18 +1142,10 @@ app.get('/api/appeals', async (req, res) => {
   }
 });
 
-app.post('/api/appeals', async (req, res) => {
+app.post('/api/appeals', authenticate, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
+    const userId = req.user.userId;
+    const userRole = req.user.role;
     const { subject, message, priority } = req.body;
 
     if (!subject || !message) {
@@ -1037,20 +1176,6 @@ app.post('/api/appeals', async (req, res) => {
       [clubId, userId, subject, message, priority || 'medium']
     );
 
-    const admins = await pool.query(
-      "SELECT id FROM users WHERE role IN ('admin', 'movement_coordinator', 'president', 'vice_president')"
-    );
-    for (const admin of admins.rows) {
-      await createNotification(
-        admin.id,
-        'appeal',
-        '📨 Новое обращение',
-        `Новое обращение от координатора: "${subject}"`,
-        '/appeals',
-        'high'
-      );
-    }
-
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Ошибка создания обращения:', error);
@@ -1058,20 +1183,12 @@ app.post('/api/appeals', async (req, res) => {
   }
 });
 
-app.post('/api/appeals/:id/reply', async (req, res) => {
+app.post('/api/appeals/:id/reply', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { message, status } = req.body;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
 
     const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
     if (!allowedRoles.includes(userRole)) {
@@ -1113,17 +1230,6 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
       [newStatus, userId, id]
     );
 
-    if (appeal.coordinator_id) {
-      await createNotification(
-        appeal.coordinator_id,
-        'appeal',
-        '📨 Ответ на обращение',
-        `Получен ответ на ваше обращение`,
-        '/appeals',
-        'high'
-      );
-    }
-
     const result = await pool.query(
       `SELECT a.*, 
               u.full_name as coordinator_name,
@@ -1147,7 +1253,7 @@ app.post('/api/appeals/:id/reply', async (req, res) => {
   }
 });
 
-app.get('/api/appeals/:id/replies', async (req, res) => {
+app.get('/api/appeals/:id/replies', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -1169,18 +1275,10 @@ app.get('/api/appeals/:id/replies', async (req, res) => {
   }
 });
 
-app.delete('/api/appeals/:id', async (req, res) => {
+app.delete('/api/appeals/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
+    const userRole = req.user.role;
 
     if (userRole !== 'admin') {
       return res.status(403).json({ error: 'У вас нет прав для удаления обращений' });
@@ -1202,19 +1300,12 @@ app.delete('/api/appeals/:id', async (req, res) => {
 });
 
 // ============================================================
-// 19. ЗАПРОСЫ НА ТЬЮТОРОВ
+// 24. ЗАПРОСЫ НА ТЬЮТОРОВ
 // ============================================================
-app.get('/api/tutor-requests', async (req, res) => {
+app.get('/api/tutor-requests', authenticate, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
 
     let query = `
       SELECT tr.*, 
@@ -1245,18 +1336,10 @@ app.get('/api/tutor-requests', async (req, res) => {
   }
 });
 
-app.post('/api/tutor-requests', async (req, res) => {
+app.post('/api/tutor-requests', authenticate, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
+    const userId = req.user.userId;
+    const userRole = req.user.role;
     const { tutor_name, tutor_email, tutor_phone, event_date, event_name, event_description, role, responsibilities, notes } = req.body;
 
     if (!tutor_name || !event_date || !event_name) {
@@ -1296,20 +1379,12 @@ app.post('/api/tutor-requests', async (req, res) => {
   }
 });
 
-app.patch('/api/tutor-requests/:id', async (req, res) => {
+app.patch('/api/tutor-requests/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { status, comment } = req.body;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
 
     const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
     if (!allowedRoles.includes(userRole)) {
@@ -1339,19 +1414,11 @@ app.patch('/api/tutor-requests/:id', async (req, res) => {
 });
 
 // ============================================================
-// 20. ЗАГРУЗКА АВАТАРА
+// 25. ЗАГРУЗКА АВАТАРА
 // ============================================================
-app.post('/api/upload-avatar', async (req, res) => {
+app.post('/api/upload-avatar', authenticate, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-
+    const userId = req.user.userId;
     const { avatar_base64 } = req.body;
 
     if (!avatar_base64) {
@@ -1363,12 +1430,9 @@ app.post('/api/upload-avatar', async (req, res) => {
     }
 
     const sizeInBytes = Buffer.from(avatar_base64.split(',')[1], 'base64').length;
-    const sizeInKB = sizeInBytes / 1024;
-    console.log(`📦 Размер аватара: ${sizeInKB.toFixed(2)} KB`);
-    
     if (sizeInBytes > 500 * 1024) {
       return res.status(400).json({ 
-        error: 'Изображение слишком большое. Максимум 500KB. Пожалуйста, сожмите изображение.' 
+        error: 'Изображение слишком большое. Максимум 500KB.' 
       });
     }
 
@@ -1394,20 +1458,8 @@ app.post('/api/upload-avatar', async (req, res) => {
   }
 });
 
-app.post('/api/upload-news-image', async (req, res) => {
+app.post('/api/upload-news-image', authenticate, requireAdminOrCoordinator, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    
-    if (!['admin', 'movement_coordinator'].includes(decoded.role)) {
-      return res.status(403).json({ error: 'У вас нет прав' });
-    }
-
     const { image_base64 } = req.body;
 
     if (!image_base64) {
@@ -1429,9 +1481,9 @@ app.post('/api/upload-news-image', async (req, res) => {
 });
 
 // ============================================================
-// 21. ИСТОРИЯ УЧАСТНИКА
+// 26. ИСТОРИЯ УЧАСТНИКА
 // ============================================================
-app.get('/api/participant-events/:userId', async (req, res) => {
+app.get('/api/participant-events/:userId', authenticate, async (req, res) => {
   try {
     const { userId } = req.params;
     
@@ -1458,7 +1510,7 @@ app.get('/api/participant-events/:userId', async (req, res) => {
   }
 });
 
-app.get('/api/participant-stats/:userId', async (req, res) => {
+app.get('/api/participant-stats/:userId', authenticate, async (req, res) => {
   try {
     const { userId } = req.params;
     
@@ -1509,20 +1561,11 @@ app.get('/api/participant-stats/:userId', async (req, res) => {
 });
 
 // ============================================================
-// 22. ДЕТИ РОДИТЕЛЯ
+// 27. ДЕТИ РОДИТЕЛЯ
 // ============================================================
-app.get('/api/parent-children', async (req, res) => {
+app.get('/api/parent-children', authenticate, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-
-    console.log('👨‍👩‍👦 Запрос детей для родителя:', userId);
+    const userId = req.user.userId;
 
     const result = await pool.query(
       `SELECT 
@@ -1553,7 +1596,6 @@ app.get('/api/parent-children', async (req, res) => {
       [userId]
     );
 
-    console.log('✅ Найдено детей:', result.rows.length);
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения детей:', error);
@@ -1562,556 +1604,88 @@ app.get('/api/parent-children', async (req, res) => {
 });
 
 // ============================================================
-// 23. TIMELINE РЕБЁНКА
+// 28. ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ
 // ============================================================
-app.get('/api/child-timeline/:childId', async (req, res) => {
+app.post('/api/parent-link-child', authenticate, async (req, res) => {
   try {
-    const { childId } = req.params;
-    const { limit = 20 } = req.query;
+    const parentId = req.user.userId;
+    const parentRole = req.user.role;
 
-    const events = await pool.query(
-      `SELECT 
-        'event' as type,
-        e.id as id,
-        e.title as title,
-        e.event_date as date,
-        e.location as location,
-        r.status as status,
-        '📅' as icon
-       FROM registrations r
-       LEFT JOIN events e ON r.event_id = e.id
-       WHERE r.user_id = $1
-       ORDER BY e.event_date DESC
-       LIMIT $2`,
-      [childId, limit]
-    );
-
-    const achievements = await pool.query(
-      `SELECT 
-        'achievement' as type,
-        a.id as id,
-        a.title as title,
-        a.achievement_date as date,
-        a.description as description,
-        '🏆' as icon
-       FROM achievements a
-       WHERE a.participant_id = $1
-       ORDER BY a.achievement_date DESC
-       LIMIT $2`,
-      [childId, limit]
-    );
-
-    const timeline = [...events.rows, ...achievements.rows];
-    timeline.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    res.json(timeline.slice(0, limit));
-  } catch (error) {
-    console.error('Ошибка получения timeline:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 24. ОБЪЯВЛЕНИЯ
-// ============================================================
-app.post('/api/announcements', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
+    if (parentRole !== 'parent') {
+      return res.status(403).json({ error: 'Только родители могут привязывать детей' });
     }
 
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
+    const { child_email, child_password } = req.body;
 
-    const { club_id, title, content, priority = 'normal' } = req.body;
-
-    if (!club_id || !title || !content) {
-      return res.status(400).json({ error: 'club_id, title и content обязательны' });
+    if (!child_email || !child_password) {
+      return res.status(400).json({ error: 'Email и пароль ребёнка обязательны' });
     }
 
-    if (userRole === 'club_coordinator') {
-      const clubCheck = await pool.query(
-        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-        [userId, club_id]
+    const childResult = await pool.query(
+      'SELECT id, full_name, role, password_hash FROM users WHERE email = $1',
+      [child_email]
+    );
+
+    if (childResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Ребёнок с таким email не найден' });
+    }
+
+    const child = childResult.rows[0];
+
+    if (child.role !== 'participant') {
+      return res.status(400).json({ error: 'Указанный пользователь не является участником' });
+    }
+
+    const validPassword = await bcrypt.compare(child_password, child.password_hash);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Неверный пароль' });
+    }
+
+    const existingLink = await pool.query(
+      'SELECT id FROM child_parent WHERE child_id = $1 AND status = $2',
+      [child.id, 'active']
+    );
+
+    if (existingLink.rows.length > 0) {
+      const sameParent = await pool.query(
+        'SELECT id FROM child_parent WHERE child_id = $1 AND parent_id = $2 AND status = $3',
+        [child.id, parentId, 'active']
       );
-      if (clubCheck.rows.length === 0) {
-        return res.status(403).json({ error: 'У вас нет прав для этого клуба' });
+      if (sameParent.rows.length > 0) {
+        return res.status(400).json({ error: 'Этот ребёнок уже привязан к вам' });
       }
-    } else if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав' });
+      return res.status(400).json({ error: 'Этот ребёнок уже привязан к другому родителю' });
     }
 
-    const result = await pool.query(
-      `INSERT INTO announcements (club_id, created_by, title, content, priority, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
+    await pool.query(
+      `INSERT INTO child_parent (parent_id, child_id, status, created_at)
+       VALUES ($1, $2, 'active', NOW())
        RETURNING *`,
-      [club_id, userId, title, content, priority]
+      [parentId, child.id]
     );
 
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Ошибка создания объявления:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get('/api/announcements/:clubId', async (req, res) => {
-  try {
-    const { clubId } = req.params;
-    const { limit = 20 } = req.query;
-
-    const result = await pool.query(
-      `SELECT a.*, u.full_name as created_by_name
-       FROM announcements a
-       LEFT JOIN users u ON a.created_by = u.id
-       WHERE a.club_id = $1
-       ORDER BY a.created_at DESC
-       LIMIT $2`,
-      [clubId, limit]
-    );
-
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Ошибка получения объявлений:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.delete('/api/announcements/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await pool.query('DELETE FROM announcements WHERE id = $1', [id]);
-    res.json({ message: 'Объявление удалено' });
-  } catch (error) {
-    console.error('Ошибка удаления объявления:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 25. ШАБЛОНЫ ОТЧЁТОВ (ИСПРАВЛЕННЫЙ - ВСЕ СОТРУДНИКИ ВИДЯТ)
-// ============================================================
-
-// ===== ПОЛУЧЕНИЕ ВСЕХ ШАБЛОНОВ =====
-app.get('/api/report-templates', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-    const userId = decoded.userId;
-    const isPresident = decoded.is_president || false;
-
-    // КТО НЕ ВИДИТ ШАБЛОНЫ:
-    if (userRole === 'participant' || userRole === 'parent' || isPresident === true) {
-      console.log(`⛔ Доступ запрещён: ${userRole}, is_president: ${isPresident}`);
-      return res.status(403).json({ 
-        error: 'У вас нет прав для просмотра шаблонов',
-        message: 'Шаблоны доступны только сотрудникам движения'
-      });
-    }
-
-    // КТО ВИДИТ ШАБЛОНЫ:
-    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
-    if (!allowedRoles.includes(userRole)) {
-      console.log(`⛔ Роль ${userRole} не в списке разрешённых`);
-      return res.status(403).json({ error: 'У вас нет прав для просмотра шаблонов' });
-    }
-
-    console.log(`✅ Просмотр шаблонов: ${userRole}, userId: ${userId}`);
-
-    let query = `
-      SELECT 
-        rt.*,
-        u.full_name as created_by_name,
-        c.name as club_name
-      FROM report_templates rt
-      LEFT JOIN users u ON rt.created_by = u.id
-      LEFT JOIN clubs c ON rt.club_id = c.id
-      WHERE 1=1
-    `;
-    const params = [];
-
-    // ============================================================
-    // ЛОГИКА ДЛЯ РАЗНЫХ РОЛЕЙ:
-    // ============================================================
-
-    // 1. АДМИН И КООРДИНАТОР ДВИЖЕНИЯ - видят ВСЕ шаблоны
-    if (userRole === 'admin' || userRole === 'movement_coordinator') {
-      console.log('👑 Админ/Координатор движения: видит все шаблоны');
-      // Никаких условий - видят всё
-    }
-    // 2. ПРЕЗИДЕНТ И ВИЦЕ-ПРЕЗИДЕНТ - видят ВСЕ шаблоны
-    else if (userRole === 'president' || userRole === 'vice_president') {
-      console.log('👑 Президент/Вице: видит все шаблоны');
-      // Никаких условий - видят всё
-    }
-    // 3. ТЬЮТОР - видят ВСЕ шаблоны
-    else if (userRole === 'tutor') {
-      console.log('📚 Тьютор: видит все шаблоны');
-      // Никаких условий - видят всё
-    }
-    // 4. КООРДИНАТОР КЮДА - видит шаблоны своего клуба И общие
-    else if (userRole === 'club_coordinator') {
-      const clubResult = await pool.query(
-        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
-        [userId]
-      );
-      if (clubResult.rows.length > 0) {
-        const clubId = clubResult.rows[0].club_id;
-        query += ` AND (rt.club_id = $1 OR rt.club_id IS NULL)`;
-        params.push(clubId);
-        console.log(`🏫 Координатор КЮДа: видит шаблоны клуба ${clubId} и общие`);
-      } else {
-        query += ` AND rt.club_id IS NULL`;
-        console.log(`📄 Координатор КЮДа без клуба: видит только общие шаблоны`);
+    res.json({
+      message: 'Ребёнок успешно привязан!',
+      child: {
+        id: child.id,
+        full_name: child.full_name,
+        email: child.email
       }
-    }
-
-    query += ' ORDER BY rt.created_at DESC';
-
-    const result = await pool.query(query, params);
-    console.log(`📥 Загружено шаблонов: ${result.rows.length}`);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('❌ Ошибка получения шаблонов:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== СОЗДАНИЕ ШАБЛОНА =====
-app.post('/api/report-templates', async (req, res) => {
-  try {
-    console.log('📥 POST /api/report-templates');
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    // КТО МОЖЕТ СОЗДАВАТЬ ШАБЛОНЫ:
-    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator'];
-    if (!allowedRoles.includes(userRole)) {
-      console.log(`❌ Нет прав для создания. Роль: ${userRole}`);
-      return res.status(403).json({ error: 'У вас нет прав для создания шаблонов' });
-    }
-
-    const { club_id, name, description, template_data, category = 'general' } = req.body;
-
-    console.log('📥 Данные шаблона:', { 
-      name, 
-      description, 
-      category, 
-      club_id,
-      template_data_length: template_data?.length 
     });
 
-    if (!name || !name.trim() || !template_data || !template_data.trim()) {
-      return res.status(400).json({ error: 'Название и шаблон обязательны' });
-    }
-
-    // Если координатор КЮДа создаёт шаблон - привязываем к его клубу
-    let finalClubId = club_id || null;
-    if (userRole === 'club_coordinator' && !finalClubId) {
-      const clubResult = await pool.query(
-        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
-        [userId]
-      );
-      if (clubResult.rows.length > 0) {
-        finalClubId = clubResult.rows[0].club_id;
-        console.log('🏫 Привязан к клубу:', finalClubId);
-      }
-    }
-
-    const templateDataString = typeof template_data === 'string' ? template_data : JSON.stringify(template_data);
-
-    const result = await pool.query(
-      `INSERT INTO report_templates (club_id, created_by, name, description, template_data, category, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())
-       RETURNING *`,
-      [finalClubId, userId, name.trim(), description || '', templateDataString, category || 'general']
-    );
-
-    console.log('✅ Шаблон создан! ID:', result.rows[0].id);
-
-    // ============================================================
-    // УВЕДОМЛЕНИЯ О НОВОМ ШАБЛОНЕ
-    // ============================================================
-    const users = await pool.query(
-      `SELECT id FROM users 
-       WHERE status = 'active' 
-       AND role NOT IN ('participant', 'parent')
-       AND (role != 'participant' OR is_president != true)`
-    );
-
-    console.log(`👥 Отправка уведомлений ${users.rows.length} пользователям`);
-
-    for (const user of users.rows) {
-      await pool.query(
-        `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-        [
-          user.id,
-          'system',
-          `📋 Новый шаблон: ${result.rows[0].name}`,
-          `Создан новый шаблон отчёта "${result.rows[0].name}"`,
-          '/reports-templates',
-          'normal'
-        ]
-      );
-    }
-
-    res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('❌ Ошибка создания шаблона:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== ОБНОВЛЕНИЕ ШАБЛОНА =====
-app.put('/api/report-templates/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для редактирования шаблонов' });
-    }
-
-    const { club_id, name, description, template_data, category = 'general' } = req.body;
-
-    const check = await pool.query('SELECT * FROM report_templates WHERE id = $1', [id]);
-    if (check.rows.length === 0) {
-      return res.status(404).json({ error: 'Шаблон не найден' });
-    }
-
-    const templateDataString = typeof template_data === 'string' 
-      ? template_data 
-      : JSON.stringify(template_data || '');
-
-    const result = await pool.query(
-      `UPDATE report_templates 
-       SET club_id = $1, name = $2, description = $3, template_data = $4, category = $5, updated_at = NOW()
-       WHERE id = $6
-       RETURNING *`,
-      [
-        club_id || check.rows[0].club_id,
-        name || check.rows[0].name,
-        description || check.rows[0].description,
-        templateDataString || check.rows[0].template_data,
-        category || check.rows[0].category,
-        id
-      ]
-    );
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('❌ Ошибка обновления шаблона:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== УДАЛЕНИЕ ШАБЛОНА =====
-app.delete('/api/report-templates/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для удаления шаблонов' });
-    }
-
-    const check = await pool.query('SELECT id FROM report_templates WHERE id = $1', [id]);
-    if (check.rows.length === 0) {
-      return res.status(404).json({ error: 'Шаблон не найден' });
-    }
-
-    await pool.query('DELETE FROM report_templates WHERE id = $1', [id]);
-    res.json({ message: 'Шаблон удалён' });
-  } catch (error) {
-    console.error('❌ Ошибка удаления шаблона:', error);
+    console.error('❌ Ошибка привязки ребёнка:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // ============================================================
-// ИСПОЛЬЗОВАНИЕ ШАБЛОНА ДЛЯ СОЗДАНИЯ ОТЧЁТА
+// 29. НАЗНАЧЕНИЕ ПРЕЗИДЕНТА КЛУБА
 // ============================================================
-app.post('/api/reports/from-template/:templateId', async (req, res) => {
+app.patch('/api/clubs/:clubId/president', authenticate, async (req, res) => {
   try {
-    const { templateId } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    console.log(`📋 Использование шаблона: ${templateId}, роль: ${userRole}`);
-
-    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'];
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для создания отчётов' });
-    }
-
-    // Получаем шаблон
-    const templateResult = await pool.query(
-      'SELECT * FROM report_templates WHERE id = $1',
-      [templateId]
-    );
-    if (templateResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Шаблон не найден' });
-    }
-
-    const template = templateResult.rows[0];
-    console.log(`📋 Шаблон найден: ${template.name}`);
-
-    const { club_id, report_month, report_data } = req.body;
-
-    if (!club_id) {
-      return res.status(400).json({ error: 'Выберите клуб для отчёта' });
-    }
-
-    if (!report_month) {
-      return res.status(400).json({ error: 'Выберите месяц отчёта' });
-    }
-
-    // Проверяем доступ к клубу
-    if (userRole === 'club_coordinator') {
-      const clubCheck = await pool.query(
-        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-        [userId, club_id]
-      );
-      if (clubCheck.rows.length === 0) {
-        return res.status(403).json({ error: 'У вас нет доступа к этому клубу' });
-      }
-    }
-
-    // Получаем название клуба
-    const clubNameResult = await pool.query('SELECT name FROM clubs WHERE id = $1', [club_id]);
-    const clubName = clubNameResult.rows[0]?.name || 'Клуб';
-
-    // Заменяем плейсхолдеры в шаблоне
-    let content = template.template_data || '';
-    const placeholders = {
-      '{club_name}': clubName,
-      '{report_month}': report_month,
-      '{date}': new Date().toISOString().slice(0, 10),
-      '{user_name}': decoded.full_name || 'Пользователь',
-      ...(report_data || {})
-    };
-
-    for (const [key, value] of Object.entries(placeholders)) {
-      content = content.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value || '');
-    }
-
-    // СОЗДАЁМ ОТЧЁТ В ТАБЛИЦЕ reports
-    const result = await pool.query(
-      `INSERT INTO reports (
-        club_id, created_by, title, content, report_month, status, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, 'draft', NOW(), NOW())
-      RETURNING *`,
-      [
-        club_id,
-        userId,
-        `Отчёт за ${report_month}`,
-        content,
-        report_month
-      ]
-    );
-
-    console.log(`✅ Отчёт создан! ID: ${result.rows[0].id}`);
-
-    // Уведомление
-    await pool.query(
-      `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-      [
-        userId,
-        'system',
-        '📋 Отчёт создан из шаблона',
-        `Вы создали отчёт из шаблона "${template.name}" за ${report_month}`,
-        '/reports',
-        'normal'
-      ]
-    );
-
-    // Если есть координаторы клуба - уведомляем их
-    const coordinators = await pool.query(
-      'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
-      [club_id]
-    );
-    for (const coord of coordinators.rows) {
-      if (coord.profile_id !== userId) {
-        await pool.query(
-          `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-          [
-            coord.profile_id,
-            'system',
-            '📋 Новый отчёт в клубе',
-            `Создан новый отчёт за ${report_month} в вашем клубе`,
-            '/reports',
-            'normal'
-          ]
-        );
-      }
-    }
-
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('❌ Ошибка создания отчёта из шаблона:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-console.log('✅ API для шаблонов отчётов загружены');
-
-// ============================================================
-// 26. НАЗНАЧЕНИЕ ПРЕЗИДЕНТА КЛУБА
-// ============================================================
-app.patch('/api/clubs/:clubId/president', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
+    const userId = req.user.userId;
+    const userRole = req.user.role;
     const { clubId } = req.params;
     const { president_id } = req.body;
 
@@ -2124,24 +1698,18 @@ app.patch('/api/clubs/:clubId/president', async (req, res) => {
     }
 
     if (userRole === 'club_coordinator') {
-      if (decoded.club_id === clubId) {
+      const clubCheck = await pool.query(
+        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
+        [userId, clubId]
+      );
+      if (clubCheck.rows.length > 0) {
         hasAccess = true;
-      }
-      
-      if (!hasAccess) {
-        const clubCheck = await pool.query(
-          'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-          [userId, clubId]
-        );
-        if (clubCheck.rows.length > 0) {
-          hasAccess = true;
-        }
       }
     }
 
     if (!hasAccess) {
       return res.status(403).json({ 
-        error: 'У вас нет прав для этого клуба. Вы не привязаны к этому КЮДу.' 
+        error: 'У вас нет прав для этого клуба.'
       });
     }
 
@@ -2205,32 +1773,6 @@ app.patch('/api/clubs/:clubId/president', async (req, res) => {
       [president_id]
     );
 
-    await createNotification(
-      president_id,
-      'system',
-      '👑 Вы назначены президентом клуба',
-      `Поздравляем! Вы назначены президентом клуба "${result.rows[0].name || 'КЮД'}"`,
-      `/club/${clubId}`,
-      'high'
-    );
-
-    const coordinators = await pool.query(
-      'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
-      [clubId]
-    );
-    for (const coord of coordinators.rows) {
-      if (coord.profile_id !== userId) {
-        await createNotification(
-          coord.profile_id,
-          'system',
-          '👑 Назначен президент клуба',
-          `Новый президент назначен в вашем клубе: ${candidate.full_name}`,
-          `/club/${clubId}`,
-          'medium'
-        );
-      }
-    }
-
     res.json({
       message: 'Президент назначен',
       club: result.rows[0],
@@ -2242,7 +1784,7 @@ app.patch('/api/clubs/:clubId/president', async (req, res) => {
   }
 });
 
-app.get('/api/clubs/:clubId/president', async (req, res) => {
+app.get('/api/clubs/:clubId/president', authenticate, async (req, res) => {
   try {
     const { clubId } = req.params;
 
@@ -2262,9 +1804,9 @@ app.get('/api/clubs/:clubId/president', async (req, res) => {
 });
 
 // ============================================================
-// 27. РЕЙТИНГ УЧАСТНИКОВ КЛУБА
+// 30. РЕЙТИНГ УЧАСТНИКОВ КЛУБА
 // ============================================================
-app.get('/api/club-rating/:clubId', async (req, res) => {
+app.get('/api/club-rating/:clubId', authenticate, async (req, res) => {
   try {
     const { clubId } = req.params;
     const { limit = 20 } = req.query;
@@ -2304,7 +1846,7 @@ app.get('/api/club-rating/:clubId', async (req, res) => {
 });
 
 // ============================================================
-// 28. НОВОСТИ
+// 31. НОВОСТИ
 // ============================================================
 app.get('/api/news', async (req, res) => {
   try {
@@ -2318,20 +1860,8 @@ app.get('/api/news', async (req, res) => {
   }
 });
 
-app.post('/api/news', async (req, res) => {
+app.post('/api/news', authenticate, requireAdminOrCoordinator, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    
-    if (!['admin', 'movement_coordinator'].includes(decoded.role)) {
-      return res.status(403).json({ error: 'У вас нет прав' });
-    }
-
     const { title, content, image_url } = req.body;
 
     if (!title || !content) {
@@ -2353,20 +1883,8 @@ app.post('/api/news', async (req, res) => {
   }
 });
 
-app.put('/api/news/:id', async (req, res) => {
+app.put('/api/news/:id', authenticate, requireAdminOrCoordinator, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    
-    if (!['admin', 'movement_coordinator'].includes(decoded.role)) {
-      return res.status(403).json({ error: 'У вас нет прав' });
-    }
-
     const { id } = req.params;
     const { title, content, image_url } = req.body;
 
@@ -2397,20 +1915,8 @@ app.put('/api/news/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/news/:id', async (req, res) => {
+app.delete('/api/news/:id', authenticate, requireAdminOrCoordinator, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    
-    if (!['admin', 'movement_coordinator'].includes(decoded.role)) {
-      return res.status(403).json({ error: 'У вас нет прав' });
-    }
-
     const { id } = req.params;
     
     const check = await pool.query('SELECT id FROM news WHERE id = $1', [id]);
@@ -2429,19 +1935,12 @@ app.delete('/api/news/:id', async (req, res) => {
 });
 
 // ============================================================
-// 29. УВЕДОМЛЕНИЯ API
+// 32. УВЕДОМЛЕНИЯ
 // ============================================================
-app.get('/api/notifications', async (req, res) => {
+app.get('/api/notifications', authenticate, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
 
     const result = await pool.query(
       `SELECT n.*
@@ -2461,17 +1960,10 @@ app.get('/api/notifications', async (req, res) => {
   }
 });
 
-app.patch('/api/notifications/:id/read', async (req, res) => {
+app.patch('/api/notifications/:id/read', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
+    const userId = req.user.userId;
 
     const check = await pool.query(
       'SELECT user_id FROM notifications WHERE id = $1',
@@ -2497,16 +1989,9 @@ app.patch('/api/notifications/:id/read', async (req, res) => {
   }
 });
 
-app.patch('/api/notifications/read-all', async (req, res) => {
+app.patch('/api/notifications/read-all', authenticate, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
+    const userId = req.user.userId;
 
     await pool.query(
       'UPDATE notifications SET read = true, read_at = NOW() WHERE user_id = $1 AND read = false',
@@ -2520,639 +2005,14 @@ app.patch('/api/notifications/read-all', async (req, res) => {
   }
 });
 
-app.post('/api/notifications', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав' });
-    }
-
-    const { user_id, role, type, title, message, link, priority = 'normal' } = req.body;
-
-    if (!title || !message) {
-      return res.status(400).json({ error: 'title и message обязательны' });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO notifications (user_id, role, type, title, message, link, priority, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-       RETURNING *`,
-      [user_id || null, role || null, type || 'system', title, message, link || null, priority]
-    );
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Ошибка создания уведомления:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 30. СОЗДАНИЕ ТЕСТОВОГО ПОЛЬЗОВАТЕЛЯ
-// ============================================================
-app.post('/api/create-test-user', async (req, res) => {
-  try {
-    const email = 'newadmin@dod.ru';
-    const password = '123456';
-    const full_name = 'Новый Администратор';
-    const role = 'admin';
-
-    await pool.query('DELETE FROM users WHERE email = $1', [email]);
-    console.log('🗑️ Старый пользователь удалён');
-
-    const password_hash = await bcrypt.hash(password, 10);
-
-    const result = await pool.query(
-      `INSERT INTO users (email, password_hash, full_name, role, birth_date, registration_status)
-       VALUES ($1, $2, $3, $4, '2000-01-01', 'active')
-       RETURNING id, email, full_name, role, registration_status`,
-      [email, password_hash, full_name, role]
-    );
-
-    console.log('✅ Тестовый пользователь создан');
-    res.json({ message: 'Пользователь создан!', user: result.rows[0] });
-
-  } catch (error) {
-    console.error('❌ Ошибка:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 31. ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ
-// ============================================================
-app.post('/api/parent-link-child', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const parentId = decoded.userId;
-    const parentRole = decoded.role;
-
-    if (parentRole !== 'parent') {
-      return res.status(403).json({ error: 'Только родители могут привязывать детей' });
-    }
-
-    const { child_email, child_password } = req.body;
-
-    if (!child_email || !child_password) {
-      return res.status(400).json({ error: 'Email и пароль ребёнка обязательны' });
-    }
-
-    const childResult = await pool.query(
-      'SELECT id, full_name, role, password_hash FROM users WHERE email = $1',
-      [child_email]
-    );
-
-    if (childResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Ребёнок с таким email не найден' });
-    }
-
-    const child = childResult.rows[0];
-
-    if (child.role !== 'participant') {
-      return res.status(400).json({ error: 'Указанный пользователь не является участником' });
-    }
-
-    const validPassword = await bcrypt.compare(child_password, child.password_hash);
-    if (!validPassword) {
-      return res.status(401).json({ error: 'Неверный пароль' });
-    }
-
-    const existingLink = await pool.query(
-      'SELECT id FROM child_parent WHERE child_id = $1 AND status = $2',
-      [child.id, 'active']
-    );
-
-    if (existingLink.rows.length > 0) {
-      const sameParent = await pool.query(
-        'SELECT id FROM child_parent WHERE child_id = $1 AND parent_id = $2 AND status = $3',
-        [child.id, parentId, 'active']
-      );
-      if (sameParent.rows.length > 0) {
-        return res.status(400).json({ error: 'Этот ребёнок уже привязан к вам' });
-      }
-      return res.status(400).json({ error: 'Этот ребёнок уже привязан к другому родителю' });
-    }
-
-    await pool.query(
-      `INSERT INTO child_parent (parent_id, child_id, status, created_at)
-       VALUES ($1, $2, 'active', NOW())
-       RETURNING *`,
-      [parentId, child.id]
-    );
-
-    await createNotification(
-      parentId,
-      'system',
-      '👨‍👩‍👦 Ребёнок привязан',
-      `Вы успешно привязали ребёнка "${child.full_name}" к своему аккаунту`,
-      '/parent-dashboard',
-      'high'
-    );
-
-    await createNotification(
-      child.id,
-      'system',
-      '👨‍👩‍👦 Привязка к родителю',
-      `Ваш профиль привязан к родителю. Теперь родитель может видеть ваши достижения и мероприятия.`,
-      '/profile',
-      'normal'
-    );
-
-    res.json({
-      message: 'Ребёнок успешно привязан!',
-      child: {
-        id: child.id,
-        full_name: child.full_name,
-        email: child.email
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Ошибка привязки ребёнка:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 32. ВНУТРЕННИЕ МЕРОПРИЯТИЯ КЛУБА
-// ============================================================
-app.get('/api/club-events/:clubId', async (req, res) => {
-  try {
-    const { clubId } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    let hasAccess = false;
-    
-    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      hasAccess = true;
-    }
-    
-    if (userRole === 'club_coordinator') {
-      const clubCheck = await pool.query(
-        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-        [userId, clubId]
-      );
-      if (clubCheck.rows.length > 0) {
-        hasAccess = true;
-      }
-    }
-    
-    if (userRole === 'participant') {
-      const userCheck = await pool.query(
-        'SELECT club_id FROM users WHERE id = $1 AND club_id = $2',
-        [userId, clubId]
-      );
-      if (userCheck.rows.length > 0) {
-        hasAccess = true;
-      }
-    }
-    
-    if (userRole === 'tutor') {
-      const tutorCheck = await pool.query(
-        'SELECT id FROM event_tutors WHERE tutor_id = $1 AND club_id = $2',
-        [userId, clubId]
-      );
-      if (tutorCheck.rows.length > 0) {
-        hasAccess = true;
-      }
-    }
-
-    if (!hasAccess) {
-      return res.status(403).json({ error: 'У вас нет доступа к этому клубу' });
-    }
-
-    const result = await pool.query(
-      `SELECT e.*, 
-              u.full_name as proposed_by_name,
-              u2.full_name as created_by_name,
-              COUNT(DISTINCT ep.user_id) as current_participants
-       FROM events e
-       LEFT JOIN users u ON e.proposed_by = u.id
-       LEFT JOIN users u2 ON e.created_by = u2.id
-       LEFT JOIN event_participants ep ON e.id = ep.event_id AND ep.status = 'registered'
-       WHERE e.club_id = $1 AND e.is_club_event = true
-       GROUP BY e.id, u.full_name, u2.full_name
-       ORDER BY e.event_date ASC`,
-      [clubId]
-    );
-
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Ошибка получения мероприятий клуба:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/club-events', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    const {
-      title,
-      description,
-      location,
-      event_date,
-      end_date,
-      start_time,
-      end_time,
-      max_participants,
-      registration_deadline,
-      club_id
-    } = req.body;
-
-    if (!title || !event_date || !club_id) {
-      return res.status(400).json({ error: 'Название, дата и клуб обязательны' });
-    }
-
-    let canCreate = false;
-    
-    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      canCreate = true;
-    }
-    
-    if (userRole === 'club_coordinator') {
-      const clubCheck = await pool.query(
-        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-        [userId, club_id]
-      );
-      if (clubCheck.rows.length > 0) {
-        canCreate = true;
-      }
-    }
-
-    if (!canCreate) {
-      return res.status(403).json({ error: 'У вас нет прав для создания мероприятий в этом клубе' });
-    }
-
-    let status = 'approved';
-    if (userRole === 'participant') {
-      status = 'pending';
-    }
-
-    const result = await pool.query(
-      `INSERT INTO events (
-        title, description, location, event_date, end_date,
-        start_time, end_time, max_participants, registration_deadline,
-        club_id, is_club_event, proposed_by, status, created_by, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, $11, $12, $13, NOW())
-      RETURNING *`,
-      [
-        title,
-        description || '',
-        location || '',
-        event_date,
-        end_date || event_date,
-        start_time || null,
-        end_time || null,
-        max_participants || 20,
-        registration_deadline || null,
-        club_id,
-        userId,
-        status,
-        userId
-      ]
-    );
-
-    const newEvent = result.rows[0];
-
-    const participants = await pool.query(
-      'SELECT id FROM users WHERE club_id = $1 AND role = $2 AND status = $3',
-      [club_id, 'participant', 'active']
-    );
-
-    for (const p of participants.rows) {
-      await createNotification(
-        p.id,
-        'event',
-        '📅 Новое мероприятие в клубе',
-        `В вашем клубе создано мероприятие: "${title}"`,
-        `/club/${club_id}`,
-        'normal'
-      );
-    }
-
-    if (userRole === 'participant' && status === 'pending') {
-      const coordinators = await pool.query(
-        'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
-        [club_id]
-      );
-      for (const c of coordinators.rows) {
-        await createNotification(
-          c.profile_id,
-          'event',
-          '📅 Новое предложение мероприятия',
-          `Участник предложил мероприятие "${title}" в вашем клубе`,
-          `/club/${club_id}`,
-          'high'
-        );
-      }
-    }
-
-    res.status(201).json(newEvent);
-  } catch (error) {
-    console.error('Ошибка создания мероприятия клуба:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.patch('/api/club-events/:id/moderate', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status, comment } = req.body;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    let canModerate = false;
-    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      canModerate = true;
-    }
-    
-    if (userRole === 'club_coordinator') {
-      const clubCheck = await pool.query(
-        `SELECT c.id FROM clubs c
-         JOIN club_coordinators cc ON c.id = cc.club_id
-         JOIN events e ON e.club_id = c.id
-         WHERE cc.profile_id = $1 AND e.id = $2`,
-        [userId, id]
-      );
-      if (clubCheck.rows.length > 0) {
-        canModerate = true;
-      }
-    }
-
-    if (!canModerate) {
-      return res.status(403).json({ error: 'У вас нет прав для модерации' });
-    }
-
-    const result = await pool.query(
-      `UPDATE events 
-       SET status = $1, moderation_comment = $2, moderated_by = $3, moderated_at = NOW()
-       WHERE id = $4
-       RETURNING *`,
-      [status, comment || null, userId, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Мероприятие не найдено' });
-    }
-
-    const event = result.rows[0];
-
-    if (event.proposed_by) {
-      await createNotification(
-        event.proposed_by,
-        'event',
-        status === 'approved' ? '✅ Мероприятие одобрено' : '❌ Мероприятие отклонено',
-        `Ваше мероприятие "${event.title}" ${status === 'approved' ? 'одобрено' : 'отклонено'}`,
-        `/club/${event.club_id}`,
-        status === 'approved' ? 'high' : 'normal'
-      );
-    }
-
-    if (status === 'approved') {
-      const participants = await pool.query(
-        'SELECT id FROM users WHERE club_id = $1 AND role = $2 AND status = $3',
-        [event.club_id, 'participant', 'active']
-      );
-      for (const p of participants.rows) {
-        await createNotification(
-          p.id,
-          'event',
-          '📅 Новое мероприятие в клубе',
-          `Мероприятие "${event.title}" одобрено и доступно для записи!`,
-          `/club/${event.club_id}`,
-          'normal'
-        );
-      }
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Ошибка модерации мероприятия:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/club-events/:id/register', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    const eventCheck = await pool.query(
-      'SELECT id, club_id, max_participants, status FROM events WHERE id = $1 AND is_club_event = true',
-      [id]
-    );
-    if (eventCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Мероприятие не найдено' });
-    }
-
-    const event = eventCheck.rows[0];
-
-    if (event.status !== 'approved') {
-      return res.status(400).json({ error: 'Мероприятие ещё не одобрено' });
-    }
-
-    const userCheck = await pool.query(
-      'SELECT id FROM users WHERE id = $1 AND club_id = $2 AND role = $3',
-      [userId, event.club_id, 'participant']
-    );
-    if (userCheck.rows.length === 0) {
-      return res.status(403).json({ error: 'Вы не являетесь участником этого клуба' });
-    }
-
-    const existing = await pool.query(
-      'SELECT id FROM event_participants WHERE event_id = $1 AND user_id = $2',
-      [id, userId]
-    );
-    if (existing.rows.length > 0) {
-      return res.status(400).json({ error: 'Вы уже записаны на это мероприятие' });
-    }
-
-    const count = await pool.query(
-      'SELECT COUNT(*) FROM event_participants WHERE event_id = $1 AND status = $2',
-      [id, 'registered']
-    );
-    const maxParticipants = event.max_participants || 20;
-    if (parseInt(count.rows[0].count) >= maxParticipants) {
-      return res.status(400).json({ error: 'Лимит участников достигнут' });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO event_participants (event_id, user_id, status, registered_at)
-       VALUES ($1, $2, 'registered', NOW())
-       RETURNING *`,
-      [id, userId]
-    );
-
-    const coordinators = await pool.query(
-      'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
-      [event.club_id]
-    );
-    const user = await pool.query(
-      'SELECT full_name FROM users WHERE id = $1',
-      [userId]
-    );
-    for (const c of coordinators.rows) {
-      await createNotification(
-        c.profile_id,
-        'event',
-        '📝 Новая запись на мероприятие',
-        `${user.rows[0].full_name} записался на "${event.title}"`,
-        `/club/${event.club_id}`,
-        'normal'
-      );
-    }
-
-    res.json({ 
-      message: 'Вы записаны на мероприятие!', 
-      participant: result.rows[0] 
-    });
-  } catch (error) {
-    console.error('Ошибка записи на мероприятие:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get('/api/my-club-events', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    let clubIds = [];
-
-    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      const result = await pool.query(
-        `SELECT e.*, 
-                c.name as club_name,
-                u.full_name as proposed_by_name
-         FROM events e
-         LEFT JOIN clubs c ON e.club_id = c.id
-         LEFT JOIN users u ON e.proposed_by = u.id
-         WHERE e.is_club_event = true AND e.status = 'approved'
-         ORDER BY e.event_date ASC`
-      );
-      return res.json(result.rows);
-    }
-
-    if (userRole === 'club_coordinator') {
-      const clubs = await pool.query(
-        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
-        [userId]
-      );
-      clubIds = clubs.rows.map(r => r.club_id);
-    }
-
-    if (userRole === 'participant') {
-      const user = await pool.query(
-        'SELECT club_id FROM users WHERE id = $1',
-        [userId]
-      );
-      if (user.rows.length > 0 && user.rows[0].club_id) {
-        clubIds = [user.rows[0].club_id];
-      }
-    }
-
-    if (userRole === 'tutor') {
-      const clubs = await pool.query(
-        'SELECT DISTINCT club_id FROM event_tutors WHERE tutor_id = $1',
-        [userId]
-      );
-      clubIds = clubs.rows.map(r => r.club_id);
-    }
-
-    if (clubIds.length === 0) {
-      return res.json([]);
-    }
-
-    const result = await pool.query(
-      `SELECT e.*, 
-              c.name as club_name,
-              u.full_name as proposed_by_name
-       FROM events e
-       LEFT JOIN clubs c ON e.club_id = c.id
-       LEFT JOIN users u ON e.proposed_by = u.id
-       WHERE e.is_club_event = true 
-         AND e.status = 'approved'
-         AND e.club_id = ANY($1::uuid[])
-       ORDER BY e.event_date ASC`,
-      [clubIds]
-    );
-
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Ошибка получения мероприятий:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // ============================================================
 // 33. ЗАДАНИЯ ПРЕЗИДЕНТА
 // ============================================================
-app.get('/api/president-tasks', async (req, res) => {
+app.get('/api/president-tasks', authenticate, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-    const isPresident = decoded.is_president || false;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+    const isPresident = req.user.is_president || false;
 
     let query = `
       SELECT 
@@ -3171,43 +2031,27 @@ app.get('/api/president-tasks', async (req, res) => {
     let conditions = [];
 
     if (['admin', 'movement_coordinator'].includes(userRole)) {
-      console.log('👑 Админ/Координатор движения: видит все задания');
-    } 
-    else if (userRole === 'president') {
-      console.log('👑 Президент движения: видит все задания');
-    }
-    else if (userRole === 'vice_president') {
-      console.log('👑 Вице-президент движения: видит все задания');
-    }
-    else if (userRole === 'club_coordinator') {
+      // Видит всё
+    } else if (['president', 'vice_president'].includes(userRole)) {
+      // Видит всё
+    } else if (userRole === 'club_coordinator') {
       const clubResult = await pool.query(
         'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
         [userId]
       );
-      
       if (clubResult.rows.length > 0) {
         const clubId = clubResult.rows[0].club_id;
-        conditions.push(`(
-          pt.created_by = $${params.length + 1} 
-          OR pt.club_id = $${params.length + 2} 
-          OR pt.is_global = true
-        )`);
+        conditions.push(`(pt.created_by = $${params.length + 1} OR pt.club_id = $${params.length + 2} OR pt.is_global = true)`);
         params.push(userId, clubId);
-        console.log(`🏫 Координатор клуба (клуб ${clubId}): видит только задания своего клуба и глобальные`);
       } else {
         conditions.push(`pt.created_by = $${params.length + 1}`);
         params.push(userId);
-        console.log('⚠️ Координатор без клуба: видит только свои задания');
       }
-    }
-    else if (userRole === 'participant' && isPresident === true) {
+    } else if (userRole === 'participant' && isPresident === true) {
       conditions.push(`(pt.assigned_to = $${params.length + 1} OR pt.is_global = true)`);
       params.push(userId);
-      console.log(`👑 Президент клуба: видит свои задания (${userId})`);
-    }
-    else {
+    } else {
       conditions.push('1 = 0');
-      console.log('⛔ Нет прав для просмотра заданий');
     }
 
     if (conditions.length > 0) {
@@ -3217,7 +2061,6 @@ app.get('/api/president-tasks', async (req, res) => {
     query += ' ORDER BY pt.created_at DESC';
 
     const result = await pool.query(query, params);
-    console.log(`📥 Загружено заданий: ${result.rows.length}`);
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения заданий:', error);
@@ -3225,122 +2068,17 @@ app.get('/api/president-tasks', async (req, res) => {
   }
 });
 
-app.get('/api/president-tasks/:id', async (req, res) => {
+app.post('/api/president-tasks', authenticate, async (req, res) => {
   try {
-    const { id } = req.params;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+    const { title, description, priority, deadline, club_id, assigned_to, is_global } = req.body;
 
-    const result = await pool.query(
-      `
-      SELECT 
-        pt.*,
-        u.full_name as assigned_to_name,
-        u2.full_name as created_by_name,
-        c.name as club_name,
-        (SELECT COUNT(*) FROM president_task_responses ptr WHERE ptr.task_id = pt.id) as response_count
-      FROM president_tasks pt
-      LEFT JOIN users u ON pt.assigned_to = u.id
-      LEFT JOIN users u2 ON pt.created_by = u2.id
-      LEFT JOIN clubs c ON pt.club_id = c.id
-      WHERE pt.id = $1
-      `,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Задание не найдено' });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('❌ Ошибка получения задания:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/president-tasks', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    const { 
-      title, 
-      description, 
-      priority, 
-      deadline, 
-      club_id, 
-      assigned_to, 
-      is_global 
-    } = req.body;
-
-    if (userRole === 'president') {
-      if (is_global) {
-        return res.status(403).json({ error: 'Президент движения не может создавать глобальные задания' });
-      }
-      if (!assigned_to) {
-        return res.status(400).json({ error: 'Укажите президента клуба, которому назначается задание' });
-      }
-    }
-    else if (userRole === 'vice_president') {
-      if (is_global) {
-        return res.status(403).json({ error: 'Вице-президент движения не может создавать глобальные задания' });
-      }
-      if (!assigned_to) {
-        return res.status(400).json({ error: 'Укажите президента клуба, которому назначается задание' });
-      }
-    }
-    else if (userRole === 'club_coordinator') {
-      const clubResult = await pool.query(
-        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
-        [userId]
-      );
-      
-      if (clubResult.rows.length === 0) {
-        return res.status(400).json({ error: 'Вы не привязаны к КЮДу' });
-      }
-      
-      const coordinatorClubId = clubResult.rows[0].club_id;
-      
-      if (club_id && club_id !== coordinatorClubId) {
-        return res.status(403).json({ error: 'Вы можете создавать задания только для своего КЮДа' });
-      }
-      
-      if (is_global) {
-        return res.status(403).json({ error: 'Координатор КЮДа не может создавать глобальные задания' });
-      }
-      
-      if (assigned_to) {
-        const presidentCheck = await pool.query(
-          `SELECT u.id, u.role, u.is_president, u.club_id 
-           FROM users u 
-           WHERE u.id = $1`,
-          [assigned_to]
-        );
-        if (presidentCheck.rows.length === 0) {
-          return res.status(400).json({ error: 'Пользователь не найден' });
-        }
-        const president = presidentCheck.rows[0];
-        if (president.role !== 'president' && !president.is_president) {
-          return res.status(400).json({ error: 'Указанный пользователь не является президентом клуба' });
-        }
-        if (president.club_id !== coordinatorClubId) {
-          return res.status(403).json({ error: 'Вы можете назначать задания только президенту своего КЮДа' });
-        }
-      }
-    }
-    else if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'Недостаточно прав для создания задания' });
+    if (!title || title.trim() === '') {
+      return res.status(400).json({ error: 'Заголовок обязателен' });
     }
 
     let finalAssignedTo = assigned_to || null;
-
-    console.log(`🔍 Проверка автоматического назначения: club_id=${club_id}, assigned_to=${assigned_to}, finalAssignedTo=${finalAssignedTo}`);
 
     if (club_id && !finalAssignedTo) {
       const presidentResult = await pool.query(
@@ -3349,9 +2087,7 @@ app.post('/api/president-tasks', async (req, res) => {
       );
       if (presidentResult.rows.length > 0) {
         finalAssignedTo = presidentResult.rows[0].id;
-        console.log(`👑 Автоматически назначено президенту клуба: ${finalAssignedTo}`);
       } else {
-        console.log(`⚠️ В клубе ${club_id} нет президента`);
         return res.status(400).json({ 
           error: 'В этом клубе нет президента. Назначьте президента клуба сначала.' 
         });
@@ -3359,42 +2095,17 @@ app.post('/api/president-tasks', async (req, res) => {
     }
 
     if (!finalAssignedTo && !is_global) {
-      console.log(`⚠️ Задание не назначено: finalAssignedTo=${finalAssignedTo}, is_global=${is_global}`);
       return res.status(400).json({ 
         error: 'Назначьте задание президенту клуба или сделайте его глобальным' 
       });
     }
 
-    console.log(`✅ Итоговое назначение: finalAssignedTo=${finalAssignedTo}, is_global=${is_global}`);
-
-    if (finalAssignedTo) {
-      const presidentCheck = await pool.query(
-        `SELECT u.id, u.role, u.is_president, u.club_id 
-         FROM users u 
-         WHERE u.id = $1`,
-        [finalAssignedTo]
-      );
-      if (presidentCheck.rows.length === 0) {
-        return res.status(400).json({ error: 'Пользователь не найден' });
-      }
-      const president = presidentCheck.rows[0];
-      if (president.role !== 'president' && !president.is_president) {
-        return res.status(400).json({ error: 'Указанный пользователь не является президентом клуба' });
-      }
-    }
-
-    if (!title || title.trim() === '') {
-      return res.status(400).json({ error: 'Заголовок обязателен' });
-    }
-
     const result = await pool.query(
-      `
-      INSERT INTO president_tasks (
+      `INSERT INTO president_tasks (
         title, description, priority, deadline, club_id, assigned_to, 
         created_by, is_global, status, created_at, updated_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', NOW(), NOW())
-      RETURNING *
-      `,
+      RETURNING *`,
       [
         title.trim(),
         description || '',
@@ -3407,131 +2118,19 @@ app.post('/api/president-tasks', async (req, res) => {
       ]
     );
 
-    const newTask = result.rows[0];
-
-    const fullResult = await pool.query(
-      `
-      SELECT 
-        pt.*,
-        u.full_name as assigned_to_name,
-        u2.full_name as created_by_name,
-        c.name as club_name,
-        (SELECT COUNT(*) FROM president_task_responses ptr WHERE ptr.task_id = pt.id) as response_count
-      FROM president_tasks pt
-      LEFT JOIN users u ON pt.assigned_to = u.id
-      LEFT JOIN users u2 ON pt.created_by = u2.id
-      LEFT JOIN clubs c ON pt.club_id = c.id
-      WHERE pt.id = $1
-      `,
-      [newTask.id]
-    );
-
-    if (finalAssignedTo) {
-      let notificationTitle = '👑 Новое задание';
-      let notificationMessage = `Вам назначено задание: "${title}"`;
-      
-      if (userRole === 'president') {
-        notificationTitle = '👑 Новое задание от президента движения';
-        notificationMessage = `Президент движения назначил вам задание: "${title}"`;
-      } else if (userRole === 'vice_president') {
-        notificationTitle = '👑 Новое задание от вице-президента движения';
-        notificationMessage = `Вице-президент движения назначил вам задание: "${title}"`;
-      } else if (userRole === 'club_coordinator') {
-        notificationTitle = '📌 Новое задание от координатора КЮДа';
-        notificationMessage = `Координатор вашего КЮДа назначил вам задание: "${title}"`;
-      }
-      
-      await createNotification(
-        finalAssignedTo,
-        'task',
-        notificationTitle,
-        notificationMessage,
-        '/president-tasks',
-        'high'
-      );
-    }
-
-    if (club_id) {
-      const coordinators = await pool.query(
-        'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
-        [club_id]
-      );
-      for (const coord of coordinators.rows) {
-        if (coord.profile_id !== userId) {
-          let fromWho = 'Назначено';
-          if (userRole === 'president') fromWho = 'Президент движения';
-          else if (userRole === 'vice_president') fromWho = 'Вице-президент движения';
-          else if (userRole === 'admin') fromWho = 'Администратор';
-          else if (userRole === 'movement_coordinator') fromWho = 'Координатор движения';
-          else if (userRole === 'club_coordinator') fromWho = 'Координатор КЮДа';
-          
-          await createNotification(
-            coord.profile_id,
-            'task',
-            '📌 Задание для президента вашего клуба',
-            `${fromWho} назначил задание президенту вашего клуба: "${title}"`,
-            '/president-tasks',
-            'medium'
-          );
-        }
-      }
-    }
-
-    if (is_global) {
-      const presidents = await pool.query(
-        "SELECT id FROM users WHERE role = 'president' OR is_president = true"
-      );
-      for (const p of presidents.rows) {
-        await createNotification(
-          p.id,
-          'task',
-          '👑 Новое глобальное задание',
-          `Новое задание для всех президентов клубов: "${title}"`,
-          '/president-tasks',
-          'medium'
-        );
-      }
-    }
-
-    if (userRole === 'club_coordinator') {
-      const admins = await pool.query(
-        "SELECT id FROM users WHERE role IN ('admin', 'movement_coordinator', 'president', 'vice_president')"
-      );
-      for (const admin of admins.rows) {
-        if (admin.id !== userId) {
-          await createNotification(
-            admin.id,
-            'task',
-            '📌 Новое задание от координатора КЮДа',
-            `Координатор КЮДа создал задание для президента: "${title}"`,
-            '/president-tasks',
-            'normal'
-          );
-        }
-      }
-    }
-
-    res.status(201).json(fullResult.rows[0]);
+    res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка создания задания:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-app.patch('/api/president-tasks/:id/status', async (req, res) => {
+app.patch('/api/president-tasks/:id/status', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
 
     const validStatuses = ['pending', 'in_progress', 'completed', 'rejected'];
     if (!validStatuses.includes(status)) {
@@ -3548,60 +2147,24 @@ app.patch('/api/president-tasks/:id/status', async (req, res) => {
     }
 
     const task = taskCheck.rows[0];
+    const isCreator = task.created_by === userId;
 
     const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
     const isAllowed = allowedRoles.includes(userRole);
-    const isCreator = task.created_by === userId;
 
     if (!isAllowed && !isCreator) {
       return res.status(403).json({ error: 'Недостаточно прав для изменения статуса' });
     }
 
-    if (userRole === 'club_coordinator' && !isCreator) {
-      return res.status(403).json({ error: 'Вы можете менять статус только своих заданий' });
-    }
-
     const completedAt = status === 'completed' ? new Date() : null;
 
     const result = await pool.query(
-      `
-      UPDATE president_tasks 
-      SET status = $1, completed_at = $2, updated_at = NOW()
-      WHERE id = $3
-      RETURNING *
-      `,
+      `UPDATE president_tasks 
+       SET status = $1, completed_at = $2, updated_at = NOW()
+       WHERE id = $3
+       RETURNING *`,
       [status, completedAt, id]
     );
-
-    if (task.created_by !== userId) {
-      await createNotification(
-        task.created_by,
-        'task',
-        `📌 Статус задания изменён на "${status}"`,
-        `Задание "${task.title}" теперь имеет статус: ${status}`,
-        '/president-tasks',
-        'normal'
-      );
-    }
-
-    if (task.club_id) {
-      const coordinators = await pool.query(
-        'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
-        [task.club_id]
-      );
-      for (const coord of coordinators.rows) {
-        if (coord.profile_id !== userId && coord.profile_id !== task.created_by) {
-          await createNotification(
-            coord.profile_id,
-            'task',
-            `📌 Статус задания для президента изменён`,
-            `Статус задания "${task.title}" изменён на: ${status}`,
-            '/president-tasks',
-            'normal'
-          );
-        }
-      }
-    }
 
     res.json(result.rows[0]);
   } catch (error) {
@@ -3610,20 +2173,12 @@ app.patch('/api/president-tasks/:id/status', async (req, res) => {
   }
 });
 
-app.post('/api/president-tasks/:id/respond', async (req, res) => {
+app.post('/api/president-tasks/:id/respond', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { response } = req.body;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
 
     if (!response || response.trim() === '') {
       return res.status(400).json({ error: 'Текст ответа обязателен' });
@@ -3640,16 +2195,8 @@ app.post('/api/president-tasks/:id/respond', async (req, res) => {
 
     const task = taskCheck.rows[0];
 
-    if (userRole !== 'president' && userRole !== 'vice_president') {
-      return res.status(403).json({ error: 'Только президенты клубов могут отвечать на задания' });
-    }
-
-    const userCheck = await pool.query(
-      'SELECT is_president, club_id FROM users WHERE id = $1',
-      [userId]
-    );
-    if (userCheck.rows.length === 0 || !userCheck.rows[0].is_president) {
-      return res.status(403).json({ error: 'Вы не являетесь президентом клуба' });
+    if (!['president', 'vice_president'].includes(userRole)) {
+      return res.status(403).json({ error: 'Только президенты могут отвечать на задания' });
     }
 
     if (task.assigned_to !== userId && !task.is_global) {
@@ -3657,40 +2204,10 @@ app.post('/api/president-tasks/:id/respond', async (req, res) => {
     }
 
     await pool.query(
-      `
-      INSERT INTO president_task_responses (task_id, user_id, response, created_at)
-      VALUES ($1, $2, $3, NOW())
-      `,
+      `INSERT INTO president_task_responses (task_id, user_id, response, created_at)
+       VALUES ($1, $2, $3, NOW())`,
       [id, userId, response.trim()]
     );
-
-    await createNotification(
-      task.created_by,
-      'task',
-      '💬 Новый ответ на задание',
-      `Получен ответ от президента клуба на задание "${task.title}"`,
-      `/president-tasks`,
-      'medium'
-    );
-
-    if (task.club_id) {
-      const coordinators = await pool.query(
-        'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
-        [task.club_id]
-      );
-      for (const coord of coordinators.rows) {
-        if (coord.profile_id !== task.created_by) {
-          await createNotification(
-            coord.profile_id,
-            'task',
-            '💬 Президент клуба ответил на задание',
-            `Президент вашего клуба ответил на задание "${task.title}"`,
-            `/president-tasks`,
-            'normal'
-          );
-        }
-      }
-    }
 
     res.status(201).json({ 
       success: true, 
@@ -3702,45 +2219,11 @@ app.post('/api/president-tasks/:id/respond', async (req, res) => {
   }
 });
 
-app.get('/api/president-tasks/:id/responses', async (req, res) => {
+app.delete('/api/president-tasks/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-
-    const result = await pool.query(
-      `
-      SELECT 
-        ptr.*,
-        u.full_name as user_name,
-        u.role as user_role,
-        u.is_president
-      FROM president_task_responses ptr
-      LEFT JOIN users u ON ptr.user_id = u.id
-      WHERE ptr.task_id = $1
-      ORDER BY ptr.created_at DESC
-      `,
-      [id]
-    );
-
-    res.json(result.rows);
-  } catch (error) {
-    console.error('❌ Ошибка получения ответов:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.delete('/api/president-tasks/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
 
     const taskCheck = await pool.query(
       'SELECT * FROM president_tasks WHERE id = $1',
@@ -3757,10 +2240,6 @@ app.delete('/api/president-tasks/:id', async (req, res) => {
     const isAllowed = allowedRoles.includes(userRole);
     const isCreator = task.created_by === userId;
 
-    if (userRole === 'president' || userRole === 'vice_president') {
-      return res.status(403).json({ error: 'Президент и вице-президент не могут удалять задания' });
-    }
-
     if (!isAllowed && !isCreator) {
       return res.status(403).json({ error: 'Недостаточно прав для удаления' });
     }
@@ -3776,429 +2255,14 @@ app.delete('/api/president-tasks/:id', async (req, res) => {
 });
 
 // ============================================================
-// 34. ОФИЦИАЛЬНЫЕ ДОКУМЕНТЫ
+// 34. НАЗНАЧЕНИЕ ТЬЮТОРОВ НА МЕРОПРИЯТИЯ
 // ============================================================
-app.get('/api/official-documents', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-    const userId = decoded.userId;
-
-    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
-    
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет доступа к этому разделу' });
-    }
-
-    let query = `
-      SELECT 
-        d.*,
-        u.full_name as created_by_name,
-        u2.full_name as approved_by_name,
-        (SELECT COUNT(*) FROM document_acknowledgments da WHERE da.document_id = d.id) as read_count,
-        (SELECT COUNT(*) FROM document_acknowledgments da WHERE da.document_id = d.id AND da.user_id = $1) as is_read
-      FROM official_documents d
-      LEFT JOIN users u ON d.created_by = u.id
-      LEFT JOIN users u2 ON d.approved_by = u2.id
-      WHERE 1=1
-    `;
-    const params = [userId];
-    const conditions = [];
-
-    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      console.log('👑 Показываем все документы для:', userRole);
-    } else if (['club_coordinator', 'tutor'].includes(userRole)) {
-      conditions.push(`d.status = 'published'`);
-      console.log('🏫 Показываем только опубликованные документы для:', userRole);
-    }
-
-    if (conditions.length > 0) {
-      query += ' AND (' + conditions.join(' AND ') + ')';
-    }
-
-    query += ' ORDER BY d.created_at DESC';
-
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('❌ Ошибка получения документов:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/official-documents', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
-    
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для создания документов' });
-    }
-
-    const { title, content, document_type, is_urgent, priority } = req.body;
-
-    if (!title || !content || !document_type) {
-      return res.status(400).json({ error: 'Заголовок, содержание и тип документа обязательны' });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO official_documents (
-        title, content, document_type, is_urgent, priority, 
-        status, created_by, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, 'draft', $6, NOW(), NOW())
-      RETURNING *`,
-      [title, content, document_type, is_urgent || false, priority || 'normal', userId]
-    );
-
-    const newDocument = result.rows[0];
-
-    if (userRole !== 'president') {
-      const presidents = await pool.query(
-        "SELECT id FROM users WHERE role = 'president'"
-      );
-      for (const p of presidents.rows) {
-        await createNotification(
-          p.id,
-          'document',
-          '📜 Новый документ на согласование',
-          `Создан новый документ: "${title}"`,
-          '/documents',
-          'high'
-        );
-      }
-    }
-
-    res.status(201).json(newDocument);
-  } catch (error) {
-    console.error('❌ Ошибка создания документа:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.patch('/api/official-documents/:id/submit', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав' });
-    }
-
-    const check = await pool.query('SELECT * FROM official_documents WHERE id = $1', [id]);
-    if (check.rows.length === 0) {
-      return res.status(404).json({ error: 'Документ не найден' });
-    }
-
-    if (check.rows[0].created_by !== userId && userRole !== 'admin') {
-      return res.status(403).json({ error: 'Вы можете отправлять только свои документы' });
-    }
-
-    const result = await pool.query(
-      `UPDATE official_documents 
-       SET status = 'pending_approval', updated_at = NOW()
-       WHERE id = $1
-       RETURNING *`,
-      [id]
-    );
-
-    const presidents = await pool.query(
-      "SELECT id FROM users WHERE role = 'president'"
-    );
-    for (const p of presidents.rows) {
-      await createNotification(
-        p.id,
-        'document',
-        '📜 Документ на согласовании',
-        `Документ "${result.rows[0].title}" отправлен на согласование`,
-        '/documents',
-        'high'
-      );
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('❌ Ошибка отправки на согласование:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.patch('/api/official-documents/:id/approve', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    if (userRole !== 'president' && userRole !== 'vice_president') {
-      return res.status(403).json({ error: 'Только президент движения может одобрять документы' });
-    }
-
-    const check = await pool.query('SELECT * FROM official_documents WHERE id = $1', [id]);
-    if (check.rows.length === 0) {
-      return res.status(404).json({ error: 'Документ не найден' });
-    }
-
-    if (check.rows[0].status !== 'pending_approval') {
-      return res.status(400).json({ error: 'Документ не ожидает согласования' });
-    }
-
-    const result = await pool.query(
-      `UPDATE official_documents 
-       SET status = 'approved', 
-           approved_by = $1, 
-           approved_at = NOW(),
-           updated_at = NOW()
-       WHERE id = $2
-       RETURNING *`,
-      [decoded.userId, id]
-    );
-
-    if (result.rows[0].created_by) {
-      await createNotification(
-        result.rows[0].created_by,
-        'document',
-        '✅ Документ одобрен',
-        `Ваш документ "${result.rows[0].title}" одобрен президентом`,
-        '/documents',
-        'high'
-      );
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('❌ Ошибка одобрения документа:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.patch('/api/official-documents/:id/reject', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { reason } = req.body;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    if (userRole !== 'president' && userRole !== 'vice_president') {
-      return res.status(403).json({ error: 'Только президент движения может отклонять документы' });
-    }
-
-    const check = await pool.query('SELECT * FROM official_documents WHERE id = $1', [id]);
-    if (check.rows.length === 0) {
-      return res.status(404).json({ error: 'Документ не найден' });
-    }
-
-    const result = await pool.query(
-      `UPDATE official_documents 
-       SET status = 'rejected', 
-           approved_by = $1, 
-           approved_at = NOW(),
-           updated_at = NOW()
-       WHERE id = $2
-       RETURNING *`,
-      [decoded.userId, id]
-    );
-
-    if (result.rows[0].created_by) {
-      await createNotification(
-        result.rows[0].created_by,
-        'document',
-        '❌ Документ отклонён',
-        `Ваш документ "${result.rows[0].title}" отклонён. Причина: ${reason || 'Не указана'}`,
-        '/documents',
-        'high'
-      );
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('❌ Ошибка отклонения документа:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.patch('/api/official-documents/:id/publish', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    const allowedRoles = ['admin', 'movement_coordinator', 'president', 'vice_president'];
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для публикации' });
-    }
-
-    const check = await pool.query('SELECT * FROM official_documents WHERE id = $1', [id]);
-    if (check.rows.length === 0) {
-      return res.status(404).json({ error: 'Документ не найден' });
-    }
-
-    if (check.rows[0].status !== 'approved') {
-      return res.status(400).json({ error: 'Документ должен быть одобрен перед публикацией' });
-    }
-
-    const result = await pool.query(
-      `UPDATE official_documents 
-       SET status = 'published', 
-           published_at = NOW(),
-           updated_at = NOW()
-       WHERE id = $1
-       RETURNING *`,
-      [id]
-    );
-
-    const allowedViewers = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
-    const viewers = await pool.query(
-      "SELECT id FROM users WHERE role = ANY($1::text[])",
-      [allowedViewers]
-    );
-    
-    for (const viewer of viewers.rows) {
-      await createNotification(
-        viewer.id,
-        'document',
-        '📢 Новый официальный документ',
-        `Опубликован документ: "${result.rows[0].title}"`,
-        '/documents',
-        'normal'
-      );
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('❌ Ошибка публикации документа:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/official-documents/:id/read', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-
-    await pool.query(
-      `INSERT INTO document_acknowledgments (document_id, user_id, read_at)
-       VALUES ($1, $2, NOW())
-       ON CONFLICT (document_id, user_id) DO UPDATE SET read_at = NOW()`,
-      [id, userId]
-    );
-
-    res.json({ message: 'Документ отмечен как прочитанный' });
-  } catch (error) {
-    console.error('❌ Ошибка отметки о прочтении:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.delete('/api/official-documents/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    if (userRole !== 'admin') {
-      return res.status(403).json({ error: 'Только администратор может удалять документы' });
-    }
-
-    const check = await pool.query('SELECT id, title FROM official_documents WHERE id = $1', [id]);
-    if (check.rows.length === 0) {
-      return res.status(404).json({ error: 'Документ не найден' });
-    }
-
-    const doc = check.rows[0];
-
-    await pool.query('DELETE FROM document_acknowledgments WHERE document_id = $1', [id]);
-    await pool.query('DELETE FROM document_comments WHERE document_id = $1', [id]);
-    await pool.query('DELETE FROM official_documents WHERE id = $1', [id]);
-
-    console.log(`✅ Документ "${doc.title}" удалён администратором`);
-
-    res.json({ 
-      message: 'Документ удалён',
-      deleted_document: doc
-    });
-  } catch (error) {
-    console.error('❌ Ошибка удаления документа:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 35. НАЗНАЧЕНИЕ ТЬЮТОРОВ НА МЕРОПРИЯТИЯ
-// ============================================================
-app.post('/api/events/:eventId/tutors', async (req, res) => {
+app.post('/api/events/:eventId/tutors', authenticate, async (req, res) => {
   try {
     const { eventId } = req.params;
     const { tutor_id, role, notes } = req.body;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
 
     const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator'];
     if (!allowedRoles.includes(userRole)) {
@@ -4225,16 +2289,6 @@ app.post('/api/events/:eventId/tutors', async (req, res) => {
       return res.status(404).json({ error: 'Мероприятие не найдено' });
     }
 
-    const event = eventCheck.rows[0];
-
-    const existing = await pool.query(
-      'SELECT id FROM event_tutor_assignments WHERE event_id = $1 AND tutor_id = $2',
-      [eventId, tutor_id]
-    );
-    if (existing.rows.length > 0) {
-      return res.status(400).json({ error: 'Тьютор уже назначен на это мероприятие' });
-    }
-
     const result = await pool.query(
       `INSERT INTO event_tutor_assignments (
         event_id, tutor_id, role, status, assigned_by, assigned_at, notes
@@ -4243,54 +2297,17 @@ app.post('/api/events/:eventId/tutors', async (req, res) => {
       [eventId, tutor_id, role || 'tutor', userId, notes || null]
     );
 
-    await createNotification(
-      tutor_id,
-      'event',
-      '📅 Новое назначение на мероприятие',
-      `Вас назначили тьютором на мероприятие: "${event.title}"`,
-      `/events/${eventId}`,
-      'high'
-    );
-
-    const eventCreator = await pool.query(
-      'SELECT created_by FROM events WHERE id = $1',
-      [eventId]
-    );
-    if (eventCreator.rows.length > 0 && eventCreator.rows[0].created_by !== userId) {
-      await createNotification(
-        eventCreator.rows[0].created_by,
-        'event',
-        '👤 Тьютор назначен на мероприятие',
-        `На мероприятие "${event.title}" назначен тьютор: ${tutorCheck.rows[0].full_name}`,
-        `/events/${eventId}`,
-        'medium'
-      );
-    }
-
-    res.status(201).json({
-      message: 'Тьютор назначен на мероприятие',
-      assignment: result.rows[0],
-      tutor: tutorCheck.rows[0]
-    });
+    res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка назначения тьютора:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-app.get('/api/event-tutor-assignments', async (req, res) => {
+app.get('/api/event-tutor-assignments', authenticate, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-    const userId = decoded.userId;
-
-    console.log(`👤 Запрос назначений от: ${userRole} (${userId})`);
+    const userId = req.user.userId;
+    const userRole = req.user.role;
 
     let query = `
       SELECT 
@@ -4311,13 +2328,11 @@ app.get('/api/event-tutor-assignments', async (req, res) => {
     if (userRole === 'tutor') {
       query += ' AND eta.tutor_id = $1';
       params.push(userId);
-      console.log(`👨‍🏫 Загрузка назначений для тьютора ${userId}`);
     }
 
     query += ' ORDER BY eta.assigned_at DESC';
 
     const result = await pool.query(query, params);
-    console.log(`📥 Найдено назначений: ${result.rows.length}`);
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения назначений:', error);
@@ -4325,47 +2340,11 @@ app.get('/api/event-tutor-assignments', async (req, res) => {
   }
 });
 
-app.get('/api/events/:eventId/tutors', async (req, res) => {
-  try {
-    const { eventId } = req.params;
-
-    const result = await pool.query(
-      `
-      SELECT 
-        eta.*,
-        u.full_name as tutor_name,
-        u.email as tutor_email,
-        u.phone as tutor_phone,
-        u2.full_name as assigned_by_name
-      FROM event_tutor_assignments eta
-      LEFT JOIN users u ON eta.tutor_id = u.id
-      LEFT JOIN users u2 ON eta.assigned_by = u2.id
-      WHERE eta.event_id = $1
-      ORDER BY eta.assigned_at DESC
-      `,
-      [eventId]
-    );
-
-    res.json(result.rows);
-  } catch (error) {
-    console.error('❌ Ошибка получения назначений:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.patch('/api/event-tutor-assignments/:id', async (req, res) => {
+app.patch('/api/event-tutor-assignments/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
+    const userId = req.user.userId;
 
     const validStatuses = ['pending', 'accepted', 'declined'];
     if (!validStatuses.includes(status)) {
@@ -4392,803 +2371,20 @@ app.patch('/api/event-tutor-assignments/:id', async (req, res) => {
       [status, id]
     );
 
-    const assignment = result.rows[0];
-    const eventCreator = await pool.query(
-      'SELECT created_by, title FROM events WHERE id = $1',
-      [assignment.event_id]
-    );
-    if (eventCreator.rows.length > 0) {
-      const tutor = await pool.query(
-        'SELECT full_name FROM users WHERE id = $1',
-        [userId]
-      );
-      await createNotification(
-        eventCreator.rows[0].created_by,
-        'event',
-        status === 'accepted' ? '✅ Тьютор принял назначение' : '❌ Тьютор отклонил назначение',
-        `Тьютор ${tutor.rows[0].full_name} ${status === 'accepted' ? 'принял' : 'отклонил'} назначение на "${eventCreator.rows[0].title}"`,
-        `/events/${assignment.event_id}`,
-        'medium'
-      );
-    }
-
-    res.json({
-      message: `Статус изменён на "${status}"`,
-      assignment: result.rows[0]
-    });
+    res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка обновления статуса:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-app.delete('/api/event-tutor-assignments/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    const allowedRoles = ['admin', 'movement_coordinator'];
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для удаления назначений' });
-    }
-
-    await pool.query('DELETE FROM event_tutor_assignments WHERE id = $1', [id]);
-
-    res.json({ message: 'Назначение удалено' });
-  } catch (error) {
-    console.error('❌ Ошибка удаления назначения:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // ============================================================
-// 36. МАССОВЫЕ УВЕДОМЛЕНИЯ
+// 35. ОТЧЁТЫ
 // ============================================================
-
-// ===== ПОЛУЧЕНИЕ ВСЕХ УВЕДОМЛЕНИЙ =====
-app.get('/api/mass-notifications', async (req, res) => {
+app.get('/api/reports', authenticate, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для просмотра уведомлений' });
-    }
-
-    const result = await pool.query(`
-      SELECT 
-        mn.*,
-        u.full_name as created_by_name
-      FROM mass_notifications mn
-      LEFT JOIN users u ON mn.created_by = u.id
-      ORDER BY mn.created_at DESC
-    `);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('❌ Ошибка получения уведомлений:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== СОЗДАНИЕ МАССОВОГО УВЕДОМЛЕНИЯ =====
-app.post('/api/mass-notifications', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для создания уведомлений' });
-    }
-
-    const { title, message, recipients, priority, scheduled_at } = req.body;
-
-    if (!title || !title.trim() || !message || !message.trim()) {
-      return res.status(400).json({ error: 'Заголовок и текст обязательны' });
-    }
-
-    // Получаем всех активных пользователей
-    const users = await pool.query('SELECT id, role FROM users WHERE status = $1', ['active']);
-    console.log(`👥 Всего активных пользователей: ${users.rows.length}`);
-
-    // Фильтруем по ролям
-    let targetUsers = [];
-    const roleMap = {
-      'all': 'all',
-      'participants': 'participant',
-      'coordinators': 'club_coordinator',
-      'tutors': 'tutor',
-      'admins': ['admin', 'movement_coordinator']
-    };
-
-    const roles = roleMap[recipients];
-    if (recipients === 'all') {
-      targetUsers = users.rows;
-    } else if (Array.isArray(roles)) {
-      targetUsers = users.rows.filter(u => roles.includes(u.role));
-    } else {
-      targetUsers = users.rows.filter(u => u.role === roles);
-    }
-
-    console.log(`👥 Получателей для роли "${recipients}": ${targetUsers.length}`);
-
-    if (targetUsers.length === 0) {
-      return res.status(400).json({ error: 'Нет получателей для выбранной группы' });
-    }
-
-    // Сохраняем в массовые уведомления
-    const status = scheduled_at ? 'scheduled' : 'sent';
-    const sentAt = !scheduled_at ? new Date() : null;
-
-    const result = await pool.query(
-      `INSERT INTO mass_notifications (
-        title, message, recipients, priority, status, scheduled_at, sent_at, created_by, recipient_count
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *`,
-      [
-        title.trim(),
-        message.trim(),
-        recipients || 'all',
-        priority || 'normal',
-        status,
-        scheduled_at || null,
-        sentAt,
-        userId,
-        targetUsers.length
-      ]
-    );
-
-    const massNotification = result.rows[0];
-    console.log(`✅ Массовое уведомление сохранено: ${massNotification.id}`);
-
-    // Отправляем уведомления каждому пользователю
-    let sentCount = 0;
-    for (const user of targetUsers) {
-      try {
-        await pool.query(
-          `INSERT INTO notifications (user_id, type, title, message, priority, link, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-          [
-            user.id,
-            'system',
-            title.trim(),
-            message.trim(),
-            priority || 'normal',
-            '/notifications'
-          ]
-        );
-        sentCount++;
-      } catch (err) {
-        console.error(`❌ Ошибка отправки уведомления пользователю ${user.id}:`, err.message);
-      }
-    }
-
-    console.log(`✅ Отправлено ${sentCount} уведомлений из ${targetUsers.length}`);
-
-    // Логируем действие
-    await pool.query(
-      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [
-        userId,
-        'CREATE',
-        'mass_notification',
-        massNotification.id,
-        { 
-          title: massNotification.title, 
-          recipients: massNotification.recipients,
-          count: sentCount
-        }
-      ]
-    );
-
-    res.status(201).json({
-      ...massNotification,
-      sent_count: sentCount
-    });
-  } catch (error) {
-    console.error('❌ Ошибка создания уведомления:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== УДАЛЕНИЕ МАССОВОГО УВЕДОМЛЕНИЯ =====
-app.delete('/api/mass-notifications/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для удаления уведомлений' });
-    }
-
-    await pool.query('DELETE FROM mass_notifications WHERE id = $1', [id]);
-    res.json({ message: 'Уведомление удалено' });
-  } catch (error) {
-    console.error('❌ Ошибка удаления уведомления:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-console.log('✅ API для массовых уведомлений загружены');
-
-// ============================================================
-// 37. ЦЕЛИ И KPI
-// ============================================================
-
-// ===== ПОЛУЧЕНИЕ ВСЕХ ЦЕЛЕЙ =====
-app.get('/api/goals', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-    const userId = decoded.userId;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для просмотра целей' });
-    }
-
-    const result = await pool.query(
-      `
-      SELECT 
-        g.*,
-        u.full_name as assigned_to_name,
-        u2.full_name as created_by_name,
-        c.name as club_name
-      FROM goals g
-      LEFT JOIN users u ON g.assigned_to = u.id
-      LEFT JOIN users u2 ON g.created_by = u2.id
-      LEFT JOIN clubs c ON g.club_id = c.id
-      ORDER BY g.created_at DESC
-      `
-    );
-    res.json(result.rows);
-  } catch (error) {
-    console.error('❌ Ошибка получения целей:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== СОЗДАНИЕ ЦЕЛИ =====
-app.post('/api/goals', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для создания целей' });
-    }
-
-    const { title, description, category, target_value, unit, start_date, end_date, assigned_to, club_id } = req.body;
-
-    if (!title || !title.trim() || !target_value) {
-      return res.status(400).json({ error: 'Заголовок и целевое значение обязательны' });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO goals (
-        title, description, category, target_value, unit, start_date, end_date, assigned_to, club_id, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING *`,
-      [
-        title.trim(),
-        description || '',
-        category || 'general',
-        parseInt(target_value),
-        unit || 'participants',
-        start_date || null,
-        end_date || null,
-        assigned_to || null,
-        club_id || null,
-        userId
-      ]
-    );
-
-    // Логируем действие
-    await pool.query(
-      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [userId, 'CREATE', 'goal', result.rows[0].id, { title: result.rows[0].title, target: result.rows[0].target_value }]
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('❌ Ошибка создания цели:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== ОБНОВЛЕНИЕ ЦЕЛИ =====
-app.put('/api/goals/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для редактирования целей' });
-    }
-
-    const { title, description, category, target_value, current_value, unit, status, start_date, end_date, assigned_to, club_id } = req.body;
-
-    const check = await pool.query('SELECT * FROM goals WHERE id = $1', [id]);
-    if (check.rows.length === 0) {
-      return res.status(404).json({ error: 'Цель не найдена' });
-    }
-
-    const result = await pool.query(
-      `UPDATE goals 
-       SET title = $1, description = $2, category = $3, target_value = $4, current_value = $5,
-           unit = $6, status = $7, start_date = $8, end_date = $9, assigned_to = $10, 
-           club_id = $11, updated_at = NOW()
-       WHERE id = $12
-       RETURNING *`,
-      [
-        title || check.rows[0].title,
-        description || check.rows[0].description,
-        category || check.rows[0].category,
-        target_value || check.rows[0].target_value,
-        current_value !== undefined ? current_value : check.rows[0].current_value,
-        unit || check.rows[0].unit,
-        status || check.rows[0].status,
-        start_date || check.rows[0].start_date,
-        end_date || check.rows[0].end_date,
-        assigned_to || check.rows[0].assigned_to,
-        club_id || check.rows[0].club_id,
-        id
-      ]
-    );
-
-    // Логируем действие
-    await pool.query(
-      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [userId, 'UPDATE', 'goal', id, { title: result.rows[0].title, progress: `${result.rows[0].current_value}/${result.rows[0].target_value}` }]
-    );
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('❌ Ошибка обновления цели:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== УДАЛЕНИЕ ЦЕЛИ =====
-app.delete('/api/goals/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для удаления целей' });
-    }
-
-    await pool.query('DELETE FROM goals WHERE id = $1', [id]);
-    res.json({ message: 'Цель удалена' });
-  } catch (error) {
-    console.error('❌ Ошибка удаления цели:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 38. ЖУРНАЛ ДЕЙСТВИЙ (Activity Log)
-// ============================================================
-
-// ===== ПОЛУЧЕНИЕ ЖУРНАЛА =====
-app.get('/api/activity-log', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для просмотра журнала' });
-    }
-
-    const { limit = 100, offset = 0, user_id, entity_type } = req.query;
-
-    let query = `
-      SELECT 
-        al.*,
-        u.full_name as user_name,
-        u.role as user_role
-      FROM activity_logs al
-      LEFT JOIN users u ON al.user_id = u.id
-      WHERE 1=1
-    `;
-    const params = [];
-    let paramIndex = 1;
-
-    if (user_id) {
-      query += ` AND al.user_id = $${paramIndex}`;
-      params.push(user_id);
-      paramIndex++;
-    }
-
-    if (entity_type) {
-      query += ` AND al.entity_type = $${paramIndex}`;
-      params.push(entity_type);
-      paramIndex++;
-    }
-
-    query += ` ORDER BY al.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    params.push(parseInt(limit), parseInt(offset));
-
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('❌ Ошибка получения журнала:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
-// 39. СТАТИСТИКА СОГЛАСИЙ
-// ============================================================
-
-// ===== ПОЛУЧЕНИЕ СТАТИСТИКИ СОГЛАСИЙ =====
-app.get('/api/consents-stats', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для просмотра статистики' });
-    }
-
-    const { club_id } = req.query;
-
-    let query = `
-      SELECT 
-        COUNT(*) as total,
-        COUNT(CASE WHEN consent_personal_data = true THEN 1 END) as personal_data,
-        COUNT(CASE WHEN consent_photo_publication = true THEN 1 END) as photo_publication,
-        COUNT(CASE WHEN consent_event_participation = true THEN 1 END) as event_participation,
-        COUNT(CASE WHEN consent_personal_data = true AND consent_photo_publication = true AND consent_event_participation = true THEN 1 END) as all_consents,
-        COUNT(CASE WHEN consent_personal_data = false OR consent_photo_publication = false OR consent_event_participation = false THEN 1 END) as missing_consents
-      FROM users
-      WHERE role = 'participant' AND status = 'active'
-    `;
-    const params = [];
-
-    if (club_id) {
-      query += ` AND club_id = $1`;
-      params.push(club_id);
-    }
-
-    const result = await pool.query(query, params);
-    res.json(result.rows[0] || { total: 0, personal_data: 0, photo_publication: 0, event_participation: 0, all_consents: 0, missing_consents: 0 });
-  } catch (error) {
-    console.error('❌ Ошибка получения статистики согласий:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== ПОЛУЧЕНИЕ СПИСКА УЧАСТНИКОВ С НЕДОСТАЮЩИМИ СОГЛАСИЯМИ =====
-app.get('/api/consents-missing', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для просмотра' });
-    }
-
-    const { club_id } = req.query;
-
-    let query = `
-      SELECT 
-        u.id,
-        u.full_name,
-        u.email,
-        u.school,
-        u.class_name,
-        u.club_id,
-        c.name as club_name,
-        u.consent_personal_data,
-        u.consent_photo_publication,
-        u.consent_event_participation
-      FROM users u
-      LEFT JOIN clubs c ON u.club_id = c.id
-      WHERE u.role = 'participant' 
-        AND u.status = 'active'
-        AND (u.consent_personal_data = false OR u.consent_photo_publication = false OR u.consent_event_participation = false)
-    `;
-    const params = [];
-
-    if (club_id) {
-      query += ` AND u.club_id = $1`;
-      params.push(club_id);
-    }
-
-    query += ' ORDER BY u.full_name';
-
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('❌ Ошибка получения списка:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-console.log('✅ API для координатора движения загружены');
-
-// ============================================================
-// ДОКУМЕНТЫ (Центр документов) - API
-// ============================================================
-
-// ===== ПОЛУЧЕНИЕ ВСЕХ ДОКУМЕНТОВ =====
-app.get('/api/documents', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-    const userId = decoded.userId;
-    const isPresident = decoded.is_president || false;
-
-    // КТО НЕ ВИДИТ
-    if (userRole === 'participant' || userRole === 'parent' || isPresident === true) {
-      return res.status(403).json({ error: 'У вас нет прав для просмотра документов' });
-    }
-
-    // КТО ВИДИТ
-    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для просмотра документов' });
-    }
-
-    let query = `
-      SELECT 
-        d.*,
-        u.full_name as created_by_name,
-        c.name as club_name
-      FROM documents d
-      LEFT JOIN users u ON d.created_by = u.id
-      LEFT JOIN clubs c ON d.club_id = c.id
-      WHERE 1=1
-    `;
-    const params = [];
-
-    // Координатор КЮДа - видит свои, публичные и общие
-    if (userRole === 'club_coordinator') {
-      const clubResult = await pool.query(
-        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
-        [userId]
-      );
-      if (clubResult.rows.length > 0) {
-        const clubId = clubResult.rows[0].club_id;
-        query += ` AND (d.club_id = $1 OR d.is_public = true OR d.club_id IS NULL)`;
-        params.push(clubId);
-      } else {
-        query += ` AND (d.is_public = true OR d.club_id IS NULL)`;
-      }
-    }
-
-    query += ' ORDER BY d.created_at DESC';
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('❌ Ошибка получения документов:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== СОЗДАНИЕ ДОКУМЕНТА =====
-app.post('/api/documents', async (req, res) => {
-  try {
-    console.log('📥 POST /api/documents');
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    // КТО МОЖЕТ СОЗДАВАТЬ
-    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator'];
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для создания документов' });
-    }
-
-    const { title, content, category, document_type, is_public, club_id, tags } = req.body;
-
-    if (!title || !title.trim()) {
-      return res.status(400).json({ error: 'Заголовок обязателен' });
-    }
-
-    let finalClubId = club_id || null;
-    if (userRole === 'club_coordinator' && !finalClubId) {
-      const clubResult = await pool.query(
-        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
-        [userId]
-      );
-      if (clubResult.rows.length > 0) {
-        finalClubId = clubResult.rows[0].club_id;
-      }
-    }
-
-    const result = await pool.query(
-      `INSERT INTO documents (
-        title, content, category, document_type, is_public, club_id, tags, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING *`,
-      [
-        title.trim(),
-        content || '',
-        category || 'general',
-        document_type || 'pdf',
-        is_public !== undefined ? is_public : true,
-        finalClubId,
-        tags || [],
-        userId
-      ]
-    );
-
-    console.log('✅ Документ сохранён! ID:', result.rows[0].id);
-
-    // УВЕДОМЛЕНИЯ
-    const users = await pool.query(
-      `SELECT id FROM users 
-       WHERE status = 'active' 
-       AND role NOT IN ('participant', 'parent')
-       AND (role != 'participant' OR is_president != true)`
-    );
-
-    for (const user of users.rows) {
-      await pool.query(
-        `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-        [
-          user.id,
-          'document',
-          `📢 Новый документ: ${result.rows[0].title}`,
-          `Опубликован новый документ "${result.rows[0].title}"`,
-          '/documents-center',
-          'normal'
-        ]
-      );
-    }
-
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('❌ Ошибка создания документа:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== УДАЛЕНИЕ ДОКУМЕНТА =====
-app.delete('/api/documents/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для удаления документов' });
-    }
-
-    await pool.query('DELETE FROM documents WHERE id = $1', [id]);
-    res.json({ message: 'Документ удалён' });
-  } catch (error) {
-    console.error('❌ Ошибка удаления документа:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-console.log('✅ API для документов загружены');
-
-// ============================================================
-// ОТЧЁТЫ - ПОЛНЫЙ CRUD
-// ============================================================
-
-// ===== ПОЛУЧЕНИЕ ВСЕХ ОТЧЁТОВ =====
-app.get('/api/reports', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-    const userId = decoded.userId;
-    const isPresident = decoded.is_president || false;
-
-    if (userRole === 'participant' || userRole === 'parent' || isPresident === true) {
-      return res.status(403).json({ error: 'У вас нет прав для просмотра отчётов' });
-    }
-
-    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для просмотра отчётов' });
-    }
+    const userId = req.user.userId;
+    const userRole = req.user.role;
 
     let query = `
       SELECT 
@@ -5212,18 +2408,16 @@ app.get('/api/reports', async (req, res) => {
         [userId]
       );
       if (clubResult.rows.length > 0) {
-        const clubId = clubResult.rows[0].club_id;
-        query += ` AND r.club_id = $1`;
-        params.push(clubId);
+        query += ' AND r.club_id = $1';
+        params.push(clubResult.rows[0].club_id);
       } else {
-        query += ` AND 1 = 0`;
+        query += ' AND 1 = 0';
       }
     }
 
     query += ' ORDER BY r.created_at DESC';
 
     const result = await pool.query(query, params);
-    console.log(`📥 Загружено отчётов: ${result.rows.length}`);
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения отчётов:', error);
@@ -5231,26 +2425,10 @@ app.get('/api/reports', async (req, res) => {
   }
 });
 
-// ===== СОЗДАНИЕ ОТЧЁТА =====
-app.post('/api/reports', async (req, res) => {
+app.post('/api/reports', authenticate, async (req, res) => {
   try {
-    console.log('📥 POST /api/reports');
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator'];
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для создания отчётов' });
-    }
-
+    const userId = req.user.userId;
+    const userRole = req.user.role;
     const { club_id, report_month, report_text, events_count, participants_count } = req.body;
 
     if (!club_id) {
@@ -5296,7 +2474,6 @@ app.post('/api/reports', async (req, res) => {
       ]
     );
 
-    console.log('✅ Отчёт создан! ID:', result.rows[0].id);
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка создания отчёта:', error);
@@ -5304,115 +2481,10 @@ app.post('/api/reports', async (req, res) => {
   }
 });
 
-// ===== ОБНОВЛЕНИЕ ОТЧЁТА =====
-app.put('/api/reports/:id', async (req, res) => {
+app.patch('/api/reports/:id/submit', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    console.log(`📥 PUT /api/reports/${id}, роль: ${userRole}`);
-
-    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator'];
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для редактирования отчётов' });
-    }
-
-    const { club_id, report_month, report_text, events_count, participants_count } = req.body;
-
-    const check = await pool.query('SELECT * FROM reports WHERE id = $1', [id]);
-    if (check.rows.length === 0) {
-      return res.status(404).json({ error: 'Отчёт не найден' });
-    }
-
-    const report = check.rows[0];
-
-    if (userRole === 'club_coordinator' && report.created_by !== userId) {
-      return res.status(403).json({ error: 'Вы можете редактировать только свои отчёты' });
-    }
-
-    let finalClubId = club_id || report.club_id;
-    if (userRole === 'club_coordinator' && club_id && club_id !== report.club_id) {
-      return res.status(403).json({ error: 'Вы не можете изменить клуб в отчёте' });
-    }
-
-    const clubNameResult = await pool.query('SELECT name FROM clubs WHERE id = $1', [finalClubId]);
-    const clubName = clubNameResult.rows[0]?.name || 'Клуб';
-
-    const result = await pool.query(
-      `UPDATE reports 
-       SET club_id = $1, 
-           title = $2, 
-           content = $3, 
-           report_month = $4, 
-           events_count = $5, 
-           participants_count = $6, 
-           updated_at = NOW()
-       WHERE id = $7
-       RETURNING *`,
-      [
-        finalClubId,
-        `Отчёт за ${report_month || report.report_month} (${clubName})`,
-        report_text || report.content,
-        report_month || report.report_month,
-        parseInt(events_count) || report.events_count || 0,
-        parseInt(participants_count) || report.participants_count || 0,
-        id
-      ]
-    );
-
-    console.log(`✅ Отчёт обновлён! ID: ${result.rows[0].id}`);
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('❌ Ошибка обновления отчёта:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== УДАЛЕНИЕ ОТЧЁТА =====
-app.delete('/api/reports/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-
-    if (!['admin', 'movement_coordinator'].includes(userRole)) {
-      return res.status(403).json({ error: 'У вас нет прав для удаления отчётов' });
-    }
-
-    await pool.query('DELETE FROM reports WHERE id = $1', [id]);
-    res.json({ message: 'Отчёт удалён' });
-  } catch (error) {
-    console.error('❌ Ошибка удаления отчёта:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== ОТПРАВКА ОТЧЁТА НА ПРОВЕРКУ =====
-app.patch('/api/reports/:id/submit', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
+    const userId = req.user.userId;
 
     const check = await pool.query('SELECT * FROM reports WHERE id = $1', [id]);
     if (check.rows.length === 0) {
@@ -5434,19 +2506,11 @@ app.patch('/api/reports/:id/submit', async (req, res) => {
   }
 });
 
-// ===== УТВЕРЖДЕНИЕ ОТЧЁТА =====
-app.patch('/api/reports/:id/approve', async (req, res) => {
+app.patch('/api/reports/:id/approve', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
 
     if (!['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав для утверждения отчётов' });
@@ -5467,20 +2531,12 @@ app.patch('/api/reports/:id/approve', async (req, res) => {
   }
 });
 
-// ===== ОТКЛОНЕНИЕ ОТЧЁТА =====
-app.patch('/api/reports/:id/reject', async (req, res) => {
+app.patch('/api/reports/:id/reject', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { comment } = req.body;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
 
     if (!['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
       return res.status(403).json({ error: 'У вас нет прав для отклонения отчётов' });
@@ -5501,380 +2557,417 @@ app.patch('/api/reports/:id/reject', async (req, res) => {
   }
 });
 
-console.log('✅ API для отчётов загружены');
-
-// ============================================================
-// УПРАВЛЕНИЕ УЧАСТНИКАМИ МЕРОПРИЯТИЙ (КООРДИНАТОР КЮДА)
-// ============================================================
-
-// ===== ПОЛУЧЕНИЕ УЧАСТНИКОВ МЕРОПРИЯТИЯ =====
-app.get('/api/events/:eventId/participants', async (req, res) => {
+app.delete('/api/reports/:id', authenticate, async (req, res) => {
   try {
-    const { eventId } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
+    const { id } = req.params;
+    const userRole = req.user.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления отчётов' });
     }
 
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    // Проверяем, что мероприятие существует
-    const eventCheck = await pool.query(
-      'SELECT * FROM events WHERE id = $1',
-      [eventId]
-    );
-    if (eventCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Мероприятие не найдено' });
-    }
-
-    const event = eventCheck.rows[0];
-
-    // Кто может видеть участников:
-    // - Админ, координатор движения, президент, вице-президент
-    // - Координатор КЮДа (если он создатель или мероприятие глобальное)
-    // - Тьютор (если назначен на мероприятие)
-    let canView = false;
-
-    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      canView = true;
-    } else if (userRole === 'club_coordinator') {
-      // Координатор видит, если создал мероприятие ИЛИ мероприятие глобальное
-      if (event.created_by === userId || event.is_global === true) {
-        canView = true;
-      }
-    } else if (userRole === 'tutor') {
-      const assignmentCheck = await pool.query(
-        'SELECT id FROM event_tutor_assignments WHERE event_id = $1 AND tutor_id = $2 AND status = $3',
-        [eventId, userId, 'accepted']
-      );
-      if (assignmentCheck.rows.length > 0) {
-        canView = true;
-      }
-    }
-
-    if (!canView) {
-      return res.status(403).json({ error: 'У вас нет прав для просмотра участников' });
-    }
-
-    // Получаем участников мероприятия с их оценками
-    const result = await pool.query(
-      `
-      SELECT 
-        ep.*,
-        u.full_name,
-        u.school,
-        u.class_name,
-        u.avatar_url,
-        u.club_id,
-        c.name as club_name,
-        ps.id as score_id,
-        ps.engagement_score,
-        ps.teamwork_score,
-        ps.initiative_score,
-        ps.communication_score,
-        ps.responsibility_score,
-        ps.comment as score_comment,
-        ps.status as score_status,
-        ps.created_at as score_created_at,
-        ps.updated_at as score_updated_at
-      FROM event_participants ep
-      LEFT JOIN users u ON ep.user_id = u.id
-      LEFT JOIN clubs c ON u.club_id = c.id
-      LEFT JOIN participant_scores ps ON ps.event_id = ep.event_id AND ps.participant_id = ep.user_id AND ps.tutor_id = $2
-      WHERE ep.event_id = $1
-      ORDER BY u.full_name
-      `,
-      [eventId, userId]
-    );
-
-    res.json(result.rows);
+    await pool.query('DELETE FROM reports WHERE id = $1', [id]);
+    res.json({ message: 'Отчёт удалён' });
   } catch (error) {
-    console.error('❌ Ошибка получения участников:', error);
+    console.error('❌ Ошибка удаления отчёта:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// ===== ДОБАВЛЕНИЕ УЧАСТНИКА НА МЕРОПРИЯТИЕ =====
-app.post('/api/events/:eventId/participants', async (req, res) => {
+// ============================================================
+// 36. ШАБЛОНЫ ОТЧЁТОВ
+// ============================================================
+app.get('/api/report-templates', authenticate, async (req, res) => {
   try {
-    const { eventId } = req.params;
-    const { user_id } = req.body;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
 
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
+    let query = `
+      SELECT 
+        rt.*,
+        u.full_name as created_by_name,
+        c.name as club_name
+      FROM report_templates rt
+      LEFT JOIN users u ON rt.created_by = u.id
+      LEFT JOIN clubs c ON rt.club_id = c.id
+      WHERE 1=1
+    `;
+    const params = [];
 
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    if (!user_id) {
-      return res.status(400).json({ error: 'user_id обязателен' });
-    }
-
-    // Проверяем, что мероприятие существует
-    const eventCheck = await pool.query(
-      'SELECT * FROM events WHERE id = $1',
-      [eventId]
-    );
-    if (eventCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Мероприятие не найдено' });
-    }
-
-    const event = eventCheck.rows[0];
-
-    // Кто может добавлять участников:
-    // - Админ, координатор движения
-    // - Координатор КЮДа (если создатель или мероприятие глобальное)
-    let canAdd = false;
-
-    if (['admin', 'movement_coordinator'].includes(userRole)) {
-      canAdd = true;
-    } else if (userRole === 'club_coordinator') {
-      if (event.created_by === userId || event.is_global === true) {
-        canAdd = true;
+    if (userRole === 'club_coordinator') {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      if (clubResult.rows.length > 0) {
+        const clubId = clubResult.rows[0].club_id;
+        query += ` AND (rt.club_id = $1 OR rt.club_id IS NULL)`;
+        params.push(clubId);
+      } else {
+        query += ` AND rt.club_id IS NULL`;
       }
     }
 
-    if (!canAdd) {
-      return res.status(403).json({ error: 'У вас нет прав для добавления участников' });
+    query += ' ORDER BY rt.created_at DESC';
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения шаблонов:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/report-templates', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+    const { club_id, name, description, template_data, category = 'general' } = req.body;
+
+    if (!name || !name.trim() || !template_data || !template_data.trim()) {
+      return res.status(400).json({ error: 'Название и шаблон обязательны' });
     }
 
-    // Проверяем, что пользователь существует и является участником
-    const userCheck = await pool.query(
-      'SELECT id, full_name, club_id FROM users WHERE id = $1 AND role = $2',
-      [user_id, 'participant']
-    );
-    if (userCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Участник не найден' });
-    }
-
-    // Проверяем, что участник уже не добавлен
-    const existing = await pool.query(
-      'SELECT id FROM event_participants WHERE event_id = $1 AND user_id = $2',
-      [eventId, user_id]
-    );
-    if (existing.rows.length > 0) {
-      return res.status(400).json({ error: 'Участник уже добавлен на мероприятие' });
-    }
-
-    // Добавляем участника
-    const result = await pool.query(
-      `INSERT INTO event_participants (event_id, user_id, status, registered_at)
-       VALUES ($1, $2, 'registered', NOW())
-       RETURNING *`,
-      [eventId, user_id]
-    );
-
-    // Уведомление участнику
-    await createNotification(
-      user_id,
-      'event',
-      '📅 Вы добавлены на мероприятие',
-      `Вас добавили на мероприятие "${event.title}"`,
-      `/events/${eventId}`,
-      'normal'
-    );
-
-    // Уведомление тьюторам, если они назначены
-    const tutors = await pool.query(
-      'SELECT tutor_id FROM event_tutor_assignments WHERE event_id = $1 AND status = $2',
-      [eventId, 'accepted']
-    );
-    for (const tutor of tutors.rows) {
-      await createNotification(
-        tutor.tutor_id,
-        'event',
-        '👤 Новый участник на мероприятии',
-        `На мероприятие "${event.title}" добавлен участник: ${userCheck.rows[0].full_name}`,
-        `/events/${eventId}`,
-        'normal'
+    let finalClubId = club_id || null;
+    if (userRole === 'club_coordinator' && !finalClubId) {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
       );
+      if (clubResult.rows.length > 0) {
+        finalClubId = clubResult.rows[0].club_id;
+      }
     }
+
+    const result = await pool.query(
+      `INSERT INTO report_templates (club_id, created_by, name, description, template_data, category, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       RETURNING *`,
+      [finalClubId, userId, name.trim(), description || '', template_data, category || 'general']
+    );
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('❌ Ошибка добавления участника:', error);
+    console.error('❌ Ошибка создания шаблона:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// ===== УДАЛЕНИЕ УЧАСТНИКА С МЕРОПРИЯТИЯ =====
-app.delete('/api/events/:eventId/participants/:participantId', async (req, res) => {
-  try {
-    const { eventId, participantId } = req.params;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    // Проверяем, что мероприятие существует
-    const eventCheck = await pool.query(
-      'SELECT * FROM events WHERE id = $1',
-      [eventId]
-    );
-    if (eventCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Мероприятие не найдено' });
-    }
-
-    const event = eventCheck.rows[0];
-
-    // Кто может удалять участников:
-    let canRemove = false;
-
-    if (['admin', 'movement_coordinator'].includes(userRole)) {
-      canRemove = true;
-    } else if (userRole === 'club_coordinator') {
-      if (event.created_by === userId || event.is_global === true) {
-        canRemove = true;
-      }
-    }
-
-    if (!canRemove) {
-      return res.status(403).json({ error: 'У вас нет прав для удаления участников' });
-    }
-
-    await pool.query(
-      'DELETE FROM event_participants WHERE event_id = $1 AND user_id = $2',
-      [eventId, participantId]
-    );
-
-    res.json({ message: 'Участник удалён с мероприятия' });
-  } catch (error) {
-    console.error('❌ Ошибка удаления участника:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ===== ПОЛУЧЕНИЕ СПИСКА ДОСТУПНЫХ УЧАСТНИКОВ =====
-app.get('/api/events/:eventId/available-participants', async (req, res) => {
-  try {
-    const { eventId } = req.params;
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
-    const userRole = decoded.role;
-
-    // Проверяем, что мероприятие существует
-    const eventCheck = await pool.query(
-      'SELECT * FROM events WHERE id = $1',
-      [eventId]
-    );
-    if (eventCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Мероприятие не найдено' });
-    }
-
-    const event = eventCheck.rows[0];
-
-    // Кто может видеть список:
-    let canView = false;
-
-    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      canView = true;
-    } else if (userRole === 'club_coordinator') {
-      if (event.created_by === userId || event.is_global === true) {
-        canView = true;
-      }
-    }
-
-    if (!canView) {
-      return res.status(403).json({ error: 'У вас нет прав для просмотра списка' });
-    }
-
-    // Получаем всех участников движения, которые ещё не добавлены на мероприятие
-    const result = await pool.query(
-      `
-      SELECT 
-        u.id,
-        u.full_name,
-        u.school,
-        u.class_name,
-        u.club_id,
-        c.name as club_name
-      FROM users u
-      LEFT JOIN clubs c ON u.club_id = c.id
-      WHERE u.role = 'participant' 
-        AND u.status = 'active'
-        AND u.id NOT IN (
-          SELECT user_id FROM event_participants WHERE event_id = $1
-        )
-      ORDER BY u.full_name
-      `,
-      [eventId]
-    );
-
-    res.json(result.rows);
-  } catch (error) {
-    console.error('❌ Ошибка получения списка участников:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-console.log('✅ API для управления участниками мероприятий загружены');
-
-// ============================================================
-// УДАЛЕНИЕ МЕРОПРИЯТИЯ
-// ============================================================
-app.delete('/api/events/:id', async (req, res) => {
+app.put('/api/report-templates/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'Нет токена' });
+    const userRole = req.user.role;
+    const { club_id, name, description, template_data, category = 'general' } = req.body;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для редактирования шаблонов' });
     }
 
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRole = decoded.role;
-    const userId = decoded.userId;
-
-    console.log(`🗑️ Удаление мероприятия ${id}, роль: ${userRole}`);
-
-    const eventCheck = await pool.query('SELECT * FROM events WHERE id = $1', [id]);
-    if (eventCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    const check = await pool.query('SELECT * FROM report_templates WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Шаблон не найден' });
     }
 
-    const event = eventCheck.rows[0];
+    const result = await pool.query(
+      `UPDATE report_templates 
+       SET club_id = $1, name = $2, description = $3, template_data = $4, category = $5, updated_at = NOW()
+       WHERE id = $6
+       RETURNING *`,
+      [club_id || check.rows[0].club_id, name || check.rows[0].name, description || check.rows[0].description, template_data || check.rows[0].template_data, category || check.rows[0].category, id]
+    );
 
-    let canDelete = false;
-
-    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
-      canDelete = true;
-    } else if (userRole === 'club_coordinator' && event.created_by === userId) {
-      canDelete = true;
-    }
-
-    if (!canDelete) {
-      return res.status(403).json({ error: 'У вас нет прав для удаления мероприятия' });
-    }
-
-    // Удаляем связанные данные
-    await pool.query('DELETE FROM event_participants WHERE event_id = $1', [id]);
-    await pool.query('DELETE FROM event_tutor_assignments WHERE event_id = $1', [id]);
-    await pool.query('DELETE FROM registrations WHERE event_id = $1', [id]);
-    await pool.query('DELETE FROM events WHERE id = $1', [id]);
-
-    res.json({ message: 'Мероприятие удалено', deleted_event: event.title });
+    res.json(result.rows[0]);
   } catch (error) {
-    console.error('❌ Ошибка удаления мероприятия:', error);
+    console.error('❌ Ошибка обновления шаблона:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/report-templates/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userRole = req.user.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления шаблонов' });
+    }
+
+    await pool.query('DELETE FROM report_templates WHERE id = $1', [id]);
+    res.json({ message: 'Шаблон удалён' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления шаблона:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 37. ДОКУМЕНТЫ
+// ============================================================
+app.get('/api/documents', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+
+    let query = `
+      SELECT 
+        d.*,
+        u.full_name as created_by_name,
+        c.name as club_name
+      FROM documents d
+      LEFT JOIN users u ON d.created_by = u.id
+      LEFT JOIN clubs c ON d.club_id = c.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (userRole === 'club_coordinator') {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      if (clubResult.rows.length > 0) {
+        const clubId = clubResult.rows[0].club_id;
+        query += ` AND (d.club_id = $1 OR d.is_public = true OR d.club_id IS NULL)`;
+        params.push(clubId);
+      } else {
+        query += ` AND (d.is_public = true OR d.club_id IS NULL)`;
+      }
+    }
+
+    query += ' ORDER BY d.created_at DESC';
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения документов:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/documents', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+    const { title, content, category, document_type, is_public, club_id, tags } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'Заголовок обязателен' });
+    }
+
+    let finalClubId = club_id || null;
+    if (userRole === 'club_coordinator' && !finalClubId) {
+      const clubResult = await pool.query(
+        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+        [userId]
+      );
+      if (clubResult.rows.length > 0) {
+        finalClubId = clubResult.rows[0].club_id;
+      }
+    }
+
+    const result = await pool.query(
+      `INSERT INTO documents (
+        title, content, category, document_type, is_public, club_id, tags, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *`,
+      [
+        title.trim(),
+        content || '',
+        category || 'general',
+        document_type || 'pdf',
+        is_public !== undefined ? is_public : true,
+        finalClubId,
+        tags || [],
+        userId
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания документа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/documents/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userRole = req.user.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления документов' });
+    }
+
+    await pool.query('DELETE FROM documents WHERE id = $1', [id]);
+    res.json({ message: 'Документ удалён' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления документа:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 38. МАССОВЫЕ УВЕДОМЛЕНИЯ
+// ============================================================
+app.get('/api/mass-notifications', authenticate, async (req, res) => {
+  try {
+    const userRole = req.user.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для просмотра уведомлений' });
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        mn.*,
+        u.full_name as created_by_name
+      FROM mass_notifications mn
+      LEFT JOIN users u ON mn.created_by = u.id
+      ORDER BY mn.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения уведомлений:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/mass-notifications', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для создания уведомлений' });
+    }
+
+    const { title, message, recipients, priority, scheduled_at } = req.body;
+
+    if (!title || !title.trim() || !message || !message.trim()) {
+      return res.status(400).json({ error: 'Заголовок и текст обязательны' });
+    }
+
+    const users = await pool.query('SELECT id, role FROM users WHERE status = $1', ['active']);
+    
+    let targetUsers = [];
+    const roleMap = {
+      'all': 'all',
+      'participants': 'participant',
+      'coordinators': 'club_coordinator',
+      'tutors': 'tutor',
+      'admins': ['admin', 'movement_coordinator']
+    };
+
+    const roles = roleMap[recipients];
+    if (recipients === 'all') {
+      targetUsers = users.rows;
+    } else if (Array.isArray(roles)) {
+      targetUsers = users.rows.filter(u => roles.includes(u.role));
+    } else {
+      targetUsers = users.rows.filter(u => u.role === roles);
+    }
+
+    if (targetUsers.length === 0) {
+      return res.status(400).json({ error: 'Нет получателей для выбранной группы' });
+    }
+
+    const status = scheduled_at ? 'scheduled' : 'sent';
+    const sentAt = !scheduled_at ? new Date() : null;
+
+    const result = await pool.query(
+      `INSERT INTO mass_notifications (
+        title, message, recipients, priority, status, scheduled_at, sent_at, created_by, recipient_count
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *`,
+      [
+        title.trim(),
+        message.trim(),
+        recipients || 'all',
+        priority || 'normal',
+        status,
+        scheduled_at || null,
+        sentAt,
+        userId,
+        targetUsers.length
+      ]
+    );
+
+    const massNotification = result.rows[0];
+    let sentCount = 0;
+
+    for (const user of targetUsers) {
+      try {
+        await pool.query(
+          `INSERT INTO notifications (user_id, type, title, message, priority, link, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+          [
+            user.id,
+            'system',
+            title.trim(),
+            message.trim(),
+            priority || 'normal',
+            '/notifications'
+          ]
+        );
+        sentCount++;
+      } catch (err) {
+        console.error(`❌ Ошибка отправки уведомления пользователю ${user.id}:`, err.message);
+      }
+    }
+
+    res.status(201).json({
+      ...massNotification,
+      sent_count: sentCount
+    });
+  } catch (error) {
+    console.error('❌ Ошибка создания уведомления:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/mass-notifications/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userRole = req.user.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления уведомлений' });
+    }
+
+    await pool.query('DELETE FROM mass_notifications WHERE id = $1', [id]);
+    res.json({ message: 'Уведомление удалено' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления уведомления:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 39. СОЗДАНИЕ ТЕСТОВОГО ПОЛЬЗОВАТЕЛЯ
+// ============================================================
+app.post('/api/create-test-user', async (req, res) => {
+  try {
+    const email = 'newadmin@dod.ru';
+    const password = '123456';
+    const full_name = 'Новый Администратор';
+    const role = 'admin';
+
+    await pool.query('DELETE FROM users WHERE email = $1', [email]);
+    console.log('🗑️ Старый пользователь удалён');
+
+    const password_hash = await bcrypt.hash(password, 10);
+
+    const result = await pool.query(
+      `INSERT INTO users (email, password_hash, full_name, role, birth_date, registration_status, must_change_password)
+       VALUES ($1, $2, $3, $4, '2000-01-01', 'active', false)
+       RETURNING id, email, full_name, role, registration_status`,
+      [email, password_hash, full_name, role]
+    );
+
+    console.log('✅ Тестовый пользователь создан');
+    res.json({ message: 'Пользователь создан!', user: result.rows[0] });
+
+  } catch (error) {
+    console.error('❌ Ошибка:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -5884,7 +2977,7 @@ app.delete('/api/events/:id', async (req, res) => {
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Сервер запущен на порту ${PORT}`);
-  console.log(`🔐 JWT_SECRET: установлен`);
+  console.log(`🔐 JWT_SECRET: ${JWT_SECRET ? 'установлен' : '❌ НЕ УСТАНОВЛЕН!'}`);
   console.log(`📝 Создать тестового пользователя: POST /api/create-test-user`);
   console.log(`👤 Тестовый пользователь: newadmin@dod.ru / 123456`);
 });

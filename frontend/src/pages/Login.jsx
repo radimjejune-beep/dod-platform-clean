@@ -1,7 +1,7 @@
 // frontend/src/pages/Login.jsx
 
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { login } from '../lib/api';
 import logo from '../assets/Image.png';
 import ardLogo from '../assets/АРДЛОГО.png';
@@ -33,7 +33,6 @@ export default function Login() {
       const result = await login(email, password);
       
       if (result.must_change_password) {
-        // Нужно сменить пароль
         setMustChangePassword(true);
         setResetToken(result.reset_token);
         setError('');
@@ -41,7 +40,6 @@ export default function Login() {
         return;
       }
       
-      // Успешный вход
       redirectByRole(result.user.role);
       
     } catch (err) {
@@ -84,7 +82,6 @@ export default function Login() {
         throw new Error(data.error || 'Ошибка смены пароля');
       }
 
-      // Пароль изменён, теперь входим с новым паролем
       if (data.token) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
@@ -116,227 +113,189 @@ export default function Login() {
     navigate(routes[role] || '/dashboard');
   };
 
-  // Если нужно сменить пароль — показываем форму смены
+  // Форма смены пароля
   if (mustChangePassword) {
     return (
       <div className="login-page">
-        <div className="login-bg">
-          <div className="login-bg-overlay" />
-          <div className="login-bg-particles">
-            <span>✦</span><span>✦</span><span>✦</span><span>✦</span>
-            <span>✦</span><span>✦</span><span>✦</span><span>✦</span>
-          </div>
-        </div>
-
-        <div className="login-card">
-          <div className="login-card-inner">
-            <div className="login-emblem">
-              <img src={logo} alt="ДОД «Дипломаты будущего»" className="login-emblem-logo" />
-              <div className="login-emblem-line" />
-              <div className="login-emblem-partners">
-                <span className="login-emblem-partner-label">При поддержке</span>
-                <img src={ardLogo} alt="Ассоциация российских дипломатов" className="login-emblem-ard" />
-              </div>
-            </div>
-
+        <div className="login-container">
+          <div className="login-card">
             <div className="login-header">
-              <h1>Детское общественное движение</h1>
-              <h2>«Дипломаты будущего»</h2>
+              <div className="login-logo">
+                <img src={logo} alt="ДОД" />
+              </div>
+              <h1>Дипломаты будущего</h1>
               <p className="login-subtitle">Ассоциация российских дипломатов</p>
               <div className="login-divider" />
-              <p className="login-welcome">⚠️ Необходимо изменить временный пароль</p>
+              <p className="login-warning">⚠️ Необходимо изменить временный пароль</p>
             </div>
 
             {error && (
               <div className="login-error">
-                ❌ {error}
+                {error}
               </div>
             )}
 
-            <form onSubmit={handleChangePassword}>
-              <div className="login-form-group">
-                <label>Новый пароль *</label>
+            <form onSubmit={handleChangePassword} className="login-form">
+              <div className="form-group">
+                <label>Новый пароль</label>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  required
                   placeholder="Минимум 8 символов"
+                  required
                 />
               </div>
 
-              <div className="login-form-group">
-                <label>Подтверждение пароля *</label>
+              <div className="form-group">
+                <label>Подтверждение пароля</label>
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
                   placeholder="Повторите пароль"
+                  required
                 />
               </div>
 
-              <button
-                type="submit"
-                className="login-btn"
-                disabled={loading}
-              >
-                {loading ? (
-                  <span className="login-btn-loader" />
-                ) : (
-                  '🔑 Установить новый пароль'
-                )}
+              <button type="submit" className="login-btn" disabled={loading}>
+                {loading ? '⏳ Сохранение...' : '🔑 Установить новый пароль'}
               </button>
-            </form>
 
-            <div className="login-footer">
-              <p className="login-security">
-                🔒 Пароль должен содержать минимум 8 символов, заглавную и строчную буквы, цифру
+              <p className="login-hint">
+                Пароль должен содержать заглавную и строчную буквы, цифру
               </p>
-            </div>
+            </form>
           </div>
         </div>
 
         <style>{`
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          
           .login-page {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            background: linear-gradient(160deg, #0B1F3A 0%, #051224 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             padding: 20px;
             position: relative;
-            background: linear-gradient(145deg, #0B1F3A 0%, #07152B 100%);
-          }
-          .login-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 0;
-          }
-          .login-bg-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(ellipse at 20% 30%, rgba(201, 162, 39, 0.06) 0%, transparent 60%),
-                        radial-gradient(ellipse at 80% 70%, rgba(23, 74, 126, 0.06) 0%, transparent 60%);
-          }
-          .login-bg-particles {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
             overflow: hidden;
-            pointer-events: none;
           }
-          .login-bg-particles span {
+
+          .login-page::before {
+            content: '';
             position: absolute;
-            color: rgba(201, 162, 39, 0.05);
-            font-size: 20px;
-            animation: float 20s infinite linear;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+              radial-gradient(ellipse at 30% 30%, rgba(201, 162, 39, 0.05) 0%, transparent 50%),
+              radial-gradient(ellipse at 70% 70%, rgba(23, 74, 126, 0.05) 0%, transparent 50%);
+            animation: floatBg 30s ease-in-out infinite alternate;
           }
-          .login-bg-particles span:nth-child(1) { top: 10%; left: 10%; animation-delay: 0s; }
-          .login-bg-particles span:nth-child(2) { top: 30%; left: 85%; animation-delay: 3s; }
-          .login-bg-particles span:nth-child(3) { top: 70%; left: 15%; animation-delay: 6s; }
-          .login-bg-particles span:nth-child(4) { top: 85%; left: 70%; animation-delay: 9s; }
-          .login-bg-particles span:nth-child(5) { top: 50%; left: 50%; animation-delay: 2s; }
-          .login-bg-particles span:nth-child(6) { top: 15%; left: 50%; animation-delay: 5s; }
-          .login-bg-particles span:nth-child(7) { top: 60%; left: 90%; animation-delay: 8s; }
-          .login-bg-particles span:nth-child(8) { top: 90%; left: 30%; animation-delay: 11s; }
-          @keyframes float {
-            0% { transform: translate(0, 0) rotate(0deg); opacity: 0.4; }
-            25% { transform: translate(30px, -20px) rotate(90deg); opacity: 1; }
-            50% { transform: translate(-20px, 30px) rotate(180deg); opacity: 0.4; }
-            75% { transform: translate(40px, 10px) rotate(270deg); opacity: 1; }
-            100% { transform: translate(0, 0) rotate(360deg); opacity: 0.4; }
+
+          @keyframes floatBg {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-30px, 30px) scale(1.05); }
+            100% { transform: translate(30px, -30px) scale(0.95); }
           }
-          .login-card {
+
+          .login-container {
             position: relative;
             z-index: 1;
             width: 100%;
-            max-width: 420px;
+            max-width: 440px;
+          }
+
+          .login-card {
             background: rgba(255, 255, 255, 0.97);
             backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 40px 36px;
+            border-radius: 24px;
+            padding: 48px 40px;
             box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(201, 162, 39, 0.08);
             animation: slideUp 0.6s ease;
           }
+
           @keyframes slideUp {
             from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
           }
-          .login-card-inner { position: relative; }
-          .login-emblem {
+
+          .login-header {
+            text-align: center;
+            margin-bottom: 32px;
+          }
+
+          .login-logo {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 16px;
+            background: linear-gradient(135deg, #0B1F3A, #174A7E);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-direction: column;
-            margin-bottom: 20px;
+            border: 2px solid rgba(201, 162, 39, 0.3);
+            box-shadow: 0 4px 20px rgba(11, 31, 58, 0.2);
           }
-          .login-emblem-logo { height: 56px; width: auto; object-fit: contain; }
-          .login-emblem-line {
-            width: 50px;
-            height: 2px;
-            background: linear-gradient(135deg, #C9A227, #E8D9A8);
-            margin-top: 10px;
-            border-radius: 2px;
+
+          .login-logo img {
+            height: 40px;
+            width: auto;
+            filter: brightness(0) invert(1);
           }
-          .login-emblem-partners {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            margin-top: 8px;
-          }
-          .login-emblem-partner-label {
-            font-size: 10px;
-            color: #98A2B3;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-          }
-          .login-emblem-ard { height: 24px; width: auto; object-fit: contain; opacity: 0.6; transition: opacity 0.3s ease; }
-          .login-emblem-ard:hover { opacity: 1; }
-          .login-header { text-align: center; margin-bottom: 28px; }
+
           .login-header h1 {
-            font-family: 'Inter', sans-serif;
-            font-size: 12px;
-            font-weight: 400;
-            color: #667085;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin: 0 0 4px;
-          }
-          .login-header h2 {
             font-family: 'Playfair Display', serif;
-            font-size: 22px;
+            font-size: 26px;
             font-weight: 700;
             color: #0B1F3A;
+            letter-spacing: -0.5px;
             margin: 0 0 4px;
-            letter-spacing: 0.5px;
           }
+
           .login-subtitle {
-            font-size: 11px;
-            color: #C9A227;
-            font-weight: 600;
-            letter-spacing: 1.5px;
+            font-size: 12px;
+            color: #98A2B3;
+            letter-spacing: 2px;
             text-transform: uppercase;
-            margin: 4px 0 0;
+            margin: 0 0 12px;
           }
+
           .login-divider {
-            width: 40px;
-            height: 2px;
-            background: linear-gradient(135deg, #C9A227, #E8D9A8);
-            margin: 12px auto;
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #C9A227, #E8D9A8);
+            margin: 0 auto 16px;
             border-radius: 2px;
           }
-          .login-welcome { font-size: 14px; color: #667085; margin: 0; }
-          .login-form-group { margin-bottom: 18px; }
-          .login-form-group label {
+
+          .login-warning {
+            font-size: 14px;
+            color: #B3262E;
+            font-weight: 500;
+          }
+
+          .login-error {
+            padding: 14px 18px;
+            background: #FCEBEC;
+            color: #B3262E;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            text-align: center;
+            border-left: 4px solid #B3262E;
+            font-weight: 500;
+          }
+
+          .login-form .form-group {
+            margin-bottom: 18px;
+          }
+
+          .login-form .form-group label {
             display: block;
             font-size: 13px;
             font-weight: 600;
@@ -344,104 +303,85 @@ export default function Login() {
             margin-bottom: 6px;
             letter-spacing: 0.3px;
           }
-          .login-form-group input {
+
+          .login-form .form-group input {
             width: 100%;
-            padding: 12px 16px;
+            padding: 14px 16px;
             border: 1.5px solid #D5DCE7;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 15px;
             outline: none;
             transition: all 0.3s ease;
             background: #F8FAFC;
             color: #0B1F3A;
+            font-family: inherit;
           }
-          .login-form-group input:focus {
+
+          .login-form .form-group input:focus {
             border-color: #C9A227;
             background: white;
-            box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.08);
+            box-shadow: 0 0 0 4px rgba(201, 162, 39, 0.08);
           }
-          .login-form-group input::placeholder { color: #98A2B3; }
+
+          .login-form .form-group input::placeholder {
+            color: #98A2B3;
+          }
+
           .login-btn {
             width: 100%;
-            padding: 14px;
+            padding: 16px;
             background: linear-gradient(135deg, #C9A227, #B8921F);
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 16px;
             font-weight: 700;
             color: #0B1F3A;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 16px rgba(201, 162, 39, 0.2);
-            margin-top: 6px;
+            box-shadow: 0 4px 20px rgba(201, 162, 39, 0.25);
             letter-spacing: 0.5px;
+            font-family: inherit;
           }
+
           .login-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(201, 162, 39, 0.3);
+            box-shadow: 0 8px 35px rgba(201, 162, 39, 0.35);
           }
-          .login-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
-          .login-btn-loader {
-            display: inline-block;
-            width: 22px;
-            height: 22px;
-            border: 2px solid rgba(11, 31, 58, 0.2);
-            border-top-color: #0B1F3A;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+
+          .login-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
           }
-          @keyframes spin { to { transform: rotate(360deg); } }
-          .login-error {
-            padding: 12px 16px;
-            background: #FCEBEC;
-            color: #B3262E;
-            border-radius: 10px;
-            margin-bottom: 18px;
-            font-size: 14px;
+
+          .login-hint {
             text-align: center;
-            border-left: 4px solid #B3262E;
+            font-size: 12px;
+            color: #98A2B3;
+            margin-top: 16px;
           }
-          .login-footer { text-align: center; margin-top: 20px; padding-top: 18px; border-top: 1px solid #F4F6F9; }
-          .login-footer p { font-size: 14px; color: #667085; margin: 0; }
-          .login-security { font-size: 12px !important; color: #98A2B3 !important; margin-top: 8px !important; }
+
           @media (max-width: 480px) {
-            .login-card { padding: 28px 20px; max-width: 100%; margin: 0 10px; }
-            .login-header h2 { font-size: 20px; }
-            .login-emblem-logo { height: 44px; }
-            .login-emblem-ard { height: 20px; }
-            .login-btn { padding: 12px; font-size: 15px; }
-            .login-form-group input { padding: 10px 14px; font-size: 14px; }
+            .login-card { padding: 32px 24px; margin: 0 10px; }
+            .login-header h1 { font-size: 22px; }
+            .login-logo { width: 60px; height: 60px; }
+            .login-logo img { height: 32px; }
           }
         `}</style>
       </div>
     );
   }
 
-  // Обычная форма входа
+  // Основная форма входа
   return (
     <div className="login-page">
-      <div className="login-bg">
-        <div className="login-bg-overlay" />
-        <div className="login-bg-particles">
-          <span>✦</span><span>✦</span><span>✦</span><span>✦</span>
-          <span>✦</span><span>✦</span><span>✦</span><span>✦</span>
-        </div>
-      </div>
-
-      <div className="login-card">
-        <div className="login-card-inner">
-          <div className="login-emblem">
-            <img src={logo} alt="ДОД «Дипломаты будущего»" className="login-emblem-logo" />
-            <div className="login-emblem-line" />
-            <div className="login-emblem-partners">
-              <span className="login-emblem-partner-label">При поддержке</span>
-              <img src={ardLogo} alt="Ассоциация российских дипломатов" className="login-emblem-ard" />
-            </div>
-          </div>
-
+      <div className="login-container">
+        <div className="login-card">
           <div className="login-header">
-            <h1>Детское общественное движение</h1>
-            <h2>«Дипломаты будущего»</h2>
+            <div className="login-logo">
+              <img src={logo} alt="ДОД" />
+            </div>
+            <h1>Дипломаты будущего</h1>
             <p className="login-subtitle">Ассоциация российских дипломатов</p>
             <div className="login-divider" />
             <p className="login-welcome">Добро пожаловать в систему</p>
@@ -449,53 +389,243 @@ export default function Login() {
 
           {error && (
             <div className="login-error">
-              ❌ {error}
+              {error}
             </div>
           )}
 
-          <form onSubmit={handleLogin}>
-            <div className="login-form-group">
-              <label>Email или логин</label>
+          <form onSubmit={handleLogin} className="login-form">
+            <div className="form-group">
+              <label>Email</label>
               <input
                 type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
                 placeholder="example@mail.com"
+                required
               />
             </div>
 
-            <div className="login-form-group">
+            <div className="form-group">
               <label>Пароль</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
                 placeholder="Введите пароль"
+                required
               />
             </div>
 
-            <button
-              type="submit"
-              className="login-btn"
-              disabled={loading}
-            >
-              {loading ? (
-                <span className="login-btn-loader" />
-              ) : (
-                '🔑 Войти в систему'
-              )}
+            <button type="submit" className="login-btn" disabled={loading}>
+              {loading ? '⏳ Вход...' : '🔑 Войти в систему'}
             </button>
-          </form>
 
-          <div className="login-footer">
-            <p className="login-security">
+            <p className="login-hint">
               🔒 Только авторизованные пользователи. Аккаунты создаются администрацией.
             </p>
-          </div>
+          </form>
         </div>
       </div>
+
+      <style>{`
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        .login-page {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(160deg, #0B1F3A 0%, #051224 100%);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          padding: 20px;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .login-page::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: 
+            radial-gradient(ellipse at 30% 30%, rgba(201, 162, 39, 0.05) 0%, transparent 50%),
+            radial-gradient(ellipse at 70% 70%, rgba(23, 74, 126, 0.05) 0%, transparent 50%);
+          animation: floatBg 30s ease-in-out infinite alternate;
+        }
+
+        @keyframes floatBg {
+          0% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(-30px, 30px) scale(1.05); }
+          100% { transform: translate(30px, -30px) scale(0.95); }
+        }
+
+        .login-container {
+          position: relative;
+          z-index: 1;
+          width: 100%;
+          max-width: 440px;
+        }
+
+        .login-card {
+          background: rgba(255, 255, 255, 0.97);
+          backdrop-filter: blur(20px);
+          border-radius: 24px;
+          padding: 48px 40px;
+          box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(201, 162, 39, 0.08);
+          animation: slideUp 0.6s ease;
+        }
+
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-header {
+          text-align: center;
+          margin-bottom: 32px;
+        }
+
+        .login-logo {
+          width: 72px;
+          height: 72px;
+          margin: 0 auto 16px;
+          background: linear-gradient(135deg, #0B1F3A, #174A7E);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 2px solid rgba(201, 162, 39, 0.3);
+          box-shadow: 0 4px 20px rgba(11, 31, 58, 0.2);
+        }
+
+        .login-logo img {
+          height: 40px;
+          width: auto;
+          filter: brightness(0) invert(1);
+        }
+
+        .login-header h1 {
+          font-family: 'Playfair Display', serif;
+          font-size: 26px;
+          font-weight: 700;
+          color: #0B1F3A;
+          letter-spacing: -0.5px;
+          margin: 0 0 4px;
+        }
+
+        .login-subtitle {
+          font-size: 12px;
+          color: #98A2B3;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          margin: 0 0 12px;
+        }
+
+        .login-divider {
+          width: 60px;
+          height: 3px;
+          background: linear-gradient(90deg, #C9A227, #E8D9A8);
+          margin: 0 auto 16px;
+          border-radius: 2px;
+        }
+
+        .login-welcome {
+          font-size: 15px;
+          color: #667085;
+          font-weight: 400;
+        }
+
+        .login-error {
+          padding: 14px 18px;
+          background: #FCEBEC;
+          color: #B3262E;
+          border-radius: 12px;
+          margin-bottom: 20px;
+          font-size: 14px;
+          text-align: center;
+          border-left: 4px solid #B3262E;
+          font-weight: 500;
+        }
+
+        .login-form .form-group {
+          margin-bottom: 18px;
+        }
+
+        .login-form .form-group label {
+          display: block;
+          font-size: 13px;
+          font-weight: 600;
+          color: #0B1F3A;
+          margin-bottom: 6px;
+          letter-spacing: 0.3px;
+        }
+
+        .login-form .form-group input {
+          width: 100%;
+          padding: 14px 16px;
+          border: 1.5px solid #D5DCE7;
+          border-radius: 12px;
+          font-size: 15px;
+          outline: none;
+          transition: all 0.3s ease;
+          background: #F8FAFC;
+          color: #0B1F3A;
+          font-family: inherit;
+        }
+
+        .login-form .form-group input:focus {
+          border-color: #C9A227;
+          background: white;
+          box-shadow: 0 0 0 4px rgba(201, 162, 39, 0.08);
+        }
+
+        .login-form .form-group input::placeholder {
+          color: #98A2B3;
+        }
+
+        .login-btn {
+          width: 100%;
+          padding: 16px;
+          background: linear-gradient(135deg, #C9A227, #B8921F);
+          border: none;
+          border-radius: 12px;
+          font-size: 16px;
+          font-weight: 700;
+          color: #0B1F3A;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 20px rgba(201, 162, 39, 0.25);
+          letter-spacing: 0.5px;
+          font-family: inherit;
+        }
+
+        .login-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 35px rgba(201, 162, 39, 0.35);
+        }
+
+        .login-btn:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        .login-hint {
+          text-align: center;
+          font-size: 12px;
+          color: #98A2B3;
+          margin-top: 16px;
+        }
+
+        @media (max-width: 480px) {
+          .login-card { padding: 32px 24px; margin: 0 10px; }
+          .login-header h1 { font-size: 22px; }
+          .login-logo { width: 60px; height: 60px; }
+          .login-logo img { height: 32px; }
+        }
+      `}</style>
     </div>
   );
 }

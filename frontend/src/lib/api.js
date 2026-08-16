@@ -142,7 +142,7 @@ export const updateProfile = async (data) => {
 };
 
 // ============================================================
-// 6. ПОЛЬЗОВАТЕЛИ (ТОЛЬКО ДЛЯ АДМИНА)
+// 6. ПОЛЬЗОВАТЕЛИ
 // ============================================================
 export const getUsers = async () => {
   const response = await fetch(`${API_URL}/users`, {
@@ -195,7 +195,19 @@ export const resetUserPassword = async (userId) => {
 };
 
 // ============================================================
-// 7. КЛУБЫ
+// 7. ПРИКРЕПЛЕНИЕ ПОЛЬЗОВАТЕЛЯ К КЛУБУ (НОВАЯ ФУНКЦИЯ)
+// ============================================================
+export const assignUserToClub = async (userId, clubId) => {
+  const response = await fetch(`${API_URL}/users/${userId}/assign-club`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ club_id: clubId })
+  });
+  return response.json();
+};
+
+// ============================================================
+// 8. КЛУБЫ
 // ============================================================
 export const getClubs = async () => {
   const response = await fetch(`${API_URL}/clubs`, {
@@ -206,7 +218,7 @@ export const getClubs = async () => {
 };
 
 // ============================================================
-// 8. ДОСТИЖЕНИЯ
+// 9. ДОСТИЖЕНИЯ
 // ============================================================
 export const getAchievements = async () => {
   const response = await fetch(`${API_URL}/achievements`, {
@@ -234,7 +246,7 @@ export const deleteAchievement = async (id) => {
 };
 
 // ============================================================
-// 9. СОБЫТИЯ
+// 10. СОБЫТИЯ
 // ============================================================
 export const getEvents = async () => {
   try {
@@ -283,7 +295,7 @@ export const deleteEvent = async (id) => {
 };
 
 // ============================================================
-// 10. РЕГИСТРАЦИИ
+// 11. РЕГИСТРАЦИИ
 // ============================================================
 export const getRegistrations = async () => {
   const response = await fetch(`${API_URL}/registrations`, {
@@ -303,7 +315,7 @@ export const addRegistration = async (data) => {
 };
 
 // ============================================================
-// 11. ОБРАЩЕНИЯ
+// 12. ОБРАЩЕНИЯ
 // ============================================================
 export const getAppeals = async () => {
   const response = await fetch(`${API_URL}/appeals`, {
@@ -323,7 +335,7 @@ export const addAppeal = async (data) => {
 };
 
 // ============================================================
-// 12. ОТЧЁТЫ
+// 13. ОТЧЁТЫ
 // ============================================================
 export const getReports = async () => {
   const response = await fetch(`${API_URL}/reports`, {
@@ -385,7 +397,7 @@ export const rejectReport = async (id, comment) => {
 };
 
 // ============================================================
-// 13. ДОКУМЕНТЫ
+// 14. ДОКУМЕНТЫ
 // ============================================================
 export const getDocuments = async () => {
   const response = await fetch(`${API_URL}/documents`, {
@@ -413,7 +425,7 @@ export const deleteDocument = async (id) => {
 };
 
 // ============================================================
-// 14. НОВОСТИ
+// 15. НОВОСТИ
 // ============================================================
 export const getNews = async () => {
   const response = await fetch(`${API_URL}/news`, {
@@ -450,7 +462,7 @@ export const deleteNews = async (id) => {
 };
 
 // ============================================================
-// 15. УВЕДОМЛЕНИЯ
+// 16. УВЕДОМЛЕНИЯ
 // ============================================================
 export const getNotifications = async () => {
   const response = await fetch(`${API_URL}/notifications`, {
@@ -477,7 +489,7 @@ export const markAllNotificationsRead = async () => {
 };
 
 // ============================================================
-// 16. АВАТАР
+// 17. АВАТАР
 // ============================================================
 export const uploadAvatar = async (avatarBase64) => {
   const response = await fetch(`${API_URL}/upload-avatar`, {
@@ -489,7 +501,7 @@ export const uploadAvatar = async (avatarBase64) => {
 };
 
 // ============================================================
-// 17. ДЕТИ РОДИТЕЛЯ
+// 18. ДЕТИ РОДИТЕЛЯ
 // ============================================================
 export const getParentChildren = async () => {
   const response = await fetch(`${API_URL}/parent-children`, {
@@ -509,7 +521,7 @@ export const parentLinkChild = async (data) => {
 };
 
 // ============================================================
-// 18. ПРЕЗИДЕНТ
+// 19. ПРЕЗИДЕНТ
 // ============================================================
 export const getPresidentTasks = async () => {
   const response = await fetch(`${API_URL}/president-tasks`, {
@@ -538,7 +550,7 @@ export const respondToPresidentTask = async (id, response) => {
 };
 
 // ============================================================
-// 19. ОСТАЛЬНЫЕ
+// 20. СТАТИСТИКА
 // ============================================================
 export const getParticipantStats = async (userId) => {
   const response = await fetch(`${API_URL}/participant-stats/${userId}`, {
@@ -566,19 +578,7 @@ export const setClubPresident = async (clubId, presidentId) => {
 };
 
 // ============================================================
-// ПРИКРЕПЛЕНИЕ ПОЛЬЗОВАТЕЛЯ К КЛУБУ
-// ============================================================
-export const assignUserToClub = async (userId, clubId) => {
-  const response = await fetch(`${API_URL}/users/${userId}/assign-club`, {
-    method: 'PATCH',
-    headers: headers(),
-    body: JSON.stringify({ club_id: clubId })
-  });
-  return response.json();
-};
-
-// ============================================================
-// ЭКСПОРТ API ОБЪЕКТА
+// 21. ЭКСПОРТ API ОБЪЕКТА
 // ============================================================
 const api = {
   // Аутентификация
@@ -597,6 +597,9 @@ const api = {
   updateUser,
   deleteUser,
   resetUserPassword,
+  
+  // Прикрепление к клубу (НОВАЯ ФУНКЦИЯ)
+  assignUserToClub,
   
   // Клубы
   getClubs,

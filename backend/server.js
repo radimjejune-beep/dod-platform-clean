@@ -5504,6 +5504,536 @@ app.patch('/api/reports/:id/reject', async (req, res) => {
 console.log('✅ API для отчётов загружены');
 
 // ============================================================
+// ОЦЕНКИ УЧАСТНИКОВ (ТЬЮТОРЫ)
+// ============================================================
+
+// ===== ПОЛУЧЕНИЕ УЧАСТНИКОВ МЕРОПРИЯТИЯ =====
+app.get('/api/events/:eventId/participants', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    // Проверяем, что пользователь имеет доступ к мероприятию
+    const eventCheck = await pool.query(
+      'SELECT * FROM events WHERE id = $1',
+      [eventId]
+    );
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    // Если тьютор - проверяем, что он назначен на это мероприятие
+    if (userRole === 'tutor') {
+      const assignmentCheck = await pool.query(
+        'SELECT id FROM event_tutor_assignments WHERE event_id = $1 AND tutor_id = $2 AND status = $3',
+        [eventId, userId, 'accepted']
+      );
+      if (assignmentCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'Вы не назначены на это мероприятие' });
+      }
+    }
+
+    // Получаем участников мероприятия с их оценками
+    const result = await pool.query(
+      `
+      SELECT 
+        ep.*,
+        u.full_name,
+        u.school,
+        u.class_name,
+        u.avatar_url,
+        ps.id as score_id,
+        ps.engagement_score,
+        ps.teamwork_score,
+        ps.initiative_score,
+        ps.communication_score,
+        ps.responsibility_score,
+        ps.comment as score_comment,
+        ps.status as score_status,
+        ps.created_at as score_created_at,
+        ps.updated_at as score_updated_at
+      FROM event_participants ep
+      LEFT JOIN users u ON ep.user_id = u.id
+      LEFT JOIN participant_scores ps ON ps.event_id = ep.event_id AND ps.participant_id = ep.user_id AND ps.tutor_id = $2
+      WHERE ep.event_id = $1
+      ORDER BY u.full_name
+      `,
+      [eventId, userId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения участников:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== СОЗДАНИЕ/ОБНОВЛЕНИЕ ОЦЕНКИ =====
+app.post('/api/participant-scores', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (userRole !== 'tutor') {
+      return res.status(403).json({ error: 'Только тьюторы могут выставлять оценки' });
+    }
+
+    const { event_id, participant_id, engagement_score, teamwork_score, initiative_score, communication_score, responsibility_score, comment } = req.body;
+
+    if (!event_id || !participant_id) {
+      return res.status(400).json({ error: 'event_id и participant_id обязательны' });
+    }
+
+    // Проверяем, что тьютор назначен на это мероприятие
+    const assignmentCheck = await pool.query(
+      'SELECT id FROM event_tutor_assignments WHERE event_id = $1 AND tutor_id = $2 AND status = $3',
+      [event_id, userId, 'accepted']
+    );
+    if (assignmentCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Вы не назначены на это мероприятие' });
+    }
+
+    // Проверяем, что участник есть в мероприятии
+    const participantCheck = await pool.query(
+      'SELECT id FROM event_participants WHERE event_id = $1 AND user_id = $2',
+      [event_id, participant_id]
+    );
+    if (participantCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Участник не найден в этом мероприятии' });
+    }
+
+    // Создаём или обновляем оценку
+    const result = await pool.query(
+      `
+      INSERT INTO participant_scores (
+        event_id, participant_id, tutor_id,
+        engagement_score, teamwork_score, initiative_score,
+        communication_score, responsibility_score,
+        comment, status, created_by, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'draft', $10, NOW(), NOW())
+      ON CONFLICT (event_id, participant_id, tutor_id) DO UPDATE SET
+        engagement_score = EXCLUDED.engagement_score,
+        teamwork_score = EXCLUDED.teamwork_score,
+        initiative_score = EXCLUDED.initiative_score,
+        communication_score = EXCLUDED.communication_score,
+        responsibility_score = EXCLUDED.responsibility_score,
+        comment = EXCLUDED.comment,
+        updated_at = NOW()
+      RETURNING *
+      `,
+      [
+        event_id,
+        participant_id,
+        userId,
+        engagement_score || null,
+        teamwork_score || null,
+        initiative_score || null,
+        communication_score || null,
+        responsibility_score || null,
+        comment || '',
+        userId
+      ]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка сохранения оценки:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ОТПРАВКА ОЦЕНОК НА ПРОВЕРКУ =====
+app.patch('/api/participant-scores/:eventId/submit', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (userRole !== 'tutor') {
+      return res.status(403).json({ error: 'Только тьюторы могут отправлять оценки' });
+    }
+
+    await pool.query(
+      `
+      UPDATE participant_scores 
+      SET status = 'submitted', updated_at = NOW()
+      WHERE event_id = $1 AND tutor_id = $2 AND status = 'draft'
+      `,
+      [eventId, userId]
+    );
+
+    // Уведомление координатору
+    const eventResult = await pool.query(
+      'SELECT created_by, title FROM events WHERE id = $1',
+      [eventId]
+    );
+    if (eventResult.rows.length > 0) {
+      await createNotification(
+        eventResult.rows[0].created_by,
+        'system',
+        '📊 Оценки отправлены на проверку',
+        `Тьютор отправил оценки на мероприятие "${eventResult.rows[0].title}"`,
+        `/events/${eventId}`,
+        'medium'
+      );
+    }
+
+    res.json({ message: 'Оценки отправлены на проверку' });
+  } catch (error) {
+    console.error('❌ Ошибка отправки оценок:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// УПРАВЛЕНИЕ УЧАСТНИКАМИ МЕРОПРИЯТИЙ (КООРДИНАТОР КЮДА)
+// ============================================================
+
+// ===== ПОЛУЧЕНИЕ УЧАСТНИКОВ МЕРОПРИЯТИЯ =====
+app.get('/api/events/:eventId/participants', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    // Проверяем, что мероприятие существует
+    const eventCheck = await pool.query(
+      'SELECT * FROM events WHERE id = $1',
+      [eventId]
+    );
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    const event = eventCheck.rows[0];
+
+    // Кто может видеть участников:
+    // - Админ, координатор движения, президент, вице-президент
+    // - Координатор КЮДа (если он создатель или мероприятие глобальное)
+    // - Тьютор (если назначен на мероприятие)
+    let canView = false;
+
+    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
+      canView = true;
+    } else if (userRole === 'club_coordinator') {
+      // Координатор видит, если создал мероприятие ИЛИ мероприятие глобальное
+      if (event.created_by === userId || event.is_global === true) {
+        canView = true;
+      }
+    } else if (userRole === 'tutor') {
+      const assignmentCheck = await pool.query(
+        'SELECT id FROM event_tutor_assignments WHERE event_id = $1 AND tutor_id = $2 AND status = $3',
+        [eventId, userId, 'accepted']
+      );
+      if (assignmentCheck.rows.length > 0) {
+        canView = true;
+      }
+    }
+
+    if (!canView) {
+      return res.status(403).json({ error: 'У вас нет прав для просмотра участников' });
+    }
+
+    // Получаем участников мероприятия с их оценками
+    const result = await pool.query(
+      `
+      SELECT 
+        ep.*,
+        u.full_name,
+        u.school,
+        u.class_name,
+        u.avatar_url,
+        u.club_id,
+        c.name as club_name,
+        ps.id as score_id,
+        ps.engagement_score,
+        ps.teamwork_score,
+        ps.initiative_score,
+        ps.communication_score,
+        ps.responsibility_score,
+        ps.comment as score_comment,
+        ps.status as score_status,
+        ps.created_at as score_created_at,
+        ps.updated_at as score_updated_at
+      FROM event_participants ep
+      LEFT JOIN users u ON ep.user_id = u.id
+      LEFT JOIN clubs c ON u.club_id = c.id
+      LEFT JOIN participant_scores ps ON ps.event_id = ep.event_id AND ps.participant_id = ep.user_id AND ps.tutor_id = $2
+      WHERE ep.event_id = $1
+      ORDER BY u.full_name
+      `,
+      [eventId, userId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения участников:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ДОБАВЛЕНИЕ УЧАСТНИКА НА МЕРОПРИЯТИЕ =====
+app.post('/api/events/:eventId/participants', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { user_id } = req.body;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'user_id обязателен' });
+    }
+
+    // Проверяем, что мероприятие существует
+    const eventCheck = await pool.query(
+      'SELECT * FROM events WHERE id = $1',
+      [eventId]
+    );
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    const event = eventCheck.rows[0];
+
+    // Кто может добавлять участников:
+    // - Админ, координатор движения
+    // - Координатор КЮДа (если создатель или мероприятие глобальное)
+    let canAdd = false;
+
+    if (['admin', 'movement_coordinator'].includes(userRole)) {
+      canAdd = true;
+    } else if (userRole === 'club_coordinator') {
+      if (event.created_by === userId || event.is_global === true) {
+        canAdd = true;
+      }
+    }
+
+    if (!canAdd) {
+      return res.status(403).json({ error: 'У вас нет прав для добавления участников' });
+    }
+
+    // Проверяем, что пользователь существует и является участником
+    const userCheck = await pool.query(
+      'SELECT id, full_name, club_id FROM users WHERE id = $1 AND role = $2',
+      [user_id, 'participant']
+    );
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Участник не найден' });
+    }
+
+    // Проверяем, что участник уже не добавлен
+    const existing = await pool.query(
+      'SELECT id FROM event_participants WHERE event_id = $1 AND user_id = $2',
+      [eventId, user_id]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Участник уже добавлен на мероприятие' });
+    }
+
+    // Добавляем участника
+    const result = await pool.query(
+      `INSERT INTO event_participants (event_id, user_id, status, registered_at)
+       VALUES ($1, $2, 'registered', NOW())
+       RETURNING *`,
+      [eventId, user_id]
+    );
+
+    // Уведомление участнику
+    await createNotification(
+      user_id,
+      'event',
+      '📅 Вы добавлены на мероприятие',
+      `Вас добавили на мероприятие "${event.title}"`,
+      `/events/${eventId}`,
+      'normal'
+    );
+
+    // Уведомление тьюторам, если они назначены
+    const tutors = await pool.query(
+      'SELECT tutor_id FROM event_tutor_assignments WHERE event_id = $1 AND status = $2',
+      [eventId, 'accepted']
+    );
+    for (const tutor of tutors.rows) {
+      await createNotification(
+        tutor.tutor_id,
+        'event',
+        '👤 Новый участник на мероприятии',
+        `На мероприятие "${event.title}" добавлен участник: ${userCheck.rows[0].full_name}`,
+        `/events/${eventId}`,
+        'normal'
+      );
+    }
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка добавления участника:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== УДАЛЕНИЕ УЧАСТНИКА С МЕРОПРИЯТИЯ =====
+app.delete('/api/events/:eventId/participants/:participantId', async (req, res) => {
+  try {
+    const { eventId, participantId } = req.params;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    // Проверяем, что мероприятие существует
+    const eventCheck = await pool.query(
+      'SELECT * FROM events WHERE id = $1',
+      [eventId]
+    );
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    const event = eventCheck.rows[0];
+
+    // Кто может удалять участников:
+    let canRemove = false;
+
+    if (['admin', 'movement_coordinator'].includes(userRole)) {
+      canRemove = true;
+    } else if (userRole === 'club_coordinator') {
+      if (event.created_by === userId || event.is_global === true) {
+        canRemove = true;
+      }
+    }
+
+    if (!canRemove) {
+      return res.status(403).json({ error: 'У вас нет прав для удаления участников' });
+    }
+
+    await pool.query(
+      'DELETE FROM event_participants WHERE event_id = $1 AND user_id = $2',
+      [eventId, participantId]
+    );
+
+    res.json({ message: 'Участник удалён с мероприятия' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления участника:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ПОЛУЧЕНИЕ СПИСКА ДОСТУПНЫХ УЧАСТНИКОВ =====
+app.get('/api/events/:eventId/available-participants', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Нет токена' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.userId;
+    const userRole = decoded.role;
+
+    // Проверяем, что мероприятие существует
+    const eventCheck = await pool.query(
+      'SELECT * FROM events WHERE id = $1',
+      [eventId]
+    );
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    const event = eventCheck.rows[0];
+
+    // Кто может видеть список:
+    let canView = false;
+
+    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
+      canView = true;
+    } else if (userRole === 'club_coordinator') {
+      if (event.created_by === userId || event.is_global === true) {
+        canView = true;
+      }
+    }
+
+    if (!canView) {
+      return res.status(403).json({ error: 'У вас нет прав для просмотра списка' });
+    }
+
+    // Получаем всех участников движения, которые ещё не добавлены на мероприятие
+    const result = await pool.query(
+      `
+      SELECT 
+        u.id,
+        u.full_name,
+        u.school,
+        u.class_name,
+        u.club_id,
+        c.name as club_name
+      FROM users u
+      LEFT JOIN clubs c ON u.club_id = c.id
+      WHERE u.role = 'participant' 
+        AND u.status = 'active'
+        AND u.id NOT IN (
+          SELECT user_id FROM event_participants WHERE event_id = $1
+        )
+      ORDER BY u.full_name
+      `,
+      [eventId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения списка участников:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+console.log('✅ API для управления участниками мероприятий загружены');
+
+// ============================================================
 // ЗАПУСК СЕРВЕРА
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {

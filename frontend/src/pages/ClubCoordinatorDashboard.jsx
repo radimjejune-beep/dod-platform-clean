@@ -1,6 +1,6 @@
 // frontend/src/pages/ClubCoordinatorDashboard.jsx
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
@@ -10,41 +10,46 @@ export default function ClubCoordinatorDashboard() {
   const [club, setClub] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState('success');
+  const [error, setError] = useState('');
   
-  const [stats, setStats] = useState({
-    participants: 0,
-    activeParticipants: 0,
-    events: 0,
-    eventsThisMonth: 0,
-    achievements: 0,
-    pendingRequests: 0,
-    pendingAppeals: 0,
-    upcomingEvents: 0,
-    newParticipantsThisMonth: 0
+  // Все данные загружаются одним блоком
+  const [dashboardData, setDashboardData] = useState({
+    participants: [],
+    events: [],
+    achievements: [],
+    tutorRequests: [],
+    appeals: [],
+    stats: {
+      participants: 0,
+      activeParticipants: 0,
+      events: 0,
+      eventsThisMonth: 0,
+      achievements: 0,
+      pendingRequests: 0,
+      pendingAppeals: 0,
+      upcomingEvents: 0,
+      newParticipantsThisMonth: 0
+    },
+    recentParticipants: [],
+    upcomingEvents: [],
+    recentAchievements: [],
+    recentActivity: []
   });
-  
-  const [participants, setParticipants] = useState([]);
-  const [recentParticipants, setRecentParticipants] = useState([]);
-  const [upcomingEvents, setUpcomingEvents] = useState([]);
-  const [recentAchievements, setRecentAchievements] = useState([]);
-  const [pendingRequests, setPendingRequests] = useState([]);
-  const [pendingAppeals, setPendingAppeals] = useState([]);
-  const [recentActivity, setRecentActivity] = useState([]);
-  
+
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedTab, setSelectedTab] = useState('overview');
   
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  // ============================================================
+  // ЗАГРУЗКА ДАННЫХ — ОДИН РАЗ
+  // ============================================================
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      setError('');
+
+      // 1. Получаем пользователя
       const userData = await api.getMe();
       if (!userData || !userData.id) {
         navigate('/login');
@@ -58,6 +63,7 @@ export default function ClubCoordinatorDashboard() {
 
       setProfile(userData);
 
+      // 2. Получаем клубы
       const clubsData = await api.getClubs();
       let coordinatorClub = null;
 
@@ -73,243 +79,179 @@ export default function ClubCoordinatorDashboard() {
       }
 
       if (!coordinatorClub) {
-        try {
-          const coordResponse = await fetch(`https://dod-backend.relaxdev.ru/api/club-coordinators?profile_id=${userData.id}`);
-          const coordData = await coordResponse.json();
-          if (coordData && coordData.length > 0) {
-            const clubId = coordData[0].club_id;
-            coordinatorClub = clubsData.find(c => c.id === clubId);
-          }
-        } catch (e) {
-          console.log('Ошибка получения координатора:', e);
-        }
-      }
-
-      if (!coordinatorClub) {
+        setError('❌ Клуб не найден. Обратитесь к администратору.');
         setLoading(false);
-        setMessage('❌ Клуб не найден. Обратитесь к администратору.');
-        setMessageType('error');
         return;
       }
 
       setClub(coordinatorClub);
 
-      await Promise.all([
-        loadStats(coordinatorClub.id),
-        loadParticipants(coordinatorClub.id),
-        loadEvents(coordinatorClub.id),
-        loadAchievements(coordinatorClub.id),
-        loadRequests(),
-        loadAppeals(),
-        loadRecentActivity(coordinatorClub.id)
-      ]);
-
-    } catch (err) {
-      console.error('Ошибка:', err);
-      setMessage('❌ Ошибка загрузки данных: ' + err.message);
-      setMessageType('error');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const loadStats = async (clubId) => {
-    try {
-      const [participantsData, eventsData, achievementsData] = await Promise.all([
+      // 3. ПАРАЛЛЕЛЬНАЯ ЗАГРУЗКА ВСЕХ ДАННЫХ — ОДИН РАЗ!
+      const [
+        participantsData,
+        eventsData,
+        achievementsData,
+        tutorRequestsData,
+        appealsData
+      ] = await Promise.all([
         api.getParticipants(),
         api.getEvents(),
-        api.getAchievements()
+        api.getAchievements(),
+        api.getTutorRequests().catch(() => []),
+        api.getAppeals().catch(() => [])
       ]);
 
-      const clubParticipants = participantsData.filter(p => p.club_id === clubId);
-      const clubEvents = eventsData.filter(e => e.club_id === clubId);
-      const clubAchievements = achievementsData.filter(a => {
-        const participant = participantsData.find(p => p.id === a.participant_id);
-        return participant?.club_id === clubId;
-      });
+      // 4. Фильтруем данные по клубу
+      const clubParticipants = participantsData.filter(p => p.club_id === coordinatorClub.id);
+      const clubEvents = eventsData.filter(e => e.club_id === coordinatorClub.id);
+      
+      const clubParticipantIds = clubParticipants.map(p => p.id);
+      const clubAchievements = achievementsData.filter(a => 
+        clubParticipantIds.includes(a.participant_id)
+      );
 
+      // 5. Считаем статистику
       const now = new Date();
       const thisMonth = now.getMonth();
       const thisYear = now.getFullYear();
+      
       const eventsThisMonth = clubEvents.filter(e => {
         const date = new Date(e.event_date);
         return date.getMonth() === thisMonth && date.getFullYear() === thisYear;
       });
 
-      const upcomingEvents = clubEvents.filter(e => {
-        const date = new Date(e.event_date);
-        return date >= now && e.status !== 'completed' && e.status !== 'rejected';
-      });
+      const upcomingEvents = clubEvents
+        .filter(e => new Date(e.event_date) >= now)
+        .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+        .slice(0, 5);
 
       const oneMonthAgo = new Date();
       oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      
       const newParticipantsThisMonth = clubParticipants.filter(p => 
         new Date(p.created_at) > oneMonthAgo
       );
 
-      setStats({
-        participants: clubParticipants.length,
-        activeParticipants: clubParticipants.filter(p => p.status === 'active').length,
-        events: clubEvents.length,
-        eventsThisMonth: eventsThisMonth.length,
-        achievements: clubAchievements.length,
-        pendingRequests: 0,
-        pendingAppeals: 0,
-        upcomingEvents: upcomingEvents.length,
-        newParticipantsThisMonth: newParticipantsThisMonth.length
-      });
+      const pendingRequests = tutorRequestsData.filter(r => r.status === 'pending');
+      const pendingAppeals = appealsData.filter(a => 
+        a.status === 'pending' || a.status === 'in_progress'
+      );
 
-    } catch (err) {
-      console.error('Ошибка загрузки статистики:', err);
-    }
-  };
-
-  const loadParticipants = async (clubId) => {
-    try {
-      const participantsData = await api.getParticipants();
-      const clubParticipants = participantsData.filter(p => p.club_id === clubId);
-      setParticipants(clubParticipants);
-      setRecentParticipants(clubParticipants.slice(0, 5));
-    } catch (err) {
-      console.error('Ошибка загрузки участников:', err);
-    }
-  };
-
-  const loadEvents = async (clubId) => {
-    try {
-      const eventsData = await api.getEvents();
-      const clubEvents = eventsData.filter(e => e.club_id === clubId);
-      
-      const now = new Date();
-      const upcoming = clubEvents
-        .filter(e => new Date(e.event_date) >= now && e.status !== 'rejected')
-        .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
-        .slice(0, 5);
-      
-      setUpcomingEvents(upcoming);
-    } catch (err) {
-      console.error('Ошибка загрузки мероприятий:', err);
-    }
-  };
-
-  const loadAchievements = async (clubId) => {
-    try {
-      const [participantsData, achievementsData] = await Promise.all([
-        api.getParticipants(),
-        api.getAchievements()
-      ]);
-
-      const clubParticipantIds = participantsData
-        .filter(p => p.club_id === clubId)
-        .map(p => p.id);
-
-      const clubAchievements = achievementsData
-        .filter(a => clubParticipantIds.includes(a.participant_id))
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 5);
-
-      setRecentAchievements(clubAchievements);
-    } catch (err) {
-      console.error('Ошибка загрузки достижений:', err);
-    }
-  };
-
-  const loadRequests = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://dod-backend.relaxdev.ru/api/tutor-requests', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      const pending = data.filter(r => r.status === 'pending');
-      setPendingRequests(pending);
-      setStats(prev => ({ ...prev, pendingRequests: pending.length }));
-    } catch (err) {
-      console.error('Ошибка загрузки запросов:', err);
-    }
-  };
-
-  const loadAppeals = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://dod-backend.relaxdev.ru/api/appeals', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      const pending = data.filter(a => a.status === 'pending' || a.status === 'in_progress');
-      setPendingAppeals(pending);
-      setStats(prev => ({ ...prev, pendingAppeals: pending.length }));
-    } catch (err) {
-      console.error('Ошибка загрузки обращений:', err);
-    }
-  };
-
-  const loadRecentActivity = async (clubId) => {
-    try {
+      // 6. Формируем активность
       const activities = [];
       
-      const participantsData = await api.getParticipants();
-      const clubParticipants = participantsData
-        .filter(p => p.club_id === clubId)
+      clubParticipants
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 3);
-      
-      clubParticipants.forEach(p => {
-        activities.push({
-          id: `join-${p.id}`,
-          type: 'join',
-          title: `${p.full_name} присоединился к клубу`,
-          date: p.created_at,
-          icon: '👤',
-          color: '#16845B'
+        .slice(0, 3)
+        .forEach(p => {
+          activities.push({
+            id: `join-${p.id}`,
+            type: 'join',
+            title: `${p.full_name} присоединился к клубу`,
+            date: p.created_at,
+            icon: '👤',
+            color: '#16845B'
+          });
         });
-      });
 
-      const eventsData = await api.getEvents();
-      const clubEvents = eventsData
-        .filter(e => e.club_id === clubId)
+      clubEvents
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 3);
-      
-      clubEvents.forEach(e => {
-        activities.push({
-          id: `event-${e.id}`,
-          type: 'event',
-          title: `Создано мероприятие: ${e.title}`,
-          date: e.created_at,
-          icon: '📅',
-          color: '#174A7E'
+        .slice(0, 3)
+        .forEach(e => {
+          activities.push({
+            id: `event-${e.id}`,
+            type: 'event',
+            title: `Создано мероприятие: ${e.title}`,
+            date: e.created_at,
+            icon: '📅',
+            color: '#174A7E'
+          });
         });
-      });
 
       activities.sort((a, b) => new Date(b.date) - new Date(a.date));
-      setRecentActivity(activities.slice(0, 5));
+
+      // 7. Сохраняем всё в одно состояние
+      setDashboardData({
+        participants: clubParticipants,
+        events: clubEvents,
+        achievements: clubAchievements,
+        tutorRequests: tutorRequestsData,
+        appeals: appealsData,
+        stats: {
+          participants: clubParticipants.length,
+          activeParticipants: clubParticipants.filter(p => p.status === 'active').length,
+          events: clubEvents.length,
+          eventsThisMonth: eventsThisMonth.length,
+          achievements: clubAchievements.length,
+          pendingRequests: pendingRequests.length,
+          pendingAppeals: pendingAppeals.length,
+          upcomingEvents: upcomingEvents.length,
+          newParticipantsThisMonth: newParticipantsThisMonth.length
+        },
+        recentParticipants: clubParticipants.slice(0, 5),
+        upcomingEvents: upcomingEvents,
+        recentAchievements: clubAchievements
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          .slice(0, 5),
+        recentActivity: activities.slice(0, 5)
+      });
 
     } catch (err) {
-      console.error('Ошибка загрузки активности:', err);
+      console.error('❌ Ошибка загрузки:', err);
+      setError('Ошибка загрузки данных: ' + err.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, [navigate]);
 
+  // ============================================================
+  // ПЕРВИЧНАЯ ЗАГРУЗКА
+  // ============================================================
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // ============================================================
+  // ОБНОВЛЕНИЕ
+  // ============================================================
   const handleRefresh = async () => {
     setRefreshing(true);
-    setMessage('🔄 Обновление...');
-    setMessageType('success');
     await loadData();
-    setMessage('✅ Данные обновлены');
-    setMessageType('success');
-    setTimeout(() => setMessage(''), 3000);
   };
 
-  const getFilteredParticipants = () => {
-    if (filterStatus === 'all') return participants;
-    return participants.filter(p => p.status === filterStatus);
-  };
+  // ============================================================
+  // ФИЛЬТРАЦИЯ УЧАСТНИКОВ
+  // ============================================================
+  const filteredParticipants = useMemo(() => {
+    if (filterStatus === 'all') return dashboardData.participants;
+    return dashboardData.participants.filter(p => p.status === filterStatus);
+  }, [dashboardData.participants, filterStatus]);
 
+  // ============================================================
+  // РЕНДЕРИНГ
+  // ============================================================
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
         <div className="spinner" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="page-background">
+        <Navigation profile={profile} />
+        <div className="container-page">
+          <div className="empty-state">
+            <div className="icon">❌</div>
+            <p style={{ fontSize: '18px', color: '#B3262E' }}>{error}</p>
+            <button className="btn-primary" onClick={handleRefresh}>
+              🔄 Попробовать снова
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -332,7 +274,7 @@ export default function ClubCoordinatorDashboard() {
     );
   }
 
-  const filteredParticipants = getFilteredParticipants();
+  const { stats, recentParticipants, upcomingEvents, recentAchievements, recentActivity, participants, events, achievements } = dashboardData;
 
   return (
     <div className="page-background">
@@ -440,7 +382,6 @@ export default function ClubCoordinatorDashboard() {
             </div>
           </div>
 
-          {/* НОВЫЕ УЧАСТНИКИ ЗА МЕСЯЦ */}
           <div style={{ 
             marginTop: '12px', 
             paddingTop: '12px', 
@@ -459,12 +400,6 @@ export default function ClubCoordinatorDashboard() {
             )}
           </div>
         </div>
-
-        {message && (
-          <div className={messageType === 'success' ? 'message-success' : 'message-error'} style={{ marginBottom: '16px' }}>
-            {message}
-          </div>
-        )}
 
         {/* УВЕДОМЛЕНИЯ О PENDING ЗАПРОСАХ */}
         {stats.pendingRequests > 0 && (
@@ -510,16 +445,10 @@ export default function ClubCoordinatorDashboard() {
           <div className="stat-card" style={{ borderTop: '3px solid #6B46C1' }}>
             <div className="number">{stats.achievements}</div>
             <div className="label">🏆 Достижений</div>
-            <div style={{ fontSize: '11px', color: '#667085', marginTop: '2px' }}>
-              📈 +{Math.floor(stats.achievements / 10) || 0}% от прошлого месяца
-            </div>
           </div>
           <div className="stat-card" style={{ borderTop: '3px solid #16845B' }}>
             <div className="number">{stats.upcomingEvents}</div>
             <div className="label">📅 Предстоящих</div>
-            <div style={{ fontSize: '11px', color: '#174A7E', marginTop: '2px' }}>
-              ⏳ {stats.pendingRequests} запросов в обработке
-            </div>
           </div>
         </div>
 
@@ -534,14 +463,10 @@ export default function ClubCoordinatorDashboard() {
             <button
               className="btn-primary"
               style={{ padding: '8px 16px', fontSize: '13px' }}
-              onClick={() => {
-                localStorage.setItem('clubEventTarget', club.id);
-                navigate('/events');
-              }}
+              onClick={() => navigate('/events')}
             >
-              📅 Создать мероприятие для клуба
+              📅 Создать мероприятие
             </button>
-            
             <button
               className="btn-primary"
               style={{ padding: '8px 16px', fontSize: '13px', background: '#C9A227', color: '#0B1F3A' }}
@@ -549,31 +474,6 @@ export default function ClubCoordinatorDashboard() {
             >
               🏆 Добавить достижение
             </button>
-
-            <button
-              className="btn-primary"
-              style={{ padding: '8px 16px', fontSize: '13px', background: '#6B46C1', color: 'white', border: 'none' }}
-              onClick={() => {
-                if (club && club.id) {
-                  navigate(`/club/${club.id}/president`);
-                } else {
-                  setMessage('❌ ID клуба не найден');
-                  setMessageType('error');
-                  setTimeout(() => setMessage(''), 3000);
-                }
-              }}
-            >
-              👑 Назначить президента
-            </button>
-
-            <button
-              className="btn-primary"
-              style={{ padding: '8px 16px', fontSize: '13px', background: '#C9A227', color: '#0B1F3A', border: 'none' }}
-              onClick={() => navigate('/club-rating')}
-            >
-              🏆 Рейтинг участников
-            </button>
-
             <button
               className="btn-secondary"
               style={{ padding: '8px 16px', fontSize: '13px', background: '#174A7E', color: 'white', border: 'none' }}
@@ -609,82 +509,34 @@ export default function ClubCoordinatorDashboard() {
           paddingBottom: '4px',
           flexWrap: 'wrap'
         }}>
-          <button
-            onClick={() => setSelectedTab('overview')}
-            style={{
-              padding: '8px 16px',
-              border: 'none',
-              background: selectedTab === 'overview' ? '#0B1F3A' : 'transparent',
-              color: selectedTab === 'overview' ? 'white' : '#667085',
-              borderRadius: '8px 8px 0 0',
-              cursor: 'pointer',
-              fontWeight: selectedTab === 'overview' ? '600' : '500',
-              fontSize: '13px',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            📊 Обзор
-          </button>
-          <button
-            onClick={() => setSelectedTab('members')}
-            style={{
-              padding: '8px 16px',
-              border: 'none',
-              background: selectedTab === 'members' ? '#0B1F3A' : 'transparent',
-              color: selectedTab === 'members' ? 'white' : '#667085',
-              borderRadius: '8px 8px 0 0',
-              cursor: 'pointer',
-              fontWeight: selectedTab === 'members' ? '600' : '500',
-              fontSize: '13px'
-            }}
-          >
-            👥 Участники ({participants.length})
-          </button>
-          <button
-            onClick={() => setSelectedTab('events')}
-            style={{
-              padding: '8px 16px',
-              border: 'none',
-              background: selectedTab === 'events' ? '#0B1F3A' : 'transparent',
-              color: selectedTab === 'events' ? 'white' : '#667085',
-              borderRadius: '8px 8px 0 0',
-              cursor: 'pointer',
-              fontWeight: selectedTab === 'events' ? '600' : '500',
-              fontSize: '13px'
-            }}
-          >
-            📅 Мероприятия ({stats.events})
-          </button>
-          <button
-            onClick={() => setSelectedTab('achievements')}
-            style={{
-              padding: '8px 16px',
-              border: 'none',
-              background: selectedTab === 'achievements' ? '#0B1F3A' : 'transparent',
-              color: selectedTab === 'achievements' ? 'white' : '#667085',
-              borderRadius: '8px 8px 0 0',
-              cursor: 'pointer',
-              fontWeight: selectedTab === 'achievements' ? '600' : '500',
-              fontSize: '13px'
-            }}
-          >
-            🏆 Достижения ({stats.achievements})
-          </button>
-          <button
-            onClick={() => setSelectedTab('activity')}
-            style={{
-              padding: '8px 16px',
-              border: 'none',
-              background: selectedTab === 'activity' ? '#0B1F3A' : 'transparent',
-              color: selectedTab === 'activity' ? 'white' : '#667085',
-              borderRadius: '8px 8px 0 0',
-              cursor: 'pointer',
-              fontWeight: selectedTab === 'activity' ? '600' : '500',
-              fontSize: '13px'
-            }}
-          >
-            📋 Активность
-          </button>
+          {['overview', 'members', 'events', 'achievements', 'activity'].map((tab) => {
+            const labels = {
+              overview: '📊 Обзор',
+              members: `👥 Участники (${participants.length})`,
+              events: `📅 Мероприятия (${events.length})`,
+              achievements: `🏆 Достижения (${achievements.length})`,
+              activity: '📋 Активность'
+            };
+            return (
+              <button
+                key={tab}
+                onClick={() => setSelectedTab(tab)}
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  background: selectedTab === tab ? '#0B1F3A' : 'transparent',
+                  color: selectedTab === tab ? 'white' : '#667085',
+                  borderRadius: '8px 8px 0 0',
+                  cursor: 'pointer',
+                  fontWeight: selectedTab === tab ? '600' : '500',
+                  fontSize: '13px',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                {labels[tab]}
+              </button>
+            );
+          })}
         </div>
 
         {/* ============================================================
@@ -720,18 +572,15 @@ export default function ClubCoordinatorDashboard() {
                           padding: '8px 12px',
                           background: '#F8FAFC',
                           borderRadius: '8px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
+                          cursor: 'pointer'
                         }}
                         onClick={() => navigate(`/participant/${p.id}`)}
-                        onMouseEnter={(e) => e.currentTarget.style.background = '#F0EDE8'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = '#F8FAFC'}
                       >
                         <div style={{
                           width: '32px',
                           height: '32px',
                           borderRadius: '50%',
-                          background: p.avatar_url ? `url(${p.avatar_url}) center/cover` : 'linear-gradient(135deg, #0B1F3A, #174A7E)',
+                          background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -740,7 +589,7 @@ export default function ClubCoordinatorDashboard() {
                           fontWeight: 'bold',
                           flexShrink: 0
                         }}>
-                          {!p.avatar_url && p.full_name?.charAt(0)}
+                          {p.full_name?.charAt(0)}
                         </div>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '13px', fontWeight: '500', color: '#0B1F3A' }}>
@@ -750,15 +599,6 @@ export default function ClubCoordinatorDashboard() {
                             {p.class_name || 'Класс не указан'}
                           </div>
                         </div>
-                        <span style={{
-                          fontSize: '10px',
-                          padding: '2px 10px',
-                          borderRadius: '12px',
-                          background: p.status === 'active' ? '#E8F5EF' : '#FCEBEC',
-                          color: p.status === 'active' ? '#16845B' : '#B3262E'
-                        }}>
-                          {p.status === 'active' ? 'Активен' : 'Неактивен'}
-                        </span>
                       </div>
                     ))}
                   </div>
@@ -789,13 +629,8 @@ export default function ClubCoordinatorDashboard() {
                           padding: '10px 14px',
                           borderLeft: '3px solid #174A7E',
                           background: '#F8FAFC',
-                          borderRadius: '0 8px 8px 0',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
+                          borderRadius: '0 8px 8px 0'
                         }}
-                        onClick={() => navigate(`/events`)}
-                        onMouseEnter={(e) => e.currentTarget.style.background = '#F0EDE8'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = '#F8FAFC'}
                       >
                         <div style={{ fontSize: '14px', fontWeight: '500', color: '#0B1F3A' }}>
                           {e.title}
@@ -845,36 +680,6 @@ export default function ClubCoordinatorDashboard() {
                 </div>
               </div>
             )}
-
-            {/* ГРАФИК АКТИВНОСТИ */}
-            <div className="card" style={{ marginTop: '20px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
-                📊 Активность клуба за месяц
-              </h3>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <span style={{ fontSize: '14px', fontWeight: '600' }}>
-                  {stats.eventsThisMonth} мероприятий
-                </span>
-                <div style={{ 
-                  flex: 1, 
-                  height: '8px', 
-                  background: '#F4F6F9', 
-                  borderRadius: '4px',
-                  overflow: 'hidden'
-                }}>
-                  <div style={{
-                    width: `${Math.min((stats.eventsThisMonth / 10) * 100, 100)}%`,
-                    height: '100%',
-                    background: 'linear-gradient(90deg, #C9A227, #E8D9A8)',
-                    borderRadius: '4px',
-                    transition: 'width 0.5s ease'
-                  }} />
-                </div>
-              </div>
-              <div style={{ fontSize: '12px', color: '#98A2B3', marginTop: '4px' }}>
-                {stats.eventsThisMonth === 0 ? 'Нет мероприятий в этом месяце' : '🚀 Отличная активность!'}
-              </div>
-            </div>
           </div>
         )}
 
@@ -888,27 +693,19 @@ export default function ClubCoordinatorDashboard() {
                 👥 Участники клуба ({participants.length})
               </h3>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                <button
-                  className={filterStatus === 'all' ? 'btn-primary' : 'btn-secondary'}
-                  style={{ padding: '4px 12px', fontSize: '11px', color: filterStatus === 'all' ? '#0B1F3A' : '#667085' }}
-                  onClick={() => setFilterStatus('all')}
-                >
-                  Все
-                </button>
-                <button
-                  className={filterStatus === 'active' ? 'btn-primary' : 'btn-secondary'}
-                  style={{ padding: '4px 12px', fontSize: '11px', color: filterStatus === 'active' ? '#0B1F3A' : '#667085' }}
-                  onClick={() => setFilterStatus('active')}
-                >
-                  🟢 Активные
-                </button>
-                <button
-                  className={filterStatus === 'inactive' ? 'btn-primary' : 'btn-secondary'}
-                  style={{ padding: '4px 12px', fontSize: '11px', color: filterStatus === 'inactive' ? '#0B1F3A' : '#667085' }}
-                  onClick={() => setFilterStatus('inactive')}
-                >
-                  🔴 Неактивные
-                </button>
+                {['all', 'active', 'inactive'].map((status) => {
+                  const labels = { all: 'Все', active: '🟢 Активные', inactive: '🔴 Неактивные' };
+                  return (
+                    <button
+                      key={status}
+                      className={filterStatus === status ? 'btn-primary' : 'btn-secondary'}
+                      style={{ padding: '4px 12px', fontSize: '11px' }}
+                      onClick={() => setFilterStatus(status)}
+                    >
+                      {labels[status]}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -928,18 +725,15 @@ export default function ClubCoordinatorDashboard() {
                       padding: '10px 14px',
                       background: '#F8FAFC',
                       borderRadius: '8px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
+                      cursor: 'pointer'
                     }}
                     onClick={() => navigate(`/participant/${p.id}`)}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#F0EDE8'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = '#F8FAFC'}
                   >
                     <div style={{
                       width: '36px',
                       height: '36px',
                       borderRadius: '50%',
-                      background: p.avatar_url ? `url(${p.avatar_url}) center/cover` : 'linear-gradient(135deg, #0B1F3A, #174A7E)',
+                      background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -948,7 +742,7 @@ export default function ClubCoordinatorDashboard() {
                       fontWeight: 'bold',
                       flexShrink: 0
                     }}>
-                      {!p.avatar_url && p.full_name?.charAt(0)}
+                      {p.full_name?.charAt(0)}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '14px', fontWeight: '500', color: '#0B1F3A' }}>
@@ -981,7 +775,7 @@ export default function ClubCoordinatorDashboard() {
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
-                📅 Все мероприятия ({stats.events})
+                📅 Все мероприятия ({events.length})
               </h3>
               <button
                 className="btn-primary"
@@ -991,13 +785,13 @@ export default function ClubCoordinatorDashboard() {
                 Управление
               </button>
             </div>
-            {stats.events === 0 ? (
+            {events.length === 0 ? (
               <p style={{ color: '#98A2B3', textAlign: 'center', padding: '20px' }}>
                 Мероприятий пока нет. Создайте первое!
               </p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {upcomingEvents.map((e) => (
+                {events.slice(0, 10).map((e) => (
                   <div key={e.id} style={{
                     padding: '12px 16px',
                     borderLeft: '3px solid #174A7E',
@@ -1025,7 +819,7 @@ export default function ClubCoordinatorDashboard() {
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
-                🏆 Достижения клуба ({stats.achievements})
+                🏆 Достижения клуба ({achievements.length})
               </h3>
               <button
                 className="btn-primary"
@@ -1035,13 +829,13 @@ export default function ClubCoordinatorDashboard() {
                 Управление
               </button>
             </div>
-            {stats.achievements === 0 ? (
+            {achievements.length === 0 ? (
               <p style={{ color: '#98A2B3', textAlign: 'center', padding: '20px' }}>
                 Достижений пока нет. Добавьте первое!
               </p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {recentAchievements.map((a) => (
+                {achievements.slice(0, 10).map((a) => (
                   <div key={a.id} style={{
                     padding: '12px 16px',
                     borderLeft: '3px solid #C9A227',
@@ -1097,34 +891,6 @@ export default function ClubCoordinatorDashboard() {
                     </div>
                   </div>
                 ))}
-              </div>
-            )}
-
-            {(stats.pendingRequests > 0 || stats.pendingAppeals > 0) && (
-              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #F4F6F9' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#0B1F3A', marginBottom: '10px' }}>
-                  ⚠️ Требуют внимания
-                </h4>
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                  {stats.pendingRequests > 0 && (
-                    <button
-                      className="btn-secondary"
-                      style={{ padding: '6px 14px', fontSize: '12px', background: '#C9A227', color: '#0B1F3A', border: 'none' }}
-                      onClick={() => navigate('/tutor-requests')}
-                    >
-                      🤝 {stats.pendingRequests} запросов на тьюторов
-                    </button>
-                  )}
-                  {stats.pendingAppeals > 0 && (
-                    <button
-                      className="btn-secondary"
-                      style={{ padding: '6px 14px', fontSize: '12px', background: '#B3262E', color: 'white', border: 'none' }}
-                      onClick={() => navigate('/appeals')}
-                    >
-                      📨 {stats.pendingAppeals} обращений ожидают ответа
-                    </button>
-                  )}
-                </div>
               </div>
             )}
           </div>

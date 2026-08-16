@@ -867,6 +867,69 @@ export const getConsentsMissing = async (clubId = null) => {
 };
 
 // ============================================================
+// ОТЧЁТЫ
+// ============================================================
+
+export const getReports = async () => {
+  const response = await fetch(`${API_URL}/reports`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const createReport = async (data) => {
+  const response = await fetch(`${API_URL}/reports`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateReport = async (id, data) => {
+  const response = await fetch(`${API_URL}/reports/${id}`, {
+    method: 'PUT',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteReport = async (id) => {
+  const response = await fetch(`${API_URL}/reports/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const submitReport = async (id) => {
+  const response = await fetch(`${API_URL}/reports/${id}/submit`, {
+    method: 'PATCH',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const approveReport = async (id) => {
+  const response = await fetch(`${API_URL}/reports/${id}/approve`, {
+    method: 'PATCH',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const rejectReport = async (id, comment) => {
+  const response = await fetch(`${API_URL}/reports/${id}/reject`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ comment })
+  });
+  return response.json();
+};
+
+// ============================================================
 // ЭКСПОРТ API ОБЪЕКТА
 // ============================================================
 const api = {

@@ -40,46 +40,68 @@ export default function Reports() {
       }
       setProfile(userData);
 
-      const [clubsData] = await Promise.all([
-        api.getClubs()
+      const role = userData.role;
+      
+      // Проверка прав доступа
+      if (!['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(role)) {
+        navigate('/dashboard');
+        return;
+      }
+
+      const [clubsData, reportsData] = await Promise.all([
+        api.getClubs(),
+        api.getReports()
       ]);
 
       setClubs(clubsData || []);
 
-      const role = userData.role;
       let filteredReports = [];
 
-      if (role === 'participant' || role === 'parent' || role === 'tutor') {
-        filteredReports = [];
-      } 
-      else if (role === 'club_coordinator') {
-        const coordinatorClub = clubsData.find(c => 
-          c.coordinator_id === userData.id || 
-          c.leader_id === userData.id
-        );
-        if (coordinatorClub) {
-          filteredReports = [];
+      // Координатор КЮДа видит только отчёты своего клуба
+      if (role === 'club_coordinator') {
+        // Получаем клуб координатора
+        let coordinatorClubId = userData.club_id;
+        
+        if (!coordinatorClubId) {
+          try {
+            const coordResponse = await fetch(`https://dod-backend.relaxdev.ru/api/club-coordinators?profile_id=${userData.id}`);
+            const coordData = await coordResponse.json();
+            if (coordData && coordData.length > 0) {
+              coordinatorClubId = coordData[0].club_id;
+            }
+          } catch (e) {
+            console.log('Ошибка получения координатора:', e);
+          }
+        }
+
+        if (coordinatorClubId) {
+          filteredReports = reportsData.filter(r => r.club_id === coordinatorClubId);
         } else {
           filteredReports = [];
         }
       } 
-      else if (role === 'movement_coordinator' || role === 'admin' || role === 'president' || role === 'vice_president') {
-        filteredReports = [];
+      // Админ, координатор движения, президент, вице-президент видят все отчёты
+      else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
+        filteredReports = reportsData || [];
       } 
       else {
         filteredReports = [];
       }
 
+      console.log('📥 Загружено отчётов:', filteredReports.length);
       setAllReports(filteredReports);
       setReports(filteredReports);
 
     } catch (err) {
-      console.error('Ошибка:', err);
+      console.error('Ошибка загрузки:', err);
+      setMessage('❌ Ошибка загрузки отчётов');
+      setMessageType('error');
     } finally {
       setLoading(false);
     }
   };
 
+  // Фильтр по клубу (только для админа и координатора движения)
   const canFilterByClub = profile?.role === 'admin' || profile?.role === 'movement_coordinator' || profile?.role === 'president' || profile?.role === 'vice_president';
 
   useEffect(() => {
@@ -98,7 +120,67 @@ export default function Reports() {
     setLoading(true);
 
     try {
-      setMessage('✅ Отчёт создан!');
+      if (!form.club_id) {
+        setMessage('❌ Выберите клуб');
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
+
+      if (!form.report_month) {
+        setMessage('❌ Выберите месяц отчёта');
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Нет авторизации');
+      }
+
+      const data = {
+        club_id: form.club_id,
+        report_month: form.report_month,
+        report_text: form.report_text || '',
+        events_count: parseInt(form.events_count) || 0,
+        participants_count: parseInt(form.participants_count) || 0
+      };
+
+      console.log('📤 Отправка отчёта:', data);
+
+      let response;
+      let result;
+
+      if (form.id) {
+        // Обновление отчёта
+        response = await fetch(`https://dod-backend.relaxdev.ru/api/reports/${form.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(data)
+        });
+        result = await response.json();
+      } else {
+        // Создание отчёта
+        response = await fetch('https://dod-backend.relaxdev.ru/api/reports', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(data)
+        });
+        result = await response.json();
+      }
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Ошибка сохранения отчёта');
+      }
+
+      setMessage(form.id ? '✅ Отчёт обновлён!' : '✅ Отчёт создан!');
       setMessageType('success');
       setForm({
         id: null,
@@ -112,6 +194,7 @@ export default function Reports() {
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
+      console.error('❌ Ошибка:', err);
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
@@ -119,12 +202,144 @@ export default function Reports() {
     }
   };
 
+  const handleEdit = (report) => {
+    setForm({
+      id: report.id,
+      club_id: report.club_id || '',
+      report_month: report.report_month || '',
+      report_text: report.report_text || report.content || '',
+      events_count: report.events_count || 0,
+      participants_count: report.participants_count || 0
+    });
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Удалить отчёт?')) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/reports/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Ошибка удаления');
+      }
+
+      setMessage('✅ Отчёт удалён');
+      setMessageType('success');
+      loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      console.error('❌ Ошибка:', err);
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
+
+  const handleSubmitReport = async (id) => {
+    if (!confirm('Отправить отчёт на проверку?')) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/reports/${id}/submit`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Ошибка отправки');
+      }
+
+      setMessage('✅ Отчёт отправлен на проверку!');
+      setMessageType('success');
+      loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      console.error('❌ Ошибка:', err);
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
+
+  const handleApproveReport = async (id) => {
+    if (!confirm('Утвердить отчёт?')) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/reports/${id}/approve`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Ошибка утверждения');
+      }
+
+      setMessage('✅ Отчёт утверждён!');
+      setMessageType('success');
+      loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      console.error('❌ Ошибка:', err);
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
+
+  const handleRejectReport = async (id) => {
+    const comment = prompt('Укажите причину отклонения:');
+    if (comment === null) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/reports/${id}/reject`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ comment })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Ошибка отклонения');
+      }
+
+      setMessage('❌ Отчёт отклонён');
+      setMessageType('error');
+      loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      console.error('❌ Ошибка:', err);
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
+
   const getStatusBadge = (status) => {
     const badges = {
-      'draft': { color: '#8A9AAA', bg: '#F4F6F9', label: 'Черновик' },
-      'submitted': { color: '#C9A227', bg: '#FBF4DC', label: 'На проверке' },
-      'approved': { color: '#16845B', bg: '#E8F5EF', label: 'Утверждён' },
-      'rejected': { color: '#B3262E', bg: '#FCEBEC', label: 'Отклонён' }
+      'draft': { color: '#8A9AAA', bg: '#F4F6F9', label: '📝 Черновик' },
+      'submitted': { color: '#C9A227', bg: '#FBF4DC', label: '⏳ На проверке' },
+      'approved': { color: '#16845B', bg: '#E8F5EF', label: '✅ Утверждён' },
+      'rejected': { color: '#B3262E', bg: '#FCEBEC', label: '❌ Отклонён' }
     };
     return badges[status] || badges['draft'];
   };
@@ -166,8 +381,8 @@ export default function Reports() {
             <h1>{isClubCoordinator ? 'Отчёты моего клуба' : 'Отчёты КЮДов'}</h1>
             <p>
               {isClubCoordinator 
-                ? 'Ежемесячные отчёты вашего клуба' 
-                : 'Проверка и утверждение отчётов всех КЮДов'}
+                ? `Ежемесячные отчёты вашего клуба (${reports.length})` 
+                : `Проверка и утверждение отчётов всех КЮДов (${reports.length})`}
             </p>
           </div>
           {canCreate && (
@@ -177,8 +392,8 @@ export default function Reports() {
               onClick={() => {
                 setForm({
                   id: null,
-                  club_id: clubs[0]?.id || '',
-                  report_month: new Date().toISOString().slice(0, 7) + '-01',
+                  club_id: profile?.club_id || '',
+                  report_month: new Date().toISOString().slice(0, 7),
                   report_text: '',
                   events_count: 0,
                   participants_count: 0
@@ -258,7 +473,7 @@ export default function Reports() {
             </h3>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>Клуб</label>
+                <label>Клуб *</label>
                 <select
                   value={form.club_id}
                   onChange={(e) => setForm({ ...form, club_id: e.target.value })}
@@ -272,11 +487,11 @@ export default function Reports() {
               </div>
 
               <div className="form-group">
-                <label>Отчётный месяц</label>
+                <label>Отчётный месяц *</label>
                 <input
                   type="month"
-                  value={form.report_month ? form.report_month.slice(0, 7) : ''}
-                  onChange={(e) => setForm({ ...form, report_month: e.target.value + '-01' })}
+                  value={form.report_month}
+                  onChange={(e) => setForm({ ...form, report_month: e.target.value })}
                   required
                 />
               </div>
@@ -314,7 +529,7 @@ export default function Reports() {
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Сохранение...' : form.id ? '💾 Обновить' : '✅ Сохранить'}
+                  {loading ? '⏳ Сохранение...' : form.id ? '💾 Обновить' : '✅ Создать'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
                   ❌ Отмена
@@ -338,33 +553,138 @@ export default function Reports() {
             <div className="empty-state">
               <div className="icon">📄</div>
               <p>Отчётов пока нет</p>
+              {canCreate && (
+                <p style={{ fontSize: '13px', color: '#98A2B3' }}>
+                  Создайте первый отчёт или используйте шаблон
+                </p>
+              )}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {reports.map((report) => {
                 const status = getStatusBadge(report.status);
+                const isDraft = report.status === 'draft';
+                const isSubmitted = report.status === 'submitted';
+                const isApproved = report.status === 'approved';
+                const isRejected = report.status === 'rejected';
+                
                 return (
                   <div
                     key={report.id}
                     className="list-item"
-                    style={{ borderLeftColor: status.color }}
+                    style={{ 
+                      borderLeftColor: status.color,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#F8FAFC';
+                      e.currentTarget.style.transform = 'translateX(4px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.transform = 'translateX(0)';
+                    }}
                     onClick={() => {
                       setSelectedReport(report);
                       setShowModal(true);
                     }}
                   >
                     <div className="title">
-                      {report.report_month 
-                        ? new Date(report.report_month).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
-                        : 'Отчёт'}
-                    </div>
-                    <div className="subtitle">
-                      🏫 {report.club_name || 'Клуб'} • 📊 Мероприятий: {report.events_count} • 👥 Участников: {report.participants_count}
-                    </div>
-                    <div className="meta">
-                      <span className="tag" style={{ background: status.bg, color: status.color }}>
+                      {report.title || `Отчёт за ${report.report_month || 'неизвестный месяц'}`}
+                      <span className="tag" style={{ background: status.bg, color: status.color, marginLeft: '8px', fontSize: '10px' }}>
                         {status.label}
                       </span>
+                    </div>
+                    <div className="subtitle">
+                      🏫 {report.club_name || 'Клуб'} 
+                      {report.report_month && ` • 📅 ${report.report_month}`}
+                      {report.events_count !== undefined && ` • 📊 ${report.events_count} мероприятий`}
+                      {report.participants_count !== undefined && ` • 👥 ${report.participants_count} участников`}
+                    </div>
+                    {report.created_by_name && (
+                      <div className="meta">👤 Создал: {report.created_by_name}</div>
+                    )}
+                    {report.content && (
+                      <div className="meta">
+                        {report.content.length > 200 ? report.content.substring(0, 200) + '...' : report.content}
+                      </div>
+                    )}
+                    <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <button
+                        className="btn-primary"
+                        style={{ padding: '4px 12px', fontSize: '12px' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedReport(report);
+                          setShowModal(true);
+                        }}
+                      >
+                        👁️ Открыть
+                      </button>
+                      
+                      {canCreate && isDraft && (
+                        <>
+                          <button
+                            className="btn-secondary"
+                            style={{ padding: '4px 12px', fontSize: '12px' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(report);
+                            }}
+                          >
+                            ✏️ Редактировать
+                          </button>
+                          <button
+                            className="btn-primary"
+                            style={{ padding: '4px 12px', fontSize: '12px', background: '#C9A227', color: '#0B1F3A' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSubmitReport(report.id);
+                            }}
+                          >
+                            📤 Отправить
+                          </button>
+                        </>
+                      )}
+                      
+                      {isSubmitted && (profile?.role === 'admin' || profile?.role === 'movement_coordinator' || profile?.role === 'president' || profile?.role === 'vice_president') && (
+                        <>
+                          <button
+                            className="btn-success"
+                            style={{ padding: '4px 12px', fontSize: '12px' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleApproveReport(report.id);
+                            }}
+                          >
+                            ✅ Утвердить
+                          </button>
+                          <button
+                            className="btn-danger"
+                            style={{ padding: '4px 12px', fontSize: '12px' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRejectReport(report.id);
+                            }}
+                          >
+                            ❌ Отклонить
+                          </button>
+                        </>
+                      )}
+                      
+                      {(profile?.role === 'admin' || profile?.role === 'movement_coordinator') && (
+                        <button
+                          className="btn-danger"
+                          style={{ padding: '4px 12px', fontSize: '12px' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(report.id);
+                          }}
+                        >
+                          🗑️ Удалить
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -374,6 +694,7 @@ export default function Reports() {
         </div>
       </div>
 
+      {/* МОДАЛЬНОЕ ОКНО ПРОСМОТРА ОТЧЁТА */}
       {showModal && selectedReport && (
         <div
           style={{
@@ -394,7 +715,15 @@ export default function Reports() {
         >
           <div
             className="card"
-            style={{ maxWidth: '500px', width: '100%', padding: '32px', maxHeight: '80vh', overflow: 'auto', position: 'relative' }}
+            style={{ 
+              maxWidth: '600px', 
+              width: '100%', 
+              padding: '32px', 
+              maxHeight: '80vh', 
+              overflow: 'auto', 
+              position: 'relative',
+              animation: 'modalSlideIn 0.3s ease'
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -407,44 +736,83 @@ export default function Reports() {
             </button>
 
             <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#0B1F3A', marginBottom: '4px' }}>
-              {selectedReport.report_month 
-                ? new Date(selectedReport.report_month).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
-                : 'Отчёт'}
+              {selectedReport.title || `Отчёт за ${selectedReport.report_month || 'неизвестный месяц'}`}
             </h2>
 
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
-              <span style={{ fontSize: '13px', color: '#667085' }}>🏫 {selectedReport.club_name || 'Клуб'}</span>
-              <span className="tag" style={{ background: getStatusBadge(selectedReport.status).bg, color: getStatusBadge(selectedReport.status).color }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+              <span className="tag" style={{ background: '#F4F6F9', color: '#667085' }}>
+                🏫 {selectedReport.club_name || 'Клуб'}
+              </span>
+              {selectedReport.report_month && (
+                <span className="tag" style={{ background: '#F4F6F9', color: '#667085' }}>
+                  📅 {selectedReport.report_month}
+                </span>
+              )}
+              <span className="tag" style={{ 
+                background: getStatusBadge(selectedReport.status).bg, 
+                color: getStatusBadge(selectedReport.status).color 
+              }}>
                 {getStatusBadge(selectedReport.status).label}
               </span>
             </div>
 
-            {selectedReport.report_text && (
-              <div style={{ padding: '16px', background: '#F8FAFC', borderRadius: '8px' }}>
-                <p style={{ fontSize: '14px', color: '#667085', lineHeight: '1.6', margin: 0 }}>
-                  {selectedReport.report_text}
+            {selectedReport.content && (
+              <div style={{ 
+                padding: '16px', 
+                background: '#F8FAFC', 
+                borderRadius: '8px',
+                border: '1px solid #E2E7EF',
+                marginBottom: '12px',
+                maxHeight: '200px',
+                overflow: 'auto',
+                whiteSpace: 'pre-wrap'
+              }}>
+                <p style={{ fontSize: '14px', color: '#0B1F3A', lineHeight: '1.6', margin: 0 }}>
+                  {selectedReport.content}
                 </p>
               </div>
             )}
 
-            <div className="grid-2" style={{ marginTop: '16px' }}>
+            <div className="grid-2" style={{ marginBottom: '12px' }}>
               <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
                 <div style={{ fontSize: '24px', fontWeight: '700', color: '#0B1F3A' }}>
-                  {selectedReport.events_count}
+                  {selectedReport.events_count || 0}
                 </div>
                 <div style={{ fontSize: '12px', color: '#98A2B3' }}>Мероприятий</div>
               </div>
               <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
                 <div style={{ fontSize: '24px', fontWeight: '700', color: '#0B1F3A' }}>
-                  {selectedReport.participants_count}
+                  {selectedReport.participants_count || 0}
                 </div>
                 <div style={{ fontSize: '12px', color: '#98A2B3' }}>Участников</div>
               </div>
             </div>
 
+            {selectedReport.created_by_name && (
+              <div style={{ fontSize: '13px', color: '#98A2B3', marginBottom: '12px' }}>
+                👤 Создал: {selectedReport.created_by_name}
+                {selectedReport.created_at && ` • 📅 ${new Date(selectedReport.created_at).toLocaleDateString('ru-RU')}`}
+              </div>
+            )}
+
+            {selectedReport.reviewer_comment && (
+              <div style={{ 
+                padding: '12px', 
+                background: '#FCEBEC', 
+                borderRadius: '8px',
+                marginBottom: '12px',
+                border: '1px solid #FED7D7'
+              }}>
+                <strong style={{ color: '#B3262E' }}>💬 Причина отклонения:</strong>
+                <p style={{ color: '#B3262E', margin: '4px 0 0 0', fontSize: '14px' }}>
+                  {selectedReport.reviewer_comment}
+                </p>
+              </div>
+            )}
+
             <button
               className="btn-secondary"
-              style={{ width: '100%', marginTop: '16px' }}
+              style={{ width: '100%', marginTop: '8px' }}
               onClick={() => setShowModal(false)}
             >
               Закрыть
@@ -452,6 +820,19 @@ export default function Reports() {
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes modalSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+      `}</style>
     </div>
   );
 }

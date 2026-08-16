@@ -2277,20 +2277,61 @@ app.post('/api/reports', authenticate, async (req, res) => {
   }
 });
 
+// ============================================================
+// ОТПРАВКА ОТЧЁТА НА ПРОВЕРКУ С УВЕДОМЛЕНИЕМ
+// ============================================================
 app.patch('/api/reports/:id/submit', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.userId;
+    const userRole = req.user.role;
 
     const check = await pool.query('SELECT * FROM reports WHERE id = $1', [id]);
     if (check.rows.length === 0) {
       return res.status(404).json({ error: 'Отчёт не найден' });
     }
 
+    const report = check.rows[0];
+
+    if (report.status !== 'draft') {
+      return res.status(400).json({ error: 'Отчёт уже отправлен' });
+    }
+
+    // Обновляем статус
     const result = await pool.query(
-      `UPDATE reports SET status = 'submitted', submitted_by = $1, submitted_at = NOW(), updated_at = NOW() WHERE id = $2 RETURNING *`,
+      `UPDATE reports SET status = 'submitted', submitted_by = $1, submitted_at = NOW(), updated_at = NOW() 
+       WHERE id = $2 RETURNING *`,
       [userId, id]
     );
+
+    // ============================================================
+    // УВЕДОМЛЕНИЕ: ОТПРАВЛЕН НА ПРОВЕРКУ
+    // ============================================================
+    // Уведомляем автора
+    await createNotification(
+      userId,
+      'report',
+      '📤 Отчёт отправлен на проверку',
+      `Вы отправили отчёт "${result.rows[0].title}" на проверку`,
+      '/reports',
+      'normal'
+    );
+
+    // Уведомляем администраторов и координаторов движения
+    const admins = await pool.query(
+      "SELECT id FROM users WHERE role IN ('admin', 'movement_coordinator', 'president', 'vice_president')"
+    );
+    const clubName = await getClubName(report.club_id);
+    for (const admin of admins.rows) {
+      await createNotification(
+        admin.id,
+        'report',
+        '📤 Новый отчёт на проверку',
+        `Отчёт "${result.rows[0].title}" (${clubName}) отправлен на проверку`,
+        '/reports',
+        'high'
+      );
+    }
 
     res.json(result.rows[0]);
   } catch (error) {
@@ -2299,6 +2340,9 @@ app.patch('/api/reports/:id/submit', authenticate, async (req, res) => {
   }
 });
 
+// ============================================================
+// УТВЕРЖДЕНИЕ ОТЧЁТА С УВЕДОМЛЕНИЕМ
+// ============================================================
 app.patch('/api/reports/:id/approve', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
@@ -2309,10 +2353,55 @@ app.patch('/api/reports/:id/approve', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'У вас нет прав для утверждения отчётов' });
     }
 
+    const check = await pool.query('SELECT * FROM reports WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Отчёт не найден' });
+    }
+
+    const report = check.rows[0];
+
+    if (report.status !== 'submitted') {
+      return res.status(400).json({ error: 'Отчёт не ожидает проверки' });
+    }
+
     const result = await pool.query(
-      `UPDATE reports SET status = 'approved', approved_by = $1, approved_at = NOW(), updated_at = NOW() WHERE id = $2 RETURNING *`,
+      `UPDATE reports SET status = 'approved', approved_by = $1, approved_at = NOW(), updated_at = NOW() 
+       WHERE id = $2 RETURNING *`,
       [userId, id]
     );
+
+    // ============================================================
+    // УВЕДОМЛЕНИЕ: ОТЧЁТ УТВЕРЖДЁН
+    // ============================================================
+    // Уведомляем автора
+    if (report.created_by) {
+      await createNotification(
+        report.created_by,
+        'report',
+        '✅ Отчёт утверждён',
+        `Ваш отчёт "${result.rows[0].title}" утверждён!`,
+        '/reports',
+        'high'
+      );
+    }
+
+    // Уведомляем координаторов клуба
+    const coordinators = await pool.query(
+      'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
+      [report.club_id]
+    );
+    for (const coord of coordinators.rows) {
+      if (coord.profile_id !== report.created_by && coord.profile_id !== userId) {
+        await createNotification(
+          coord.profile_id,
+          'report',
+          '✅ Отчёт утверждён',
+          `Отчёт "${result.rows[0].title}" утверждён!`,
+          '/reports',
+          'normal'
+        );
+      }
+    }
 
     res.json(result.rows[0]);
   } catch (error) {
@@ -2321,6 +2410,9 @@ app.patch('/api/reports/:id/approve', authenticate, async (req, res) => {
   }
 });
 
+// ============================================================
+// ОТКЛОНЕНИЕ ОТЧЁТА С УВЕДОМЛЕНИЕМ
+// ============================================================
 app.patch('/api/reports/:id/reject', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
@@ -2332,10 +2424,36 @@ app.patch('/api/reports/:id/reject', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'У вас нет прав для отклонения отчётов' });
     }
 
+    const check = await pool.query('SELECT * FROM reports WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Отчёт не найден' });
+    }
+
+    const report = check.rows[0];
+
+    if (report.status !== 'submitted') {
+      return res.status(400).json({ error: 'Отчёт не ожидает проверки' });
+    }
+
     const result = await pool.query(
-      `UPDATE reports SET status = 'rejected', approved_by = $1, approved_at = NOW(), reviewer_comment = $2, updated_at = NOW() WHERE id = $3 RETURNING *`,
+      `UPDATE reports SET status = 'rejected', approved_by = $1, approved_at = NOW(), 
+       reviewer_comment = $2, updated_at = NOW() WHERE id = $3 RETURNING *`,
       [userId, comment || 'Без комментария', id]
     );
+
+    // ============================================================
+    // УВЕДОМЛЕНИЕ: ОТЧЁТ ОТКЛОНЁН
+    // ============================================================
+    if (report.created_by) {
+      await createNotification(
+        report.created_by,
+        'report',
+        '❌ Отчёт отклонён',
+        `Ваш отчёт "${result.rows[0].title}" отклонён. Причина: ${comment || 'Без комментария'}`,
+        '/reports',
+        'high'
+      );
+    }
 
     res.json(result.rows[0]);
   } catch (error) {
@@ -3059,6 +3177,227 @@ app.post('/api/create-test-user', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// ГЕНЕРАЦИЯ ОТЧЁТА ИЗ ШАБЛОНА С ДИНАМИЧЕСКИМИ ДАННЫМИ
+// ============================================================
+
+import { 
+  collectReportData, 
+  replacePlaceholders, 
+  exportToPDF, 
+  exportToDOCX, 
+  exportToHTML, 
+  exportToCSV 
+} from './lib/reportGenerator.js';
+
+// Инициализируем генератор отчётов
+initReportGenerator(pool);
+
+app.post('/api/reports/generate/:templateId', authenticate, async (req, res) => {
+  try {
+    const { templateId } = req.params;
+    const { club_id, report_month, format = 'html' } = req.body;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+
+    console.log('📊 ГЕНЕРАЦИЯ ОТЧЁТА:');
+    console.log(`  📋 Шаблон: ${templateId}`);
+    console.log(`  🏫 Клуб: ${club_id}`);
+    console.log(`  📅 Месяц: ${report_month}`);
+    console.log(`  📄 Формат: ${format}`);
+    console.log(`  👤 Пользователь: ${userId}`);
+
+    if (!club_id) {
+      return res.status(400).json({ error: 'Выберите клуб' });
+    }
+
+    if (!report_month) {
+      return res.status(400).json({ error: 'Выберите месяц отчёта' });
+    }
+
+    const monthRegex = /^\d{4}-\d{2}$/;
+    if (!monthRegex.test(report_month)) {
+      return res.status(400).json({ error: 'Неверный формат месяца. Используйте YYYY-MM' });
+    }
+
+    // Проверка прав
+    if (userRole === 'club_coordinator') {
+      const clubCheck = await pool.query(
+        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
+        [userId, club_id]
+      );
+      if (clubCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'У вас нет доступа к этому клубу' });
+      }
+    }
+
+    // Получаем шаблон
+    const templateResult = await pool.query(
+      'SELECT * FROM report_templates WHERE id = $1',
+      [templateId]
+    );
+    if (templateResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Шаблон не найден' });
+    }
+    const template = templateResult.rows[0];
+
+    // Собираем данные
+    const reportData = await collectReportData(club_id, report_month);
+
+    // Заменяем плейсхолдеры
+    const content = replacePlaceholders(template.template_data, reportData);
+
+    // Создаём отчёт в БД
+    const reportResult = await pool.query(
+      `INSERT INTO reports (club_id, created_by, title, content, report_month, status, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, 'draft', NOW(), NOW()) RETURNING *`,
+      [club_id, userId, `Отчёт за ${reportData.report_month_name}`, content, report_month]
+    );
+
+    const report = reportResult.rows[0];
+
+    // ============================================================
+    // УВЕДОМЛЕНИЕ: ОТЧЁТ СОЗДАН
+    // ============================================================
+    await createNotification(
+      userId,
+      'report',
+      '📝 Отчёт создан',
+      `Вы создали отчёт "${report.title}"`,
+      '/reports',
+      'normal'
+    );
+
+    // Уведомляем координаторов клуба
+    const coordinators = await pool.query(
+      'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
+      [club_id]
+    );
+    for (const coord of coordinators.rows) {
+      if (coord.profile_id !== userId) {
+        await createNotification(
+          coord.profile_id,
+          'report',
+          '📝 Новый отчёт в клубе',
+          `В вашем клубе создан отчёт "${report.title}"`,
+          '/reports',
+          'normal'
+        );
+      }
+    }
+
+    // ============================================================
+    // ЭКСПОРТ В ВЫБРАННОМ ФОРМАТЕ
+    // ============================================================
+    let resultData = { report, content };
+
+    switch (format) {
+      case 'pdf':
+        const pdfBuffer = await exportToPDF(content, report.title);
+        resultData = { report, content, pdfBuffer };
+        break;
+      case 'docx':
+        const docxBuffer = await exportToDOCX(content, report.title);
+        resultData = { report, content, docxBuffer };
+        break;
+      case 'html':
+        const html = exportToHTML(content, report.title);
+        resultData = { report, content, html };
+        break;
+      case 'csv':
+        const csv = exportToCSV(reportData, report.title);
+        resultData = { report, content, csv };
+        break;
+      default:
+        // JSON — возвращаем данные
+        resultData = { report, content, data: reportData };
+    }
+
+    res.status(201).json(resultData);
+
+  } catch (error) {
+    console.error('❌ Ошибка генерации отчёта:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// ЭКСПОРТ ОТЧЁТА В ФАЙЛ
+// ============================================================
+app.get('/api/reports/:id/export/:format', authenticate, async (req, res) => {
+  try {
+    const { id, format } = req.params;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+
+    console.log(`📤 ЭКСПОРТ ОТЧЁТА ${id} в ${format}`);
+
+    // Проверяем, что отчёт существует
+    const reportResult = await pool.query(
+      `SELECT r.*, c.name as club_name FROM reports r 
+       LEFT JOIN clubs c ON r.club_id = c.id 
+       WHERE r.id = $1`,
+      [id]
+    );
+    if (reportResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Отчёт не найден' });
+    }
+    const report = reportResult.rows[0];
+
+    // Проверка прав
+    if (userRole === 'club_coordinator') {
+      const clubCheck = await pool.query(
+        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
+        [userId, report.club_id]
+      );
+      if (clubCheck.rows.length === 0 && report.created_by !== userId) {
+        return res.status(403).json({ error: 'У вас нет доступа к этому отчёту' });
+      }
+    }
+
+    // Собираем данные для отчёта (если нужно)
+    const reportData = await collectReportData(report.club_id, report.report_month);
+    const content = replacePlaceholders(report.content, reportData);
+
+    switch (format.toLowerCase()) {
+      case 'pdf':
+        const pdfBuffer = await exportToPDF(content, report.title);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${report.title}.pdf"`);
+        res.send(pdfBuffer);
+        break;
+
+      case 'docx':
+        const docxBuffer = await exportToDOCX(content, report.title);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.setHeader('Content-Disposition', `attachment; filename="${report.title}.docx"`);
+        res.send(docxBuffer);
+        break;
+
+      case 'html':
+        const html = exportToHTML(content, report.title);
+        res.setHeader('Content-Type', 'text/html');
+        res.setHeader('Content-Disposition', `attachment; filename="${report.title}.html"`);
+        res.send(html);
+        break;
+
+      case 'csv':
+        const csv = exportToCSV(reportData, report.title);
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${report.title}.csv"`);
+        res.send(csv);
+        break;
+
+      default:
+        return res.status(400).json({ error: 'Неизвестный формат экспорта. Доступно: pdf, docx, html, csv' });
+    }
+
+  } catch (error) {
+    console.error('❌ Ошибка экспорта отчёта:', error);
     res.status(500).json({ error: error.message });
   }
 });

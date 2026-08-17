@@ -20,11 +20,9 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   // ============================================================
-  // ЕДИНОЕ МЕНЮ (ОБЩЕЕ С НАВИГАЦИЕЙ)
+  // ЕДИНОЕ МЕНЮ
   // ============================================================
   const menuItems = useMenuItems(profile);
-
-  // Вкладки — это те же пункты меню
   const tabs = menuItems;
 
   useEffect(() => {
@@ -55,7 +53,7 @@ export default function Dashboard() {
           achievements: achievements.length || 0,
         });
 
-        // Если активная вкладка не существует в меню — сбрасываем на дашборд
+        // Если активная вкладка не существует — сбрасываем
         const tabExists = tabs.some(t => t.id === activeTab);
         if (!tabExists && tabs.length > 0) {
           setActiveTab(tabs[0].id);
@@ -83,70 +81,102 @@ export default function Dashboard() {
   // РЕНДЕР КОНТЕНТА ВКЛАДКИ
   // ============================================================
   const renderTabContent = () => {
+    // Находим активную вкладку
+    const activeTabData = tabs.find(t => t.id === activeTab);
+
     // Если вкладка не найдена — показываем общий контент
+    if (!activeTabData) {
+      return renderOverview();
+    }
+
+    // Для каждой вкладки — ссылка на соответствующую страницу
     return (
       <div className="dashboard-tab-content">
-        <div className="dashboard-profile-card">
-          <h3 className="dashboard-section-title">Ваш профиль</h3>
-          <div className="dashboard-profile-info">
-            <div className="profile-info-item">
-              <span className="profile-info-label">Email</span>
-              <span className="profile-info-value">{profile?.email}</span>
-            </div>
-            <div className="profile-info-item">
-              <span className="profile-info-label">Роль</span>
-              <span className="profile-info-value">{profile?.role}</span>
-            </div>
-            <div className="profile-info-item">
-              <span className="profile-info-label">Статус</span>
-              <span className="profile-info-value badge badge-active">Активен</span>
-            </div>
-            {profile?.club_name && (
-              <div className="profile-info-item">
-                <span className="profile-info-label">КЮД</span>
-                <span className="profile-info-value">{profile.club_name}</span>
-              </div>
-            )}
+        <div className="dashboard-tab-page">
+          <div className="flex-between mb-2">
+            <h3 className="dashboard-section-title">{activeTabData.label}</h3>
+            <Link to={activeTabData.path} className="btn btn-primary btn-sm">
+              Перейти →
+            </Link>
           </div>
-        </div>
-
-        <div className="dashboard-grid-2">
           <div className="card">
-            <h4 className="card-title">Статистика</h4>
-            <div className="dashboard-mini-stats">
-              <div>
-                <span className="stat-number" style={{ fontSize: '24px' }}>{stats.events}</span>
-                <span className="stat-label">Мероприятий</span>
-              </div>
-              <div>
-                <span className="stat-number" style={{ fontSize: '24px' }}>{stats.participants}</span>
-                <span className="stat-label">Участников</span>
-              </div>
-              <div>
-                <span className="stat-number" style={{ fontSize: '24px' }}>{stats.achievements}</span>
-                <span className="stat-label">Достижений</span>
-              </div>
-              <div>
-                <span className="stat-number" style={{ fontSize: '24px' }}>{stats.clubs}</span>
-                <span className="stat-label">Клубов</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <h4 className="card-title">Быстрый доступ</h4>
-            <div className="quick-actions-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              {tabs.slice(0, 6).map((tab) => (
-                <Link key={tab.id} to={tab.path} className="quick-action-card" style={{ padding: '12px', minHeight: '60px' }}>
-                  <span className="label" style={{ fontSize: '12px' }}>{tab.label}</span>
-                </Link>
-              ))}
-            </div>
+            <p className="text-muted" style={{ marginBottom: '16px' }}>
+              Перейдите на страницу «{activeTabData.label}» для полного доступа
+            </p>
+            <Link to={activeTabData.path} className="btn btn-gold">
+              Открыть {activeTabData.label.toLowerCase()}
+            </Link>
           </div>
         </div>
       </div>
     );
   };
+
+  // ============================================================
+  // ОБЗОР (ГЛАВНАЯ СТРАНИЦА ДАШБОРДА)
+  // ============================================================
+  const renderOverview = () => (
+    <div className="dashboard-tab-content">
+      <div className="dashboard-profile-card">
+        <h3 className="dashboard-section-title">Ваш профиль</h3>
+        <div className="dashboard-profile-info">
+          <div className="profile-info-item">
+            <span className="profile-info-label">Email</span>
+            <span className="profile-info-value">{profile?.email}</span>
+          </div>
+          <div className="profile-info-item">
+            <span className="profile-info-label">Роль</span>
+            <span className="profile-info-value">{profile?.role}</span>
+          </div>
+          <div className="profile-info-item">
+            <span className="profile-info-label">Статус</span>
+            <span className="profile-info-value badge badge-active">Активен</span>
+          </div>
+          {profile?.club_name && (
+            <div className="profile-info-item">
+              <span className="profile-info-label">КЮД</span>
+              <span className="profile-info-value">{profile.club_name}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="dashboard-grid-2">
+        <div className="card">
+          <h4 className="card-title">Статистика</h4>
+          <div className="dashboard-mini-stats">
+            <div>
+              <span className="stat-number" style={{ fontSize: '24px' }}>{stats.events}</span>
+              <span className="stat-label">Мероприятий</span>
+            </div>
+            <div>
+              <span className="stat-number" style={{ fontSize: '24px' }}>{stats.participants}</span>
+              <span className="stat-label">Участников</span>
+            </div>
+            <div>
+              <span className="stat-number" style={{ fontSize: '24px' }}>{stats.achievements}</span>
+              <span className="stat-label">Достижений</span>
+            </div>
+            <div>
+              <span className="stat-number" style={{ fontSize: '24px' }}>{stats.clubs}</span>
+              <span className="stat-label">Клубов</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <h4 className="card-title">Быстрый доступ</h4>
+          <div className="quick-actions-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            {tabs.slice(0, 6).map((tab) => (
+              <Link key={tab.id} to={tab.path} className="quick-action-card" style={{ padding: '12px', minHeight: '60px' }}>
+                <span className="label" style={{ fontSize: '12px' }}>{tab.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   // ============================================================
   // ОСНОВНОЙ РЕНДЕР
@@ -184,7 +214,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ВКЛАДКИ — ТЕ ЖЕ, ЧТО И В НАВИГАЦИИ */}
+      {/* ВКЛАДКИ */}
       <div className="dashboard-tabs">
         {tabs.map((tab) => (
           <button
@@ -351,6 +381,10 @@ export default function Dashboard() {
           width: 100%;
         }
 
+        .dashboard-tab-page {
+          width: 100%;
+        }
+
         .dashboard-section-title {
           font-family: 'Playfair Display', serif;
           font-size: 20px;
@@ -491,6 +525,66 @@ export default function Dashboard() {
           color: #A8A29A;
         }
 
+        .flex-between {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .mb-2 {
+          margin-bottom: 16px;
+        }
+
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 10px 22px;
+          border: none;
+          border-radius: 8px;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          text-decoration: none;
+          letter-spacing: 0.01em;
+          min-height: 40px;
+          min-width: 80px;
+          white-space: nowrap;
+        }
+
+        .btn-primary {
+          background: #0A1628;
+          color: white;
+          box-shadow: 0 4px 16px rgba(10,22,40,0.15);
+        }
+        .btn-primary:hover {
+          background: #1A3555;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(10,22,40,0.25);
+        }
+
+        .btn-gold {
+          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
+          color: #0A1628;
+          box-shadow: 0 2px 16px rgba(201, 162, 39, 0.25);
+        }
+        .btn-gold:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
+        }
+
+        .btn-sm {
+          padding: 6px 14px;
+          font-size: 12px;
+          min-height: 32px;
+          min-width: 60px;
+        }
+
         /* ============================================================
            АДАПТИВНОСТЬ
            ============================================================ */
@@ -595,6 +689,19 @@ export default function Dashboard() {
 
           .quick-actions-grid {
             grid-template-columns: repeat(2, 1fr);
+          }
+
+          .btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            min-height: 32px;
+            min-width: 50px;
+          }
+          .btn-sm {
+            padding: 4px 10px;
+            font-size: 11px;
+            min-height: 26px;
+            min-width: 40px;
           }
         }
       `}</style>

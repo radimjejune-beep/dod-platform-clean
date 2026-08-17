@@ -2,11 +2,14 @@
 
 const API_URL = 'https://dod-backend.relaxdev.ru/api';
 
-// ✅ ПРОСТОЙ ПОЛУЧЕНИЕ ТОКЕНА
+// ============================================================
+// ТОКЕН
+// ============================================================
 const getToken = () => {
   return localStorage.getItem('token');
 };
 
+// ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 const headers = () => ({
   'Content-Type': 'application/json',
   ...(getToken() && { Authorization: `Bearer ${getToken()}` })
@@ -15,30 +18,6 @@ const headers = () => ({
 // ============================================================
 // 1. АУТЕНТИФИКАЦИЯ
 // ============================================================
-export const getMe = async () => {
-  const token = getToken();
-  if (!token) throw new Error('Нет токена');
-  
-  const response = await fetch(`${API_URL}/me`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    }
-  });
-  
-  if (!response.ok) {
-    if (response.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
-    throw new Error(`Ошибка ${response.status}`);
-  }
-  
-  return response.json();
-};
-
 export const login = async (email, password) => {
   const response = await fetch(`${API_URL}/login`, {
     method: 'POST',
@@ -64,6 +43,39 @@ export const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   window.location.href = '/login';
+};
+
+export const getMe = async () => {
+  const token = getToken();
+  if (!token) throw new Error('Нет токена');
+  
+  const response = await fetch(`${API_URL}/me`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    throw new Error(`Ошибка ${response.status}`);
+  }
+  
+  return response.json();
+};
+
+export const changePassword = async (data) => {
+  const response = await fetch(`${API_URL}/change-password`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
 };
 
 // ============================================================
@@ -95,6 +107,58 @@ export const getParticipants = async () => {
   return response.json();
 };
 
+export const createUser = async (data) => {
+  const response = await fetch(`${API_URL}/users`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateUser = async (userId, data) => {
+  const response = await fetch(`${API_URL}/users/${userId}`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteUser = async (userId) => {
+  const response = await fetch(`${API_URL}/users/${userId}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const resetUserPassword = async (userId) => {
+  const response = await fetch(`${API_URL}/users/${userId}/reset-password`, {
+    method: 'POST',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const assignUserToClub = async (userId, clubId) => {
+  const response = await fetch(`${API_URL}/users/${userId}/assign-club`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ club_id: clubId })
+  });
+  return response.json();
+};
+
+export const updateProfile = async (data) => {
+  const response = await fetch(`${API_URL}/profile`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
 // ============================================================
 // 3. КЛУБЫ
 // ============================================================
@@ -111,6 +175,23 @@ export const getClubs = async () => {
   return response.json();
 };
 
+export const setClubPresident = async (clubId, presidentId) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/president`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ president_id: presidentId })
+  });
+  return response.json();
+};
+
+export const getClubPresident = async (clubId) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/president`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
 // ============================================================
 // 4. ДОСТИЖЕНИЯ
 // ============================================================
@@ -124,6 +205,31 @@ export const getAchievements = async () => {
   });
   
   if (!response.ok) return [];
+  return response.json();
+};
+
+export const addAchievement = async (data) => {
+  const response = await fetch(`${API_URL}/achievements`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteAchievement = async (id) => {
+  const response = await fetch(`${API_URL}/achievements/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const getAchievementCategories = async () => {
+  const response = await fetch(`${API_URL}/achievement-categories`, {
+    method: 'GET',
+    headers: headers()
+  });
   return response.json();
 };
 
@@ -153,8 +259,54 @@ export const getEvents = async () => {
   }
 };
 
+export const createEvent = async (data) => {
+  const response = await fetch(`${API_URL}/events`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateEvent = async (id, data) => {
+  const response = await fetch(`${API_URL}/events/${id}`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteEvent = async (id) => {
+  const response = await fetch(`${API_URL}/events/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
 // ============================================================
-// 6. ОБРАЩЕНИЯ
+// 6. РЕГИСТРАЦИИ
+// ============================================================
+export const getRegistrations = async () => {
+  const response = await fetch(`${API_URL}/registrations`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const addRegistration = async (data) => {
+  const response = await fetch(`${API_URL}/registrations`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+// ============================================================
+// 7. ОБРАЩЕНИЯ
 // ============================================================
 export const getAppeals = async () => {
   const token = getToken();
@@ -169,14 +321,40 @@ export const getAppeals = async () => {
   return response.json();
 };
 
+export const addAppeal = async (data) => {
+  const response = await fetch(`${API_URL}/appeals`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const replyToAppeal = async (appealId, data) => {
+  const response = await fetch(`${API_URL}/appeals/${appealId}/reply`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const getAppealReplies = async (appealId) => {
+  const response = await fetch(`${API_URL}/appeals/${appealId}/replies`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
 // ============================================================
-// 7. ЗАПРОСЫ НА ТЬЮТОРОВ
+// 8. ОТЧЁТЫ
 // ============================================================
-export const getTutorRequests = async () => {
+export const getReports = async () => {
   const token = getToken();
   if (!token) return [];
   
-  const response = await fetch(`${API_URL}/tutor-requests`, {
+  const response = await fetch(`${API_URL}/reports`, {
     method: 'GET',
     headers: headers()
   });
@@ -185,8 +363,59 @@ export const getTutorRequests = async () => {
   return response.json();
 };
 
+export const createReport = async (data) => {
+  const response = await fetch(`${API_URL}/reports`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateReport = async (id, data) => {
+  const response = await fetch(`${API_URL}/reports/${id}`, {
+    method: 'PUT',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteReport = async (id) => {
+  const response = await fetch(`${API_URL}/reports/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const submitReport = async (id) => {
+  const response = await fetch(`${API_URL}/reports/${id}/submit`, {
+    method: 'PATCH',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const approveReport = async (id) => {
+  const response = await fetch(`${API_URL}/reports/${id}/approve`, {
+    method: 'PATCH',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const rejectReport = async (id, comment) => {
+  const response = await fetch(`${API_URL}/reports/${id}/reject`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ comment })
+  });
+  return response.json();
+};
+
 // ============================================================
-// 8. ДОКУМЕНТЫ
+// 9. ДОКУМЕНТЫ
 // ============================================================
 export const getDocuments = async () => {
   const token = getToken();
@@ -201,19 +430,20 @@ export const getDocuments = async () => {
   return response.json();
 };
 
-// ============================================================
-// 9. ОТЧЁТЫ
-// ============================================================
-export const getReports = async () => {
-  const token = getToken();
-  if (!token) return [];
-  
-  const response = await fetch(`${API_URL}/reports`, {
-    method: 'GET',
+export const createDocument = async (data) => {
+  const response = await fetch(`${API_URL}/documents`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteDocument = async (id) => {
+  const response = await fetch(`${API_URL}/documents/${id}`, {
+    method: 'DELETE',
     headers: headers()
   });
-  
-  if (!response.ok) return [];
   return response.json();
 };
 
@@ -233,6 +463,32 @@ export const getNews = async () => {
   return response.json();
 };
 
+export const createNews = async (data) => {
+  const response = await fetch(`${API_URL}/news`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateNews = async (id, data) => {
+  const response = await fetch(`${API_URL}/news/${id}`, {
+    method: 'PUT',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteNews = async (id) => {
+  const response = await fetch(`${API_URL}/news/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
 // ============================================================
 // 11. УВЕДОМЛЕНИЯ
 // ============================================================
@@ -246,6 +502,22 @@ export const getNotifications = async () => {
   });
   
   if (!response.ok) return [];
+  return response.json();
+};
+
+export const markNotificationRead = async (id) => {
+  const response = await fetch(`${API_URL}/notifications/${id}/read`, {
+    method: 'PATCH',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const markAllNotificationsRead = async () => {
+  const response = await fetch(`${API_URL}/notifications/read-all`, {
+    method: 'PATCH',
+    headers: headers()
+  });
   return response.json();
 };
 
@@ -265,6 +537,14 @@ export const getParticipantStats = async (userId) => {
   return response.json();
 };
 
+export const getParticipantEvents = async (userId) => {
+  const response = await fetch(`${API_URL}/participant-events/${userId}`, {
+    method: 'GET',
+    headers: headers()
+  });
+  return response.json();
+};
+
 // ============================================================
 // 13. ПРЕЗИДЕНТ
 // ============================================================
@@ -281,8 +561,244 @@ export const getPresidentTasks = async () => {
   return response.json();
 };
 
+export const createPresidentTask = async (data) => {
+  const response = await fetch(`${API_URL}/president-tasks`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const respondToPresidentTask = async (id, response) => {
+  const result = await fetch(`${API_URL}/president-tasks/${id}/respond`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ response })
+  });
+  return result.json();
+};
+
 // ============================================================
-// 14. АКТИВНОСТЬ
+// 14. ЗАПРОСЫ НА ТЬЮТОРОВ
+// ============================================================
+export const getTutorRequests = async () => {
+  const token = getToken();
+  if (!token) return [];
+  
+  const response = await fetch(`${API_URL}/tutor-requests`, {
+    method: 'GET',
+    headers: headers()
+  });
+  
+  if (!response.ok) return [];
+  return response.json();
+};
+
+export const createTutorRequest = async (data) => {
+  const response = await fetch(`${API_URL}/tutor-requests`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateTutorRequest = async (id, data) => {
+  const response = await fetch(`${API_URL}/tutor-requests/${id}`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+// ============================================================
+// 15. ТЬЮТОР НАЗНАЧЕНИЯ
+// ============================================================
+export const getTutorAssignments = async () => {
+  const token = getToken();
+  if (!token) return [];
+  
+  const response = await fetch(`${API_URL}/event-tutor-assignments`, {
+    method: 'GET',
+    headers: headers()
+  });
+  
+  if (!response.ok) return [];
+  return response.json();
+};
+
+export const respondToAssignment = async (assignmentId, status) => {
+  const response = await fetch(`${API_URL}/event-tutor-assignments/${assignmentId}`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ status })
+  });
+  return response.json();
+};
+
+// ============================================================
+// 16. ТЬЮТОР ИНВАЙТЫ
+// ============================================================
+export const getTutorInvitations = async () => {
+  const token = getToken();
+  if (!token) return [];
+  
+  const response = await fetch(`${API_URL}/tutor-invitations`, {
+    method: 'GET',
+    headers: headers()
+  });
+  
+  if (!response.ok) return [];
+  return response.json();
+};
+
+export const createTutorInvitation = async (data) => {
+  const response = await fetch(`${API_URL}/tutor-invitations`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const respondToTutorInvitation = async (invitationId, status) => {
+  const response = await fetch(`${API_URL}/tutor-invitations/${invitationId}/respond`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ status })
+  });
+  return response.json();
+};
+
+export const cancelTutorInvitation = async (invitationId) => {
+  const response = await fetch(`${API_URL}/tutor-invitations/${invitationId}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
+// 17. МАССОВЫЕ УВЕДОМЛЕНИЯ
+// ============================================================
+export const getMassNotifications = async () => {
+  const token = getToken();
+  if (!token) return [];
+  
+  const response = await fetch(`${API_URL}/mass-notifications`, {
+    method: 'GET',
+    headers: headers()
+  });
+  
+  if (!response.ok) return [];
+  return response.json();
+};
+
+export const createMassNotification = async (data) => {
+  const response = await fetch(`${API_URL}/mass-notifications`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteMassNotification = async (id) => {
+  const response = await fetch(`${API_URL}/mass-notifications/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
+// 18. ЦЕЛИ И KPI
+// ============================================================
+export const getGoals = async () => {
+  const token = getToken();
+  if (!token) return [];
+  
+  const response = await fetch(`${API_URL}/goals`, {
+    method: 'GET',
+    headers: headers()
+  });
+  
+  if (!response.ok) return [];
+  return response.json();
+};
+
+export const createGoal = async (data) => {
+  const response = await fetch(`${API_URL}/goals`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateGoal = async (id, data) => {
+  const response = await fetch(`${API_URL}/goals/${id}`, {
+    method: 'PUT',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteGoal = async (id) => {
+  const response = await fetch(`${API_URL}/goals/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
+// 19. ЗАДАЧИ
+// ============================================================
+export const getTasks = async () => {
+  const token = getToken();
+  if (!token) return [];
+  
+  const response = await fetch(`${API_URL}/tasks`, {
+    method: 'GET',
+    headers: headers()
+  });
+  
+  if (!response.ok) return [];
+  return response.json();
+};
+
+export const createTask = async (data) => {
+  const response = await fetch(`${API_URL}/tasks`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateTask = async (id, data) => {
+  const response = await fetch(`${API_URL}/tasks/${id}`, {
+    method: 'PUT',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteTask = async (id) => {
+  const response = await fetch(`${API_URL}/tasks/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
+// 20. АКТИВНОСТЬ
 // ============================================================
 export const getActivityLog = async (params = {}) => {
   const token = getToken();
@@ -301,7 +817,7 @@ export const getActivityLog = async (params = {}) => {
 };
 
 // ============================================================
-// 15. СОГЛАСИЯ
+// 21. СОГЛАСИЯ
 // ============================================================
 export const getConsentsStats = async (clubId = null) => {
   const token = getToken();
@@ -317,14 +833,12 @@ export const getConsentsStats = async (clubId = null) => {
   return response.json();
 };
 
-// ============================================================
-// 16. МАССОВЫЕ УВЕДОМЛЕНИЯ
-// ============================================================
-export const getMassNotifications = async () => {
+export const getConsentsMissing = async (clubId = null) => {
   const token = getToken();
   if (!token) return [];
   
-  const response = await fetch(`${API_URL}/mass-notifications`, {
+  const url = clubId ? `${API_URL}/consents-missing?club_id=${clubId}` : `${API_URL}/consents-missing`;
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
@@ -334,66 +848,34 @@ export const getMassNotifications = async () => {
 };
 
 // ============================================================
-// 17. ТЬЮТОР ИНВАЙТЫ
+// 22. ДЕТИ РОДИТЕЛЯ
 // ============================================================
-export const getTutorInvitations = async () => {
-  const token = getToken();
-  if (!token) return [];
-  
-  const response = await fetch(`${API_URL}/tutor-invitations`, {
+export const getParentChildren = async () => {
+  const response = await fetch(`${API_URL}/parent-children`, {
     method: 'GET',
     headers: headers()
   });
-  
-  if (!response.ok) return [];
+  return response.json();
+};
+
+export const parentLinkChild = async (data) => {
+  const response = await fetch(`${API_URL}/parent-link-child`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
   return response.json();
 };
 
 // ============================================================
-// 18. ТЬЮТОР НАЗНАЧЕНИЯ
+// 23. АВАТАР
 // ============================================================
-export const getTutorAssignments = async () => {
-  const token = getToken();
-  if (!token) return [];
-  
-  const response = await fetch(`${API_URL}/event-tutor-assignments`, {
-    method: 'GET',
-    headers: headers()
+export const uploadAvatar = async (avatarBase64) => {
+  const response = await fetch(`${API_URL}/upload-avatar`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ avatar_base64: avatarBase64 })
   });
-  
-  if (!response.ok) return [];
-  return response.json();
-};
-
-// ============================================================
-// 19. ЦЕЛИ И KPI
-// ============================================================
-export const getGoals = async () => {
-  const token = getToken();
-  if (!token) return [];
-  
-  const response = await fetch(`${API_URL}/goals`, {
-    method: 'GET',
-    headers: headers()
-  });
-  
-  if (!response.ok) return [];
-  return response.json();
-};
-
-// ============================================================
-// 20. ЗАДАЧИ
-// ============================================================
-export const getTasks = async () => {
-  const token = getToken();
-  if (!token) return [];
-  
-  const response = await fetch(`${API_URL}/tasks`, {
-    method: 'GET',
-    headers: headers()
-  });
-  
-  if (!response.ok) return [];
   return response.json();
 };
 
@@ -401,29 +883,124 @@ export const getTasks = async () => {
 // ЭКСПОРТ
 // ============================================================
 const api = {
+  // Аутентификация
   login,
   logout,
   getMe,
+  changePassword,
+  
+  // Пользователи
   getUsers,
   getParticipants,
+  createUser,
+  updateUser,
+  deleteUser,
+  resetUserPassword,
+  assignUserToClub,
+  updateProfile,
+  
+  // Клубы
   getClubs,
+  setClubPresident,
+  getClubPresident,
+  
+  // Достижения
   getAchievements,
+  addAchievement,
+  deleteAchievement,
+  getAchievementCategories,
+  
+  // События
   getEvents,
+  createEvent,
+  updateEvent,
+  deleteEvent,
+  
+  // Регистрации
+  getRegistrations,
+  addRegistration,
+  
+  // Обращения
   getAppeals,
-  getTutorRequests,
-  getDocuments,
+  addAppeal,
+  replyToAppeal,
+  getAppealReplies,
+  
+  // Отчёты
   getReports,
+  createReport,
+  updateReport,
+  deleteReport,
+  submitReport,
+  approveReport,
+  rejectReport,
+  
+  // Документы
+  getDocuments,
+  createDocument,
+  deleteDocument,
+  
+  // Новости
   getNews,
+  createNews,
+  updateNews,
+  deleteNews,
+  
+  // Уведомления
   getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  
+  // Статистика
   getParticipantStats,
+  getParticipantEvents,
+  
+  // Президент
   getPresidentTasks,
-  getActivityLog,
-  getConsentsStats,
-  getMassNotifications,
-  getTutorInvitations,
+  createPresidentTask,
+  respondToPresidentTask,
+  
+  // Тьюторы
+  getTutorRequests,
+  createTutorRequest,
+  updateTutorRequest,
   getTutorAssignments,
+  respondToAssignment,
+  getTutorInvitations,
+  createTutorInvitation,
+  respondToTutorInvitation,
+  cancelTutorInvitation,
+  
+  // Массовые уведомления
+  getMassNotifications,
+  createMassNotification,
+  deleteMassNotification,
+  
+  // Цели и KPI
   getGoals,
+  createGoal,
+  updateGoal,
+  deleteGoal,
+  
+  // Задачи
   getTasks,
+  createTask,
+  updateTask,
+  deleteTask,
+  
+  // Активность
+  getActivityLog,
+  
+  // Согласия
+  getConsentsStats,
+  getConsentsMissing,
+  
+  // Дети
+  getParentChildren,
+  parentLinkChild,
+  
+  // Аватар
+  uploadAvatar,
 };
 
 export default api;

@@ -74,6 +74,7 @@ export default function Dashboard() {
         setRecentParticipants(participants.slice(0, 5));
         setRecentAchievements(achievements.slice(0, 5));
 
+        // Если активная вкладка не существует — сбрасываем на первую
         const tabExists = tabs.some(t => t.id === activeTab);
         if (!tabExists && tabs.length > 0) {
           setActiveTab(tabs[0].id);
@@ -98,7 +99,7 @@ export default function Dashboard() {
   }
 
   // ============================================================
-  // БЫСТРЫЕ ДЕЙСТВИЯ ПО РОЛИ
+  // БЫСТРЫЕ ДЕЙСТВИЯ ПО РОЛИ (ОТДЕЛЬНЫЙ БЛОК)
   // ============================================================
   const getQuickActions = () => {
     const role = profile?.role;
@@ -108,12 +109,12 @@ export default function Dashboard() {
       actions.push(
         { path: '/admin/users', label: 'Пользователи', icon: '👥' },
         { path: '/clubs', label: 'КЮДы', icon: '🏫' },
-        { path: '/clubs-management', label: 'Управление', icon: '⚙️' },
         { path: '/events', label: 'Мероприятия', icon: '📅' },
         { path: '/participants', label: 'Участники', icon: '👤' },
         { path: '/achievements', label: 'Достижения', icon: '🏆' },
         { path: '/reports', label: 'Отчёты', icon: '📋' },
         { path: '/analytics', label: 'Аналитика', icon: '📊' },
+        { path: '/appeals', label: 'Обращения', icon: '📨' },
       );
     }
 
@@ -175,41 +176,42 @@ export default function Dashboard() {
   const quickActions = getQuickActions();
 
   // ============================================================
-  // РЕНДЕР КОНТЕНТА ВКЛАДКИ
+  // РЕНДЕР КОНТЕНТА ВКЛАДКИ — ПЕРЕХОД НА СТРАНИЦУ
   // ============================================================
   const renderTabContent = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return renderOverview();
-      case 'events':
-        return renderEvents();
-      case 'participants':
-        return renderParticipants();
-      case 'achievements':
-        return renderAchievements();
-      case 'clubs':
-        return renderClubs();
-      case 'reports':
-        return renderReports();
-      case 'appeals':
-        return renderAppeals();
-      case 'analytics':
-        return renderAnalytics();
-      case 'president-tasks':
-        return renderPresidentTasks();
-      case 'rating':
-        return renderRating();
-      case 'documents':
-        return renderDocuments();
-      case 'users':
-        return renderUsers();
-      default:
-        return renderOverview();
+    // Находим активную вкладку
+    const activeTabData = tabs.find(t => t.id === activeTab);
+
+    // Если вкладка не найдена или это "Обзор" — показываем общий контент
+    if (!activeTabData || activeTab === 'dashboard') {
+      return renderOverview();
     }
+
+    // Для всех остальных вкладок — показываем ссылку на страницу
+    return (
+      <div className="dashboard-tab-content">
+        <div className="dashboard-tab-page">
+          <div className="flex-between mb-2">
+            <h3 className="dashboard-section-title">{activeTabData.label}</h3>
+            <Link to={activeTabData.path} className="btn btn-primary btn-sm">
+              Перейти к разделу →
+            </Link>
+          </div>
+          <div className="card">
+            <p className="text-muted" style={{ marginBottom: '16px' }}>
+              Перейдите на страницу «{activeTabData.label}» для полного доступа
+            </p>
+            <Link to={activeTabData.path} className="btn btn-gold" style={{ width: '100%', justifyContent: 'center' }}>
+              Открыть {activeTabData.label.toLowerCase()}
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // ============================================================
-  // ВКЛАДКА: ОБЗОР
+  // ВКЛАДКА: ОБЗОР (ГЛАВНАЯ СТРАНИЦА ДАШБОРДА)
   // ============================================================
   const renderOverview = () => (
     <div className="dashboard-tab-content">
@@ -269,261 +271,6 @@ export default function Dashboard() {
               </Link>
             ))}
           </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ============================================================
-  // ВКЛАДКА: МЕРОПРИЯТИЯ
-  // ============================================================
-  const renderEvents = () => (
-    <div className="dashboard-tab-content">
-      <div className="flex-between mb-2">
-        <h3 className="dashboard-section-title">Мероприятия</h3>
-        <Link to="/events" className="btn btn-primary btn-sm">Все мероприятия</Link>
-      </div>
-      <div className="card">
-        {recentEvents.length === 0 ? (
-          <p className="text-muted">Мероприятий пока нет</p>
-        ) : (
-          <ul className="dashboard-list">
-            {recentEvents.map((e) => (
-              <li key={e.id}>
-                <span className="list-title">{e.title}</span>
-                <span className="list-meta">{new Date(e.event_date).toLocaleDateString('ru-RU')}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div style={{ marginTop: '16px' }}>
-          <Link to="/events" className="btn btn-gold btn-sm">Создать мероприятие</Link>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ============================================================
-  // ВКЛАДКА: УЧАСТНИКИ
-  // ============================================================
-  const renderParticipants = () => (
-    <div className="dashboard-tab-content">
-      <div className="flex-between mb-2">
-        <h3 className="dashboard-section-title">Участники</h3>
-        <Link to="/participants" className="btn btn-primary btn-sm">Все участники</Link>
-      </div>
-      <div className="card">
-        {recentParticipants.length === 0 ? (
-          <p className="text-muted">Участников пока нет</p>
-        ) : (
-          <ul className="dashboard-list">
-            {recentParticipants.map((p) => (
-              <li key={p.id}>
-                <span className="list-title">{p.full_name}</span>
-                <span className="list-meta">{p.role || 'Участник'}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div style={{ marginTop: '16px' }}>
-          <Link to="/participants" className="btn btn-gold btn-sm">Добавить участника</Link>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ============================================================
-  // ВКЛАДКА: ДОСТИЖЕНИЯ
-  // ============================================================
-  const renderAchievements = () => (
-    <div className="dashboard-tab-content">
-      <div className="flex-between mb-2">
-        <h3 className="dashboard-section-title">Достижения</h3>
-        <Link to="/achievements" className="btn btn-primary btn-sm">Все достижения</Link>
-      </div>
-      <div className="card">
-        {recentAchievements.length === 0 ? (
-          <p className="text-muted">Достижений пока нет</p>
-        ) : (
-          <ul className="dashboard-list">
-            {recentAchievements.map((a) => (
-              <li key={a.id}>
-                <span className="list-title">{a.title}</span>
-                <span className="list-meta">{a.participant_name || 'Участник'}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div style={{ marginTop: '16px' }}>
-          <Link to="/manage-achievements" className="btn btn-gold btn-sm">Добавить достижение</Link>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ============================================================
-  // ВКЛАДКА: КЛУБЫ
-  // ============================================================
-  const renderClubs = () => (
-    <div className="dashboard-tab-content">
-      <div className="flex-between mb-2">
-        <h3 className="dashboard-section-title">Клубы юных дипломатов</h3>
-        <Link to="/clubs" className="btn btn-primary btn-sm">Все клубы</Link>
-      </div>
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-          <span className="stat-number" style={{ fontSize: '28px' }}>{stats.clubs}</span>
-          <span className="text-muted">всего клубов</span>
-        </div>
-        <div style={{ marginTop: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <Link to="/clubs" className="btn btn-primary btn-sm">Список клубов</Link>
-          {profile?.role === 'admin' && (
-            <Link to="/clubs-management" className="btn btn-gold btn-sm">Управление клубами</Link>
-          )}
-          {club && profile?.role === 'club_coordinator' && (
-            <Link to={`/club/${club.id}/president`} className="btn btn-gold btn-sm">Назначить президента</Link>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  // ============================================================
-  // ВКЛАДКА: ОТЧЁТЫ
-  // ============================================================
-  const renderReports = () => (
-    <div className="dashboard-tab-content">
-      <div className="flex-between mb-2">
-        <h3 className="dashboard-section-title">Отчёты</h3>
-        <Link to="/reports" className="btn btn-primary btn-sm">Все отчёты</Link>
-      </div>
-      <div className="card">
-        <p className="text-muted">Управление отчётами клубов</p>
-        <div style={{ marginTop: '16px' }}>
-          <Link to="/reports" className="btn btn-gold btn-sm">Создать отчёт</Link>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ============================================================
-  // ВКЛАДКА: ОБРАЩЕНИЯ
-  // ============================================================
-  const renderAppeals = () => (
-    <div className="dashboard-tab-content">
-      <div className="flex-between mb-2">
-        <h3 className="dashboard-section-title">Обращения</h3>
-        <Link to="/appeals" className="btn btn-primary btn-sm">Все обращения</Link>
-      </div>
-      <div className="card">
-        <p className="text-muted">Обращения координаторов КЮДов к руководству</p>
-        <div style={{ marginTop: '16px' }}>
-          <Link to="/appeals" className="btn btn-gold btn-sm">Создать обращение</Link>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ============================================================
-  // ВКЛАДКА: АНАЛИТИКА
-  // ============================================================
-  const renderAnalytics = () => (
-    <div className="dashboard-tab-content">
-      <div className="flex-between mb-2">
-        <h3 className="dashboard-section-title">Аналитика</h3>
-        <Link to="/analytics" className="btn btn-primary btn-sm">Полная аналитика</Link>
-      </div>
-      <div className="card">
-        <div className="dashboard-grid-2" style={{ marginTop: '0' }}>
-          <div>
-            <h4 className="card-title">Ключевые показатели</h4>
-            <div className="dashboard-mini-stats">
-              <div><span className="stat-number" style={{ fontSize: '20px' }}>{stats.events}</span><span className="stat-label">Мероприятий</span></div>
-              <div><span className="stat-number" style={{ fontSize: '20px' }}>{stats.participants}</span><span className="stat-label">Участников</span></div>
-              <div><span className="stat-number" style={{ fontSize: '20px' }}>{stats.achievements}</span><span className="stat-label">Достижений</span></div>
-              <div><span className="stat-number" style={{ fontSize: '20px' }}>{stats.clubs}</span><span className="stat-label">Клубов</span></div>
-            </div>
-          </div>
-          <div>
-            <h4 className="card-title">Действия</h4>
-            <Link to="/analytics" className="btn btn-gold" style={{ width: '100%', justifyContent: 'center' }}>Открыть аналитику</Link>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ============================================================
-  // ВКЛАДКА: ЗАДАНИЯ ПРЕЗИДЕНТА
-  // ============================================================
-  const renderPresidentTasks = () => (
-    <div className="dashboard-tab-content">
-      <div className="flex-between mb-2">
-        <h3 className="dashboard-section-title">Задания президента</h3>
-        <Link to="/president-tasks" className="btn btn-primary btn-sm">Все задания</Link>
-      </div>
-      <div className="card">
-        <p className="text-muted">Управление заданиями для президентов клубов</p>
-        <div style={{ marginTop: '16px' }}>
-          <Link to="/president-tasks" className="btn btn-gold btn-sm">Создать задание</Link>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ============================================================
-  // ВКЛАДКА: РЕЙТИНГ
-  // ============================================================
-  const renderRating = () => (
-    <div className="dashboard-tab-content">
-      <div className="flex-between mb-2">
-        <h3 className="dashboard-section-title">Рейтинг</h3>
-        <Link to="/club-rating" className="btn btn-primary btn-sm">Полный рейтинг</Link>
-      </div>
-      <div className="card">
-        <p className="text-muted">Рейтинг участников и клубов</p>
-        <div style={{ marginTop: '16px' }}>
-          <Link to="/club-rating" className="btn btn-gold btn-sm">Открыть рейтинг</Link>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ============================================================
-  // ВКЛАДКА: ДОКУМЕНТЫ
-  // ============================================================
-  const renderDocuments = () => (
-    <div className="dashboard-tab-content">
-      <div className="flex-between mb-2">
-        <h3 className="dashboard-section-title">Центр документов</h3>
-        <Link to="/documents-center" className="btn btn-primary btn-sm">Все документы</Link>
-      </div>
-      <div className="card">
-        <p className="text-muted">Официальные документы и материалы</p>
-        <div style={{ marginTop: '16px' }}>
-          <Link to="/documents-center" className="btn btn-gold btn-sm">Добавить документ</Link>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ============================================================
-  // ВКЛАДКА: ПОЛЬЗОВАТЕЛИ (ТОЛЬКО АДМИН)
-  // ============================================================
-  const renderUsers = () => (
-    <div className="dashboard-tab-content">
-      <div className="flex-between mb-2">
-        <h3 className="dashboard-section-title">Пользователи</h3>
-        <Link to="/admin/users" className="btn btn-primary btn-sm">Управление</Link>
-      </div>
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-          <span className="stat-number" style={{ fontSize: '28px' }}>{stats.users}</span>
-          <span className="text-muted">всего пользователей</span>
-        </div>
-        <div style={{ marginTop: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <Link to="/admin/users" className="btn btn-primary btn-sm">Список пользователей</Link>
-          <Link to="/admin/invite" className="btn btn-gold btn-sm">Пригласить</Link>
         </div>
       </div>
     </div>
@@ -732,6 +479,10 @@ export default function Dashboard() {
           width: 100%;
         }
 
+        .dashboard-tab-page {
+          width: 100%;
+        }
+
         .dashboard-section-title {
           font-family: 'Playfair Display', serif;
           font-size: 20px;
@@ -832,36 +583,6 @@ export default function Dashboard() {
           border-radius: 8px;
         }
 
-        .dashboard-list {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-
-        .dashboard-list li {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 10px 0;
-          border-bottom: 1px solid #F0EDE8;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .dashboard-list li:last-child {
-          border-bottom: none;
-        }
-
-        .list-title {
-          font-weight: 500;
-          color: #0A1628;
-        }
-
-        .list-meta {
-          font-size: 13px;
-          color: #8A8480;
-        }
-
         .quick-actions-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -960,17 +681,6 @@ export default function Dashboard() {
         .btn-gold:hover {
           transform: translateY(-2px);
           box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
-        }
-
-        .btn-outline {
-          background: transparent;
-          color: #0A1628;
-          border: 1.5px solid #C9A227;
-          box-shadow: none;
-        }
-        .btn-outline:hover {
-          background: #FBF4DC;
-          transform: translateY(-2px);
         }
 
         .btn-sm {

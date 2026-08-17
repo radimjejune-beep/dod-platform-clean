@@ -4,13 +4,19 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/Image.png';
 
+// ============================================================
+// ГЛОБАЛЬНОЕ СОСТОЯНИЕ ДЛЯ УВЕДОМЛЕНИЙ
+// ============================================================
+let notificationsCache = null;
+let unreadCountCache = 0;
+let isNotificationsLoaded = false;
+
 export default function Navigation({ profile }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState(notificationsCache || []);
+  const [unreadCount, setUnreadCount] = useState(unreadCountCache);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notificationsLoaded, setNotificationsLoaded] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -18,7 +24,9 @@ export default function Navigation({ profile }) {
   const notificationRef = useRef(null);
   const menuRef = useRef(null);
 
-  // Закрытие попапов
+  // ============================================================
+  // ЗАКРЫТИЕ ПОПАПОВ
+  // ============================================================
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
@@ -36,10 +44,17 @@ export default function Navigation({ profile }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Загрузка уведомлений (1 раз)
+  // ============================================================
+  // ЗАГРУЗКА УВЕДОМЛЕНИЙ (ТОЛЬКО 1 РАЗ)
+  // ============================================================
   const loadNotifications = async () => {
-    if (notificationsLoaded) return;
-    
+    // ✅ Если уже загружены — не делаем запрос
+    if (isNotificationsLoaded && notificationsCache) {
+      setNotifications(notificationsCache);
+      setUnreadCount(unreadCountCache);
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -50,27 +65,88 @@ export default function Navigation({ profile }) {
 
       if (response.ok) {
         const data = await response.json();
-        setNotifications(data || []);
-        setUnreadCount(data.filter(n => !n.read).length);
-        setNotificationsLoaded(true);
+        notificationsCache = data || [];
+        unreadCountCache = data.filter(n => !n.read).length;
+        isNotificationsLoaded = true;
+        
+        setNotifications(notificationsCache);
+        setUnreadCount(unreadCountCache);
       }
     } catch (error) {
       console.error('Ошибка загрузки уведомлений:', error);
     }
   };
 
+  // Загружаем при первом рендере
   useEffect(() => {
-    if (profile && !notificationsLoaded) {
+    if (profile) {
       loadNotifications();
     }
-  }, [profile, notificationsLoaded]);
+  }, [profile]);
 
+  // ============================================================
+  // ОТМЕТКА ОДНОГО УВЕДОМЛЕНИЯ КАК ПРОЧИТАННОГО
+  // ============================================================
+  const markAsRead = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`https://dod-backend.relaxdev.ru/api/notifications/${id}/read`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Обновляем глобальный кэш
+      notificationsCache = notificationsCache.map(n =>
+        n.id === id ? { ...n, read: true } : n
+      );
+      unreadCountCache = notificationsCache.filter(n => !n.read).length;
+
+      setNotifications(notificationsCache);
+      setUnreadCount(unreadCountCache);
+    } catch (error) {
+      console.error('Ошибка:', error);
+    }
+  };
+
+  // ============================================================
+  // ОТМЕТКА ВСЕХ КАК ПРОЧИТАННЫХ
+  // ============================================================
+  const markAllAsRead = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch('https://dod-backend.relaxdev.ru/api/notifications/read-all', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Обновляем глобальный кэш
+      notificationsCache = notificationsCache.map(n => ({ ...n, read: true }));
+      unreadCountCache = 0;
+
+      setNotifications(notificationsCache);
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Ошибка:', error);
+    }
+  };
+
+  // ============================================================
+  // ВЫХОД
+  // ============================================================
   const handleLogout = () => {
+    // Сбрасываем кэш при выходе
+    notificationsCache = null;
+    unreadCountCache = 0;
+    isNotificationsLoaded = false;
+    
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
   };
 
+  // ============================================================
+  // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+  // ============================================================
   const getInitials = (name) => {
     if (!name) return '?';
     const parts = name.split(' ');
@@ -84,7 +160,9 @@ export default function Navigation({ profile }) {
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
-  // Меню в зависимости от роли
+  // ============================================================
+  // МЕНЮ В ЗАВИСИМОСТИ ОТ РОЛИ
+  // ============================================================
   const getMenuItems = () => {
     const role = profile?.role;
     const isPresident = profile?.is_president || false;
@@ -168,7 +246,9 @@ export default function Navigation({ profile }) {
 
   const menuItems = getMenuItems();
 
-  // Если нет профиля — упрощённая навигация
+  // ============================================================
+  // УПРОЩЁННАЯ НАВИГАЦИЯ (БЕЗ ПРОФИЛЯ)
+  // ============================================================
   if (!profile) {
     return (
       <nav className="nav nav-simple">
@@ -179,10 +259,22 @@ export default function Navigation({ profile }) {
           </Link>
           <Link to="/login" className="btn btn-gold btn-sm">Вход</Link>
         </div>
+        <style>{`
+          .nav-simple {
+            background: var(--primary);
+            border-bottom: none;
+          }
+          .nav-simple .nav-logo-text {
+            color: white;
+          }
+        `}</style>
       </nav>
     );
   }
 
+  // ============================================================
+  // ОСНОВНАЯ НАВИГАЦИЯ
+  // ============================================================
   return (
     <nav className="nav">
       <div className="nav-container">
@@ -227,11 +319,7 @@ export default function Navigation({ profile }) {
                 <div className="nav-notif-header">
                   <span>Уведомления</span>
                   {unreadCount > 0 && (
-                    <button onClick={() => {
-                      // Mark all read
-                      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-                      setUnreadCount(0);
-                    }} className="nav-notif-markall">
+                    <button onClick={markAllAsRead} className="nav-notif-markall">
                       Прочитать все
                     </button>
                   )}
@@ -241,7 +329,15 @@ export default function Navigation({ profile }) {
                 ) : (
                   <div className="nav-notif-list">
                     {notifications.slice(0, 10).map((n) => (
-                      <div key={n.id} className={`nav-notif-item ${!n.read ? 'unread' : ''}`}>
+                      <div
+                        key={n.id}
+                        className={`nav-notif-item ${!n.read ? 'unread' : ''}`}
+                        onClick={() => {
+                          if (!n.read) {
+                            markAsRead(n.id);
+                          }
+                        }}
+                      >
                         <div className="nav-notif-title">{n.title}</div>
                         <div className="nav-notif-message">{n.message}</div>
                         <div className="nav-notif-time">
@@ -356,15 +452,6 @@ export default function Navigation({ profile }) {
           position: sticky;
           top: 0;
           z-index: 100;
-        }
-
-        .nav-simple {
-          background: var(--primary);
-          border-bottom: none;
-        }
-
-        .nav-simple .nav-logo-text {
-          color: white;
         }
 
         .nav-container {
@@ -527,7 +614,7 @@ export default function Navigation({ profile }) {
         .nav-notif-item {
           padding: 10px 16px;
           border-bottom: 1px solid var(--border);
-          cursor: default;
+          cursor: pointer;
           transition: var(--transition);
         }
 
@@ -792,7 +879,9 @@ export default function Navigation({ profile }) {
           background: #FCEBEC;
         }
 
-        /* ===== RESPONSIVE ===== */
+        /* ============================================================
+           RESPONSIVE
+           ============================================================ */
         @media (max-width: 1024px) {
           .nav-desktop {
             display: none;

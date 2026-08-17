@@ -1,6 +1,6 @@
 // frontend/src/components/Navigation.jsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/Image.png';
 
@@ -101,20 +101,6 @@ export default function Navigation({ profile }) {
     }
   };
 
-  const getRoleLabel = (role) => {
-    const labels = {
-      'participant': 'Участник',
-      'parent': 'Родитель',
-      'club_coordinator': 'Координатор КЮДа',
-      'tutor': 'Тьютор',
-      'movement_coordinator': 'Координатор движения',
-      'admin': 'Администратор',
-      'president': 'Президент',
-      'vice_president': 'Вице-президент'
-    };
-    return labels[role] || role;
-  };
-
   const getInitials = (name) => {
     if (!name) return '?';
     const parts = name.split(' ');
@@ -130,7 +116,6 @@ export default function Navigation({ profile }) {
 
   const getMenuItems = () => {
     const role = profile?.role;
-    const isPresident = profile?.is_president || false;
     const items = [];
 
     items.push({ path: '/dashboard', label: 'Дашборд' });
@@ -140,7 +125,7 @@ export default function Navigation({ profile }) {
       items.push({ path: '/calendar', label: 'Календарь' });
       items.push({ path: '/my-achievements', label: 'Достижения' });
       items.push({ path: '/my-reviews', label: 'Оценки' });
-      if (role === 'participant' && isPresident) {
+      if (profile?.is_president) {
         items.push({ path: '/president-tasks', label: 'Задания' });
       }
     }
@@ -369,7 +354,7 @@ export default function Navigation({ profile }) {
                   </div>
                   <div>
                     <div className="nav-profile-fullname">{profile?.full_name}</div>
-                    <div className="nav-profile-role">{getRoleLabel(profile?.role)}</div>
+                    <div className="nav-profile-role">{profile?.role}</div>
                   </div>
                 </div>
                 <div className="nav-profile-divider" />

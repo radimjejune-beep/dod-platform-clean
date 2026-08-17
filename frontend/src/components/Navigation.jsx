@@ -47,7 +47,7 @@ export default function Navigation({ profile }) {
   }, [profile, notificationsLoaded]);
 
   // ============================================================
-  // ЗАКРЫТИЕ ПОПАПОВ ПРИ КЛИКЕ СНАРУЖИ
+  // ЗАКРЫТИЕ ПОПАПОВ
   // ============================================================
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -75,7 +75,7 @@ export default function Navigation({ profile }) {
   };
 
   // ============================================================
-  // УВЕДОМЛЕНИЯ: ОТМЕТКА О ПРОЧТЕНИИ
+  // УВЕДОМЛЕНИЯ
   // ============================================================
   const handleNotificationClick = async (id) => {
     try {
@@ -124,84 +124,85 @@ export default function Navigation({ profile }) {
   };
 
   // ============================================================
-  // ПОЛУЧЕНИЕ ПУНКТОВ МЕНЮ ПО РОЛИ
+  // МЕНЮ ПО РОЛИ
   // ============================================================
   const getMenuItems = () => {
     const role = profile?.role;
+    const isPresident = profile?.is_president || false;
     const items = [];
 
+    // Дашборд есть у всех
     items.push({ path: '/dashboard', label: 'Дашборд' });
 
-    if (role === 'participant' || role === 'parent') {
-      items.push({ path: '/events', label: 'Мероприятия' });
-      items.push({ path: '/calendar', label: 'Календарь' });
-      items.push({ path: '/my-achievements', label: 'Достижения' });
-      items.push({ path: '/my-reviews', label: 'Оценки' });
-      if (profile?.is_president) {
-        items.push({ path: '/president-tasks', label: 'Задания президента' });
-      }
+    // Мероприятия есть у всех
+    items.push({ path: '/events', label: 'Мероприятия' });
+
+    // Участники
+    if (['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'].includes(role)) {
+      items.push({ path: '/participants', label: 'Участники' });
     }
 
-    if (role === 'club_coordinator') {
-      items.push({ path: '/clubs', label: 'Мой КЮД' });
-      items.push({ path: '/events', label: 'Мероприятия' });
-      items.push({ path: '/participants', label: 'Участники' });
-      items.push({ path: '/manage-achievements', label: 'Достижения' });
+    // Достижения
+    if (['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'].includes(role)) {
+      items.push({ path: '/achievements', label: 'Достижения' });
+    }
+
+    // Клубы
+    if (['admin', 'movement_coordinator', 'president', 'vice_president', 'club_coordinator'].includes(role)) {
+      items.push({ path: '/clubs', label: 'КЮДы' });
+    }
+
+    // Отчёты
+    if (['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(role)) {
       items.push({ path: '/reports', label: 'Отчёты' });
+    }
+
+    // Обращения
+    if (['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(role)) {
       items.push({ path: '/appeals', label: 'Обращения' });
-      items.push({ path: '/staff', label: 'Сотрудники' });
-      items.push({ path: '/calendar', label: 'Календарь' });
-      items.push({ path: '/documents-center', label: 'Центр документов' });
     }
 
-    if (role === 'tutor') {
-      items.push({ path: '/clubs', label: 'КЮДы' });
-      items.push({ path: '/events', label: 'Мероприятия' });
-      items.push({ path: '/participants', label: 'Участники' });
-      items.push({ path: '/achievements', label: 'Достижения' });
-      items.push({ path: '/my-reviews', label: 'Оценки' });
-      items.push({ path: '/my-journal', label: 'Мой журнал' });
-      items.push({ path: '/staff-calendar', label: 'Календарь' });
-      items.push({ path: '/tutor-assignments', label: 'Назначения' });
-      items.push({ path: '/reports', label: 'Отчёты' });
-    }
-
-    if (role === 'movement_coordinator' || role === 'admin') {
-      items.push({ path: '/clubs', label: 'КЮДы' });
-      items.push({ path: '/clubs-management', label: 'Управление КЮДами' });
-      items.push({ path: '/events', label: 'Мероприятия' });
-      items.push({ path: '/participants', label: 'Участники' });
-      items.push({ path: '/achievements', label: 'Достижения' });
-      items.push({ path: '/achievements-categories', label: 'Категории достижений' });
-      items.push({ path: '/reports', label: 'Отчёты' });
+    // Аналитика
+    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
       items.push({ path: '/analytics', label: 'Аналитика' });
-      items.push({ path: '/appeals', label: 'Обращения' });
-      items.push({ path: '/documents-center', label: 'Центр документов' });
-      items.push({ path: '/mass-notifications', label: 'Массовые уведомления' });
-      items.push({ path: '/notification-history', label: 'История уведомлений' });
-      items.push({ path: '/activity-log', label: 'Журнал действий' });
-      items.push({ path: '/consents-management', label: 'Согласия' });
-      items.push({ path: '/goals', label: 'Цели и KPI' });
-      items.push({ path: '/tasks-planner', label: 'Планировщик задач' });
-      items.push({ path: '/admin/users', label: 'Пользователи' });
-      if (role === 'admin') {
-        items.push({ path: '/admin/invite', label: 'Пригласить' });
-        items.push({ path: '/import-participants', label: 'Импорт участников' });
-        items.push({ path: '/settings', label: 'Настройки' });
-      }
     }
 
-    if (role === 'president' || role === 'vice_president') {
-      items.push({ path: '/clubs', label: 'КЮДы' });
-      items.push({ path: '/events', label: 'Мероприятия' });
-      items.push({ path: '/participants', label: 'Участники' });
-      items.push({ path: '/achievements', label: 'Достижения' });
-      items.push({ path: '/reports', label: 'Отчёты' });
-      items.push({ path: '/analytics', label: 'Аналитика' });
-      items.push({ path: '/appeals', label: 'Обращения' });
-      items.push({ path: '/documents-center', label: 'Центр документов' });
-      items.push({ path: '/president-tasks', label: 'Задания президента' });
+    // Задания президента
+    if (role === 'participant' && isPresident) {
+      items.push({ path: '/president-tasks', label: 'Задания' });
+    }
+    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
+      items.push({ path: '/president-tasks', label: 'Задания' });
+    }
+
+    // Рейтинг
+    if (['admin', 'movement_coordinator', 'president', 'vice_president', 'club_coordinator'].includes(role)) {
       items.push({ path: '/club-rating', label: 'Рейтинг' });
+    }
+
+    // Документы
+    if (['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(role)) {
+      items.push({ path: '/documents-center', label: 'Документы' });
+    }
+
+    // Пользователи (только админ)
+    if (role === 'admin') {
+      items.push({ path: '/admin/users', label: 'Пользователи' });
+    }
+
+    // Календарь
+    if (['participant', 'parent', 'club_coordinator', 'tutor'].includes(role)) {
+      items.push({ path: '/calendar', label: 'Календарь' });
+    }
+
+    // Мои достижения
+    if (['participant', 'parent'].includes(role)) {
+      items.push({ path: '/my-achievements', label: 'Мои достижения' });
+    }
+
+    // Мои оценки
+    if (['participant', 'tutor'].includes(role)) {
+      items.push({ path: '/my-reviews', label: 'Мои оценки' });
     }
 
     return items;
@@ -210,7 +211,7 @@ export default function Navigation({ profile }) {
   const menuItems = getMenuItems();
 
   // ============================================================
-  // ПУБЛИЧНАЯ ВЕРСИЯ (БЕЗ ПРОФИЛЯ)
+  // ПУБЛИЧНАЯ ВЕРСИЯ
   // ============================================================
   if (!profile) {
     return (
@@ -251,8 +252,13 @@ export default function Navigation({ profile }) {
             font-weight: 700;
             color: #0A1628;
           }
-          .nav-logo img { height: 34px; width: auto; }
-          .nav-logo-text { letter-spacing: -0.02em; }
+          .nav-logo img {
+            height: 34px;
+            width: auto;
+          }
+          .nav-logo-text {
+            letter-spacing: -0.02em;
+          }
           .btn-gold {
             display: inline-flex;
             align-items: center;
@@ -267,20 +273,21 @@ export default function Navigation({ profile }) {
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease;
             text-decoration: none;
             box-shadow: 0 2px 16px rgba(201, 162, 39, 0.25);
-            letter-spacing: 0.02em;
           }
           .btn-gold:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
           }
-          .btn-gold:active { transform: translateY(0); }
           @media (max-width: 768px) {
-            .nav { padding: 0 16px; }
-            .nav-logo-text { display: none; }
-            .btn-gold { padding: 8px 18px; font-size: 13px; }
+            .nav {
+              padding: 0 16px;
+            }
+            .nav-logo-text {
+              display: none;
+            }
           }
         `}</style>
       </nav>
@@ -288,7 +295,7 @@ export default function Navigation({ profile }) {
   }
 
   // ============================================================
-  // ОСНОВНАЯ ВЕРСИЯ (С ПРОФИЛЕМ)
+  // ОСНОВНАЯ ВЕРСИЯ
   // ============================================================
   return (
     <nav className="nav">
@@ -580,39 +587,6 @@ export default function Navigation({ profile }) {
         }
 
         /* ============================================================
-           КНОПКА ВХОДА (ПУБЛИЧНАЯ)
-           ============================================================ */
-        .btn-gold {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-          padding: 10px 28px;
-          background: linear-gradient(135deg, #C9A227 0%, #D4B84A 50%, #E8D9A8 100%);
-          color: #0A1628;
-          border: none;
-          border-radius: 8px;
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          text-decoration: none;
-          box-shadow: 0 2px 16px rgba(201, 162, 39, 0.25);
-          letter-spacing: 0.02em;
-        }
-
-        .btn-gold:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
-        }
-
-        .btn-gold:active {
-          transform: translateY(0);
-          box-shadow: 0 2px 12px rgba(201, 162, 39, 0.2);
-        }
-
-        /* ============================================================
            УВЕДОМЛЕНИЯ
            ============================================================ */
         .nav-notifications {
@@ -692,7 +666,6 @@ export default function Navigation({ profile }) {
           cursor: pointer;
           font-weight: 500;
           font-family: 'Inter', sans-serif;
-          transition: color 0.2s ease;
         }
 
         .nav-notif-markall:hover {
@@ -756,7 +729,6 @@ export default function Navigation({ profile }) {
           font-weight: 500;
           flex-shrink: 0;
           font-family: 'Inter', sans-serif;
-          transition: all 0.2s ease;
         }
 
         .nav-notif-all:hover {

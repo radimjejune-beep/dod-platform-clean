@@ -1,24 +1,17 @@
 // frontend/src/components/Layout.jsx
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/Image.png';
-
-// ============================================================
-// ГЛОБАЛЬНОЕ СОСТОЯНИЕ ДЛЯ УВЕДОМЛЕНИЙ
-// ============================================================
-let notificationsCache = null;
-let unreadCountCache = 0;
-let isNotificationsLoaded = false;
 
 export default function Layout({ children, profile }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [notifications, setNotifications] = useState(notificationsCache || []);
-  const [unreadCount, setUnreadCount] = useState(unreadCountCache);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [expandedMenus, setExpandedMenus] = useState({});
+  const [notificationsLoaded, setNotificationsLoaded] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,22 +19,35 @@ export default function Layout({ children, profile }) {
   const notificationRef = useRef(null);
 
   // ============================================================
-  // АДАПТИВНОСТЬ САЙДБАРА
+  // ЗАГРУЗКА УВЕДОМЛЕНИЙ
   // ============================================================
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 1024) {
-        setIsSidebarOpen(false);
-        setIsMobileSidebarOpen(false);
-      } else {
-        setIsSidebarOpen(true);
-      }
-    };
+  const loadNotifications = async () => {
+    if (notificationsLoaded) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
 
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+      const response = await fetch('https://dod-backend.relaxdev.ru/api/notifications', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data || []);
+        setUnreadCount(data.filter(n => !n.read).length);
+        setNotificationsLoaded(true);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки уведомлений:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (profile && !notificationsLoaded) {
+      loadNotifications();
+    }
+  }, [profile, notificationsLoaded]);
 
   // ============================================================
   // ЗАКРЫТИЕ ПОПАПОВ
@@ -61,105 +67,65 @@ export default function Layout({ children, profile }) {
   }, []);
 
   // ============================================================
-  // ЗАГРУЗКА УВЕДОМЛЕНИЙ
+  // АДАПТИВНОСТЬ САЙДБАРА
   // ============================================================
-  const loadNotifications = async () => {
-    if (isNotificationsLoaded && notificationsCache) {
-      setNotifications(notificationsCache);
-      setUnreadCount(unreadCountCache);
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await fetch('https://dod-backend.relaxdev.ru/api/notifications', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        notificationsCache = data || [];
-        unreadCountCache = data.filter(n => !n.read).length;
-        isNotificationsLoaded = true;
-        
-        setNotifications(notificationsCache);
-        setUnreadCount(unreadCountCache);
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+        setIsMobileSidebarOpen(false);
       }
-    } catch (error) {
-      console.error('Ошибка загрузки уведомлений:', error);
-    }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // ============================================================
+  // ВЫХОД
+  // ============================================================
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/login');
   };
 
-  useEffect(() => {
-    if (profile) {
-      loadNotifications();
-    }
-  }, [profile]);
-
   // ============================================================
-  // УПРАВЛЕНИЕ УВЕДОМЛЕНИЯМИ
+  // УВЕДОМЛЕНИЯ
   // ============================================================
-  const markAsRead = async (id) => {
+  const handleNotificationClick = async (id) => {
     try {
       const token = localStorage.getItem('token');
       await fetch(`https://dod-backend.relaxdev.ru/api/notifications/${id}/read`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` }
       });
-
-      notificationsCache = notificationsCache.map(n =>
-        n.id === id ? { ...n, read: true } : n
+      
+      setNotifications(prev => 
+        prev.map(n => n.id === id ? { ...n, read: true } : n)
       );
-      unreadCountCache = notificationsCache.filter(n => !n.read).length;
-
-      setNotifications(notificationsCache);
-      setUnreadCount(unreadCountCache);
+      setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Ошибка:', error);
     }
   };
 
-  const markAllAsRead = async () => {
+  const markAllRead = async () => {
     try {
       const token = localStorage.getItem('token');
       await fetch('https://dod-backend.relaxdev.ru/api/notifications/read-all', {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` }
       });
-
-      notificationsCache = notificationsCache.map(n => ({ ...n, read: true }));
-      unreadCountCache = 0;
-
-      setNotifications(notificationsCache);
+      
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (error) {
       console.error('Ошибка:', error);
     }
-  };
-
-  // ============================================================
-  // РАСКРЫТИЕ ПОДМЕНЮ
-  // ============================================================
-  const toggleMenu = (key) => {
-    setExpandedMenus(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
-
-  // ============================================================
-  // ВЫХОД
-  // ============================================================
-  const handleLogout = () => {
-    notificationsCache = null;
-    unreadCountCache = 0;
-    isNotificationsLoaded = false;
-    
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
   };
 
   // ============================================================
@@ -179,411 +145,110 @@ export default function Layout({ children, profile }) {
   };
 
   // ============================================================
-  // SVG ИКОНКИ
+  // МЕНЮ ДЛЯ САЙДБАРА
   // ============================================================
-  const Icon = {
-    Dashboard: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-      </svg>
-    ),
-    Events: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-        <line x1="16" y1="2" x2="16" y2="6" />
-        <line x1="8" y1="2" x2="8" y2="6" />
-        <line x1="3" y1="10" x2="21" y2="10" />
-      </svg>
-    ),
-    Calendar: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-        <line x1="16" y1="2" x2="16" y2="6" />
-        <line x1="8" y1="2" x2="8" y2="6" />
-        <line x1="3" y1="10" x2="21" y2="10" />
-        <circle cx="12" cy="14" r="1" />
-        <circle cx="16" cy="14" r="1" />
-        <circle cx="8" cy="14" r="1" />
-      </svg>
-    ),
-    Participants: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
-    Club: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-        <polyline points="9 22 9 12 15 12 15 22" />
-      </svg>
-    ),
-    Achievements: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-      </svg>
-    ),
-    Reports: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="16" y1="13" x2="8" y2="13" />
-        <line x1="16" y1="17" x2="8" y2="17" />
-        <polyline points="10 9 9 9 8 9" />
-      </svg>
-    ),
-    Appeals: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      </svg>
-    ),
-    Staff: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-      </svg>
-    ),
-    Analytics: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="18" y1="20" x2="18" y2="10" />
-        <line x1="12" y1="20" x2="12" y2="4" />
-        <line x1="6" y1="20" x2="6" y2="14" />
-      </svg>
-    ),
-    Settings: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="3" />
-        <path d="M12 1v4" />
-        <path d="M12 19v4" />
-        <path d="M4.22 4.22l2.83 2.83" />
-        <path d="M16.95 16.95l2.83 2.83" />
-        <path d="M1 12h4" />
-        <path d="M19 12h4" />
-        <path d="M4.22 19.78l2.83-2.83" />
-        <path d="M16.95 7.05l2.83-2.83" />
-      </svg>
-    ),
-    Documents: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="16" y1="13" x2="8" y2="13" />
-        <line x1="16" y1="17" x2="8" y2="17" />
-        <polyline points="10 9 9 9 8 9" />
-      </svg>
-    ),
-    Users: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
-    Tutor: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2a8 8 0 0 0-8 8c0 5 4 9 8 12 4-3 8-7 8-12a8 8 0 0 0-8-8z" />
-        <circle cx="12" cy="10" r="3" />
-      </svg>
-    ),
-    Notifications: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-      </svg>
-    ),
-    Consents: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-        <polyline points="22 4 12 14.01 9 11.01" />
-      </svg>
-    ),
-    Goals: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <circle cx="12" cy="12" r="6" />
-        <circle cx="12" cy="12" r="2" />
-      </svg>
-    ),
-    Tasks: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2a8 8 0 0 0-8 8c0 5 4 9 8 12 4-3 8-7 8-12a8 8 0 0 0-8-8z" />
-        <polyline points="12 6 12 12 16 14" />
-      </svg>
-    ),
-    President: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-      </svg>
-    ),
-    Rating: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-      </svg>
-    ),
-    Journal: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-      </svg>
-    ),
-    Import: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-        <polyline points="17 8 12 3 7 8" />
-        <line x1="12" y1="3" x2="12" y2="15" />
-      </svg>
-    ),
-    Invite: () => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="8.5" cy="7" r="4" />
-        <line x1="20" y1="8" x2="20" y2="14" />
-        <line x1="23" y1="11" x2="17" y2="11" />
-      </svg>
-    ),
-    ChevronDown: () => (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="6 9 12 15 18 9" />
-      </svg>
-    ),
-    ChevronRight: () => (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="9 18 15 12 9 6" />
-      </svg>
-    ),
-    Menu: () => (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        <line x1="3" y1="6" x2="21" y2="6" />
-        <line x1="3" y1="12" x2="21" y2="12" />
-        <line x1="3" y1="18" x2="21" y2="18" />
-      </svg>
-    ),
-    Close: () => (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        <line x1="18" y1="6" x2="6" y2="18" />
-        <line x1="6" y1="6" x2="18" y2="18" />
-      </svg>
-    ),
-  };
-
-  // ============================================================
-  // СТРУКТУРА МЕНЮ
-  // ============================================================
-  const getMenuStructure = () => {
+  const getMenuItems = () => {
     const role = profile?.role;
-    const isPresident = profile?.is_president || false;
-    const menu = [];
+    const items = [];
 
-    menu.push({
-      id: 'dashboard',
-      label: 'Дашборд',
-      path: '/dashboard',
-      icon: Icon.Dashboard,
-      isLink: true
-    });
+    items.push({ path: '/dashboard', label: 'Дашборд', icon: '📊' });
 
     if (role === 'participant' || role === 'parent') {
-      menu.push({
-        id: 'participant',
-        label: 'Участнику',
-        icon: Icon.Participants,
-        isLink: false,
-        children: [
-          { path: '/events', label: 'Мероприятия', icon: Icon.Events },
-          { path: '/calendar', label: 'Календарь', icon: Icon.Calendar },
-          { path: '/my-achievements', label: 'Достижения', icon: Icon.Achievements },
-          { path: '/my-reviews', label: 'Оценки', icon: Icon.Analytics },
-        ]
-      });
-      if (isPresident) {
-        menu.push({
-          id: 'president',
-          label: 'Президенту',
-          icon: Icon.President,
-          isLink: false,
-          children: [
-            { path: '/president-tasks', label: 'Задания', icon: Icon.Tasks },
-            { path: '/club-rating', label: 'Рейтинг', icon: Icon.Rating },
-          ]
-        });
+      items.push({ path: '/events', label: 'Мероприятия', icon: '📅' });
+      items.push({ path: '/calendar', label: 'Календарь', icon: '📆' });
+      items.push({ path: '/my-achievements', label: 'Достижения', icon: '🏆' });
+      items.push({ path: '/my-reviews', label: 'Оценки', icon: '📊' });
+      if (profile?.is_president) {
+        items.push({ path: '/president-tasks', label: 'Задания', icon: '👑' });
       }
     }
 
     if (role === 'club_coordinator') {
-      menu.push({
-        id: 'club',
-        label: 'КЮД',
-        icon: Icon.Club,
-        isLink: false,
-        children: [
-          { path: '/clubs', label: 'Мой КЮД', icon: Icon.Club },
-          { path: '/events', label: 'Мероприятия', icon: Icon.Events },
-          { path: '/participants', label: 'Участники', icon: Icon.Participants },
-          { path: '/manage-achievements', label: 'Достижения', icon: Icon.Achievements },
-          { path: '/reports', label: 'Отчёты', icon: Icon.Reports },
-          { path: '/appeals', label: 'Обращения', icon: Icon.Appeals },
-          { path: '/staff', label: 'Сотрудники', icon: Icon.Staff },
-          { path: '/calendar', label: 'Календарь', icon: Icon.Calendar },
-          { path: '/documents-center', label: 'Центр документов', icon: Icon.Documents },
-        ]
-      });
+      items.push({ path: '/clubs', label: 'КЮД', icon: '🏫' });
+      items.push({ path: '/events', label: 'Мероприятия', icon: '📅' });
+      items.push({ path: '/participants', label: 'Участники', icon: '👥' });
+      items.push({ path: '/manage-achievements', label: 'Достижения', icon: '🏆' });
+      items.push({ path: '/reports', label: 'Отчёты', icon: '📋' });
+      items.push({ path: '/appeals', label: 'Обращения', icon: '📨' });
+      items.push({ path: '/staff', label: 'Сотрудники', icon: '👤' });
+      items.push({ path: '/calendar', label: 'Календарь', icon: '📆' });
+      items.push({ path: '/documents-center', label: 'Центр документов', icon: '📁' });
     }
 
     if (role === 'tutor') {
-      menu.push({
-        id: 'tutor',
-        label: 'Тьютору',
-        icon: Icon.Tutor,
-        isLink: false,
-        children: [
-          { path: '/clubs', label: 'КЮДы', icon: Icon.Club },
-          { path: '/events', label: 'Мероприятия', icon: Icon.Events },
-          { path: '/participants', label: 'Участники', icon: Icon.Participants },
-          { path: '/achievements', label: 'Достижения', icon: Icon.Achievements },
-          { path: '/my-reviews', label: 'Оценки', icon: Icon.Analytics },
-          { path: '/my-journal', label: 'Журнал', icon: Icon.Journal },
-          { path: '/staff-calendar', label: 'Календарь', icon: Icon.Calendar },
-          { path: '/tutor-assignments', label: 'Назначения', icon: Icon.Tasks },
-          { path: '/reports', label: 'Отчёты', icon: Icon.Reports },
-        ]
-      });
+      items.push({ path: '/clubs', label: 'КЮДы', icon: '🏫' });
+      items.push({ path: '/events', label: 'Мероприятия', icon: '📅' });
+      items.push({ path: '/participants', label: 'Участники', icon: '👥' });
+      items.push({ path: '/achievements', label: 'Достижения', icon: '🏆' });
+      items.push({ path: '/my-reviews', label: 'Оценки', icon: '📊' });
+      items.push({ path: '/my-journal', label: 'Журнал', icon: '📓' });
+      items.push({ path: '/staff-calendar', label: 'Календарь', icon: '📆' });
+      items.push({ path: '/tutor-assignments', label: 'Назначения', icon: '📋' });
+      items.push({ path: '/reports', label: 'Отчёты', icon: '📋' });
     }
 
     if (role === 'movement_coordinator' || role === 'admin') {
-      menu.push({
-        id: 'management',
-        label: 'Управление',
-        icon: Icon.Settings,
-        isLink: false,
-        children: [
-          { path: '/clubs', label: 'КЮДы', icon: Icon.Club },
-          { path: '/clubs-management', label: 'Управление КЮДами', icon: Icon.Settings },
-          { path: '/events', label: 'Мероприятия', icon: Icon.Events },
-          { path: '/participants', label: 'Участники', icon: Icon.Participants },
-          { path: '/achievements', label: 'Достижения', icon: Icon.Achievements },
-          { path: '/achievements-categories', label: 'Категории', icon: Icon.Achievements },
-          { path: '/reports', label: 'Отчёты', icon: Icon.Reports },
-          { path: '/analytics', label: 'Аналитика', icon: Icon.Analytics },
-          { path: '/appeals', label: 'Обращения', icon: Icon.Appeals },
-          { path: '/documents-center', label: 'Центр документов', icon: Icon.Documents },
-          { path: '/mass-notifications', label: 'Уведомления', icon: Icon.Notifications },
-          { path: '/notification-history', label: 'История', icon: Icon.Notifications },
-          { path: '/activity-log', label: 'Журнал', icon: Icon.Journal },
-          { path: '/consents-management', label: 'Согласия', icon: Icon.Consents },
-          { path: '/goals', label: 'Цели', icon: Icon.Goals },
-          { path: '/tasks-planner', label: 'Планировщик', icon: Icon.Tasks },
-          { path: '/admin/users', label: 'Пользователи', icon: Icon.Users },
-        ]
-      });
+      items.push({ path: '/clubs', label: 'КЮДы', icon: '🏫' });
+      items.push({ path: '/clubs-management', label: 'Управление', icon: '⚙️' });
+      items.push({ path: '/events', label: 'Мероприятия', icon: '📅' });
+      items.push({ path: '/participants', label: 'Участники', icon: '👥' });
+      items.push({ path: '/achievements', label: 'Достижения', icon: '🏆' });
+      items.push({ path: '/achievements-categories', label: 'Категории', icon: '🏷️' });
+      items.push({ path: '/reports', label: 'Отчёты', icon: '📋' });
+      items.push({ path: '/analytics', label: 'Аналитика', icon: '📊' });
+      items.push({ path: '/appeals', label: 'Обращения', icon: '📨' });
+      items.push({ path: '/documents-center', label: 'Документы', icon: '📁' });
+      items.push({ path: '/mass-notifications', label: 'Уведомления', icon: '📨' });
+      items.push({ path: '/notification-history', label: 'История', icon: '📋' });
+      items.push({ path: '/activity-log', label: 'Журнал', icon: '📋' });
+      items.push({ path: '/consents-management', label: 'Согласия', icon: '📝' });
+      items.push({ path: '/goals', label: 'Цели', icon: '🎯' });
+      items.push({ path: '/tasks-planner', label: 'Планировщик', icon: '📅' });
+      items.push({ path: '/admin/users', label: 'Пользователи', icon: '👥' });
       if (role === 'admin') {
-        menu.push({
-          id: 'admin',
-          label: 'Администрирование',
-          icon: Icon.Settings,
-          isLink: false,
-          children: [
-            { path: '/admin/invite', label: 'Пригласить', icon: Icon.Invite },
-            { path: '/import-participants', label: 'Импорт', icon: Icon.Import },
-            { path: '/settings', label: 'Настройки', icon: Icon.Settings },
-          ]
-        });
+        items.push({ path: '/admin/invite', label: 'Пригласить', icon: '🎫' });
+        items.push({ path: '/import-participants', label: 'Импорт', icon: '📥' });
+        items.push({ path: '/settings', label: 'Настройки', icon: '⚙️' });
       }
     }
 
     if (role === 'president' || role === 'vice_president') {
-      menu.push({
-        id: 'president',
-        label: 'Президенту',
-        icon: Icon.President,
-        isLink: false,
-        children: [
-          { path: '/clubs', label: 'КЮДы', icon: Icon.Club },
-          { path: '/events', label: 'Мероприятия', icon: Icon.Events },
-          { path: '/participants', label: 'Участники', icon: Icon.Participants },
-          { path: '/achievements', label: 'Достижения', icon: Icon.Achievements },
-          { path: '/reports', label: 'Отчёты', icon: Icon.Reports },
-          { path: '/analytics', label: 'Аналитика', icon: Icon.Analytics },
-          { path: '/appeals', label: 'Обращения', icon: Icon.Appeals },
-          { path: '/documents-center', label: 'Центр документов', icon: Icon.Documents },
-          { path: '/president-tasks', label: 'Задания', icon: Icon.Tasks },
-          { path: '/club-rating', label: 'Рейтинг', icon: Icon.Rating },
-        ]
-      });
+      items.push({ path: '/clubs', label: 'КЮДы', icon: '🏫' });
+      items.push({ path: '/events', label: 'Мероприятия', icon: '📅' });
+      items.push({ path: '/participants', label: 'Участники', icon: '👥' });
+      items.push({ path: '/achievements', label: 'Достижения', icon: '🏆' });
+      items.push({ path: '/reports', label: 'Отчёты', icon: '📋' });
+      items.push({ path: '/analytics', label: 'Аналитика', icon: '📊' });
+      items.push({ path: '/appeals', label: 'Обращения', icon: '📨' });
+      items.push({ path: '/documents-center', label: 'Документы', icon: '📁' });
+      items.push({ path: '/president-tasks', label: 'Задания', icon: '👑' });
+      items.push({ path: '/club-rating', label: 'Рейтинг', icon: '🏆' });
     }
 
-    return menu;
+    return items;
   };
 
-  const menuStructure = getMenuStructure();
+  const menuItems = getMenuItems();
 
   // ============================================================
-  // РЕНДЕР ПУНКТА МЕНЮ
+  // ЕСЛИ НЕТ ПРОФИЛЯ — ПУБЛИЧНАЯ ЧАСТЬ
   // ============================================================
-  const renderMenuItem = (item) => {
-    if (item.isLink) {
-      return (
-        <Link
-          key={item.id}
-          to={item.path}
-          className={`sidebar-link ${isActive(item.path) ? 'active' : ''}`}
-          onClick={() => {
-            if (window.innerWidth < 1024) {
-              setIsMobileSidebarOpen(false);
-            }
-          }}
-        >
-          <span className="sidebar-link-icon"><item.icon /></span>
-          <span className="sidebar-link-label">{item.label}</span>
-        </Link>
-      );
-    }
-
-    const isExpanded = expandedMenus[item.id] || false;
-    const isChildActive = item.children?.some(child => isActive(child.path));
-
+  if (!profile) {
     return (
-      <div key={item.id} className="sidebar-group">
-        <button
-          className={`sidebar-group-toggle ${isChildActive ? 'active' : ''}`}
-          onClick={() => toggleMenu(item.id)}
-        >
-          <span className="sidebar-link-icon"><item.icon /></span>
-          <span className="sidebar-link-label">{item.label}</span>
-          <span className="sidebar-group-arrow">
-            {isExpanded ? <Icon.ChevronDown /> : <Icon.ChevronRight />}
-          </span>
-        </button>
-        {isExpanded && (
-          <div className="sidebar-group-children">
-            {item.children.map((child) => (
-              <Link
-                key={child.path}
-                to={child.path}
-                className={`sidebar-link sidebar-child ${isActive(child.path) ? 'active' : ''}`}
-                onClick={() => {
-                  if (window.innerWidth < 1024) {
-                    setIsMobileSidebarOpen(false);
-                  }
-                }}
-              >
-                <span className="sidebar-link-icon"><child.icon /></span>
-                <span className="sidebar-link-label">{child.label}</span>
-              </Link>
-            ))}
-          </div>
-        )}
+      <div className="layout-public">
+        {children}
+        <style>{`
+          .layout-public {
+            min-height: 100vh;
+            background: #F5F6F8;
+          }
+        `}</style>
       </div>
     );
-  };
+  }
 
   // ============================================================
-  // РЕНДЕР
+  // ОСНОВНОЙ РЕНДЕР С САЙДБАРОМ
   // ============================================================
   return (
     <div className="layout">
@@ -612,7 +277,21 @@ export default function Layout({ children, profile }) {
         </div>
 
         <nav className="sidebar-nav">
-          {menuStructure.map((item) => renderMenuItem(item))}
+          {menuItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`sidebar-link ${isActive(item.path) ? 'active' : ''}`}
+              onClick={() => {
+                if (window.innerWidth < 1024) {
+                  setIsSidebarOpen(false);
+                }
+              }}
+            >
+              <span className="sidebar-link-icon">{item.icon}</span>
+              <span className="sidebar-link-label">{item.label}</span>
+            </Link>
+          ))}
         </nav>
 
         <div className="sidebar-footer">
@@ -623,25 +302,24 @@ export default function Layout({ children, profile }) {
       </aside>
 
       {/* Оверлей для мобильного сайдбара */}
-      {window.innerWidth < 1024 && isMobileSidebarOpen && (
-        <div className="sidebar-overlay" onClick={() => setIsMobileSidebarOpen(false)} />
+      {window.innerWidth < 1024 && isSidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)} />
       )}
 
       {/* Основной контент */}
       <main className="main-content">
-        {/* Верхний хедер */}
         <header className="main-header">
           <button
             className="main-header-toggle"
             onClick={() => {
               if (window.innerWidth < 1024) {
-                setIsMobileSidebarOpen(!isMobileSidebarOpen);
+                setIsSidebarOpen(!isSidebarOpen);
               } else {
                 setIsSidebarOpen(!isSidebarOpen);
               }
             }}
           >
-            {isSidebarOpen ? <Icon.Close /> : <Icon.Menu />}
+            ☰
           </button>
 
           <div className="main-header-right">
@@ -651,7 +329,7 @@ export default function Layout({ children, profile }) {
                 className="header-notif-btn"
                 onClick={() => setShowNotifications(!showNotifications)}
               >
-                <Icon.Notifications />
+                🔔
                 {unreadCount > 0 && (
                   <span className="header-notif-badge">{unreadCount}</span>
                 )}
@@ -662,7 +340,7 @@ export default function Layout({ children, profile }) {
                   <div className="header-notif-header">
                     <span>Уведомления</span>
                     {unreadCount > 0 && (
-                      <button onClick={markAllAsRead} className="header-notif-markall">
+                      <button onClick={markAllRead} className="header-notif-markall">
                         Прочитать все
                       </button>
                     )}
@@ -675,11 +353,7 @@ export default function Layout({ children, profile }) {
                         <div
                           key={n.id}
                           className={`header-notif-item ${!n.read ? 'unread' : ''}`}
-                          onClick={() => {
-                            if (!n.read) {
-                              markAsRead(n.id);
-                            }
-                          }}
+                          onClick={() => handleNotificationClick(n.id)}
                         >
                           <div className="header-notif-title">{n.title}</div>
                           <div className="header-notif-message">{n.message}</div>
@@ -691,13 +365,13 @@ export default function Layout({ children, profile }) {
                     </div>
                   )}
                   <Link to="/notification-history" className="header-notif-all">
-                    Все уведомления
+                    Все уведомления →
                   </Link>
                 </div>
               )}
             </div>
 
-            {/* Профиль в хедере */}
+            {/* Профиль */}
             <div className="header-profile" ref={profileRef}>
               <button
                 className="header-profile-btn"
@@ -711,36 +385,20 @@ export default function Layout({ children, profile }) {
                   )}
                 </div>
                 <span className="header-profile-name">{profile?.full_name}</span>
-                <Icon.ChevronDown />
               </button>
 
               {isProfileOpen && (
                 <div className="header-profile-dropdown">
-                  <div className="header-profile-header">
-                    <div className="header-profile-avatar">
-                      {profile?.avatar_url ? (
-                        <img src={profile.avatar_url} alt="Аватар" />
-                      ) : (
-                        getInitials(profile?.full_name)
-                      )}
-                    </div>
-                    <div>
-                      <div className="header-profile-fullname">{profile?.full_name}</div>
-                      <div className="header-profile-role">{profile?.role}</div>
-                    </div>
-                  </div>
-                  <div className="header-divider" />
-                  <Link to="/profile" className="header-profile-item" onClick={() => setIsProfileOpen(false)}>
+                  <Link to="/profile" className="header-dropdown-item" onClick={() => setIsProfileOpen(false)}>
                     Профиль
                   </Link>
-                  <Link to="/my-achievements" className="header-profile-item" onClick={() => setIsProfileOpen(false)}>
+                  <Link to="/my-achievements" className="header-dropdown-item" onClick={() => setIsProfileOpen(false)}>
                     Достижения
                   </Link>
-                  <Link to="/my-reviews" className="header-profile-item" onClick={() => setIsProfileOpen(false)}>
+                  <Link to="/my-reviews" className="header-dropdown-item" onClick={() => setIsProfileOpen(false)}>
                     Оценки
                   </Link>
-                  <div className="header-divider" />
-                  <button className="header-profile-item header-profile-logout" onClick={handleLogout}>
+                  <button className="header-dropdown-item header-dropdown-logout" onClick={handleLogout}>
                     Выйти
                   </button>
                 </div>
@@ -749,10 +407,7 @@ export default function Layout({ children, profile }) {
           </div>
         </header>
 
-        {/* Контент страницы */}
-        <div className="main-content-body">
-          {children}
-        </div>
+        <div className="main-content-body">{children}</div>
       </main>
 
       <style>{`
@@ -762,7 +417,7 @@ export default function Layout({ children, profile }) {
         .layout {
           display: flex;
           min-height: 100vh;
-          background: var(--background);
+          background: #F5F6F8;
         }
 
         /* ============================================================
@@ -771,7 +426,7 @@ export default function Layout({ children, profile }) {
         .sidebar {
           width: 260px;
           min-height: 100vh;
-          background: var(--primary);
+          background: #0B1F3A;
           color: white;
           display: flex;
           flex-direction: column;
@@ -780,7 +435,7 @@ export default function Layout({ children, profile }) {
           left: 0;
           bottom: 0;
           z-index: 1000;
-          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: transform 0.3s ease;
           overflow-y: auto;
         }
 
@@ -807,24 +462,16 @@ export default function Layout({ children, profile }) {
           filter: brightness(0) invert(1);
         }
 
-        .sidebar-brand-text {
-          display: flex;
-          flex-direction: column;
-          line-height: 1.2;
-        }
-
         .sidebar-brand-title {
-          font-family: var(--font-serif);
+          font-family: 'Playfair Display', serif;
           font-size: 18px;
           font-weight: 700;
           color: white;
-          letter-spacing: -0.3px;
         }
 
         .sidebar-brand-subtitle {
           font-size: 11px;
           color: rgba(255,255,255,0.4);
-          letter-spacing: 0.5px;
         }
 
         .sidebar-profile {
@@ -839,11 +486,11 @@ export default function Layout({ children, profile }) {
           width: 36px;
           height: 36px;
           border-radius: 50%;
-          background: var(--gold-gradient);
+          background: linear-gradient(135deg, #C9A227, #E8D9A8);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: var(--primary);
+          color: #0B1F3A;
           font-size: 14px;
           font-weight: 600;
           flex-shrink: 0;
@@ -860,15 +507,11 @@ export default function Layout({ children, profile }) {
           font-size: 13px;
           font-weight: 500;
           color: white;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
         }
 
         .sidebar-profile-role {
           font-size: 11px;
           color: rgba(255,255,255,0.4);
-          text-transform: capitalize;
         }
 
         .sidebar-nav {
@@ -882,12 +525,12 @@ export default function Layout({ children, profile }) {
           align-items: center;
           gap: 12px;
           padding: 9px 14px;
-          border-radius: var(--radius-sm);
+          border-radius: 8px;
           color: rgba(255,255,255,0.5);
           text-decoration: none;
           font-size: 13px;
           font-weight: 400;
-          transition: var(--transition);
+          transition: all 0.2s ease;
           margin-bottom: 1px;
         }
 
@@ -902,73 +545,14 @@ export default function Layout({ children, profile }) {
         }
 
         .sidebar-link.active .sidebar-link-icon {
-          color: var(--gold);
+          color: #C9A227;
         }
 
         .sidebar-link-icon {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
+          font-size: 18px;
           width: 24px;
-          color: rgba(255,255,255,0.3);
-        }
-
-        .sidebar-link.active .sidebar-link-icon {
-          color: var(--gold);
-        }
-
-        .sidebar-link-label {
-          white-space: nowrap;
-        }
-
-        /* ============================================================
-           SIDEBAR ГРУППЫ
-           ============================================================ */
-        .sidebar-group {
-          margin-bottom: 1px;
-        }
-
-        .sidebar-group-toggle {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          width: 100%;
-          padding: 9px 14px;
-          border: none;
-          background: none;
-          border-radius: var(--radius-sm);
-          color: rgba(255,255,255,0.5);
-          font-size: 13px;
-          font-weight: 400;
-          cursor: pointer;
-          transition: var(--transition);
-          font-family: var(--font-sans);
-        }
-
-        .sidebar-group-toggle:hover {
-          background: rgba(255,255,255,0.06);
-          color: white;
-        }
-
-        .sidebar-group-toggle.active {
-          background: rgba(255,255,255,0.08);
-          color: white;
-        }
-
-        .sidebar-group-arrow {
-          margin-left: auto;
-          color: rgba(255,255,255,0.2);
-          transition: transform 0.25s ease;
-        }
-
-        .sidebar-group-children {
-          padding-left: 16px;
-        }
-
-        .sidebar-child {
-          padding: 7px 14px;
-          font-size: 12px;
+          text-align: center;
+          flex-shrink: 0;
         }
 
         .sidebar-footer {
@@ -983,12 +567,12 @@ export default function Layout({ children, profile }) {
           padding: 8px 14px;
           border: none;
           background: rgba(255,255,255,0.04);
-          border-radius: var(--radius-sm);
+          border-radius: 8px;
           color: rgba(255,255,255,0.4);
           font-size: 13px;
-          font-family: var(--font-sans);
+          font-family: inherit;
           cursor: pointer;
-          transition: var(--transition);
+          transition: all 0.2s ease;
           width: 100%;
         }
 
@@ -997,9 +581,6 @@ export default function Layout({ children, profile }) {
           color: #FED7D7;
         }
 
-        /* ============================================================
-           SIDEBAR OVERLAY (МОБИЛЬНЫЙ)
-           ============================================================ */
         .sidebar-overlay {
           position: fixed;
           top: 0;
@@ -1008,12 +589,6 @@ export default function Layout({ children, profile }) {
           height: 100%;
           background: rgba(0,0,0,0.4);
           z-index: 999;
-          animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
         }
 
         /* ============================================================
@@ -1027,16 +602,13 @@ export default function Layout({ children, profile }) {
           flex-direction: column;
         }
 
-        /* ============================================================
-           MAIN HEADER
-           ============================================================ */
         .main-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
           padding: 12px 32px;
           background: white;
-          border-bottom: 1px solid var(--border);
+          border-bottom: 1px solid #E2E7EF;
           position: sticky;
           top: 0;
           z-index: 100;
@@ -1051,14 +623,15 @@ export default function Layout({ children, profile }) {
           height: 40px;
           border: none;
           background: transparent;
-          border-radius: var(--radius-sm);
+          border-radius: 8px;
           cursor: pointer;
-          color: var(--text-secondary);
-          transition: var(--transition);
+          font-size: 20px;
+          color: #667085;
+          transition: all 0.2s ease;
         }
 
         .main-header-toggle:hover {
-          background: var(--background);
+          background: #F4F6F9;
         }
 
         .main-header-right {
@@ -1068,7 +641,7 @@ export default function Layout({ children, profile }) {
         }
 
         /* ============================================================
-           HEADER УВЕДОМЛЕНИЯ
+           УВЕДОМЛЕНИЯ
            ============================================================ */
         .header-notifications {
           position: relative;
@@ -1081,26 +654,26 @@ export default function Layout({ children, profile }) {
           background: transparent;
           border-radius: 50%;
           cursor: pointer;
-          color: var(--text-secondary);
-          transition: var(--transition);
+          font-size: 20px;
+          position: relative;
+          transition: background 0.2s ease;
           display: flex;
           align-items: center;
           justify-content: center;
-          position: relative;
         }
 
         .header-notif-btn:hover {
-          background: var(--background);
+          background: #F4F6F9;
         }
 
         .header-notif-badge {
           position: absolute;
-          top: 4px;
-          right: 4px;
+          top: 2px;
+          right: 2px;
           background: #B3262E;
           color: white;
           font-size: 10px;
-          font-weight: 600;
+          font-weight: 700;
           width: 18px;
           height: 18px;
           border-radius: 50%;
@@ -1116,9 +689,9 @@ export default function Layout({ children, profile }) {
           width: 360px;
           max-height: 420px;
           background: white;
-          border-radius: var(--radius);
-          box-shadow: var(--shadow-hover);
-          border: 1px solid var(--border);
+          border-radius: 12px;
+          box-shadow: 0 12px 40px rgba(11, 31, 58, 0.15);
+          border: 1px solid #E2E7EF;
           overflow: hidden;
           z-index: 1000;
           display: flex;
@@ -1130,23 +703,22 @@ export default function Layout({ children, profile }) {
           justify-content: space-between;
           align-items: center;
           padding: 12px 16px;
-          border-bottom: 1px solid var(--border);
+          border-bottom: 1px solid #F4F6F9;
           font-weight: 600;
-          font-size: 14px;
-          color: var(--text-primary);
-          flex-shrink: 0;
+          color: #0B1F3A;
         }
 
         .header-notif-markall {
           background: none;
           border: none;
-          color: var(--text-secondary);
+          color: #174A7E;
           font-size: 12px;
           cursor: pointer;
+          font-weight: 500;
         }
 
         .header-notif-markall:hover {
-          color: var(--text-primary);
+          text-decoration: underline;
         }
 
         .header-notif-list {
@@ -1156,42 +728,42 @@ export default function Layout({ children, profile }) {
 
         .header-notif-item {
           padding: 10px 16px;
-          border-bottom: 1px solid var(--border);
+          border-bottom: 1px solid #F4F6F9;
           cursor: pointer;
-          transition: var(--transition);
+          transition: background 0.2s ease;
         }
 
         .header-notif-item:hover {
-          background: var(--background);
+          background: #F8FAFC;
         }
 
         .header-notif-item.unread {
-          border-left: 3px solid var(--gold);
-          background: #FAF8F4;
+          background: #FBF4DC;
+          border-left: 3px solid #C9A227;
         }
 
         .header-notif-title {
           font-weight: 600;
           font-size: 13px;
-          color: var(--text-primary);
+          color: #0B1F3A;
         }
 
         .header-notif-message {
           font-size: 13px;
-          color: var(--text-secondary);
+          color: #667085;
           margin-top: 2px;
         }
 
         .header-notif-time {
           font-size: 11px;
-          color: var(--text-muted);
+          color: #98A2B3;
           margin-top: 4px;
         }
 
         .header-notif-empty {
-          padding: 28px;
+          padding: 30px;
           text-align: center;
-          color: var(--text-muted);
+          color: #98A2B3;
           font-size: 14px;
         }
 
@@ -1199,20 +771,19 @@ export default function Layout({ children, profile }) {
           display: block;
           padding: 10px 16px;
           text-align: center;
-          border-top: 1px solid var(--border);
-          color: var(--text-secondary);
+          border-top: 1px solid #F4F6F9;
+          color: #174A7E;
           text-decoration: none;
           font-size: 13px;
           font-weight: 500;
-          flex-shrink: 0;
         }
 
         .header-notif-all:hover {
-          background: var(--background);
+          background: #F8FAFC;
         }
 
         /* ============================================================
-           HEADER ПРОФИЛЬ
+           ПРОФИЛЬ В ХЕДЕРЕ
            ============================================================ */
         .header-profile {
           position: relative;
@@ -1227,19 +798,19 @@ export default function Layout({ children, profile }) {
           background: transparent;
           border-radius: 30px;
           cursor: pointer;
-          transition: var(--transition);
-          font-family: var(--font-sans);
+          transition: all 0.2s ease;
+          font-family: inherit;
         }
 
         .header-profile-btn:hover {
-          background: var(--background);
+          background: #F4F6F9;
         }
 
         .header-avatar {
           width: 32px;
           height: 32px;
           border-radius: 50%;
-          background: var(--primary);
+          background: linear-gradient(135deg, #0B1F3A, #174A7E);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1259,116 +830,57 @@ export default function Layout({ children, profile }) {
         .header-profile-name {
           font-size: 13px;
           font-weight: 500;
-          color: var(--text-primary);
-          max-width: 120px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .header-profile-btn svg {
-          color: var(--text-muted);
-          flex-shrink: 0;
+          color: #0B1F3A;
         }
 
         .header-profile-dropdown {
           position: absolute;
           top: calc(100% + 8px);
           right: 0;
-          width: 240px;
+          width: 200px;
           background: white;
-          border-radius: var(--radius);
-          box-shadow: var(--shadow-hover);
-          border: 1px solid var(--border);
+          border-radius: 12px;
+          box-shadow: 0 12px 40px rgba(11, 31, 58, 0.15);
+          border: 1px solid #E2E7EF;
           overflow: hidden;
           z-index: 1000;
         }
 
-        .header-profile-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 14px 16px;
-        }
-
-        .header-profile-avatar {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          background: var(--primary);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 14px;
-          font-weight: 600;
-          flex-shrink: 0;
-          overflow: hidden;
-        }
-
-        .header-profile-avatar img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .header-profile-fullname {
-          font-weight: 600;
-          font-size: 14px;
-          color: var(--text-primary);
-        }
-
-        .header-profile-role {
-          font-size: 12px;
-          color: var(--text-secondary);
-          text-transform: capitalize;
-        }
-
-        .header-divider {
-          height: 1px;
-          background: var(--border);
-          margin: 0 12px;
-        }
-
-        .header-profile-item {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 8px 16px;
-          color: var(--text-primary);
+        .header-dropdown-item {
+          display: block;
+          padding: 10px 18px;
+          color: #0B1F3A;
           text-decoration: none;
           font-size: 13px;
-          transition: var(--transition);
+          transition: all 0.2s ease;
           border: none;
           background: none;
           width: 100%;
           cursor: pointer;
-          font-family: var(--font-sans);
+          font-family: inherit;
           text-align: left;
         }
 
-        .header-profile-item:hover {
-          background: var(--background);
+        .header-dropdown-item:hover {
+          background: #F4F6F9;
         }
 
-        .header-profile-logout {
+        .header-dropdown-logout {
           color: #B3262E;
+          border-top: 1px solid #F4F6F9;
         }
 
-        .header-profile-logout:hover {
+        .header-dropdown-logout:hover {
           background: #FCEBEC;
         }
 
-        /* ============================================================
-           MAIN CONTENT BODY
-           ============================================================ */
         .main-content-body {
           flex: 1;
           padding: 24px 32px 40px;
         }
 
         /* ============================================================
-           RESPONSIVE
+           АДАПТИВНОСТЬ
            ============================================================ */
         @media (max-width: 1024px) {
           .sidebar {
@@ -1408,12 +920,7 @@ export default function Layout({ children, profile }) {
 
           .header-notif-dropdown {
             width: 300px;
-            right: -40px;
-          }
-
-          .header-profile-dropdown {
-            width: 200px;
-            right: -20px;
+            right: -60px;
           }
         }
 
@@ -1427,19 +934,14 @@ export default function Layout({ children, profile }) {
             padding: 8px 12px 16px;
           }
 
-          .header-notif-dropdown {
-            width: 280px;
-            right: -60px;
-          }
-
-          .header-profile-dropdown {
-            width: 180px;
-            right: -40px;
-          }
-
           .sidebar {
             width: 100%;
             max-width: 320px;
+          }
+
+          .header-notif-dropdown {
+            width: 280px;
+            right: -80px;
           }
         }
       `}</style>

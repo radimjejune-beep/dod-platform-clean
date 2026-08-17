@@ -283,21 +283,48 @@ export default function Layout({ children, profile }) {
 
       {/* ОСНОВНОЙ КОНТЕНТ */}
       <main className="main-content">
+        {/* ХЕДЕР — ТОЛЬКО БУРГЕР, УВЕДОМЛЕНИЯ, ПРОФИЛЬ */}
         <header className="main-header">
           <button
             className="main-header-toggle"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            aria-label="Toggle menu"
           >
-            ☰
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
           </button>
 
+          <div className="main-header-title">
+            {location.pathname === '/dashboard' && 'Дашборд'}
+            {location.pathname === '/events' && 'Мероприятия'}
+            {location.pathname === '/calendar' && 'Календарь'}
+            {location.pathname === '/clubs' && 'КЮДы'}
+            {location.pathname === '/participants' && 'Участники'}
+            {location.pathname === '/profile' && 'Профиль'}
+            {location.pathname === '/reports' && 'Отчёты'}
+            {location.pathname === '/analytics' && 'Аналитика'}
+            {location.pathname === '/appeals' && 'Обращения'}
+            {location.pathname === '/documents-center' && 'Центр документов'}
+            {location.pathname === '/manage-achievements' && 'Управление достижениями'}
+            {location.pathname === '/my-achievements' && 'Мои достижения'}
+            {location.pathname === '/clubs-management' && 'Управление КЮДами'}
+          </div>
+
           <div className="main-header-right">
+            {/* УВЕДОМЛЕНИЯ */}
             <div className="header-notifications" ref={notificationRef}>
               <button
                 className="header-notif-btn"
                 onClick={() => setShowNotifications(!showNotifications)}
+                aria-label="Уведомления"
               >
-                🔔
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
                 {unreadCount > 0 && (
                   <span className="header-notif-badge">{unreadCount}</span>
                 )}
@@ -339,10 +366,12 @@ export default function Layout({ children, profile }) {
               )}
             </div>
 
+            {/* ПРОФИЛЬ */}
             <div className="header-profile" ref={profileRef}>
               <button
                 className="header-profile-btn"
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
+                aria-label="Профиль"
               >
                 <div className="header-avatar">
                   {profile?.avatar_url ? (
@@ -352,6 +381,9 @@ export default function Layout({ children, profile }) {
                   )}
                 </div>
                 <span className="header-profile-name">{profile?.full_name}</span>
+                <svg width="12" height="12" viewBox="0 0 12 8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <path d="M1 1.5L6 6.5L11 1.5" />
+                </svg>
               </button>
 
               {isProfileOpen && (
@@ -365,6 +397,7 @@ export default function Layout({ children, profile }) {
                   <Link to="/my-reviews" className="header-dropdown-item" onClick={() => setIsProfileOpen(false)}>
                     Оценки
                   </Link>
+                  <div className="header-dropdown-divider" />
                   <button className="header-dropdown-item header-dropdown-logout" onClick={handleLogout}>
                     Выйти
                   </button>
@@ -404,6 +437,7 @@ export default function Layout({ children, profile }) {
           z-index: 1000;
           transition: transform 0.3s ease;
           overflow-y: auto;
+          flex-shrink: 0;
         }
 
         .sidebar::-webkit-scrollbar {
@@ -420,6 +454,7 @@ export default function Layout({ children, profile }) {
           gap: 12px;
           padding: 20px 20px 16px;
           border-bottom: 1px solid rgba(255,255,255,0.06);
+          flex-shrink: 0;
         }
 
         .sidebar-logo {
@@ -446,6 +481,7 @@ export default function Layout({ children, profile }) {
           gap: 12px;
           padding: 14px 20px;
           border-bottom: 1px solid rgba(255,255,255,0.06);
+          flex-shrink: 0;
         }
 
         .sidebar-avatar {
@@ -523,6 +559,7 @@ export default function Layout({ children, profile }) {
         .sidebar-footer {
           padding: 12px 20px 20px;
           border-top: 1px solid rgba(255,255,255,0.06);
+          flex-shrink: 0;
         }
 
         .sidebar-logout {
@@ -567,42 +604,56 @@ export default function Layout({ children, profile }) {
           flex-direction: column;
         }
 
+        /* ============================================================
+           HEADER
+           ============================================================ */
         .main-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 12px 32px;
+          padding: 10px 32px;
           background: white;
           border-bottom: 1px solid #E4E7EC;
           position: sticky;
           top: 0;
           z-index: 100;
-          min-height: 64px;
+          min-height: 60px;
+          gap: 16px;
         }
 
         .main-header-toggle {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 40px;
-          height: 40px;
+          width: 38px;
+          height: 38px;
           border: none;
           background: transparent;
           border-radius: 8px;
           cursor: pointer;
-          font-size: 20px;
           color: #667085;
           transition: all 0.2s ease;
+          flex-shrink: 0;
         }
 
         .main-header-toggle:hover {
           background: #F4F6F9;
+          color: #0B1F3A;
+        }
+
+        .main-header-title {
+          flex: 1;
+          font-family: 'Playfair Display', serif;
+          font-size: 18px;
+          font-weight: 600;
+          color: #0B1F3A;
+          letter-spacing: -0.2px;
         }
 
         .main-header-right {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 8px;
           flex-shrink: 0;
         }
 
@@ -614,28 +665,29 @@ export default function Layout({ children, profile }) {
         }
 
         .header-notif-btn {
-          width: 40px;
-          height: 40px;
+          width: 38px;
+          height: 38px;
           border: none;
           background: transparent;
           border-radius: 50%;
           cursor: pointer;
-          font-size: 20px;
-          position: relative;
+          color: #667085;
           transition: all 0.2s ease;
           display: flex;
           align-items: center;
           justify-content: center;
+          position: relative;
         }
 
         .header-notif-btn:hover {
           background: #F4F6F9;
+          color: #0B1F3A;
         }
 
         .header-notif-badge {
           position: absolute;
-          top: 2px;
-          right: 2px;
+          top: 4px;
+          right: 4px;
           background: #B3262E;
           color: white;
           font-size: 10px;
@@ -651,12 +703,12 @@ export default function Layout({ children, profile }) {
         .header-notif-dropdown {
           position: absolute;
           top: calc(100% + 8px);
-          right: 0;
+          right: -8px;
           width: 360px;
-          max-height: 420px;
+          max-height: 440px;
           background: white;
           border-radius: 12px;
-          box-shadow: 0 12px 40px rgba(11, 31, 58, 0.15);
+          box-shadow: 0 12px 48px rgba(11, 31, 58, 0.15);
           border: 1px solid #E4E7EC;
           overflow: hidden;
           z-index: 1000;
@@ -671,7 +723,9 @@ export default function Layout({ children, profile }) {
           padding: 12px 16px;
           border-bottom: 1px solid #F4F6F9;
           font-weight: 600;
+          font-size: 14px;
           color: #0B1F3A;
+          flex-shrink: 0;
         }
 
         .header-notif-markall {
@@ -680,6 +734,7 @@ export default function Layout({ children, profile }) {
           color: #667085;
           font-size: 12px;
           cursor: pointer;
+          font-weight: 500;
         }
 
         .header-notif-markall:hover {
@@ -741,6 +796,7 @@ export default function Layout({ children, profile }) {
           text-decoration: none;
           font-size: 13px;
           font-weight: 500;
+          flex-shrink: 0;
         }
 
         .header-notif-all:hover {
@@ -748,7 +804,7 @@ export default function Layout({ children, profile }) {
         }
 
         /* ============================================================
-           ПРОФИЛЬ В ХЕДЕРЕ
+           ПРОФИЛЬ
            ============================================================ */
         .header-profile {
           position: relative;
@@ -765,6 +821,8 @@ export default function Layout({ children, profile }) {
           cursor: pointer;
           transition: all 0.2s ease;
           font-family: inherit;
+          font-size: 13px;
+          color: #0B1F3A;
         }
 
         .header-profile-btn:hover {
@@ -801,6 +859,11 @@ export default function Layout({ children, profile }) {
           white-space: nowrap;
         }
 
+        .header-profile-btn svg {
+          color: #98A2B3;
+          flex-shrink: 0;
+        }
+
         .header-profile-dropdown {
           position: absolute;
           top: calc(100% + 8px);
@@ -808,15 +871,17 @@ export default function Layout({ children, profile }) {
           width: 200px;
           background: white;
           border-radius: 12px;
-          box-shadow: 0 12px 40px rgba(11, 31, 58, 0.15);
+          box-shadow: 0 12px 48px rgba(11, 31, 58, 0.15);
           border: 1px solid #E4E7EC;
           overflow: hidden;
           z-index: 1000;
         }
 
         .header-dropdown-item {
-          display: block;
-          padding: 10px 18px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 16px;
           color: #0B1F3A;
           text-decoration: none;
           font-size: 13px;
@@ -833,9 +898,14 @@ export default function Layout({ children, profile }) {
           background: #F4F6F9;
         }
 
+        .header-dropdown-divider {
+          height: 1px;
+          background: #F4F6F9;
+          margin: 4px 12px;
+        }
+
         .header-dropdown-logout {
           color: #B3262E;
-          border-top: 1px solid #F4F6F9;
         }
 
         .header-dropdown-logout:hover {
@@ -864,12 +934,16 @@ export default function Layout({ children, profile }) {
           }
 
           .main-header {
-            padding: 10px 20px;
+            padding: 8px 20px;
             min-height: 56px;
           }
 
           .main-content-body {
             padding: 16px 20px 32px;
+          }
+
+          .main-header-title {
+            font-size: 16px;
           }
 
           .header-profile-name {
@@ -879,17 +953,30 @@ export default function Layout({ children, profile }) {
 
         @media (max-width: 768px) {
           .main-header {
-            padding: 8px 16px;
+            padding: 6px 16px;
             min-height: 52px;
+            gap: 10px;
           }
 
           .main-content-body {
             padding: 12px 16px 24px;
           }
 
+          .main-header-title {
+            font-size: 15px;
+          }
+
           .header-notif-dropdown {
             width: 320px;
-            right: -40px;
+            right: -50px;
+          }
+
+          .header-profile-dropdown {
+            width: 180px;
+          }
+
+          .sidebar {
+            width: 280px;
           }
         }
 
@@ -903,19 +990,98 @@ export default function Layout({ children, profile }) {
             padding: 8px 12px 16px;
           }
 
+          .main-header-title {
+            font-size: 13px;
+          }
+
+          .main-header-toggle {
+            width: 32px;
+            height: 32px;
+          }
+
+          .main-header-toggle svg {
+            width: 20px;
+            height: 20px;
+          }
+
+          .header-notif-btn {
+            width: 32px;
+            height: 32px;
+          }
+
+          .header-notif-btn svg {
+            width: 18px;
+            height: 18px;
+          }
+
+          .header-notif-badge {
+            width: 16px;
+            height: 16px;
+            font-size: 9px;
+            top: 2px;
+            right: 2px;
+          }
+
           .header-notif-dropdown {
             width: 290px;
             right: -60px;
           }
 
+          .header-profile-btn {
+            padding: 4px;
+          }
+
+          .header-avatar {
+            width: 28px;
+            height: 28px;
+            font-size: 10px;
+          }
+
           .header-profile-dropdown {
-            width: 180px;
+            width: 160px;
             right: -20px;
+          }
+
+          .header-dropdown-item {
+            padding: 8px 14px;
+            font-size: 12px;
           }
 
           .sidebar {
             width: 100%;
             max-width: 300px;
+          }
+
+          .sidebar-brand {
+            padding: 14px 16px;
+          }
+
+          .sidebar-brand-title {
+            font-size: 16px;
+          }
+
+          .sidebar-profile {
+            padding: 10px 16px;
+          }
+
+          .sidebar-avatar {
+            width: 32px;
+            height: 32px;
+            font-size: 12px;
+          }
+
+          .sidebar-profile-name {
+            font-size: 12px;
+          }
+
+          .sidebar-link {
+            padding: 8px 12px;
+            font-size: 12px;
+          }
+
+          .sidebar-link-icon {
+            font-size: 16px;
+            width: 20px;
           }
         }
       `}</style>

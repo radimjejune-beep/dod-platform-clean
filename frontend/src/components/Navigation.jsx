@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useMenuItems } from '../hooks/useMenuItems';
 import logo from '../assets/Image.png';
 
 export default function Navigation({ profile }) {
@@ -18,9 +19,10 @@ export default function Navigation({ profile }) {
   const notificationRef = useRef(null);
   const menuRef = useRef(null);
 
-  // ============================================================
+  // ЕДИНОЕ МЕНЮ (ОБЩЕЕ С ДАШБОРДОМ)
+  const menuItems = useMenuItems(profile);
+
   // ЗАГРУЗКА УВЕДОМЛЕНИЙ
-  // ============================================================
   const loadNotifications = async () => {
     if (notificationsLoaded) return;
     try {
@@ -46,9 +48,7 @@ export default function Navigation({ profile }) {
     }
   }, [profile, notificationsLoaded]);
 
-  // ============================================================
   // ЗАКРЫТИЕ ПОПАПОВ
-  // ============================================================
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
@@ -65,18 +65,14 @@ export default function Navigation({ profile }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ============================================================
   // ВЫХОД
-  // ============================================================
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
   };
 
-  // ============================================================
   // УВЕДОМЛЕНИЯ
-  // ============================================================
   const handleNotificationClick = async (id) => {
     try {
       const token = localStorage.getItem('token');
@@ -107,9 +103,7 @@ export default function Navigation({ profile }) {
     }
   };
 
-  // ============================================================
   // ВСПОМОГАТЕЛЬНЫЕ
-  // ============================================================
   const getInitials = (name) => {
     if (!name) return '?';
     const parts = name.split(' ');
@@ -123,96 +117,7 @@ export default function Navigation({ profile }) {
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
-  // ============================================================
-  // МЕНЮ ПО РОЛИ
-  // ============================================================
-  const getMenuItems = () => {
-    const role = profile?.role;
-    const isPresident = profile?.is_president || false;
-    const items = [];
-
-    // Дашборд есть у всех
-    items.push({ path: '/dashboard', label: 'Дашборд' });
-
-    // Мероприятия есть у всех
-    items.push({ path: '/events', label: 'Мероприятия' });
-
-    // Участники
-    if (['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'].includes(role)) {
-      items.push({ path: '/participants', label: 'Участники' });
-    }
-
-    // Достижения
-    if (['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'].includes(role)) {
-      items.push({ path: '/achievements', label: 'Достижения' });
-    }
-
-    // Клубы
-    if (['admin', 'movement_coordinator', 'president', 'vice_president', 'club_coordinator'].includes(role)) {
-      items.push({ path: '/clubs', label: 'КЮДы' });
-    }
-
-    // Отчёты
-    if (['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(role)) {
-      items.push({ path: '/reports', label: 'Отчёты' });
-    }
-
-    // Обращения
-    if (['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(role)) {
-      items.push({ path: '/appeals', label: 'Обращения' });
-    }
-
-    // Аналитика
-    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
-      items.push({ path: '/analytics', label: 'Аналитика' });
-    }
-
-    // Задания президента
-    if (role === 'participant' && isPresident) {
-      items.push({ path: '/president-tasks', label: 'Задания' });
-    }
-    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
-      items.push({ path: '/president-tasks', label: 'Задания' });
-    }
-
-    // Рейтинг
-    if (['admin', 'movement_coordinator', 'president', 'vice_president', 'club_coordinator'].includes(role)) {
-      items.push({ path: '/club-rating', label: 'Рейтинг' });
-    }
-
-    // Документы
-    if (['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(role)) {
-      items.push({ path: '/documents-center', label: 'Документы' });
-    }
-
-    // Пользователи (только админ)
-    if (role === 'admin') {
-      items.push({ path: '/admin/users', label: 'Пользователи' });
-    }
-
-    // Календарь
-    if (['participant', 'parent', 'club_coordinator', 'tutor'].includes(role)) {
-      items.push({ path: '/calendar', label: 'Календарь' });
-    }
-
-    // Мои достижения
-    if (['participant', 'parent'].includes(role)) {
-      items.push({ path: '/my-achievements', label: 'Мои достижения' });
-    }
-
-    // Мои оценки
-    if (['participant', 'tutor'].includes(role)) {
-      items.push({ path: '/my-reviews', label: 'Мои оценки' });
-    }
-
-    return items;
-  };
-
-  const menuItems = getMenuItems();
-
-  // ============================================================
   // ПУБЛИЧНАЯ ВЕРСИЯ
-  // ============================================================
   if (!profile) {
     return (
       <nav className="nav">
@@ -252,20 +157,15 @@ export default function Navigation({ profile }) {
             font-weight: 700;
             color: #0A1628;
           }
-          .nav-logo img {
-            height: 34px;
-            width: auto;
-          }
-          .nav-logo-text {
-            letter-spacing: -0.02em;
-          }
+          .nav-logo img { height: 34px; width: auto; }
+          .nav-logo-text { letter-spacing: -0.02em; }
           .btn-gold {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
             padding: 10px 28px;
-            background: linear-gradient(135deg, #C9A227 0%, #D4B84A 50%, #E8D9A8 100%);
+            background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
             color: #0A1628;
             border: none;
             border-radius: 8px;
@@ -282,21 +182,15 @@ export default function Navigation({ profile }) {
             box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
           }
           @media (max-width: 768px) {
-            .nav {
-              padding: 0 16px;
-            }
-            .nav-logo-text {
-              display: none;
-            }
+            .nav { padding: 0 16px; }
+            .nav-logo-text { display: none; }
           }
         `}</style>
       </nav>
     );
   }
 
-  // ============================================================
   // ОСНОВНАЯ ВЕРСИЯ
-  // ============================================================
   return (
     <nav className="nav">
       <div className="nav-container">
@@ -307,11 +201,11 @@ export default function Navigation({ profile }) {
           <span className="nav-logo-text">Дипломаты будущего</span>
         </Link>
 
-        {/* ДЕСКТОПНОЕ МЕНЮ */}
+        {/* ДЕСКТОПНОЕ МЕНЮ — ИЗ ХУКА */}
         <div className="nav-desktop">
           {menuItems.map((item) => (
             <Link
-              key={item.path}
+              key={item.id}
               to={item.path}
               className={`nav-link ${isActive(item.path) ? 'active' : ''}`}
             >
@@ -328,7 +222,6 @@ export default function Navigation({ profile }) {
             <button
               className="nav-notif-btn"
               onClick={() => setShowNotifications(!showNotifications)}
-              aria-label="Уведомления"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -349,7 +242,6 @@ export default function Navigation({ profile }) {
                     </button>
                   )}
                 </div>
-
                 {notifications.length === 0 ? (
                   <div className="nav-notif-empty">Нет уведомлений</div>
                 ) : (
@@ -369,7 +261,6 @@ export default function Navigation({ profile }) {
                     ))}
                   </div>
                 )}
-
                 <Link to="/notification-history" className="nav-notif-all">
                   Все уведомления →
                 </Link>
@@ -382,7 +273,6 @@ export default function Navigation({ profile }) {
             <button
               className="nav-profile-btn"
               onClick={() => setIsProfileOpen(!isProfileOpen)}
-              aria-label="Профиль"
             >
               <div className="nav-avatar">
                 {profile?.avatar_url ? (
@@ -412,37 +302,18 @@ export default function Navigation({ profile }) {
                     <div className="nav-profile-role">{profile?.role}</div>
                   </div>
                 </div>
-
                 <div className="nav-profile-divider" />
-
-                <Link
-                  to="/profile"
-                  className="nav-profile-item"
-                  onClick={() => setIsProfileOpen(false)}
-                >
+                <Link to="/profile" className="nav-profile-item" onClick={() => setIsProfileOpen(false)}>
                   Профиль
                 </Link>
-                <Link
-                  to="/my-achievements"
-                  className="nav-profile-item"
-                  onClick={() => setIsProfileOpen(false)}
-                >
+                <Link to="/my-achievements" className="nav-profile-item" onClick={() => setIsProfileOpen(false)}>
                   Достижения
                 </Link>
-                <Link
-                  to="/my-reviews"
-                  className="nav-profile-item"
-                  onClick={() => setIsProfileOpen(false)}
-                >
+                <Link to="/my-reviews" className="nav-profile-item" onClick={() => setIsProfileOpen(false)}>
                   Оценки
                 </Link>
-
                 <div className="nav-profile-divider" />
-
-                <button
-                  className="nav-profile-item nav-profile-logout"
-                  onClick={handleLogout}
-                >
+                <button className="nav-profile-item nav-profile-logout" onClick={handleLogout}>
                   Выйти
                 </button>
               </div>
@@ -453,7 +324,6 @@ export default function Navigation({ profile }) {
           <button
             className="nav-mobile-toggle"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-label="Меню"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="3" y1="6" x2="21" y2="6" />
@@ -470,7 +340,7 @@ export default function Navigation({ profile }) {
         <div className="nav-mobile" ref={menuRef}>
           {menuItems.map((item) => (
             <Link
-              key={item.path}
+              key={item.id}
               to={item.path}
               className={`nav-mobile-link ${isActive(item.path) ? 'active' : ''}`}
               onClick={() => setIsMenuOpen(false)}
@@ -479,26 +349,16 @@ export default function Navigation({ profile }) {
             </Link>
           ))}
           <div className="nav-mobile-divider" />
-          <Link
-            to="/profile"
-            className="nav-mobile-link"
-            onClick={() => setIsMenuOpen(false)}
-          >
+          <Link to="/profile" className="nav-mobile-link" onClick={() => setIsMenuOpen(false)}>
             Профиль
           </Link>
-          <button
-            className="nav-mobile-logout"
-            onClick={handleLogout}
-          >
+          <button className="nav-mobile-logout" onClick={handleLogout}>
             Выйти
           </button>
         </div>
       )}
 
       <style>{`
-        /* ============================================================
-           NAV
-           ============================================================ */
         .nav {
           background: white;
           border-bottom: 1px solid #E4DFD8;
@@ -530,19 +390,9 @@ export default function Navigation({ profile }) {
           color: #0A1628;
           flex-shrink: 0;
         }
+        .nav-logo img { height: 34px; width: auto; }
+        .nav-logo-text { letter-spacing: -0.02em; }
 
-        .nav-logo img {
-          height: 34px;
-          width: auto;
-        }
-
-        .nav-logo-text {
-          letter-spacing: -0.02em;
-        }
-
-        /* ============================================================
-           ДЕСКТОПНОЕ МЕНЮ
-           ============================================================ */
         .nav-desktop {
           display: flex;
           align-items: center;
@@ -564,21 +414,9 @@ export default function Navigation({ profile }) {
           white-space: nowrap;
           letter-spacing: 0.01em;
         }
+        .nav-link:hover { background: #F8F6F2; color: #0A1628; }
+        .nav-link.active { background: #FBF4DC; color: #C9A227; font-weight: 600; }
 
-        .nav-link:hover {
-          background: #F8F6F2;
-          color: #0A1628;
-        }
-
-        .nav-link.active {
-          background: #FBF4DC;
-          color: #C9A227;
-          font-weight: 600;
-        }
-
-        /* ============================================================
-           ПРАВАЯ ЧАСТЬ
-           ============================================================ */
         .nav-right {
           display: flex;
           align-items: center;
@@ -586,442 +424,156 @@ export default function Navigation({ profile }) {
           flex-shrink: 0;
         }
 
-        /* ============================================================
-           УВЕДОМЛЕНИЯ
-           ============================================================ */
-        .nav-notifications {
-          position: relative;
-        }
-
+        .nav-notifications { position: relative; }
         .nav-notif-btn {
-          width: 40px;
-          height: 40px;
-          border: none;
-          background: transparent;
-          border-radius: 50%;
-          cursor: pointer;
-          color: #6B6561;
-          transition: all 0.25s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          position: relative;
+          width: 40px; height: 40px; border: none; background: transparent; border-radius: 50%;
+          cursor: pointer; color: #6B6561; transition: all 0.25s ease;
+          display: flex; align-items: center; justify-content: center; position: relative;
         }
-
-        .nav-notif-btn:hover {
-          background: #F8F6F2;
-          color: #0A1628;
-        }
-
+        .nav-notif-btn:hover { background: #F8F6F2; color: #0A1628; }
         .nav-notif-badge {
-          position: absolute;
-          top: 3px;
-          right: 3px;
-          background: #B3262E;
-          color: white;
-          font-size: 10px;
-          font-weight: 700;
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          position: absolute; top: 3px; right: 3px;
+          background: #B3262E; color: white; font-size: 10px; font-weight: 700;
+          width: 18px; height: 18px; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
         }
-
         .nav-notif-dropdown {
-          position: absolute;
-          top: calc(100% + 10px);
-          right: 0;
-          width: 360px;
-          max-height: 440px;
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 12px 48px rgba(10, 22, 40, 0.12);
-          border: 1px solid #E4DFD8;
-          overflow: hidden;
-          z-index: 1000;
-          display: flex;
-          flex-direction: column;
+          position: absolute; top: calc(100% + 10px); right: 0;
+          width: 360px; max-height: 440px;
+          background: white; border-radius: 12px;
+          box-shadow: 0 12px 48px rgba(10,22,40,0.12);
+          border: 1px solid #E4DFD8; overflow: hidden; z-index: 1000;
+          display: flex; flex-direction: column;
         }
-
         .nav-notif-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 14px 18px;
-          border-bottom: 1px solid #F0EDE8;
-          font-weight: 600;
-          font-size: 14px;
-          color: #0A1628;
-          flex-shrink: 0;
-          font-family: 'Playfair Display', serif;
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 14px 18px; border-bottom: 1px solid #F0EDE8;
+          font-weight: 600; font-size: 14px; color: #0A1628;
+          font-family: 'Playfair Display', serif; flex-shrink: 0;
         }
-
         .nav-notif-markall {
-          background: none;
-          border: none;
-          color: #6B6561;
-          font-size: 12px;
-          cursor: pointer;
-          font-weight: 500;
-          font-family: 'Inter', sans-serif;
+          background: none; border: none; color: #6B6561; font-size: 12px;
+          cursor: pointer; font-weight: 500; font-family: 'Inter', sans-serif;
         }
-
-        .nav-notif-markall:hover {
-          color: #0A1628;
-        }
-
-        .nav-notif-list {
-          overflow-y: auto;
-          flex: 1;
-        }
-
+        .nav-notif-markall:hover { color: #0A1628; }
+        .nav-notif-list { overflow-y: auto; flex: 1; }
         .nav-notif-item {
-          padding: 12px 18px;
-          border-bottom: 1px solid #F0EDE8;
-          cursor: pointer;
-          transition: all 0.2s ease;
+          padding: 12px 18px; border-bottom: 1px solid #F0EDE8;
+          cursor: pointer; transition: all 0.2s ease;
         }
-
-        .nav-notif-item:hover {
-          background: #F8F6F2;
-        }
-
-        .nav-notif-item.unread {
-          background: #FBF4DC;
-          border-left: 3px solid #C9A227;
-        }
-
-        .nav-notif-title {
-          font-weight: 600;
-          font-size: 13px;
-          color: #0A1628;
-        }
-
-        .nav-notif-message {
-          font-size: 13px;
-          color: #6B6561;
-          margin-top: 2px;
-        }
-
-        .nav-notif-time {
-          font-size: 11px;
-          color: #A8A29A;
-          margin-top: 4px;
-        }
-
-        .nav-notif-empty {
-          padding: 32px;
-          text-align: center;
-          color: #A8A29A;
-          font-size: 14px;
-        }
-
+        .nav-notif-item:hover { background: #F8F6F2; }
+        .nav-notif-item.unread { background: #FBF4DC; border-left: 3px solid #C9A227; }
+        .nav-notif-title { font-weight: 600; font-size: 13px; color: #0A1628; }
+        .nav-notif-message { font-size: 13px; color: #6B6561; margin-top: 2px; }
+        .nav-notif-time { font-size: 11px; color: #A8A29A; margin-top: 4px; }
+        .nav-notif-empty { padding: 32px; text-align: center; color: #A8A29A; font-size: 14px; }
         .nav-notif-all {
-          display: block;
-          padding: 12px 18px;
-          text-align: center;
-          border-top: 1px solid #F0EDE8;
-          color: #0A1628;
-          text-decoration: none;
-          font-size: 13px;
-          font-weight: 500;
-          flex-shrink: 0;
-          font-family: 'Inter', sans-serif;
+          display: block; padding: 12px 18px; text-align: center;
+          border-top: 1px solid #F0EDE8; color: #0A1628;
+          text-decoration: none; font-size: 13px; font-weight: 500;
+          font-family: 'Inter', sans-serif; flex-shrink: 0;
         }
+        .nav-notif-all:hover { background: #F8F6F2; }
 
-        .nav-notif-all:hover {
-          background: #F8F6F2;
-        }
-
-        /* ============================================================
-           ПРОФИЛЬ
-           ============================================================ */
-        .nav-profile {
-          position: relative;
-        }
-
+        .nav-profile { position: relative; }
         .nav-profile-btn {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 4px 14px 4px 4px;
-          border: none;
-          background: transparent;
-          border-radius: 30px;
-          cursor: pointer;
-          transition: all 0.25s ease;
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
-          color: #0A1628;
+          display: flex; align-items: center; gap: 8px;
+          padding: 4px 14px 4px 4px; border: none; background: transparent;
+          border-radius: 30px; cursor: pointer; transition: all 0.25s ease;
+          font-family: 'Inter', sans-serif; font-size: 14px; color: #0A1628;
         }
-
-        .nav-profile-btn:hover {
-          background: #F8F6F2;
-        }
-
+        .nav-profile-btn:hover { background: #F8F6F2; }
         .nav-avatar {
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
+          width: 36px; height: 36px; border-radius: 50%;
           background: linear-gradient(135deg, #0A1628, #1A3555);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 14px;
-          font-weight: 600;
-          flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center;
+          color: white; font-size: 14px; font-weight: 600; flex-shrink: 0;
           overflow: hidden;
         }
-
-        .nav-avatar img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
+        .nav-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .nav-profile-name {
-          font-size: 14px;
-          font-weight: 500;
-          color: #0A1628;
-          max-width: 120px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
+          font-size: 14px; font-weight: 500; color: #0A1628;
+          max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-
-        .nav-profile-btn svg {
-          color: #A8A29A;
-          flex-shrink: 0;
-          transition: transform 0.2s ease;
-        }
-
-        .nav-profile-btn:hover svg {
-          transform: rotate(180deg);
-        }
-
+        .nav-profile-btn svg { color: #A8A29A; flex-shrink: 0; transition: transform 0.2s ease; }
+        .nav-profile-btn:hover svg { transform: rotate(180deg); }
         .nav-profile-dropdown {
-          position: absolute;
-          top: calc(100% + 10px);
-          right: 0;
-          width: 240px;
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 12px 48px rgba(10, 22, 40, 0.12);
-          border: 1px solid #E4DFD8;
-          overflow: hidden;
-          z-index: 1000;
+          position: absolute; top: calc(100% + 10px); right: 0;
+          width: 240px; background: white; border-radius: 12px;
+          box-shadow: 0 12px 48px rgba(10,22,40,0.12);
+          border: 1px solid #E4DFD8; overflow: hidden; z-index: 1000;
         }
-
         .nav-profile-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 16px 18px;
+          display: flex; align-items: center; gap: 12px; padding: 16px 18px;
         }
-
         .nav-profile-avatar {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
+          width: 40px; height: 40px; border-radius: 50%;
           background: linear-gradient(135deg, #0A1628, #1A3555);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 14px;
-          font-weight: 600;
-          flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center;
+          color: white; font-size: 14px; font-weight: 600; flex-shrink: 0;
           overflow: hidden;
         }
-
-        .nav-profile-avatar img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .nav-profile-fullname {
-          font-weight: 600;
-          font-size: 14px;
-          color: #0A1628;
-        }
-
-        .nav-profile-role {
-          font-size: 12px;
-          color: #6B6561;
-          text-transform: capitalize;
-        }
-
-        .nav-profile-divider {
-          height: 1px;
-          background: #F0EDE8;
-          margin: 0 12px;
-        }
-
+        .nav-profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .nav-profile-fullname { font-weight: 600; font-size: 14px; color: #0A1628; }
+        .nav-profile-role { font-size: 12px; color: #6B6561; text-transform: capitalize; }
+        .nav-profile-divider { height: 1px; background: #F0EDE8; margin: 0 12px; }
         .nav-profile-item {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 10px 18px;
-          color: #0A1628;
-          text-decoration: none;
-          font-size: 14px;
-          transition: all 0.2s ease;
-          border: none;
-          background: none;
-          width: 100%;
-          cursor: pointer;
-          font-family: 'Inter', sans-serif;
-          text-align: left;
+          display: flex; align-items: center; gap: 10px;
+          padding: 10px 18px; color: #0A1628; text-decoration: none;
+          font-size: 14px; transition: all 0.2s ease;
+          border: none; background: none; width: 100%; cursor: pointer;
+          font-family: 'Inter', sans-serif; text-align: left;
         }
+        .nav-profile-item:hover { background: #F8F6F2; }
+        .nav-profile-logout { color: #B3262E; }
+        .nav-profile-logout:hover { background: #FCEBEC; }
 
-        .nav-profile-item:hover {
-          background: #F8F6F2;
-        }
-
-        .nav-profile-logout {
-          color: #B3262E;
-        }
-
-        .nav-profile-logout:hover {
-          background: #FCEBEC;
-        }
-
-        /* ============================================================
-           МОБИЛЬНОЕ МЕНЮ
-           ============================================================ */
         .nav-mobile-toggle {
-          display: none;
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #0A1628;
-          padding: 8px 4px;
+          display: none; background: none; border: none;
+          cursor: pointer; color: #0A1628; padding: 8px 4px;
         }
-
         .nav-mobile {
-          display: none;
-          position: absolute;
-          top: 68px;
-          left: 0;
-          right: 0;
-          background: white;
-          border-bottom: 1px solid #E4DFD8;
-          padding: 12px 16px 20px;
-          flex-direction: column;
-          gap: 2px;
-          box-shadow: 0 8px 32px rgba(10, 22, 40, 0.06);
-          max-height: calc(100vh - 68px);
-          overflow-y: auto;
-          z-index: 999;
+          display: none; position: absolute; top: 68px; left: 0; right: 0;
+          background: white; border-bottom: 1px solid #E4DFD8;
+          padding: 12px 16px 20px; flex-direction: column; gap: 2px;
+          box-shadow: 0 8px 32px rgba(10,22,40,0.06);
+          max-height: calc(100vh - 68px); overflow-y: auto; z-index: 999;
         }
-
         .nav-mobile-link {
-          padding: 10px 14px;
-          border-radius: 8px;
-          text-decoration: none;
-          color: #0A1628;
-          font-size: 14px;
-          font-weight: 500;
+          padding: 10px 14px; border-radius: 8px; text-decoration: none;
+          color: #0A1628; font-size: 14px; font-weight: 500;
           transition: all 0.2s ease;
         }
-
-        .nav-mobile-link:hover {
-          background: #F8F6F2;
-        }
-
-        .nav-mobile-link.active {
-          background: #FBF4DC;
-          color: #C9A227;
-        }
-
-        .nav-mobile-divider {
-          height: 1px;
-          background: #F0EDE8;
-          margin: 8px 0;
-        }
-
+        .nav-mobile-link:hover { background: #F8F6F2; }
+        .nav-mobile-link.active { background: #FBF4DC; color: #C9A227; }
+        .nav-mobile-divider { height: 1px; background: #F0EDE8; margin: 8px 0; }
         .nav-mobile-logout {
-          padding: 10px 14px;
-          border: none;
-          background: none;
-          text-align: left;
-          font-size: 14px;
-          color: #B3262E;
-          cursor: pointer;
-          border-radius: 8px;
-          font-weight: 500;
-          font-family: 'Inter', sans-serif;
+          padding: 10px 14px; border: none; background: none; text-align: left;
+          font-size: 14px; color: #B3262E; cursor: pointer; border-radius: 8px;
+          font-weight: 500; font-family: 'Inter', sans-serif;
           transition: all 0.2s ease;
         }
+        .nav-mobile-logout:hover { background: #FCEBEC; }
 
-        .nav-mobile-logout:hover {
-          background: #FCEBEC;
-        }
-
-        /* ============================================================
-           АДАПТИВНОСТЬ
-           ============================================================ */
         @media (max-width: 1024px) {
-          .nav-desktop {
-            display: none;
-          }
-
-          .nav-mobile-toggle {
-            display: block;
-          }
-
-          .nav-mobile {
-            display: flex;
-          }
-
-          .nav-profile-name {
-            display: none;
-          }
+          .nav-desktop { display: none; }
+          .nav-mobile-toggle { display: block; }
+          .nav-mobile { display: flex; }
+          .nav-profile-name { display: none; }
         }
 
         @media (max-width: 768px) {
-          .nav {
-            padding: 0 16px;
-          }
-
-          .nav-logo-text {
-            display: none;
-          }
-
-          .nav-notif-dropdown {
-            width: 320px;
-            right: -40px;
-          }
+          .nav { padding: 0 16px; }
+          .nav-logo-text { display: none; }
+          .nav-notif-dropdown { width: 320px; right: -40px; }
         }
 
         @media (max-width: 480px) {
-          .nav {
-            padding: 0 12px;
-          }
-
-          .nav-notif-dropdown {
-            width: 290px;
-            right: -60px;
-          }
-
-          .nav-profile-btn {
-            padding: 4px;
-          }
-
-          .nav-avatar {
-            width: 32px;
-            height: 32px;
-            font-size: 12px;
-          }
-
-          .nav-profile-dropdown {
-            width: 200px;
-            right: -10px;
-          }
+          .nav { padding: 0 12px; }
+          .nav-notif-dropdown { width: 290px; right: -60px; }
+          .nav-profile-btn { padding: 4px; }
+          .nav-avatar { width: 32px; height: 32px; font-size: 12px; }
+          .nav-profile-dropdown { width: 200px; right: -10px; }
         }
       `}</style>
     </nav>

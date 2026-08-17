@@ -508,6 +508,9 @@ export default function Navigation({ profile }) {
         .nav-logo img { height: 34px; width: auto; }
         .nav-logo-text { letter-spacing: -0.02em; }
 
+        /* ============================================================
+           ДЕСКТОПНОЕ МЕНЮ
+           ============================================================ */
         .nav-desktop {
           display: flex;
           align-items: center;
@@ -536,7 +539,11 @@ export default function Navigation({ profile }) {
         .nav-link.active { background: #FBF4DC; color: #C9A227; font-weight: 600; }
         .nav-link-icon { font-size: 18px; }
 
+        /* ============================================================
+           ГРУППЫ МЕНЮ (РАСКРЫВАЮЩИЕСЯ)
+           ============================================================ */
         .nav-group { position: relative; }
+
         .nav-group-toggle {
           display: flex;
           align-items: center;
@@ -555,32 +562,49 @@ export default function Navigation({ profile }) {
         }
         .nav-group-toggle:hover { background: #F8F6F2; color: #0A1628; }
         .nav-group-toggle.active { background: #FBF4DC; color: #C9A227; }
-        .nav-group-arrow { margin-left: 4px; font-size: 12px; color: #A8A29A; }
+        .nav-group-arrow {
+          margin-left: 4px;
+          font-size: 12px;
+          color: #A8A29A;
+          transition: transform 0.3s ease;
+        }
+        .nav-group-toggle.active .nav-group-arrow {
+          transform: rotate(90deg);
+        }
 
+        /* ============================================================
+           ВЫПАДАЮЩЕЕ ПОДМЕНЮ
+           ============================================================ */
         .nav-group-children {
           position: absolute;
           top: calc(100% + 4px);
           left: 0;
-          min-width: 220px;
+          min-width: 240px;
           background: white;
           border-radius: 12px;
           border: 1px solid #E4DFD8;
-          box-shadow: 0 12px 48px rgba(10,22,40,0.12);
+          box-shadow: 0 12px 48px rgba(10, 22, 40, 0.15);
           padding: 6px 0;
           z-index: 1000;
-          animation: fadeDown 0.2s ease;
+          animation: navFadeDown 0.2s ease;
         }
-        @keyframes fadeDown {
+        @keyframes navFadeDown {
           from { opacity: 0; transform: translateY(-8px); }
           to { opacity: 1; transform: translateY(0); }
         }
+
         .nav-child {
-          padding: 8px 16px;
+          padding: 8px 18px;
           border-radius: 0;
           white-space: nowrap;
+          font-size: 13px;
         }
         .nav-child:hover { background: #F8F6F2; }
+        .nav-child .nav-link-icon { font-size: 16px; }
 
+        /* ============================================================
+           ПРАВАЯ ЧАСТЬ
+           ============================================================ */
         .nav-right {
           display: flex;
           align-items: center;
@@ -588,6 +612,9 @@ export default function Navigation({ profile }) {
           flex-shrink: 0;
         }
 
+        /* ============================================================
+           УВЕДОМЛЕНИЯ
+           ============================================================ */
         .nav-notifications { position: relative; }
         .nav-notif-btn {
           width: 40px; height: 40px; border: none; background: transparent; border-radius: 50%;
@@ -639,6 +666,9 @@ export default function Navigation({ profile }) {
         }
         .nav-notif-all:hover { background: #F8F6F2; }
 
+        /* ============================================================
+           ПРОФИЛЬ
+           ============================================================ */
         .nav-profile { position: relative; }
         .nav-profile-btn {
           display: flex; align-items: center; gap: 8px;
@@ -692,6 +722,9 @@ export default function Navigation({ profile }) {
         .nav-profile-logout { color: #B3262E; }
         .nav-profile-logout:hover { background: #FCEBEC; }
 
+        /* ============================================================
+           МОБИЛЬНОЕ МЕНЮ
+           ============================================================ */
         .nav-mobile-toggle {
           display: none; background: none; border: none;
           cursor: pointer; color: #0A1628; padding: 8px 4px;
@@ -744,11 +777,26 @@ export default function Navigation({ profile }) {
         }
         .nav-mobile-logout:hover { background: #FCEBEC; }
 
+        /* ============================================================
+           АДАПТИВНОСТЬ
+           ============================================================ */
         @media (max-width: 1024px) {
           .nav-desktop { display: none; }
           .nav-mobile-toggle { display: block; }
           .nav-mobile { display: flex; }
           .nav-profile-name { display: none; }
+          .nav-group-children {
+            position: static;
+            box-shadow: none;
+            border: none;
+            padding: 0 0 0 16px;
+            animation: none;
+            min-width: auto;
+          }
+          .nav-child {
+            white-space: normal;
+            padding-left: 40px;
+          }
         }
 
         @media (max-width: 768px) {

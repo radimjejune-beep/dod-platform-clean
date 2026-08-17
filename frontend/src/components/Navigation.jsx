@@ -130,10 +130,8 @@ export default function Navigation({ profile }) {
     const role = profile?.role;
     const items = [];
 
-    // Дашборд есть у всех
     items.push({ path: '/dashboard', label: 'Дашборд' });
 
-    // Роль: Участник или Родитель
     if (role === 'participant' || role === 'parent') {
       items.push({ path: '/events', label: 'Мероприятия' });
       items.push({ path: '/calendar', label: 'Календарь' });
@@ -144,7 +142,6 @@ export default function Navigation({ profile }) {
       }
     }
 
-    // Роль: Координатор КЮДа
     if (role === 'club_coordinator') {
       items.push({ path: '/clubs', label: 'Мой КЮД' });
       items.push({ path: '/events', label: 'Мероприятия' });
@@ -157,7 +154,6 @@ export default function Navigation({ profile }) {
       items.push({ path: '/documents-center', label: 'Центр документов' });
     }
 
-    // Роль: Тьютор
     if (role === 'tutor') {
       items.push({ path: '/clubs', label: 'КЮДы' });
       items.push({ path: '/events', label: 'Мероприятия' });
@@ -170,7 +166,6 @@ export default function Navigation({ profile }) {
       items.push({ path: '/reports', label: 'Отчёты' });
     }
 
-    // Роль: Администратор или Координатор движения
     if (role === 'movement_coordinator' || role === 'admin') {
       items.push({ path: '/clubs', label: 'КЮДы' });
       items.push({ path: '/clubs-management', label: 'Управление КЮДами' });
@@ -196,7 +191,6 @@ export default function Navigation({ profile }) {
       }
     }
 
-    // Роль: Президент или Вице-президент
     if (role === 'president' || role === 'vice_president') {
       items.push({ path: '/clubs', label: 'КЮДы' });
       items.push({ path: '/events', label: 'Мероприятия' });
@@ -224,21 +218,20 @@ export default function Navigation({ profile }) {
         <div className="nav-container">
           <Link to="/" className="nav-logo">
             <img src={logo} alt="ДОД" />
-            <span>Дипломаты будущего</span>
+            <span className="nav-logo-text">Дипломаты будущего</span>
           </Link>
           <div className="nav-right">
-            <Link to="/login" className="btn btn-gold btn-sm">Вход</Link>
+            <Link to="/login" className="btn-gold">Войти</Link>
           </div>
         </div>
         <style>{`
           .nav {
             background: white;
-            border-bottom: 1px solid #E4E7EC;
+            border-bottom: 1px solid #E4DFD8;
             padding: 0 24px;
             position: sticky;
             top: 0;
             z-index: 100;
-            box-shadow: 0 1px 4px rgba(11,31,58,0.04);
           }
           .nav-container {
             max-width: 1400px;
@@ -246,39 +239,48 @@ export default function Navigation({ profile }) {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            height: 64px;
+            height: 68px;
           }
           .nav-logo {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             text-decoration: none;
             font-family: 'Playfair Display', serif;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 700;
-            color: #0B1F3A;
+            color: #0A1628;
           }
-          .nav-logo img {
-            height: 32px;
-            width: auto;
-          }
-          .btn-login {
-            padding: 8px 24px;
-            background: linear-gradient(135deg, #C9A227, #B8921F);
-            color: #0B1F3A;
+          .nav-logo img { height: 34px; width: auto; }
+          .nav-logo-text { letter-spacing: -0.02em; }
+          .btn-gold {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px 28px;
+            background: linear-gradient(135deg, #C9A227 0%, #D4B84A 50%, #E8D9A8 100%);
+            color: #0A1628;
+            border: none;
             border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
+            font-family: 'Inter', sans-serif;
             font-size: 14px;
-            transition: all 0.3s ease;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            box-shadow: 0 2px 16px rgba(201, 162, 39, 0.25);
+            letter-spacing: 0.02em;
           }
-          .btn-login:hover {
+          .btn-gold:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(201,162,39,0.3);
+            box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
           }
+          .btn-gold:active { transform: translateY(0); }
           @media (max-width: 768px) {
             .nav { padding: 0 16px; }
-            .nav-logo span { display: none; }
+            .nav-logo-text { display: none; }
+            .btn-gold { padding: 8px 18px; font-size: 13px; }
           }
         `}</style>
       </nav>
@@ -295,7 +297,7 @@ export default function Navigation({ profile }) {
         {/* ЛОГОТИП */}
         <Link to="/" className="nav-logo">
           <img src={logo} alt="ДОД" />
-          <span>Дипломаты будущего</span>
+          <span className="nav-logo-text">Дипломаты будущего</span>
         </Link>
 
         {/* ДЕСКТОПНОЕ МЕНЮ */}
@@ -456,7 +458,7 @@ export default function Navigation({ profile }) {
         </div>
       </div>
 
-      {/* МОБИЛЬНОЕ МЕНЮ (ВЫПАДАЮЩЕЕ) */}
+      {/* МОБИЛЬНОЕ МЕНЮ */}
       {isMenuOpen && (
         <div className="nav-mobile" ref={menuRef}>
           {menuItems.map((item) => (
@@ -492,12 +494,12 @@ export default function Navigation({ profile }) {
            ============================================================ */
         .nav {
           background: white;
-          border-bottom: 1px solid #E4E7EC;
+          border-bottom: 1px solid #E4DFD8;
           padding: 0 24px;
           position: sticky;
           top: 0;
           z-index: 100;
-          box-shadow: 0 1px 4px rgba(11,31,58,0.04);
+          box-shadow: 0 1px 4px rgba(10, 22, 40, 0.03);
         }
 
         .nav-container {
@@ -506,25 +508,29 @@ export default function Navigation({ profile }) {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          height: 64px;
+          height: 68px;
           gap: 16px;
         }
 
         .nav-logo {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
           text-decoration: none;
           font-family: 'Playfair Display', serif;
-          font-size: 18px;
+          font-size: 20px;
           font-weight: 700;
-          color: #0B1F3A;
+          color: #0A1628;
           flex-shrink: 0;
         }
 
         .nav-logo img {
-          height: 32px;
+          height: 34px;
           width: auto;
+        }
+
+        .nav-logo-text {
+          letter-spacing: -0.02em;
         }
 
         /* ============================================================
@@ -533,31 +539,34 @@ export default function Navigation({ profile }) {
         .nav-desktop {
           display: flex;
           align-items: center;
-          gap: 4px;
+          gap: 2px;
           flex: 1;
           overflow-x: auto;
           padding: 0 8px;
         }
 
         .nav-link {
-          padding: 6px 14px;
+          padding: 7px 18px;
           border-radius: 8px;
           text-decoration: none;
-          color: #667085;
+          color: #6B6561;
+          font-family: 'Inter', sans-serif;
           font-size: 14px;
           font-weight: 500;
-          transition: all 0.2s ease;
+          transition: all 0.25s ease;
           white-space: nowrap;
+          letter-spacing: 0.01em;
         }
 
         .nav-link:hover {
-          background: #F4F6F9;
-          color: #0B1F3A;
+          background: #F8F6F2;
+          color: #0A1628;
         }
 
         .nav-link.active {
           background: #FBF4DC;
-          color: #8A6A00;
+          color: #C9A227;
+          font-weight: 600;
         }
 
         /* ============================================================
@@ -568,6 +577,39 @@ export default function Navigation({ profile }) {
           align-items: center;
           gap: 8px;
           flex-shrink: 0;
+        }
+
+        /* ============================================================
+           КНОПКА ВХОДА (ПУБЛИЧНАЯ)
+           ============================================================ */
+        .btn-gold {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          padding: 10px 28px;
+          background: linear-gradient(135deg, #C9A227 0%, #D4B84A 50%, #E8D9A8 100%);
+          color: #0A1628;
+          border: none;
+          border-radius: 8px;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          text-decoration: none;
+          box-shadow: 0 2px 16px rgba(201, 162, 39, 0.25);
+          letter-spacing: 0.02em;
+        }
+
+        .btn-gold:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
+        }
+
+        .btn-gold:active {
+          transform: translateY(0);
+          box-shadow: 0 2px 12px rgba(201, 162, 39, 0.2);
         }
 
         /* ============================================================
@@ -584,8 +626,8 @@ export default function Navigation({ profile }) {
           background: transparent;
           border-radius: 50%;
           cursor: pointer;
-          color: #667085;
-          transition: all 0.2s ease;
+          color: #6B6561;
+          transition: all 0.25s ease;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -593,13 +635,14 @@ export default function Navigation({ profile }) {
         }
 
         .nav-notif-btn:hover {
-          background: #F4F6F9;
+          background: #F8F6F2;
+          color: #0A1628;
         }
 
         .nav-notif-badge {
           position: absolute;
-          top: 2px;
-          right: 2px;
+          top: 3px;
+          right: 3px;
           background: #B3262E;
           color: white;
           font-size: 10px;
@@ -614,14 +657,14 @@ export default function Navigation({ profile }) {
 
         .nav-notif-dropdown {
           position: absolute;
-          top: calc(100% + 8px);
+          top: calc(100% + 10px);
           right: 0;
           width: 360px;
           max-height: 440px;
           background: white;
           border-radius: 12px;
-          box-shadow: 0 12px 40px rgba(11,31,58,0.15);
-          border: 1px solid #E4E7EC;
+          box-shadow: 0 12px 48px rgba(10, 22, 40, 0.12);
+          border: 1px solid #E4DFD8;
           overflow: hidden;
           z-index: 1000;
           display: flex;
@@ -632,25 +675,28 @@ export default function Navigation({ profile }) {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 12px 16px;
-          border-bottom: 1px solid #F4F6F9;
+          padding: 14px 18px;
+          border-bottom: 1px solid #F0EDE8;
           font-weight: 600;
           font-size: 14px;
-          color: #0B1F3A;
+          color: #0A1628;
           flex-shrink: 0;
+          font-family: 'Playfair Display', serif;
         }
 
         .nav-notif-markall {
           background: none;
           border: none;
-          color: #667085;
+          color: #6B6561;
           font-size: 12px;
           cursor: pointer;
           font-weight: 500;
+          font-family: 'Inter', sans-serif;
+          transition: color 0.2s ease;
         }
 
         .nav-notif-markall:hover {
-          color: #0B1F3A;
+          color: #0A1628;
         }
 
         .nav-notif-list {
@@ -659,14 +705,14 @@ export default function Navigation({ profile }) {
         }
 
         .nav-notif-item {
-          padding: 10px 16px;
-          border-bottom: 1px solid #F4F6F9;
+          padding: 12px 18px;
+          border-bottom: 1px solid #F0EDE8;
           cursor: pointer;
           transition: all 0.2s ease;
         }
 
         .nav-notif-item:hover {
-          background: #F8FAFC;
+          background: #F8F6F2;
         }
 
         .nav-notif-item.unread {
@@ -677,42 +723,44 @@ export default function Navigation({ profile }) {
         .nav-notif-title {
           font-weight: 600;
           font-size: 13px;
-          color: #0B1F3A;
+          color: #0A1628;
         }
 
         .nav-notif-message {
           font-size: 13px;
-          color: #667085;
+          color: #6B6561;
           margin-top: 2px;
         }
 
         .nav-notif-time {
           font-size: 11px;
-          color: #98A2B3;
+          color: #A8A29A;
           margin-top: 4px;
         }
 
         .nav-notif-empty {
-          padding: 30px;
+          padding: 32px;
           text-align: center;
-          color: #98A2B3;
+          color: #A8A29A;
           font-size: 14px;
         }
 
         .nav-notif-all {
           display: block;
-          padding: 10px 16px;
+          padding: 12px 18px;
           text-align: center;
-          border-top: 1px solid #F4F6F9;
-          color: #174A7E;
+          border-top: 1px solid #F0EDE8;
+          color: #0A1628;
           text-decoration: none;
           font-size: 13px;
           font-weight: 500;
           flex-shrink: 0;
+          font-family: 'Inter', sans-serif;
+          transition: all 0.2s ease;
         }
 
         .nav-notif-all:hover {
-          background: #F8FAFC;
+          background: #F8F6F2;
         }
 
         /* ============================================================
@@ -726,26 +774,26 @@ export default function Navigation({ profile }) {
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 4px 12px 4px 4px;
+          padding: 4px 14px 4px 4px;
           border: none;
           background: transparent;
           border-radius: 30px;
           cursor: pointer;
-          transition: all 0.2s ease;
-          font-family: inherit;
+          transition: all 0.25s ease;
+          font-family: 'Inter', sans-serif;
           font-size: 14px;
-          color: #0B1F3A;
+          color: #0A1628;
         }
 
         .nav-profile-btn:hover {
-          background: #F4F6F9;
+          background: #F8F6F2;
         }
 
         .nav-avatar {
           width: 36px;
           height: 36px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #0B1F3A, #174A7E);
+          background: linear-gradient(135deg, #0A1628, #1A3555);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -765,7 +813,7 @@ export default function Navigation({ profile }) {
         .nav-profile-name {
           font-size: 14px;
           font-weight: 500;
-          color: #0B1F3A;
+          color: #0A1628;
           max-width: 120px;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -773,19 +821,24 @@ export default function Navigation({ profile }) {
         }
 
         .nav-profile-btn svg {
-          color: #98A2B3;
+          color: #A8A29A;
           flex-shrink: 0;
+          transition: transform 0.2s ease;
+        }
+
+        .nav-profile-btn:hover svg {
+          transform: rotate(180deg);
         }
 
         .nav-profile-dropdown {
           position: absolute;
-          top: calc(100% + 8px);
+          top: calc(100% + 10px);
           right: 0;
           width: 240px;
           background: white;
           border-radius: 12px;
-          box-shadow: 0 12px 40px rgba(11,31,58,0.15);
-          border: 1px solid #E4E7EC;
+          box-shadow: 0 12px 48px rgba(10, 22, 40, 0.12);
+          border: 1px solid #E4DFD8;
           overflow: hidden;
           z-index: 1000;
         }
@@ -794,14 +847,14 @@ export default function Navigation({ profile }) {
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 14px 16px;
+          padding: 16px 18px;
         }
 
         .nav-profile-avatar {
           width: 40px;
           height: 40px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #0B1F3A, #174A7E);
+          background: linear-gradient(135deg, #0A1628, #1A3555);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -821,18 +874,18 @@ export default function Navigation({ profile }) {
         .nav-profile-fullname {
           font-weight: 600;
           font-size: 14px;
-          color: #0B1F3A;
+          color: #0A1628;
         }
 
         .nav-profile-role {
           font-size: 12px;
-          color: #667085;
+          color: #6B6561;
           text-transform: capitalize;
         }
 
         .nav-profile-divider {
           height: 1px;
-          background: #F4F6F9;
+          background: #F0EDE8;
           margin: 0 12px;
         }
 
@@ -840,8 +893,8 @@ export default function Navigation({ profile }) {
           display: flex;
           align-items: center;
           gap: 10px;
-          padding: 10px 16px;
-          color: #0B1F3A;
+          padding: 10px 18px;
+          color: #0A1628;
           text-decoration: none;
           font-size: 14px;
           transition: all 0.2s ease;
@@ -849,12 +902,12 @@ export default function Navigation({ profile }) {
           background: none;
           width: 100%;
           cursor: pointer;
-          font-family: inherit;
+          font-family: 'Inter', sans-serif;
           text-align: left;
         }
 
         .nav-profile-item:hover {
-          background: #F4F6F9;
+          background: #F8F6F2;
         }
 
         .nav-profile-logout {
@@ -873,23 +926,23 @@ export default function Navigation({ profile }) {
           background: none;
           border: none;
           cursor: pointer;
-          color: #0B1F3A;
+          color: #0A1628;
           padding: 8px 4px;
         }
 
         .nav-mobile {
           display: none;
           position: absolute;
-          top: 64px;
+          top: 68px;
           left: 0;
           right: 0;
           background: white;
-          border-bottom: 1px solid #E4E7EC;
+          border-bottom: 1px solid #E4DFD8;
           padding: 12px 16px 20px;
           flex-direction: column;
           gap: 2px;
-          box-shadow: 0 8px 24px rgba(11,31,58,0.08);
-          max-height: calc(100vh - 64px);
+          box-shadow: 0 8px 32px rgba(10, 22, 40, 0.06);
+          max-height: calc(100vh - 68px);
           overflow-y: auto;
           z-index: 999;
         }
@@ -898,24 +951,24 @@ export default function Navigation({ profile }) {
           padding: 10px 14px;
           border-radius: 8px;
           text-decoration: none;
-          color: #0B1F3A;
+          color: #0A1628;
           font-size: 14px;
           font-weight: 500;
           transition: all 0.2s ease;
         }
 
         .nav-mobile-link:hover {
-          background: #F4F6F9;
+          background: #F8F6F2;
         }
 
         .nav-mobile-link.active {
           background: #FBF4DC;
-          color: #8A6A00;
+          color: #C9A227;
         }
 
         .nav-mobile-divider {
           height: 1px;
-          background: #F4F6F9;
+          background: #F0EDE8;
           margin: 8px 0;
         }
 
@@ -929,7 +982,7 @@ export default function Navigation({ profile }) {
           cursor: pointer;
           border-radius: 8px;
           font-weight: 500;
-          font-family: inherit;
+          font-family: 'Inter', sans-serif;
           transition: all 0.2s ease;
         }
 
@@ -963,7 +1016,7 @@ export default function Navigation({ profile }) {
             padding: 0 16px;
           }
 
-          .nav-logo span {
+          .nav-logo-text {
             display: none;
           }
 
@@ -991,6 +1044,11 @@ export default function Navigation({ profile }) {
             width: 32px;
             height: 32px;
             font-size: 12px;
+          }
+
+          .nav-profile-dropdown {
+            width: 200px;
+            right: -10px;
           }
         }
       `}</style>

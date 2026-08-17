@@ -1,240 +1,447 @@
-// frontend/src/pages/Dashboard.jsx
+// frontend/src/pages/Dashboard.jsx — ОБНОВЛЕННЫЙ
 
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
-import Navigation from '../components/Navigation';
 
 export default function Dashboard() {
-  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
-    participants: 0,
+    users: 0,
     clubs: 0,
     events: 0,
-    achievements: 0
+    participants: 0
   });
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchData = async () => {
+    const loadData = async () => {
       try {
-        const userData = await api.getMe();
-        if (userData && userData.id) {
-          setUser(userData);
-          
-          const [users, clubs, events, achievements] = await Promise.all([
-            api.getUsers(),
-            api.getClubs(),
-            api.getEvents(),
-            api.getAchievements()
-          ]);
-          
-          setStats({
-            participants: users.filter(u => u.role === 'participant').length,
-            clubs: clubs.length,
-            events: events.length,
-            achievements: achievements.length
-          });
-        } else {
+        const token = localStorage.getItem('token');
+        if (!token) {
           navigate('/login');
+          return;
         }
+
+        const user = await api.getMe();
+        setProfile(user);
+
+        const [users, clubs, events, participants] = await Promise.all([
+          api.getUsers().catch(() => []),
+          api.getClubs().catch(() => []),
+          api.getEvents().catch(() => []),
+          api.getParticipants().catch(() => [])
+        ]);
+
+        setStats({
+          users: users.length || 0,
+          clubs: clubs.length || 0,
+          events: events.length || 0,
+          participants: participants.length || 0
+        });
+
       } catch (err) {
-        console.error('Ошибка:', err);
-        navigate('/login');
+        console.error('Ошибка загрузки:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    loadData();
   }, [navigate]);
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <div className="spinner" />
       </div>
     );
   }
 
-  const role = user?.role;
+  const role = profile?.role || 'user';
 
-  // Получение названия роли
-  const getRoleLabel = () => {
-    const labels = {
-      'participant': '👤 Участник',
-      'parent': '👨‍👩‍👦 Родитель',
-      'club_coordinator': '🏫 Координатор КЮДа',
-      'tutor': '📚 Тьютор',
-      'movement_coordinator': '⭐ Координатор движения',
-      'admin': '🔧 Администратор',
-      'president': '👑 Президент',
-      'vice_president': '⭐ Вице-президент'
-    };
-    return labels[role] || role;
+  const quickActions = {
+    admin: [
+      { path: '/admin/users', label: 'Пользователи', icon: '👥' },
+      { path: '/clubs', label: 'КЮДы', icon: '🏫' },
+      { path: '/events', label: 'Мероприятия', icon: '📅' },
+      { path: '/participants', label: 'Участники', icon: '👤' },
+      { path: '/achievements', label: 'Достижения', icon: '🏆' },
+      { path: '/reports', label: 'Отчёты', icon: '📋' },
+      { path: '/analytics', label: 'Аналитика', icon: '📊' },
+    ],
+    club_coordinator: [
+      { path: '/clubs', label: 'Мой КЮД', icon: '🏫' },
+      { path: '/events', label: 'Мероприятия', icon: '📅' },
+      { path: '/participants', label: 'Участники', icon: '👤' },
+      { path: '/manage-achievements', label: 'Достижения', icon: '🏆' },
+      { path: '/reports', label: 'Отчёты', icon: '📋' },
+      { path: '/appeals', label: 'Обращения', icon: '📨' },
+    ],
+    participant: [
+      { path: '/events', label: 'Мероприятия', icon: '📅' },
+      { path: '/calendar', label: 'Календарь', icon: '📆' },
+      { path: '/my-achievements', label: 'Достижения', icon: '🏆' },
+      { path: '/my-reviews', label: 'Оценки', icon: '📊' },
+    ],
+    tutor: [
+      { path: '/events', label: 'Мероприятия', icon: '📅' },
+      { path: '/participants', label: 'Участники', icon: '👤' },
+      { path: '/achievements', label: 'Достижения', icon: '🏆' },
+      { path: '/my-reviews', label: 'Оценки', icon: '📊' },
+      { path: '/my-journal', label: 'Журнал', icon: '📓' },
+    ],
+    parent: [
+      { path: '/events', label: 'Мероприятия', icon: '📅' },
+      { path: '/calendar', label: 'Календарь', icon: '📆' },
+      { path: '/my-achievements', label: 'Достижения', icon: '🏆' },
+    ],
+    president: [
+      { path: '/clubs', label: 'КЮДы', icon: '🏫' },
+      { path: '/events', label: 'Мероприятия', icon: '📅' },
+      { path: '/participants', label: 'Участники', icon: '👤' },
+      { path: '/president-tasks', label: 'Задания', icon: '👑' },
+      { path: '/club-rating', label: 'Рейтинг', icon: '🏆' },
+    ],
   };
 
-  // ============================================================
-  // КНОПКИ В ЗАВИСИМОСТИ ОТ РОЛИ
-  // ============================================================
-  const getButtons = () => {
-    const buttons = [];
-
-    // Базовые кнопки для всех
-    buttons.push(
-      { path: '/profile', label: '👤 Профиль', color: 'btn-secondary' }
-    );
-
-    if (role === 'participant' || role === 'parent') {
-      buttons.push(
-        { path: '/events', label: '📅 Мероприятия', color: 'btn-primary' },
-        { path: '/my-achievements', label: '🏆 Мои достижения', color: 'btn-primary' },
-        { path: '/my-reviews', label: '📊 Мои оценки', color: 'btn-primary' },
-        { path: '/calendar', label: '📅 Календарь', color: 'btn-secondary' }
-      );
-      if (role === 'participant') {
-        buttons.push(
-          { path: '/president-tasks', label: '👑 Задания президента', color: 'btn-primary' }
-        );
-      }
-    }
-
-    if (role === 'club_coordinator') {
-      buttons.push(
-        { path: '/clubs', label: '🏫 Мой КЮД', color: 'btn-primary' },
-        { path: '/events', label: '📅 Мероприятия', color: 'btn-primary' },
-        { path: '/participants', label: '👥 Участники', color: 'btn-primary' },
-        { path: '/manage-achievements', label: '🏆 Достижения клуба', color: 'btn-primary' },
-        { path: '/reports', label: '📋 Отчёты', color: 'btn-primary' },
-        { path: '/appeals', label: '📨 Обращения', color: 'btn-primary' },
-        { path: '/staff', label: '👥 Сотрудники', color: 'btn-secondary' },
-        { path: '/calendar', label: '📅 Календарь', color: 'btn-secondary' }
-      );
-    }
-
-    if (role === 'tutor') {
-      buttons.push(
-        { path: '/clubs', label: '🏫 КЮДы', color: 'btn-primary' },
-        { path: '/events', label: '📅 Мероприятия', color: 'btn-primary' },
-        { path: '/participants', label: '👥 Участники', color: 'btn-primary' },
-        { path: '/achievements', label: '🏆 Достижения', color: 'btn-primary' },
-        { path: '/my-reviews', label: '📊 Оценки', color: 'btn-primary' },
-        { path: '/staff-calendar', label: '📅 Мой календарь', color: 'btn-secondary' },
-        { path: '/my-journal', label: '📓 Мой журнал', color: 'btn-primary' }
-      );
-    }
-
-    if (role === 'movement_coordinator' || role === 'admin') {
-      buttons.push(
-        { path: '/clubs', label: '🏫 КЮДы', color: 'btn-primary' },
-        { path: '/events', label: '📅 Мероприятия', color: 'btn-primary' },
-        { path: '/participants', label: '👥 Участники', color: 'btn-primary' },
-        { path: '/achievements', label: '🏆 Достижения', color: 'btn-primary' },
-        { path: '/reports', label: '📋 Отчёты', color: 'btn-primary' },
-        { path: '/analytics', label: '📊 Аналитика', color: 'btn-primary' },
-        { path: '/appeals', label: '📨 Обращения', color: 'btn-primary' },
-        { path: '/admin/users', label: '👥 Пользователи', color: 'btn-primary' }
-      );
-      if (role === 'admin') {
-        buttons.push(
-          { path: '/settings', label: '⚙️ Настройки', color: 'btn-primary' },
-          { path: '/admin/invite', label: '🎫 Пригласить', color: 'btn-primary' },
-          { path: '/import-participants', label: '📥 Импорт', color: 'btn-primary' }
-        );
-      }
-    }
-
-    if (role === 'president' || role === 'vice_president') {
-      buttons.push(
-        { path: '/clubs', label: '🏫 КЮДы', color: 'btn-primary' },
-        { path: '/events', label: '📅 Мероприятия', color: 'btn-primary' },
-        { path: '/participants', label: '👥 Участники', color: 'btn-primary' },
-        { path: '/achievements', label: '🏆 Достижения', color: 'btn-primary' },
-        { path: '/reports', label: '📋 Отчёты', color: 'btn-primary' },
-        { path: '/analytics', label: '📊 Аналитика', color: 'btn-primary' },
-        { path: '/appeals', label: '📨 Обращения', color: 'btn-primary' }
-      );
-    }
-
-    return buttons;
-  };
-
-  const buttons = getButtons();
+  const actions = quickActions[role] || quickActions.participant;
 
   return (
-    <div className="page-background">
-      <Navigation profile={user} />
-      <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📊</span>
-          <div>
-            <h1>👋 Привет, {user?.full_name || 'Гость'}!</h1>
-            <p>
-              {getRoleLabel()} • Добро пожаловать в систему управления ДОД «Дипломаты будущего»
-            </p>
-          </div>
+    <div className="dashboard">
+      {/* ПРИВЕТСТВИЕ */}
+      <div className="dashboard-welcome">
+        <div className="dashboard-welcome-content">
+          <h1>Привет, {profile?.full_name || 'Пользователь'} 👋</h1>
+          <p>Добро пожаловать в платформу «Дипломаты будущего»</p>
         </div>
-
-        {/* СТАТИСТИКА */}
-        <div className="grid-4">
-          <div className="stat-card">
-            <div className="number">{stats.participants}</div>
-            <div className="label">👥 Участников</div>
-          </div>
-          <div className="stat-card">
-            <div className="number">{stats.clubs}</div>
-            <div className="label">🏫 Клубов</div>
-          </div>
-          <div className="stat-card">
-            <div className="number">{stats.events}</div>
-            <div className="label">📅 Мероприятий</div>
-          </div>
-          <div className="stat-card">
-            <div className="number">{stats.achievements}</div>
-            <div className="label">🏆 Достижений</div>
-          </div>
-        </div>
-
-        {/* БЫСТРЫЕ ДЕЙСТВИЯ */}
-        {buttons.length > 0 && (
-          <div className="card" style={{ marginTop: '20px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
-              🚀 Быстрые действия
-            </h3>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              {buttons.map((btn, index) => (
-                <Link
-                  key={index}
-                  to={btn.path}
-                  className={btn.color}
-                  style={{ textDecoration: 'none' }}
-                >
-                  {btn.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ */}
-        <div className="card" style={{ marginTop: '20px' }}>
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontSize: '13px', color: '#667085' }}>Email</div>
-              <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{user?.email}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '13px', color: '#667085' }}>Роль</div>
-              <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{getRoleLabel()}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '13px', color: '#667085' }}>Статус</div>
-              <div className="status-active">🟢 Активен</div>
-            </div>
-          </div>
+        <div className="dashboard-welcome-role">
+          <span className="dashboard-role-badge">{role}</span>
         </div>
       </div>
+
+      {/* СТАТИСТИКА */}
+      <div className="dashboard-stats">
+        <div className="stat-card">
+          <div className="stat-number">{stats.participants}</div>
+          <div className="stat-label">Участников</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-number">{stats.clubs}</div>
+          <div className="stat-label">Клубов</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-number">{stats.events}</div>
+          <div className="stat-label">Мероприятий</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-number">{stats.users}</div>
+          <div className="stat-label">Пользователей</div>
+        </div>
+      </div>
+
+      {/* БЫСТРЫЕ ДЕЙСТВИЯ */}
+      <div className="dashboard-actions">
+        <h2 className="dashboard-section-title">Быстрые действия</h2>
+        <div className="quick-actions-grid">
+          {actions.map((action) => (
+            <Link key={action.path} to={action.path} className="quick-action-card">
+              <span className="icon">{action.icon}</span>
+              <span className="label">{action.label}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* ПРОФИЛЬ */}
+      {profile && (
+        <div className="dashboard-profile-card">
+          <h2 className="dashboard-section-title">Ваш профиль</h2>
+          <div className="dashboard-profile-info">
+            <div className="profile-info-item">
+              <span className="profile-info-label">Email</span>
+              <span className="profile-info-value">{profile.email}</span>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">Роль</span>
+              <span className="profile-info-value">{profile.role}</span>
+            </div>
+            <div className="profile-info-item">
+              <span className="profile-info-label">Статус</span>
+              <span className="profile-info-value badge badge-active">Активен</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        .dashboard {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0;
+          width: 100%;
+        }
+
+        .dashboard-welcome {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 16px;
+          margin-bottom: 28px;
+          padding: 24px 28px;
+          background: linear-gradient(135deg, #0A1628, #1A3555);
+          border-radius: 12px;
+          color: white;
+          width: 100%;
+        }
+
+        .dashboard-welcome-content h1 {
+          font-family: 'Playfair Display', serif;
+          font-size: 26px;
+          font-weight: 700;
+          margin: 0 0 4px 0;
+          letter-spacing: -0.3px;
+          color: white;
+        }
+
+        .dashboard-welcome-content p {
+          font-size: 14px;
+          color: rgba(255,255,255,0.7);
+          margin: 0;
+        }
+
+        .dashboard-role-badge {
+          display: inline-block;
+          padding: 4px 16px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.15);
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 500;
+          color: #E8D9A8;
+          text-transform: capitalize;
+        }
+
+        .dashboard-stats {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px;
+          margin-bottom: 28px;
+          width: 100%;
+        }
+
+        .dashboard-actions {
+          margin-bottom: 28px;
+          width: 100%;
+        }
+
+        .dashboard-section-title {
+          font-family: 'Playfair Display', serif;
+          font-size: 20px;
+          font-weight: 600;
+          color: #0A1628;
+          margin-bottom: 16px;
+        }
+
+        .dashboard-profile-card {
+          background: white;
+          padding: 24px 28px;
+          border-radius: 12px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 2px 12px rgba(10, 22, 40, 0.06);
+          width: 100%;
+        }
+
+        .dashboard-profile-info {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: 16px;
+          margin-top: 12px;
+        }
+
+        .profile-info-item {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .profile-info-label {
+          font-size: 12px;
+          font-weight: 500;
+          color: #A8A29A;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .profile-info-value {
+          font-size: 14px;
+          font-weight: 500;
+          color: #0A1628;
+        }
+
+        .badge {
+          display: inline-block;
+          padding: 4px 16px;
+          border-radius: 50px;
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+        .badge-active {
+          background: #E8F5EF;
+          color: #1A7A4C;
+        }
+
+        /* ============================================================
+           БЫСТРЫЕ ДЕЙСТВИЯ — ПРЕМИАЛЬНЫЕ КАРТОЧКИ
+           ============================================================ */
+        .quick-actions-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+          gap: 16px;
+        }
+
+        .quick-action-card {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          padding: 20px 12px;
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 2px 12px rgba(10, 22, 40, 0.04);
+          text-decoration: none;
+          color: #0A1628;
+          transition: all 0.3s ease;
+          min-height: 100px;
+          text-align: center;
+          cursor: pointer;
+        }
+
+        .quick-action-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 32px rgba(10, 22, 40, 0.10);
+          border-color: #C9A227;
+        }
+
+        .quick-action-card .icon {
+          font-size: 28px;
+          line-height: 1;
+        }
+
+        .quick-action-card .label {
+          font-size: 13px;
+          font-weight: 500;
+          color: #6B6561;
+          line-height: 1.3;
+        }
+
+        /* ============================================================
+           АДАПТИВНОСТЬ
+           ============================================================ */
+        @media (max-width: 1024px) {
+          .dashboard-stats {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          .quick-actions-grid {
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+          }
+        }
+
+        @media (max-width: 768px) {
+          .dashboard-welcome {
+            padding: 18px 20px;
+            flex-direction: column;
+            align-items: flex-start;
+          }
+          .dashboard-welcome-content h1 {
+            font-size: 22px;
+          }
+          .dashboard-stats {
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+          }
+          .stat-number {
+            font-size: 26px;
+          }
+          .stat-card {
+            padding: 16px 18px;
+          }
+          .quick-actions-grid {
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 12px;
+          }
+          .quick-action-card {
+            padding: 16px 10px;
+            min-height: 80px;
+          }
+          .quick-action-card .icon {
+            font-size: 24px;
+          }
+          .quick-action-card .label {
+            font-size: 12px;
+          }
+          .dashboard-profile-card {
+            padding: 18px 20px;
+          }
+          .dashboard-profile-info {
+            grid-template-columns: 1fr;
+            gap: 12px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .dashboard-welcome {
+            padding: 14px 16px;
+          }
+          .dashboard-welcome-content h1 {
+            font-size: 18px;
+          }
+          .dashboard-welcome-content p {
+            font-size: 13px;
+          }
+          .dashboard-stats {
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+          }
+          .stat-number {
+            font-size: 22px;
+          }
+          .stat-card {
+            padding: 12px 14px;
+            border-radius: 8px;
+          }
+          .stat-label {
+            font-size: 11px;
+          }
+          .dashboard-section-title {
+            font-size: 17px;
+          }
+          .quick-actions-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+          }
+          .quick-action-card {
+            padding: 12px 8px;
+            min-height: 70px;
+            border-radius: 8px;
+          }
+          .quick-action-card .icon {
+            font-size: 20px;
+          }
+          .quick-action-card .label {
+            font-size: 11px;
+          }
+          .dashboard-profile-card {
+            padding: 14px 16px;
+          }
+        }
+      `}</style>
     </div>
   );
 }

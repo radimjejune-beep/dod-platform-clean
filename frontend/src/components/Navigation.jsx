@@ -8,6 +8,8 @@ import logo from '../assets/Image.png';
 export default function Navigation({ profile }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState({});
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -19,10 +21,24 @@ export default function Navigation({ profile }) {
   const notificationRef = useRef(null);
   const menuRef = useRef(null);
 
-  // ЕДИНОЕ МЕНЮ (ОБЩЕЕ С ДАШБОРДОМ)
+  // ============================================================
+  // ЕДИНОЕ МЕНЮ
+  // ============================================================
   const menuItems = useMenuItems(profile);
 
+  // ============================================================
+  // РАСКРЫТИЕ ПОДМЕНЮ
+  // ============================================================
+  const toggleMenu = (id) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  // ============================================================
   // ЗАГРУЗКА УВЕДОМЛЕНИЙ
+  // ============================================================
   const loadNotifications = async () => {
     if (notificationsLoaded) return;
     try {
@@ -48,7 +64,9 @@ export default function Navigation({ profile }) {
     }
   }, [profile, notificationsLoaded]);
 
+  // ============================================================
   // ЗАКРЫТИЕ ПОПАПОВ
+  // ============================================================
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
@@ -58,21 +76,25 @@ export default function Navigation({ profile }) {
         setShowNotifications(false);
       }
       if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setIsMenuOpen(false);
+        setIsMobileMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // ============================================================
   // ВЫХОД
+  // ============================================================
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
   };
 
+  // ============================================================
   // УВЕДОМЛЕНИЯ
+  // ============================================================
   const handleNotificationClick = async (id) => {
     try {
       const token = localStorage.getItem('token');
@@ -103,7 +125,9 @@ export default function Navigation({ profile }) {
     }
   };
 
+  // ============================================================
   // ВСПОМОГАТЕЛЬНЫЕ
+  // ============================================================
   const getInitials = (name) => {
     if (!name) return '?';
     const parts = name.split(' ');
@@ -117,7 +141,113 @@ export default function Navigation({ profile }) {
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
+  const isChildActive = (children) => {
+    if (!children) return false;
+    return children.some(child => isActive(child.path));
+  };
+
+  // ============================================================
+  // РЕНДЕР ПУНКТА МЕНЮ (С ПОДМЕНЮ)
+  // ============================================================
+  const renderMenuItem = (item) => {
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedMenus[item.id] || false;
+
+    if (hasChildren) {
+      const isActiveGroup = isChildActive(item.children);
+      return (
+        <div key={item.id} className="nav-group">
+          <button
+            className={`nav-group-toggle ${isActiveGroup ? 'active' : ''}`}
+            onClick={() => toggleMenu(item.id)}
+          >
+            <span className="nav-link-icon">{item.icon}</span>
+            <span>{item.label}</span>
+            <span className="nav-group-arrow">{isExpanded ? '▾' : '▸'}</span>
+          </button>
+          {isExpanded && (
+            <div className="nav-group-children">
+              {item.children.map((child) => (
+                <Link
+                  key={child.id}
+                  to={child.path}
+                  className={`nav-link nav-child ${isActive(child.path) ? 'active' : ''}`}
+                >
+                  <span className="nav-link-icon">{child.icon}</span>
+                  <span>{child.label}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <Link
+        key={item.id}
+        to={item.path}
+        className={`nav-link ${isActive(item.path) ? 'active' : ''}`}
+      >
+        <span className="nav-link-icon">{item.icon}</span>
+        <span>{item.label}</span>
+      </Link>
+    );
+  };
+
+  // ============================================================
+  // РЕНДЕР МОБИЛЬНОГО МЕНЮ
+  // ============================================================
+  const renderMobileMenuItem = (item) => {
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedMenus[item.id] || false;
+
+    if (hasChildren) {
+      return (
+        <div key={item.id} className="nav-mobile-group">
+          <button
+            className={`nav-mobile-group-toggle ${isChildActive(item.children) ? 'active' : ''}`}
+            onClick={() => toggleMenu(item.id)}
+          >
+            <span className="nav-link-icon">{item.icon}</span>
+            <span>{item.label}</span>
+            <span className="nav-group-arrow">{isExpanded ? '▾' : '▸'}</span>
+          </button>
+          {isExpanded && (
+            <div className="nav-mobile-group-children">
+              {item.children.map((child) => (
+                <Link
+                  key={child.id}
+                  to={child.path}
+                  className={`nav-mobile-link ${isActive(child.path) ? 'active' : ''}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <span className="nav-link-icon">{child.icon}</span>
+                  <span>{child.label}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <Link
+        key={item.id}
+        to={item.path}
+        className={`nav-mobile-link ${isActive(item.path) ? 'active' : ''}`}
+        onClick={() => setIsMobileMenuOpen(false)}
+      >
+        <span className="nav-link-icon">{item.icon}</span>
+        <span>{item.label}</span>
+      </Link>
+    );
+  };
+
+  // ============================================================
   // ПУБЛИЧНАЯ ВЕРСИЯ
+  // ============================================================
   if (!profile) {
     return (
       <nav className="nav">
@@ -190,7 +320,9 @@ export default function Navigation({ profile }) {
     );
   }
 
+  // ============================================================
   // ОСНОВНАЯ ВЕРСИЯ
+  // ============================================================
   return (
     <nav className="nav">
       <div className="nav-container">
@@ -201,17 +333,9 @@ export default function Navigation({ profile }) {
           <span className="nav-logo-text">Дипломаты будущего</span>
         </Link>
 
-        {/* ДЕСКТОПНОЕ МЕНЮ — ИЗ ХУКА */}
+        {/* ДЕСКТОПНОЕ МЕНЮ */}
         <div className="nav-desktop">
-          {menuItems.map((item) => (
-            <Link
-              key={item.id}
-              to={item.path}
-              className={`nav-link ${isActive(item.path) ? 'active' : ''}`}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {menuItems.map((item) => renderMenuItem(item))}
         </div>
 
         {/* ПРАВАЯ ЧАСТЬ */}
@@ -323,7 +447,7 @@ export default function Navigation({ profile }) {
           {/* МОБИЛЬНЫЙ БУРГЕР */}
           <button
             className="nav-mobile-toggle"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="3" y1="6" x2="21" y2="6" />
@@ -336,20 +460,11 @@ export default function Navigation({ profile }) {
       </div>
 
       {/* МОБИЛЬНОЕ МЕНЮ */}
-      {isMenuOpen && (
+      {isMobileMenuOpen && (
         <div className="nav-mobile" ref={menuRef}>
-          {menuItems.map((item) => (
-            <Link
-              key={item.id}
-              to={item.path}
-              className={`nav-mobile-link ${isActive(item.path) ? 'active' : ''}`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {menuItems.map((item) => renderMobileMenuItem(item))}
           <div className="nav-mobile-divider" />
-          <Link to="/profile" className="nav-mobile-link" onClick={() => setIsMenuOpen(false)}>
+          <Link to="/profile" className="nav-mobile-link" onClick={() => setIsMobileMenuOpen(false)}>
             Профиль
           </Link>
           <button className="nav-mobile-logout" onClick={handleLogout}>
@@ -396,14 +511,17 @@ export default function Navigation({ profile }) {
         .nav-desktop {
           display: flex;
           align-items: center;
-          gap: 2px;
+          gap: 4px;
           flex: 1;
           overflow-x: auto;
           padding: 0 8px;
         }
 
         .nav-link {
-          padding: 7px 18px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 7px 14px;
           border-radius: 8px;
           text-decoration: none;
           color: #6B6561;
@@ -416,6 +534,52 @@ export default function Navigation({ profile }) {
         }
         .nav-link:hover { background: #F8F6F2; color: #0A1628; }
         .nav-link.active { background: #FBF4DC; color: #C9A227; font-weight: 600; }
+        .nav-link-icon { font-size: 18px; }
+
+        .nav-group { position: relative; }
+        .nav-group-toggle {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 7px 14px;
+          border-radius: 8px;
+          border: none;
+          background: none;
+          color: #6B6561;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.25s ease;
+          white-space: nowrap;
+        }
+        .nav-group-toggle:hover { background: #F8F6F2; color: #0A1628; }
+        .nav-group-toggle.active { background: #FBF4DC; color: #C9A227; }
+        .nav-group-arrow { margin-left: 4px; font-size: 12px; color: #A8A29A; }
+
+        .nav-group-children {
+          position: absolute;
+          top: calc(100% + 4px);
+          left: 0;
+          min-width: 220px;
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 12px 48px rgba(10,22,40,0.12);
+          padding: 6px 0;
+          z-index: 1000;
+          animation: fadeDown 0.2s ease;
+        }
+        @keyframes fadeDown {
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .nav-child {
+          padding: 8px 16px;
+          border-radius: 0;
+          white-space: nowrap;
+        }
+        .nav-child:hover { background: #F8F6F2; }
 
         .nav-right {
           display: flex;
@@ -532,22 +696,47 @@ export default function Navigation({ profile }) {
           display: none; background: none; border: none;
           cursor: pointer; color: #0A1628; padding: 8px 4px;
         }
+
         .nav-mobile {
           display: none; position: absolute; top: 68px; left: 0; right: 0;
           background: white; border-bottom: 1px solid #E4DFD8;
-          padding: 12px 16px 20px; flex-direction: column; gap: 2px;
+          padding: 12px 16px 20px; flex-direction: column; gap: 4px;
           box-shadow: 0 8px 32px rgba(10,22,40,0.06);
           max-height: calc(100vh - 68px); overflow-y: auto; z-index: 999;
         }
+
         .nav-mobile-link {
+          display: flex; align-items: center; gap: 10px;
           padding: 10px 14px; border-radius: 8px; text-decoration: none;
           color: #0A1628; font-size: 14px; font-weight: 500;
           transition: all 0.2s ease;
         }
         .nav-mobile-link:hover { background: #F8F6F2; }
         .nav-mobile-link.active { background: #FBF4DC; color: #C9A227; }
+
+        .nav-mobile-group { margin-bottom: 2px; }
+        .nav-mobile-group-toggle {
+          display: flex; align-items: center; gap: 10px;
+          width: 100%; padding: 10px 14px;
+          border: none; background: none;
+          color: #0A1628; font-size: 14px; font-weight: 500;
+          cursor: pointer; transition: all 0.2s ease;
+          font-family: 'Inter', sans-serif;
+          border-radius: 8px;
+        }
+        .nav-mobile-group-toggle:hover { background: #F8F6F2; }
+        .nav-mobile-group-toggle.active { background: #FBF4DC; color: #C9A227; }
+        .nav-mobile-group-children {
+          padding-left: 16px;
+        }
+        .nav-mobile-group-children .nav-mobile-link {
+          padding-left: 40px;
+          font-size: 13px;
+        }
+
         .nav-mobile-divider { height: 1px; background: #F0EDE8; margin: 8px 0; }
         .nav-mobile-logout {
+          display: flex; align-items: center; gap: 10px;
           padding: 10px 14px; border: none; background: none; text-align: left;
           font-size: 14px; color: #B3262E; cursor: pointer; border-radius: 8px;
           font-weight: 500; font-family: 'Inter', sans-serif;

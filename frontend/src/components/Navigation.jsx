@@ -17,6 +17,7 @@ export default function Navigation({ profile }) {
   const [notifications, setNotifications] = useState(notificationsCache || []);
   const [unreadCount, setUnreadCount] = useState(unreadCountCache);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState({});
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,7 +49,6 @@ export default function Navigation({ profile }) {
   // ЗАГРУЗКА УВЕДОМЛЕНИЙ (ТОЛЬКО 1 РАЗ)
   // ============================================================
   const loadNotifications = async () => {
-    // ✅ Если уже загружены — не делаем запрос
     if (isNotificationsLoaded && notificationsCache) {
       setNotifications(notificationsCache);
       setUnreadCount(unreadCountCache);
@@ -77,7 +77,6 @@ export default function Navigation({ profile }) {
     }
   };
 
-  // Загружаем при первом рендере
   useEffect(() => {
     if (profile) {
       loadNotifications();
@@ -85,7 +84,7 @@ export default function Navigation({ profile }) {
   }, [profile]);
 
   // ============================================================
-  // ОТМЕТКА ОДНОГО УВЕДОМЛЕНИЯ КАК ПРОЧИТАННОГО
+  // УПРАВЛЕНИЕ УВЕДОМЛЕНИЯМИ
   // ============================================================
   const markAsRead = async (id) => {
     try {
@@ -95,7 +94,6 @@ export default function Navigation({ profile }) {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Обновляем глобальный кэш
       notificationsCache = notificationsCache.map(n =>
         n.id === id ? { ...n, read: true } : n
       );
@@ -108,9 +106,6 @@ export default function Navigation({ profile }) {
     }
   };
 
-  // ============================================================
-  // ОТМЕТКА ВСЕХ КАК ПРОЧИТАННЫХ
-  // ============================================================
   const markAllAsRead = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -119,7 +114,6 @@ export default function Navigation({ profile }) {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Обновляем глобальный кэш
       notificationsCache = notificationsCache.map(n => ({ ...n, read: true }));
       unreadCountCache = 0;
 
@@ -131,10 +125,19 @@ export default function Navigation({ profile }) {
   };
 
   // ============================================================
+  // РАСКРЫТИЕ ПОДМЕНЮ
+  // ============================================================
+  const toggleMenu = (key) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  // ============================================================
   // ВЫХОД
   // ============================================================
   const handleLogout = () => {
-    // Сбрасываем кэш при выходе
     notificationsCache = null;
     unreadCountCache = 0;
     isNotificationsLoaded = false;
@@ -160,91 +163,398 @@ export default function Navigation({ profile }) {
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
+  const isParentActive = (paths) => {
+    return paths.some(p => location.pathname === p || location.pathname.startsWith(p + '/'));
+  };
+
   // ============================================================
-  // МЕНЮ В ЗАВИСИМОСТИ ОТ РОЛИ
+  // SVG ИКОНКИ
   // ============================================================
-  const getMenuItems = () => {
+  const Icon = {
+    Dashboard: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </svg>
+    ),
+    Events: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+      </svg>
+    ),
+    Calendar: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+        <circle cx="12" cy="14" r="1" />
+        <circle cx="16" cy="14" r="1" />
+        <circle cx="8" cy="14" r="1" />
+      </svg>
+    ),
+    Participants: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+    Club: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
+      </svg>
+    ),
+    Achievements: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+      </svg>
+    ),
+    Reports: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+        <polyline points="10 9 9 9 8 9" />
+      </svg>
+    ),
+    Appeals: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    ),
+    Staff: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    ),
+    Analytics: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10" />
+        <line x1="12" y1="20" x2="12" y2="4" />
+        <line x1="6" y1="20" x2="6" y2="14" />
+      </svg>
+    ),
+    Settings: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 1v4" />
+        <path d="M12 19v4" />
+        <path d="M4.22 4.22l2.83 2.83" />
+        <path d="M16.95 16.95l2.83 2.83" />
+        <path d="M1 12h4" />
+        <path d="M19 12h4" />
+        <path d="M4.22 19.78l2.83-2.83" />
+        <path d="M16.95 7.05l2.83-2.83" />
+      </svg>
+    ),
+    Documents: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+        <polyline points="10 9 9 9 8 9" />
+      </svg>
+    ),
+    Users: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+    Tutor: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2a8 8 0 0 0-8 8c0 5 4 9 8 12 4-3 8-7 8-12a8 8 0 0 0-8-8z" />
+        <circle cx="12" cy="10" r="3" />
+      </svg>
+    ),
+    Notifications: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+      </svg>
+    ),
+    Consents: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+        <polyline points="22 4 12 14.01 9 11.01" />
+      </svg>
+    ),
+    Goals: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="6" />
+        <circle cx="12" cy="12" r="2" />
+      </svg>
+    ),
+    Tasks: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2a8 8 0 0 0-8 8c0 5 4 9 8 12 4-3 8-7 8-12a8 8 0 0 0-8-8z" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    ),
+    President: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+      </svg>
+    ),
+    Rating: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+      </svg>
+    ),
+    Journal: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      </svg>
+    ),
+    Import: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="17 8 12 3 7 8" />
+        <line x1="12" y1="3" x2="12" y2="15" />
+      </svg>
+    ),
+    Invite: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="8.5" cy="7" r="4" />
+        <line x1="20" y1="8" x2="20" y2="14" />
+        <line x1="23" y1="11" x2="17" y2="11" />
+      </svg>
+    ),
+    ChevronDown: () => (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    ),
+    ChevronRight: () => (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="9 18 15 12 9 6" />
+      </svg>
+    ),
+  };
+
+  // ============================================================
+  // СТРУКТУРА МЕНЮ С ПОДМЕНЮ
+  // ============================================================
+  const getMenuStructure = () => {
     const role = profile?.role;
     const isPresident = profile?.is_president || false;
-    const items = [];
-
-    items.push({ path: '/dashboard', label: 'Дашборд' });
+    
+    // Базовые пункты для всех
+    const menu = [];
+    
+    // Главный дашборд
+    menu.push({
+      id: 'dashboard',
+      label: 'Дашборд',
+      path: '/dashboard',
+      icon: Icon.Dashboard,
+      isLink: true
+    });
 
     if (role === 'participant' || role === 'parent') {
-      items.push({ path: '/events', label: 'Мероприятия' });
-      items.push({ path: '/calendar', label: 'Календарь' });
-      items.push({ path: '/my-achievements', label: 'Достижения' });
-      items.push({ path: '/my-reviews', label: 'Оценки' });
-      if (role === 'participant' && isPresident) {
-        items.push({ path: '/president-tasks', label: 'Задания' });
+      menu.push({
+        id: 'participant',
+        label: 'Участнику',
+        icon: Icon.Participants,
+        isLink: false,
+        children: [
+          { path: '/events', label: 'Мероприятия', icon: Icon.Events },
+          { path: '/calendar', label: 'Календарь', icon: Icon.Calendar },
+          { path: '/my-achievements', label: 'Достижения', icon: Icon.Achievements },
+          { path: '/my-reviews', label: 'Оценки', icon: Icon.Analytics },
+        ]
+      });
+      if (isPresident) {
+        menu.push({
+          id: 'president',
+          label: 'Президенту',
+          icon: Icon.President,
+          isLink: false,
+          children: [
+            { path: '/president-tasks', label: 'Задания', icon: Icon.Tasks },
+            { path: '/club-rating', label: 'Рейтинг', icon: Icon.Rating },
+          ]
+        });
       }
     }
 
     if (role === 'club_coordinator') {
-      items.push({ path: '/clubs', label: 'КЮД' });
-      items.push({ path: '/events', label: 'Мероприятия' });
-      items.push({ path: '/participants', label: 'Участники' });
-      items.push({ path: '/manage-achievements', label: 'Достижения' });
-      items.push({ path: '/reports', label: 'Отчёты' });
-      items.push({ path: '/appeals', label: 'Обращения' });
-      items.push({ path: '/staff', label: 'Сотрудники' });
-      items.push({ path: '/calendar', label: 'Календарь' });
+      menu.push({
+        id: 'club',
+        label: 'КЮД',
+        icon: Icon.Club,
+        isLink: false,
+        children: [
+          { path: '/clubs', label: 'Мой КЮД', icon: Icon.Club },
+          { path: '/events', label: 'Мероприятия', icon: Icon.Events },
+          { path: '/participants', label: 'Участники', icon: Icon.Participants },
+          { path: '/manage-achievements', label: 'Достижения', icon: Icon.Achievements },
+          { path: '/reports', label: 'Отчёты', icon: Icon.Reports },
+          { path: '/appeals', label: 'Обращения', icon: Icon.Appeals },
+          { path: '/staff', label: 'Сотрудники', icon: Icon.Staff },
+          { path: '/calendar', label: 'Календарь', icon: Icon.Calendar },
+          { path: '/documents-center', label: 'Центр документов', icon: Icon.Documents },
+        ]
+      });
     }
 
     if (role === 'tutor') {
-      items.push({ path: '/clubs', label: 'КЮДы' });
-      items.push({ path: '/events', label: 'Мероприятия' });
-      items.push({ path: '/participants', label: 'Участники' });
-      items.push({ path: '/achievements', label: 'Достижения' });
-      items.push({ path: '/my-reviews', label: 'Оценки' });
-      items.push({ path: '/my-journal', label: 'Журнал' });
-      items.push({ path: '/staff-calendar', label: 'Календарь' });
-      items.push({ path: '/tutor-assignments', label: 'Назначения' });
-      items.push({ path: '/reports', label: 'Отчёты' });
+      menu.push({
+        id: 'tutor',
+        label: 'Тьютору',
+        icon: Icon.Tutor,
+        isLink: false,
+        children: [
+          { path: '/clubs', label: 'КЮДы', icon: Icon.Club },
+          { path: '/events', label: 'Мероприятия', icon: Icon.Events },
+          { path: '/participants', label: 'Участники', icon: Icon.Participants },
+          { path: '/achievements', label: 'Достижения', icon: Icon.Achievements },
+          { path: '/my-reviews', label: 'Оценки', icon: Icon.Analytics },
+          { path: '/my-journal', label: 'Журнал', icon: Icon.Journal },
+          { path: '/staff-calendar', label: 'Календарь', icon: Icon.Calendar },
+          { path: '/tutor-assignments', label: 'Назначения', icon: Icon.Tasks },
+          { path: '/reports', label: 'Отчёты', icon: Icon.Reports },
+        ]
+      });
     }
 
     if (role === 'movement_coordinator' || role === 'admin') {
-      items.push({ path: '/clubs', label: 'КЮДы' });
-      items.push({ path: '/clubs-management', label: 'Управление' });
-      items.push({ path: '/events', label: 'Мероприятия' });
-      items.push({ path: '/participants', label: 'Участники' });
-      items.push({ path: '/achievements', label: 'Достижения' });
-      items.push({ path: '/achievements-categories', label: 'Категории' });
-      items.push({ path: '/reports', label: 'Отчёты' });
-      items.push({ path: '/analytics', label: 'Аналитика' });
-      items.push({ path: '/appeals', label: 'Обращения' });
-      items.push({ path: '/documents-center', label: 'Документы' });
-      items.push({ path: '/mass-notifications', label: 'Уведомления' });
-      items.push({ path: '/notification-history', label: 'История' });
-      items.push({ path: '/activity-log', label: 'Журнал' });
-      items.push({ path: '/consents-management', label: 'Согласия' });
-      items.push({ path: '/goals', label: 'Цели' });
-      items.push({ path: '/tasks-planner', label: 'Планировщик' });
-      items.push({ path: '/admin/users', label: 'Пользователи' });
+      menu.push({
+        id: 'management',
+        label: 'Управление',
+        icon: Icon.Settings,
+        isLink: false,
+        children: [
+          { path: '/clubs', label: 'КЮДы', icon: Icon.Club },
+          { path: '/clubs-management', label: 'Управление КЮДами', icon: Icon.Settings },
+          { path: '/events', label: 'Мероприятия', icon: Icon.Events },
+          { path: '/participants', label: 'Участники', icon: Icon.Participants },
+          { path: '/achievements', label: 'Достижения', icon: Icon.Achievements },
+          { path: '/achievements-categories', label: 'Категории', icon: Icon.Achievements },
+          { path: '/reports', label: 'Отчёты', icon: Icon.Reports },
+          { path: '/analytics', label: 'Аналитика', icon: Icon.Analytics },
+          { path: '/appeals', label: 'Обращения', icon: Icon.Appeals },
+          { path: '/documents-center', label: 'Центр документов', icon: Icon.Documents },
+          { path: '/mass-notifications', label: 'Уведомления', icon: Icon.Notifications },
+          { path: '/notification-history', label: 'История', icon: Icon.Notifications },
+          { path: '/activity-log', label: 'Журнал', icon: Icon.Journal },
+          { path: '/consents-management', label: 'Согласия', icon: Icon.Consents },
+          { path: '/goals', label: 'Цели', icon: Icon.Goals },
+          { path: '/tasks-planner', label: 'Планировщик', icon: Icon.Tasks },
+          { path: '/admin/users', label: 'Пользователи', icon: Icon.Users },
+        ]
+      });
       if (role === 'admin') {
-        items.push({ path: '/admin/invite', label: 'Пригласить' });
-        items.push({ path: '/import-participants', label: 'Импорт' });
-        items.push({ path: '/settings', label: 'Настройки' });
+        menu.push({
+          id: 'admin',
+          label: 'Администрирование',
+          icon: Icon.Settings,
+          isLink: false,
+          children: [
+            { path: '/admin/invite', label: 'Пригласить', icon: Icon.Invite },
+            { path: '/import-participants', label: 'Импорт', icon: Icon.Import },
+            { path: '/settings', label: 'Настройки', icon: Icon.Settings },
+          ]
+        });
       }
     }
 
     if (role === 'president' || role === 'vice_president') {
-      items.push({ path: '/clubs', label: 'КЮДы' });
-      items.push({ path: '/events', label: 'Мероприятия' });
-      items.push({ path: '/participants', label: 'Участники' });
-      items.push({ path: '/achievements', label: 'Достижения' });
-      items.push({ path: '/reports', label: 'Отчёты' });
-      items.push({ path: '/analytics', label: 'Аналитика' });
-      items.push({ path: '/appeals', label: 'Обращения' });
-      items.push({ path: '/documents-center', label: 'Документы' });
-      items.push({ path: '/president-tasks', label: 'Задания' });
-      items.push({ path: '/club-rating', label: 'Рейтинг' });
+      menu.push({
+        id: 'president',
+        label: 'Президенту',
+        icon: Icon.President,
+        isLink: false,
+        children: [
+          { path: '/clubs', label: 'КЮДы', icon: Icon.Club },
+          { path: '/events', label: 'Мероприятия', icon: Icon.Events },
+          { path: '/participants', label: 'Участники', icon: Icon.Participants },
+          { path: '/achievements', label: 'Достижения', icon: Icon.Achievements },
+          { path: '/reports', label: 'Отчёты', icon: Icon.Reports },
+          { path: '/analytics', label: 'Аналитика', icon: Icon.Analytics },
+          { path: '/appeals', label: 'Обращения', icon: Icon.Appeals },
+          { path: '/documents-center', label: 'Центр документов', icon: Icon.Documents },
+          { path: '/president-tasks', label: 'Задания', icon: Icon.Tasks },
+          { path: '/club-rating', label: 'Рейтинг', icon: Icon.Rating },
+        ]
+      });
     }
 
-    return items;
+    return menu;
   };
 
-  const menuItems = getMenuItems();
+  const menuStructure = getMenuStructure();
+
+  // ============================================================
+  // РЕНДЕР ПУНКТА МЕНЮ
+  // ============================================================
+  const renderMenuItem = (item, isMobile = false) => {
+    if (item.isLink) {
+      return (
+        <Link
+          key={item.id}
+          to={item.path}
+          className={`nav-link ${isActive(item.path) ? 'active' : ''}`}
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          <span className="nav-link-icon"><item.icon /></span>
+          <span>{item.label}</span>
+        </Link>
+      );
+    }
+
+    const isExpanded = expandedMenus[item.id] || false;
+    const isChildActive = item.children?.some(child => isActive(child.path));
+
+    return (
+      <div key={item.id} className="nav-group">
+        <button
+          className={`nav-group-toggle ${isChildActive ? 'active' : ''}`}
+          onClick={() => toggleMenu(item.id)}
+        >
+          <span className="nav-link-icon"><item.icon /></span>
+          <span>{item.label}</span>
+          <span className="nav-group-arrow">
+            {isExpanded ? <Icon.ChevronDown /> : <Icon.ChevronRight />}
+          </span>
+        </button>
+        {isExpanded && (
+          <div className="nav-group-children">
+            {item.children.map((child) => (
+              <Link
+                key={child.path}
+                to={child.path}
+                className={`nav-link nav-child ${isActive(child.path) ? 'active' : ''}`}
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  if (isMobile) toggleMenu(item.id);
+                }}
+              >
+                <span className="nav-link-icon"><child.icon /></span>
+                <span>{child.label}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // ============================================================
   // УПРОЩЁННАЯ НАВИГАЦИЯ (БЕЗ ПРОФИЛЯ)
@@ -286,15 +596,7 @@ export default function Navigation({ profile }) {
 
         {/* Десктопное меню */}
         <div className="nav-desktop">
-          {menuItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-link ${isActive(item.path) ? 'active' : ''}`}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {menuStructure.map((item) => renderMenuItem(item, false))}
         </div>
 
         {/* Правая часть */}
@@ -305,10 +607,7 @@ export default function Navigation({ profile }) {
               className="nav-notif-btn"
               onClick={() => setShowNotifications(!showNotifications)}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
+              <Icon.Notifications />
               {unreadCount > 0 && (
                 <span className="nav-notif-badge">{unreadCount}</span>
               )}
@@ -368,9 +667,7 @@ export default function Navigation({ profile }) {
                 )}
               </div>
               <span className="nav-profile-name">{profile?.full_name}</span>
-              <svg width="12" height="12" viewBox="0 0 12 8" fill="none">
-                <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <Icon.ChevronDown />
             </button>
 
             {isProfileOpen && (
@@ -423,16 +720,7 @@ export default function Navigation({ profile }) {
       {/* Мобильное меню */}
       {isMobileMenuOpen && (
         <div className="nav-mobile" ref={menuRef}>
-          {menuItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-mobile-link ${isActive(item.path) ? 'active' : ''}`}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {menuStructure.map((item) => renderMenuItem(item, true))}
           <div className="nav-divider" />
           <Link to="/profile" className="nav-mobile-link" onClick={() => setIsMobileMenuOpen(false)}>
             Профиль
@@ -444,7 +732,9 @@ export default function Navigation({ profile }) {
       )}
 
       <style>{`
-        /* ===== NAV ===== */
+        /* ============================================================
+           NAV
+           ============================================================ */
         .nav {
           background: white;
           border-bottom: 1px solid var(--border);
@@ -464,7 +754,9 @@ export default function Navigation({ profile }) {
           gap: 16px;
         }
 
-        /* ===== LOGO ===== */
+        /* ============================================================
+           LOGO
+           ============================================================ */
         .nav-logo {
           display: flex;
           align-items: center;
@@ -486,7 +778,9 @@ export default function Navigation({ profile }) {
           letter-spacing: -0.3px;
         }
 
-        /* ===== DESKTOP MENU ===== */
+        /* ============================================================
+           DESKTOP MENU
+           ============================================================ */
         .nav-desktop {
           display: flex;
           align-items: center;
@@ -496,7 +790,13 @@ export default function Navigation({ profile }) {
           padding: 0 8px;
         }
 
+        /* ============================================================
+           ССЫЛКИ
+           ============================================================ */
         .nav-link {
+          display: flex;
+          align-items: center;
+          gap: 8px;
           padding: 6px 14px;
           border-radius: var(--radius-sm);
           text-decoration: none;
@@ -505,6 +805,10 @@ export default function Navigation({ profile }) {
           color: var(--text-secondary);
           transition: var(--transition);
           white-space: nowrap;
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-family: var(--font-sans);
         }
 
         .nav-link:hover {
@@ -518,7 +822,107 @@ export default function Navigation({ profile }) {
           font-weight: 600;
         }
 
-        /* ===== RIGHT ===== */
+        .nav-link-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          color: var(--text-muted);
+        }
+
+        .nav-link.active .nav-link-icon {
+          color: var(--primary);
+        }
+
+        /* ============================================================
+           ГРУППЫ МЕНЮ (РАСКРЫВАЮЩИЕСЯ)
+           ============================================================ */
+        .nav-group {
+          position: relative;
+        }
+
+        .nav-group-toggle {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 12px;
+          border-radius: var(--radius-sm);
+          border: none;
+          background: none;
+          font-size: 13px;
+          font-weight: 500;
+          color: var(--text-secondary);
+          cursor: pointer;
+          transition: var(--transition);
+          font-family: var(--font-sans);
+          white-space: nowrap;
+        }
+
+        .nav-group-toggle:hover {
+          background: var(--background);
+          color: var(--text-primary);
+        }
+
+        .nav-group-toggle.active {
+          background: var(--background);
+          color: var(--text-primary);
+        }
+
+        .nav-group-arrow {
+          display: flex;
+          align-items: center;
+          margin-left: 4px;
+          color: var(--text-muted);
+          transition: transform 0.25s ease;
+        }
+
+        .nav-group-children {
+          position: absolute;
+          top: calc(100% + 4px);
+          left: 0;
+          min-width: 220px;
+          background: white;
+          border-radius: var(--radius);
+          border: 1px solid var(--border);
+          box-shadow: var(--shadow-hover);
+          padding: 6px 0;
+          z-index: 1000;
+          animation: fadeDown 0.2s ease;
+        }
+
+        @keyframes fadeDown {
+          from {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .nav-child {
+          padding: 8px 16px;
+          border-radius: 0;
+          white-space: nowrap;
+        }
+
+        .nav-child:hover {
+          background: var(--background);
+        }
+
+        .nav-child .nav-link-icon {
+          color: var(--text-muted);
+        }
+
+        .nav-child.active {
+          background: var(--background);
+          color: var(--text-primary);
+        }
+
+        /* ============================================================
+           RIGHT
+           ============================================================ */
         .nav-right {
           display: flex;
           align-items: center;
@@ -526,7 +930,9 @@ export default function Navigation({ profile }) {
           flex-shrink: 0;
         }
 
-        /* ===== NOTIFICATIONS ===== */
+        /* ============================================================
+           NOTIFICATIONS
+           ============================================================ */
         .nav-notifications {
           position: relative;
         }
@@ -668,7 +1074,9 @@ export default function Navigation({ profile }) {
           background: var(--background);
         }
 
-        /* ===== PROFILE ===== */
+        /* ============================================================
+           PROFILE
+           ============================================================ */
         .nav-profile {
           position: relative;
         }
@@ -814,7 +1222,9 @@ export default function Navigation({ profile }) {
           background: #FCEBEC;
         }
 
-        /* ===== MOBILE TOGGLE ===== */
+        /* ============================================================
+           MOBILE TOGGLE
+           ============================================================ */
         .nav-mobile-toggle {
           display: none;
           background: none;
@@ -824,7 +1234,9 @@ export default function Navigation({ profile }) {
           padding: 8px;
         }
 
-        /* ===== MOBILE MENU ===== */
+        /* ============================================================
+           MOBILE MENU
+           ============================================================ */
         .nav-mobile {
           display: none;
           position: absolute;
@@ -843,6 +1255,9 @@ export default function Navigation({ profile }) {
         }
 
         .nav-mobile-link {
+          display: flex;
+          align-items: center;
+          gap: 10px;
           padding: 10px 14px;
           border-radius: var(--radius-sm);
           text-decoration: none;
@@ -861,7 +1276,29 @@ export default function Navigation({ profile }) {
           font-weight: 600;
         }
 
+        .nav-mobile .nav-group-toggle {
+          width: 100%;
+          justify-content: flex-start;
+          padding: 10px 14px;
+          font-size: 14px;
+        }
+
+        .nav-mobile .nav-group-children {
+          position: static;
+          box-shadow: none;
+          border: none;
+          padding: 0 0 0 16px;
+          animation: none;
+        }
+
+        .nav-mobile .nav-child {
+          padding: 8px 14px;
+        }
+
         .nav-mobile-logout {
+          display: flex;
+          align-items: center;
+          gap: 10px;
           padding: 10px 14px;
           border: none;
           background: none;
@@ -897,6 +1334,19 @@ export default function Navigation({ profile }) {
 
           .nav-profile-name {
             display: none;
+          }
+
+          .nav-group-children {
+            position: static;
+            box-shadow: none;
+            border: none;
+            padding: 0 0 0 16px;
+            animation: none;
+            min-width: auto;
+          }
+
+          .nav-child {
+            white-space: normal;
           }
         }
 

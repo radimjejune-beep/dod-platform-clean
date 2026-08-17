@@ -5,31 +5,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&display=swap');
 
 :root {
-  /* ==========================================================
-     ЦВЕТОВАЯ ПАЛИТРА — ДИПЛОМАТИЧЕСКАЯ
-     ========================================================== */
-  
-  /* Основные цвета */
-  --color-primary: #0A1628;      /* Глубокий дипломатический синий */
+  --color-primary: #0A1628;
   --color-primary-dark: #060E1C;
   --color-primary-light: #1A3555;
-  
-  /* Акцентные цвета */
-  --color-gold: #C9A227;         /* Благородное золото */
+  --color-gold: #C9A227;
   --color-gold-light: #E8D9A8;
   --color-gold-pale: #FBF4DC;
-  --color-gold-gradient: linear-gradient(135deg, #C9A227 0%, #D4B84A 50%, #E8D9A8 100%);
-  
-  /* Дополнительные акценты */
-  --color-burgundy: #7A2E3A;     /* Дипломатический бордовый */
-  --color-burgundy-light: #9C3D4C;
-  
-  /* Нейтральные */
+  --color-gold-gradient: linear-gradient(135deg, #C9A227 0%, #D4B84A 40%, #E8D9A8 100%);
   --color-white: #FFFFFF;
-  --color-bg: #F0EDE8;           /* Благородный кремовый фон */
-  --color-bg-light: #F8F6F2;
-  
-  /* Серые (градация) */
+  --color-bg: #F0EDE8;
   --color-gray-50: #F8F6F2;
   --color-gray-100: #F0EDE8;
   --color-gray-200: #E4DFD8;
@@ -39,9 +23,6 @@
   --color-gray-600: #6B6561;
   --color-gray-700: #4D4744;
   --color-gray-800: #2F2926;
-  --color-gray-900: #1A1614;
-  
-  /* Статусы */
   --color-success: #1A7A4C;
   --color-success-bg: #E8F5EF;
   --color-error: #B3262E;
@@ -50,38 +31,27 @@
   --color-warning-bg: #FBF4DC;
   --color-info: #1A4A7A;
   --color-info-bg: #EAF2FA;
-  
-  /* ==========================================================
-     ТИПОГРАФИКА
-     ========================================================== */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
-  
-  /* ==========================================================
-     РАЗМЕРЫ
-     ========================================================== */
-  --radius-sm: 6px;
-  --radius: 10px;
+  --radius-sm: 8px;
+  --radius: 12px;
   --radius-lg: 16px;
-  
   --shadow-sm: 0 1px 3px rgba(10, 22, 40, 0.04);
   --shadow-md: 0 4px 16px rgba(10, 22, 40, 0.06);
   --shadow-lg: 0 8px 32px rgba(10, 22, 40, 0.10);
   --shadow-xl: 0 12px 48px rgba(10, 22, 40, 0.14);
-  
   --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ============================================================
-   БАЗОВЫЕ СТИЛИ
-   ============================================================ */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   width: 100%;
   min-height: 100vh;
   background: var(--color-bg);
@@ -97,30 +67,58 @@ body {
 /* ============================================================
    СКРОЛЛБАР
    ============================================================ */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--color-gray-100); }
-::-webkit-scrollbar-thumb { background: var(--color-gold); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #B8921F; }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-gray-100);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-gold);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B8921F;
+}
 
 /* ============================================================
    ТИПОГРАФИКА
    ============================================================ */
-h1, h2, h3, h4, h5 {
+h1,
+h2,
+h3,
+h4,
+h5 {
   font-family: var(--font-serif);
   color: var(--color-primary);
   letter-spacing: -0.02em;
 }
 
-h1 { font-size: 32px; font-weight: 700; }
-h2 { font-size: 24px; font-weight: 600; }
-h3 { font-size: 20px; font-weight: 600; }
-h4 { font-size: 18px; font-weight: 600; }
+h1 {
+  font-size: 32px;
+  font-weight: 700;
+}
+h2 {
+  font-size: 24px;
+  font-weight: 600;
+}
+h3 {
+  font-size: 20px;
+  font-weight: 600;
+}
+h4 {
+  font-size: 18px;
+  font-weight: 600;
+}
 
 a {
   color: var(--color-gold);
   text-decoration: none;
 }
-a:hover { color: #B8921F; }
+a:hover {
+  color: #B8921F;
+}
 
 /* ============================================================
    КОНТЕЙНЕР
@@ -133,13 +131,19 @@ a:hover { color: #B8921F; }
 }
 
 /* ============================================================
-   КНОПКИ — ПРЕМИАЛЬНЫЕ
+   ★★★★★ ВСЕ КНОПКИ — ПРЕМИАЛЬНЫЕ ★★★★★
    ============================================================ */
-.btn {
+
+/* БАЗОВАЯ КНОПКА */
+button,
+.btn,
+[role="button"],
+input[type="button"],
+input[type="submit"] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   padding: 11px 28px;
   border: none;
   border-radius: var(--radius-sm);
@@ -147,44 +151,49 @@ a:hover { color: #B8921F; }
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   text-decoration: none;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   min-height: 44px;
   position: relative;
   overflow: hidden;
+  user-select: none;
+  line-height: 1.2;
 }
 
-/* Кнопка с золотым градиентом (главная) */
-.btn-gold {
-  background: var(--color-gold-gradient);
-  color: var(--color-white);
-  box-shadow: 0 2px 12px rgba(201, 162, 39, 0.25);
+/* ======= ЗОЛОТАЯ КНОПКА (ГЛАВНАЯ) ======= */
+.btn-gold,
+.btn-gold[class*="primary"] {
+  background: var(--color-gold-gradient) !important;
+  color: var(--color-white) !important;
+  box-shadow: 0 4px 16px rgba(201, 162, 39, 0.25);
 }
-.btn-gold:hover {
+.btn-gold:hover,
+.btn-gold[class*="primary"]:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 28px rgba(201, 162, 39, 0.35);
+  box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
 }
-.btn-gold:active {
-  transform: translateY(0);
+.btn-gold:active,
+.btn-gold[class*="primary"]:active {
+  transform: scale(0.97);
 }
 
-/* Кнопка синяя (вторичная) */
+/* ======= СИНЯЯ КНОПКА ======= */
 .btn-primary {
   background: var(--color-primary);
   color: var(--color-white);
-  box-shadow: 0 2px 12px rgba(10, 22, 40, 0.15);
+  box-shadow: 0 4px 16px rgba(10, 22, 40, 0.15);
 }
 .btn-primary:hover {
   background: var(--color-primary-light);
   transform: translateY(-2px);
-  box-shadow: 0 6px 28px rgba(10, 22, 40, 0.25);
+  box-shadow: 0 8px 32px rgba(10, 22, 40, 0.25);
 }
 .btn-primary:active {
-  transform: translateY(0);
+  transform: scale(0.97);
 }
 
-/* Кнопка с обводкой (премиальная) */
+/* ======= ОБВОДНАЯ КНОПКА ======= */
 .btn-outline {
   background: transparent;
   color: var(--color-primary);
@@ -194,59 +203,100 @@ a:hover { color: #B8921F; }
 .btn-outline:hover {
   background: var(--color-gold-pale);
   transform: translateY(-2px);
-  box-shadow: 0 6px 28px rgba(201, 162, 39, 0.15);
+  box-shadow: 0 8px 32px rgba(201, 162, 39, 0.12);
 }
 .btn-outline:active {
-  transform: translateY(0);
+  transform: scale(0.97);
 }
 
-/* Кнопка белая (светлая) */
+/* ======= БЕЛАЯ КНОПКА ======= */
 .btn-white {
   background: var(--color-white);
   color: var(--color-primary);
-  box-shadow: 0 2px 12px rgba(10, 22, 40, 0.06);
+  box-shadow: 0 4px 16px rgba(10, 22, 40, 0.04);
 }
 .btn-white:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 28px rgba(10, 22, 40, 0.12);
+  box-shadow: 0 8px 32px rgba(10, 22, 40, 0.10);
 }
 .btn-white:active {
-  transform: translateY(0);
+  transform: scale(0.97);
 }
 
-/* Кнопка успех */
+/* ======= КНОПКА УСПЕХ (СОЗДАТЬ/СОХРАНИТЬ) ======= */
 .btn-success {
   background: var(--color-success);
   color: var(--color-white);
-  box-shadow: 0 2px 12px rgba(26, 122, 76, 0.2);
+  box-shadow: 0 4px 16px rgba(26, 122, 76, 0.2);
 }
 .btn-success:hover {
   background: #13663E;
   transform: translateY(-2px);
-  box-shadow: 0 6px 28px rgba(26, 122, 76, 0.3);
+  box-shadow: 0 8px 32px rgba(26, 122, 76, 0.3);
 }
 .btn-success:active {
-  transform: translateY(0);
+  transform: scale(0.97);
 }
 
-/* Кнопка ошибка */
+/* ======= КНОПКА ОПАСНОСТЬ (УДАЛИТЬ/ОТМЕНИТЬ) ======= */
 .btn-danger {
   background: var(--color-error);
   color: var(--color-white);
-  box-shadow: 0 2px 12px rgba(179, 38, 46, 0.2);
+  box-shadow: 0 4px 16px rgba(179, 38, 46, 0.2);
 }
 .btn-danger:hover {
   background: #8A1C22;
   transform: translateY(-2px);
-  box-shadow: 0 6px 28px rgba(179, 38, 46, 0.3);
+  box-shadow: 0 8px 32px rgba(179, 38, 46, 0.3);
 }
 .btn-danger:active {
-  transform: translateY(0);
+  transform: scale(0.97);
 }
 
-/* Размеры */
-.btn-sm { padding: 7px 16px; font-size: 12px; min-height: 34px; }
-.btn-lg { padding: 14px 40px; font-size: 16px; min-height: 54px; }
+/* ======= КНОПКА ПРЕДУПРЕЖДЕНИЕ ======= */
+.btn-warning {
+  background: var(--color-warning);
+  color: var(--color-white);
+  box-shadow: 0 4px 16px rgba(184, 146, 31, 0.2);
+}
+.btn-warning:hover {
+  background: #A07D1A;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(184, 146, 31, 0.3);
+}
+.btn-warning:active {
+  transform: scale(0.97);
+}
+
+/* ======= РАЗМЕРЫ ======= */
+.btn-sm {
+  padding: 7px 16px;
+  font-size: 12px;
+  min-height: 34px;
+}
+.btn-lg {
+  padding: 14px 40px;
+  font-size: 16px;
+  min-height: 54px;
+}
+
+/* ======= ДЛЯ КНОПОК С ИКОНКАМИ ======= */
+.btn svg,
+.btn img {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.btn-sm svg,
+.btn-sm img {
+  width: 14px;
+  height: 14px;
+}
+.btn-lg svg,
+.btn-lg img {
+  width: 22px;
+  height: 22px;
+}
 
 /* ============================================================
    КАРТОЧКИ — ПРЕМИАЛЬНЫЕ
@@ -266,7 +316,6 @@ a:hover { color: #B8921F; }
   transform: translateY(-3px);
 }
 
-/* Карточка с золотой линией сверху */
 .card-gold {
   border-top: 3px solid var(--color-gold);
 }
@@ -318,6 +367,7 @@ a:hover { color: #B8921F; }
   box-shadow: var(--shadow-lg);
   transform: translateY(-4px);
 }
+
 .stat-card:hover::before {
   opacity: 1;
 }
@@ -343,17 +393,31 @@ a:hover { color: #B8921F; }
 /* ============================================================
    GRID
    ============================================================ */
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
 
 /* ============================================================
    БЕЙДЖИ — ПРЕМИАЛЬНЫЕ
    ============================================================ */
 .badge {
   display: inline-block;
-  padding: 3px 14px;
-  border-radius: 20px;
+  padding: 4px 16px;
+  border-radius: 50px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -452,7 +516,6 @@ select.form-control {
   margin-bottom: 16px;
   font-size: 14px;
   font-weight: 500;
-  width: 100%;
   border-left: 4px solid transparent;
 }
 
@@ -534,7 +597,6 @@ select.form-control {
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  width: 100%;
 }
 
 .empty-state-icon {
@@ -572,9 +634,22 @@ select.form-control {
   flex-shrink: 0;
 }
 
-.avatar-sm { width: 32px; height: 32px; font-size: 12px; }
-.avatar-lg { width: 56px; height: 56px; font-size: 22px; }
-.avatar-gold { background: var(--color-gold-gradient); color: var(--color-white); }
+.avatar-sm {
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
+}
+
+.avatar-lg {
+  width: 56px;
+  height: 56px;
+  font-size: 22px;
+}
+
+.avatar-gold {
+  background: var(--color-gold-gradient);
+  color: var(--color-white);
+}
 
 /* ============================================================
    СПИННЕР
@@ -588,7 +663,11 @@ select.form-control {
   animation: spin 0.7s linear infinite;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* ============================================================
    МОДАЛЬНОЕ ОКНО — ПРЕМИАЛЬНОЕ
@@ -643,34 +722,12 @@ select.form-control {
   transition: color var(--transition);
 }
 
-.modal-close:hover { color: var(--color-gray-700); }
+.modal-close:hover {
+  color: var(--color-gray-700);
+}
 
 /* ============================================================
-   УТИЛИТЫ
-   ============================================================ */
-.text-center { text-align: center; }
-.text-gold { color: var(--color-gold); }
-.text-muted { color: var(--color-gray-400); }
-.text-secondary { color: var(--color-gray-500); }
-
-.mt-1 { margin-top: 8px; }
-.mt-2 { margin-top: 16px; }
-.mt-3 { margin-top: 24px; }
-.mb-1 { margin-bottom: 8px; }
-.mb-2 { margin-bottom: 16px; }
-.mb-3 { margin-bottom: 24px; }
-
-.flex { display: flex; }
-.flex-center { display: flex; align-items: center; justify-content: center; }
-.flex-between { display: flex; align-items: center; justify-content: space-between; }
-.gap-1 { gap: 8px; }
-.gap-2 { gap: 16px; }
-.gap-3 { gap: 24px; }
-.w-full { width: 100%; }
-.flex-wrap { flex-wrap: wrap; }
-
-/* ============================================================
-   ЗОЛОТАЯ ЛИНИЯ (декоративный элемент)
+   ЗОЛОТАЯ ЛИНИЯ (ДЕКОРАТИВНЫЙ ЭЛЕМЕНТ)
    ============================================================ */
 .gold-line {
   width: 60px;
@@ -697,38 +754,186 @@ select.form-control {
 }
 
 /* ============================================================
+   УТИЛИТЫ
+   ============================================================ */
+.text-center {
+  text-align: center;
+}
+.text-gold {
+  color: var(--color-gold);
+}
+.text-muted {
+  color: var(--color-gray-400);
+}
+.text-secondary {
+  color: var(--color-gray-500);
+}
+
+.mt-1 {
+  margin-top: 8px;
+}
+.mt-2 {
+  margin-top: 16px;
+}
+.mt-3 {
+  margin-top: 24px;
+}
+.mb-1 {
+  margin-bottom: 8px;
+}
+.mb-2 {
+  margin-bottom: 16px;
+}
+.mb-3 {
+  margin-bottom: 24px;
+}
+
+.flex {
+  display: flex;
+}
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.gap-1 {
+  gap: 8px;
+}
+.gap-2 {
+  gap: 16px;
+}
+.gap-3 {
+  gap: 24px;
+}
+.w-full {
+  width: 100%;
+}
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+/* ============================================================
    АДАПТИВНОСТЬ
    ============================================================ */
 @media (max-width: 1200px) {
-  .container-page { padding: 20px 24px 36px; }
-  .grid-4 { grid-template-columns: repeat(2, 1fr); }
-  .stat-number { font-size: 30px; }
+  .container-page {
+    padding: 20px 24px 36px;
+  }
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .stat-number {
+    font-size: 30px;
+  }
 }
 
 @media (max-width: 768px) {
-  .container-page { padding: 16px 16px 28px; }
-  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; gap: 16px; }
-  .card { padding: 20px 18px; }
-  .stat-number { font-size: 26px; }
-  .stat-card { padding: 18px 16px; }
-  .btn { padding: 9px 18px; font-size: 13px; min-height: 38px; }
-  .btn-lg { padding: 12px 28px; font-size: 14px; min-height: 48px; }
-  .modal { padding: 24px; margin: 10px; }
-  h1 { font-size: 26px; }
-  h2 { font-size: 20px; }
+  .container-page {
+    padding: 16px 16px 28px;
+  }
+  .grid-2,
+  .grid-3,
+  .grid-4 {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .card {
+    padding: 20px 18px;
+  }
+  .stat-number {
+    font-size: 26px;
+  }
+  .stat-card {
+    padding: 18px 16px;
+  }
+  button,
+  .btn,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"] {
+    padding: 9px 18px;
+    font-size: 13px;
+    min-height: 38px;
+  }
+  .btn-lg {
+    padding: 12px 28px;
+    font-size: 14px;
+    min-height: 48px;
+  }
+  .btn-sm {
+    padding: 6px 14px;
+    font-size: 12px;
+    min-height: 32px;
+  }
+  .modal {
+    padding: 24px;
+    margin: 10px;
+  }
+  h1 {
+    font-size: 26px;
+  }
+  h2 {
+    font-size: 20px;
+  }
 }
 
 @media (max-width: 480px) {
-  .container-page { padding: 12px 12px 20px; }
-  .card { padding: 14px 14px; border-radius: var(--radius); }
-  .stat-number { font-size: 22px; }
-  .stat-card { padding: 14px 12px; }
-  .btn { padding: 6px 14px; font-size: 12px; min-height: 34px; }
-  .btn-lg { padding: 10px 20px; font-size: 13px; min-height: 42px; }
-  .form-control { padding: 9px 12px; font-size: 13px; min-height: 38px; }
-  .modal { padding: 18px; }
-  .modal-title { font-size: 18px; }
-  h1 { font-size: 22px; }
-  h2 { font-size: 18px; }
-  .badge { font-size: 10px; padding: 2px 10px; }
+  .container-page {
+    padding: 12px 12px 20px;
+  }
+  .card {
+    padding: 14px 14px;
+    border-radius: var(--radius);
+  }
+  .stat-number {
+    font-size: 22px;
+  }
+  .stat-card {
+    padding: 14px 12px;
+  }
+  button,
+  .btn,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"] {
+    padding: 6px 14px;
+    font-size: 12px;
+    min-height: 34px;
+  }
+  .btn-lg {
+    padding: 10px 20px;
+    font-size: 13px;
+    min-height: 42px;
+  }
+  .btn-sm {
+    padding: 4px 10px;
+    font-size: 11px;
+    min-height: 28px;
+  }
+  .form-control {
+    padding: 9px 12px;
+    font-size: 13px;
+    min-height: 38px;
+  }
+  .modal {
+    padding: 18px;
+  }
+  .modal-title {
+    font-size: 18px;
+  }
+  h1 {
+    font-size: 22px;
+  }
+  h2 {
+    font-size: 18px;
+  }
+  .badge {
+    font-size: 10px;
+    padding: 2px 10px;
+  }
 }

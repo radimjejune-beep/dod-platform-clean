@@ -12,26 +12,24 @@ export default function Layout({ children, profile }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationsLoaded, setNotificationsLoaded] = useState(false);
-  
+
   const navigate = useNavigate();
   const location = useLocation();
   const profileRef = useRef(null);
   const notificationRef = useRef(null);
+  const sidebarRef = useRef(null);
 
   // ============================================================
   // ЗАГРУЗКА УВЕДОМЛЕНИЙ
   // ============================================================
   const loadNotifications = async () => {
     if (notificationsLoaded) return;
-    
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-
       const response = await fetch('https://dod-backend.relaxdev.ru/api/notifications', {
         headers: { Authorization: `Bearer ${token}` }
       });
-
       if (response.ok) {
         const data = await response.json();
         setNotifications(data || []);
@@ -50,7 +48,7 @@ export default function Layout({ children, profile }) {
   }, [profile, notificationsLoaded]);
 
   // ============================================================
-  // ЗАКРЫТИЕ ПОПАПОВ
+  // ЗАКРЫТИЕ ПОПАПОВ ПРИ КЛИКЕ ВНЕ
   // ============================================================
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -60,8 +58,10 @@ export default function Layout({ children, profile }) {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setShowNotifications(false);
       }
+      if (sidebarRef.current && window.innerWidth < 1024) {
+        // Не закрываем сайдбар при клике внутри
+      }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -73,12 +73,12 @@ export default function Layout({ children, profile }) {
     const handleResize = () => {
       if (window.innerWidth < 1024) {
         setIsSidebarOpen(false);
+        setIsMobileSidebarOpen(false);
       } else {
         setIsSidebarOpen(true);
         setIsMobileSidebarOpen(false);
       }
     };
-
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -103,8 +103,7 @@ export default function Layout({ children, profile }) {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` }
       });
-      
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(n => n.id === id ? { ...n, read: true } : n)
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
@@ -120,7 +119,6 @@ export default function Layout({ children, profile }) {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` }
       });
-      
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (error) {
@@ -129,7 +127,7 @@ export default function Layout({ children, profile }) {
   };
 
   // ============================================================
-  // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+  // ВСПОМОГАТЕЛЬНЫЕ
   // ============================================================
   const getInitials = (name) => {
     if (!name) return '?';
@@ -145,7 +143,7 @@ export default function Layout({ children, profile }) {
   };
 
   // ============================================================
-  // МЕНЮ ДЛЯ САЙДБАРА
+  // МЕНЮ САЙДБАРА
   // ============================================================
   const getMenuItems = () => {
     const role = profile?.role;
@@ -172,7 +170,7 @@ export default function Layout({ children, profile }) {
       items.push({ path: '/appeals', label: 'Обращения', icon: '📨' });
       items.push({ path: '/staff', label: 'Сотрудники', icon: '👤' });
       items.push({ path: '/calendar', label: 'Календарь', icon: '📆' });
-      items.push({ path: '/documents-center', label: 'Центр документов', icon: '📁' });
+      items.push({ path: '/documents-center', label: 'Документы', icon: '📁' });
     }
 
     if (role === 'tutor') {
@@ -234,26 +232,19 @@ export default function Layout({ children, profile }) {
   // ЕСЛИ НЕТ ПРОФИЛЯ — ПУБЛИЧНАЯ ЧАСТЬ
   // ============================================================
   if (!profile) {
-    return (
-      <div className="layout-public">
-        {children}
-        <style>{`
-          .layout-public {
-            min-height: 100vh;
-            background: #F5F6F8;
-          }
-        `}</style>
-      </div>
-    );
+    return <>{children}</>;
   }
 
   // ============================================================
-  // ОСНОВНОЙ РЕНДЕР С САЙДБАРОМ
+  // ОСНОВНОЙ РЕНДЕР
   // ============================================================
+  const sidebarOpen = window.innerWidth < 1024 ? isMobileSidebarOpen : isSidebarOpen;
+
   return (
-    <div className="layout">
-      {/* Сайдбар */}
-      <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+    <div className="layout" ref={sidebarRef}>
+      {/* САЙДБАР */}
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        {/* ЛОГОТИП */}
         <div className="sidebar-brand">
           <img src={logo} alt="ДОД" className="sidebar-logo" />
           <div className="sidebar-brand-text">
@@ -262,6 +253,7 @@ export default function Layout({ children, profile }) {
           </div>
         </div>
 
+        {/* ПРОФИЛЬ В САЙДБАРЕ */}
         <div className="sidebar-profile">
           <div className="sidebar-avatar">
             {profile?.avatar_url ? (
@@ -276,6 +268,7 @@ export default function Layout({ children, profile }) {
           </div>
         </div>
 
+        {/* МЕНЮ */}
         <nav className="sidebar-nav">
           {menuItems.map((item) => (
             <Link
@@ -284,7 +277,7 @@ export default function Layout({ children, profile }) {
               className={`sidebar-link ${isActive(item.path) ? 'active' : ''}`}
               onClick={() => {
                 if (window.innerWidth < 1024) {
-                  setIsSidebarOpen(false);
+                  setIsMobileSidebarOpen(false);
                 }
               }}
             >
@@ -294,6 +287,7 @@ export default function Layout({ children, profile }) {
           ))}
         </nav>
 
+        {/* ВЫХОД */}
         <div className="sidebar-footer">
           <button className="sidebar-logout" onClick={handleLogout}>
             Выйти
@@ -301,35 +295,63 @@ export default function Layout({ children, profile }) {
         </div>
       </aside>
 
-      {/* Оверлей для мобильного сайдбара */}
-      {window.innerWidth < 1024 && isSidebarOpen && (
-        <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)} />
+      {/* ОВЕРЛЕЙ ДЛЯ МОБИЛЬНОГО САЙДБАРА */}
+      {window.innerWidth < 1024 && sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setIsMobileSidebarOpen(false)} />
       )}
 
-      {/* Основной контент */}
+      {/* ОСНОВНОЙ КОНТЕНТ */}
       <main className="main-content">
+        {/* ХЕДЕР — ТОЛЬКО БУРГЕР + ПРОФИЛЬ + УВЕДОМЛЕНИЯ */}
         <header className="main-header">
+          {/* БУРГЕР */}
           <button
             className="main-header-toggle"
             onClick={() => {
               if (window.innerWidth < 1024) {
-                setIsSidebarOpen(!isSidebarOpen);
+                setIsMobileSidebarOpen(!isMobileSidebarOpen);
               } else {
                 setIsSidebarOpen(!isSidebarOpen);
               }
             }}
+            aria-label="Toggle menu"
           >
-            ☰
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
           </button>
 
+          {/* ЗАГОЛОВОК СТРАНИЦЫ В ХЕДЕРЕ */}
+          <div className="main-header-title">
+            {location.pathname === '/dashboard' && 'Дашборд'}
+            {location.pathname === '/events' && 'Мероприятия'}
+            {location.pathname === '/calendar' && 'Календарь'}
+            {location.pathname === '/clubs' && 'КЮДы'}
+            {location.pathname === '/participants' && 'Участники'}
+            {location.pathname === '/profile' && 'Профиль'}
+            {location.pathname === '/reports' && 'Отчёты'}
+            {location.pathname === '/analytics' && 'Аналитика'}
+            {location.pathname === '/appeals' && 'Обращения'}
+            {location.pathname === '/documents-center' && 'Центр документов'}
+            {location.pathname === '/manage-achievements' && 'Управление достижениями'}
+            {location.pathname === '/my-achievements' && 'Мои достижения'}
+          </div>
+
+          {/* ПРАВАЯ ЧАСТЬ ХЕДЕРА */}
           <div className="main-header-right">
-            {/* Уведомления */}
+            {/* УВЕДОМЛЕНИЯ */}
             <div className="header-notifications" ref={notificationRef}>
               <button
                 className="header-notif-btn"
                 onClick={() => setShowNotifications(!showNotifications)}
+                aria-label="Уведомления"
               >
-                🔔
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
                 {unreadCount > 0 && (
                   <span className="header-notif-badge">{unreadCount}</span>
                 )}
@@ -371,11 +393,12 @@ export default function Layout({ children, profile }) {
               )}
             </div>
 
-            {/* Профиль */}
+            {/* ПРОФИЛЬ В ХЕДЕРЕ */}
             <div className="header-profile" ref={profileRef}>
               <button
                 className="header-profile-btn"
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
+                aria-label="Профиль"
               >
                 <div className="header-avatar">
                   {profile?.avatar_url ? (
@@ -385,6 +408,9 @@ export default function Layout({ children, profile }) {
                   )}
                 </div>
                 <span className="header-profile-name">{profile?.full_name}</span>
+                <svg width="12" height="12" viewBox="0 0 12 8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <path d="M1 1.5L6 6.5L11 1.5" />
+                </svg>
               </button>
 
               {isProfileOpen && (
@@ -398,6 +424,7 @@ export default function Layout({ children, profile }) {
                   <Link to="/my-reviews" className="header-dropdown-item" onClick={() => setIsProfileOpen(false)}>
                     Оценки
                   </Link>
+                  <div className="header-dropdown-divider" />
                   <button className="header-dropdown-item header-dropdown-logout" onClick={handleLogout}>
                     Выйти
                   </button>
@@ -407,6 +434,7 @@ export default function Layout({ children, profile }) {
           </div>
         </header>
 
+        {/* КОНТЕНТ СТРАНИЦЫ */}
         <div className="main-content-body">{children}</div>
       </main>
 
@@ -435,14 +463,14 @@ export default function Layout({ children, profile }) {
           left: 0;
           bottom: 0;
           z-index: 1000;
-          transition: transform 0.3s ease;
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           overflow-y: auto;
+          flex-shrink: 0;
         }
 
         .sidebar::-webkit-scrollbar {
           width: 4px;
         }
-
         .sidebar::-webkit-scrollbar-thumb {
           background: rgba(255,255,255,0.2);
           border-radius: 2px;
@@ -454,6 +482,7 @@ export default function Layout({ children, profile }) {
           gap: 12px;
           padding: 20px 20px 16px;
           border-bottom: 1px solid rgba(255,255,255,0.06);
+          flex-shrink: 0;
         }
 
         .sidebar-logo {
@@ -472,6 +501,7 @@ export default function Layout({ children, profile }) {
         .sidebar-brand-subtitle {
           font-size: 11px;
           color: rgba(255,255,255,0.4);
+          letter-spacing: 0.3px;
         }
 
         .sidebar-profile {
@@ -480,6 +510,7 @@ export default function Layout({ children, profile }) {
           gap: 12px;
           padding: 14px 20px;
           border-bottom: 1px solid rgba(255,255,255,0.06);
+          flex-shrink: 0;
         }
 
         .sidebar-avatar {
@@ -496,7 +527,6 @@ export default function Layout({ children, profile }) {
           flex-shrink: 0;
           overflow: hidden;
         }
-
         .sidebar-avatar img {
           width: 100%;
           height: 100%;
@@ -507,11 +537,15 @@ export default function Layout({ children, profile }) {
           font-size: 13px;
           font-weight: 500;
           color: white;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .sidebar-profile-role {
           font-size: 11px;
           color: rgba(255,255,255,0.4);
+          text-transform: capitalize;
         }
 
         .sidebar-nav {
@@ -555,9 +589,14 @@ export default function Layout({ children, profile }) {
           flex-shrink: 0;
         }
 
+        .sidebar-link-label {
+          white-space: nowrap;
+        }
+
         .sidebar-footer {
           padding: 12px 20px 20px;
           border-top: 1px solid rgba(255,255,255,0.06);
+          flex-shrink: 0;
         }
 
         .sidebar-logout {
@@ -589,6 +628,12 @@ export default function Layout({ children, profile }) {
           height: 100%;
           background: rgba(0,0,0,0.4);
           z-index: 999;
+          animation: overlayFade 0.3s ease;
+        }
+
+        @keyframes overlayFade {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
         /* ============================================================
@@ -600,76 +645,93 @@ export default function Layout({ children, profile }) {
           min-height: 100vh;
           display: flex;
           flex-direction: column;
+          transition: margin-left 0.3s ease;
         }
 
+        /* ============================================================
+           HEADER
+           ============================================================ */
         .main-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 12px 32px;
+          padding: 10px 32px;
           background: white;
-          border-bottom: 1px solid #E2E7EF;
+          border-bottom: 1px solid #E4E7EC;
           position: sticky;
           top: 0;
           z-index: 100;
-          min-height: 64px;
+          min-height: 60px;
+          gap: 16px;
         }
 
         .main-header-toggle {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 40px;
-          height: 40px;
+          width: 38px;
+          height: 38px;
           border: none;
           background: transparent;
           border-radius: 8px;
           cursor: pointer;
-          font-size: 20px;
           color: #667085;
           transition: all 0.2s ease;
+          flex-shrink: 0;
         }
 
         .main-header-toggle:hover {
           background: #F4F6F9;
+          color: #0B1F3A;
+        }
+
+        .main-header-title {
+          flex: 1;
+          font-family: 'Playfair Display', serif;
+          font-size: 18px;
+          font-weight: 600;
+          color: #0B1F3A;
+          letter-spacing: -0.2px;
         }
 
         .main-header-right {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 8px;
+          flex-shrink: 0;
         }
 
         /* ============================================================
-           УВЕДОМЛЕНИЯ
+           УВЕДОМЛЕНИЯ В ХЕДЕРЕ
            ============================================================ */
         .header-notifications {
           position: relative;
         }
 
         .header-notif-btn {
-          width: 40px;
-          height: 40px;
+          width: 38px;
+          height: 38px;
           border: none;
           background: transparent;
           border-radius: 50%;
           cursor: pointer;
-          font-size: 20px;
-          position: relative;
-          transition: background 0.2s ease;
+          color: #667085;
+          transition: all 0.2s ease;
           display: flex;
           align-items: center;
           justify-content: center;
+          position: relative;
         }
 
         .header-notif-btn:hover {
           background: #F4F6F9;
+          color: #0B1F3A;
         }
 
         .header-notif-badge {
           position: absolute;
-          top: 2px;
-          right: 2px;
+          top: 4px;
+          right: 4px;
           background: #B3262E;
           color: white;
           font-size: 10px;
@@ -685,13 +747,13 @@ export default function Layout({ children, profile }) {
         .header-notif-dropdown {
           position: absolute;
           top: calc(100% + 8px);
-          right: 0;
+          right: -8px;
           width: 360px;
-          max-height: 420px;
+          max-height: 440px;
           background: white;
           border-radius: 12px;
-          box-shadow: 0 12px 40px rgba(11, 31, 58, 0.15);
-          border: 1px solid #E2E7EF;
+          box-shadow: 0 12px 48px rgba(11, 31, 58, 0.15);
+          border: 1px solid #E4E7EC;
           overflow: hidden;
           z-index: 1000;
           display: flex;
@@ -705,20 +767,22 @@ export default function Layout({ children, profile }) {
           padding: 12px 16px;
           border-bottom: 1px solid #F4F6F9;
           font-weight: 600;
+          font-size: 14px;
           color: #0B1F3A;
+          flex-shrink: 0;
         }
 
         .header-notif-markall {
           background: none;
           border: none;
-          color: #174A7E;
+          color: #667085;
           font-size: 12px;
           cursor: pointer;
           font-weight: 500;
         }
 
         .header-notif-markall:hover {
-          text-decoration: underline;
+          color: #0B1F3A;
         }
 
         .header-notif-list {
@@ -730,7 +794,7 @@ export default function Layout({ children, profile }) {
           padding: 10px 16px;
           border-bottom: 1px solid #F4F6F9;
           cursor: pointer;
-          transition: background 0.2s ease;
+          transition: all 0.2s ease;
         }
 
         .header-notif-item:hover {
@@ -776,6 +840,7 @@ export default function Layout({ children, profile }) {
           text-decoration: none;
           font-size: 13px;
           font-weight: 500;
+          flex-shrink: 0;
         }
 
         .header-notif-all:hover {
@@ -800,6 +865,8 @@ export default function Layout({ children, profile }) {
           cursor: pointer;
           transition: all 0.2s ease;
           font-family: inherit;
+          font-size: 13px;
+          color: #0B1F3A;
         }
 
         .header-profile-btn:hover {
@@ -820,7 +887,6 @@ export default function Layout({ children, profile }) {
           flex-shrink: 0;
           overflow: hidden;
         }
-
         .header-avatar img {
           width: 100%;
           height: 100%;
@@ -831,6 +897,15 @@ export default function Layout({ children, profile }) {
           font-size: 13px;
           font-weight: 500;
           color: #0B1F3A;
+          max-width: 120px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .header-profile-btn svg {
+          color: #98A2B3;
+          flex-shrink: 0;
         }
 
         .header-profile-dropdown {
@@ -840,15 +915,17 @@ export default function Layout({ children, profile }) {
           width: 200px;
           background: white;
           border-radius: 12px;
-          box-shadow: 0 12px 40px rgba(11, 31, 58, 0.15);
-          border: 1px solid #E2E7EF;
+          box-shadow: 0 12px 48px rgba(11, 31, 58, 0.15);
+          border: 1px solid #E4E7EC;
           overflow: hidden;
           z-index: 1000;
         }
 
         .header-dropdown-item {
-          display: block;
-          padding: 10px 18px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 16px;
           color: #0B1F3A;
           text-decoration: none;
           font-size: 13px;
@@ -865,15 +942,23 @@ export default function Layout({ children, profile }) {
           background: #F4F6F9;
         }
 
+        .header-dropdown-divider {
+          height: 1px;
+          background: #F4F6F9;
+          margin: 4px 12px;
+        }
+
         .header-dropdown-logout {
           color: #B3262E;
-          border-top: 1px solid #F4F6F9;
         }
 
         .header-dropdown-logout:hover {
           background: #FCEBEC;
         }
 
+        /* ============================================================
+           КОНТЕНТ
+           ============================================================ */
         .main-content-body {
           flex: 1;
           padding: 24px 32px 40px;
@@ -896,11 +981,16 @@ export default function Layout({ children, profile }) {
           }
 
           .main-header {
-            padding: 10px 20px;
+            padding: 8px 20px;
+            min-height: 56px;
           }
 
           .main-content-body {
             padding: 16px 20px 32px;
+          }
+
+          .main-header-title {
+            font-size: 16px;
           }
 
           .header-profile-name {
@@ -910,23 +1000,36 @@ export default function Layout({ children, profile }) {
 
         @media (max-width: 768px) {
           .main-header {
-            padding: 8px 16px;
-            min-height: 56px;
+            padding: 6px 16px;
+            min-height: 52px;
+            gap: 10px;
           }
 
           .main-content-body {
             padding: 12px 16px 24px;
           }
 
+          .main-header-title {
+            font-size: 15px;
+          }
+
           .header-notif-dropdown {
-            width: 300px;
-            right: -60px;
+            width: 320px;
+            right: -50px;
+          }
+
+          .header-profile-dropdown {
+            width: 180px;
+          }
+
+          .sidebar {
+            width: 280px;
           }
         }
 
         @media (max-width: 480px) {
           .main-header {
-            padding: 6px 12px;
+            padding: 4px 12px;
             min-height: 48px;
           }
 
@@ -934,14 +1037,98 @@ export default function Layout({ children, profile }) {
             padding: 8px 12px 16px;
           }
 
-          .sidebar {
-            width: 100%;
-            max-width: 320px;
+          .main-header-title {
+            font-size: 13px;
+          }
+
+          .main-header-toggle {
+            width: 32px;
+            height: 32px;
+          }
+
+          .main-header-toggle svg {
+            width: 20px;
+            height: 20px;
+          }
+
+          .header-notif-btn {
+            width: 32px;
+            height: 32px;
+          }
+
+          .header-notif-btn svg {
+            width: 18px;
+            height: 18px;
+          }
+
+          .header-notif-badge {
+            width: 16px;
+            height: 16px;
+            font-size: 9px;
+            top: 2px;
+            right: 2px;
           }
 
           .header-notif-dropdown {
-            width: 280px;
-            right: -80px;
+            width: 290px;
+            right: -60px;
+          }
+
+          .header-profile-btn {
+            padding: 4px;
+          }
+
+          .header-avatar {
+            width: 28px;
+            height: 28px;
+            font-size: 10px;
+          }
+
+          .header-profile-dropdown {
+            width: 160px;
+            right: -20px;
+          }
+
+          .header-dropdown-item {
+            padding: 8px 14px;
+            font-size: 12px;
+          }
+
+          .sidebar {
+            width: 100%;
+            max-width: 300px;
+          }
+
+          .sidebar-brand {
+            padding: 14px 16px;
+          }
+
+          .sidebar-brand-title {
+            font-size: 16px;
+          }
+
+          .sidebar-profile {
+            padding: 10px 16px;
+          }
+
+          .sidebar-avatar {
+            width: 32px;
+            height: 32px;
+            font-size: 12px;
+          }
+
+          .sidebar-profile-name {
+            font-size: 12px;
+          }
+
+          .sidebar-link {
+            padding: 8px 12px;
+            font-size: 12px;
+          }
+
+          .sidebar-link-icon {
+            font-size: 16px;
+            width: 20px;
           }
         }
       `}</style>

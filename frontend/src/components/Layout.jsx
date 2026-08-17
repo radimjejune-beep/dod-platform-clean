@@ -5,7 +5,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/Image.png';
 
 export default function Layout({ children, profile }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -46,7 +47,7 @@ export default function Layout({ children, profile }) {
   }, [profile, notificationsLoaded]);
 
   // ============================================================
-  // ЗАКРЫТИЕ ПОПАПОВ
+  // ЗАКРЫТИЕ ПОПАПОВ ПРИ КЛИКЕ ВНЕ
   // ============================================================
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -67,9 +68,10 @@ export default function Layout({ children, profile }) {
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 1024) {
-        setIsSidebarOpen(false);
+        setIsSidebarCollapsed(true);
+        setIsMobileSidebarOpen(false);
       } else {
-        setIsSidebarOpen(true);
+        setIsSidebarCollapsed(false);
       }
     };
     handleResize();
@@ -225,31 +227,42 @@ export default function Layout({ children, profile }) {
     return <>{children}</>;
   }
 
+  // Ширина сайдбара в зависимости от состояния
+  const sidebarWidth = isSidebarCollapsed ? 64 : 260;
+  const isMobile = window.innerWidth < 1024;
+
   return (
     <div className="layout">
       {/* САЙДБАР */}
-      <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+      <aside
+        className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''} ${isMobile && isMobileSidebarOpen ? 'mobile-open' : ''}`}
+        style={{ width: isMobile ? (isMobileSidebarOpen ? 280 : 0) : sidebarWidth }}
+      >
         <div className="sidebar-brand">
           <img src={logo} alt="ДОД" className="sidebar-logo" />
-          <div className="sidebar-brand-text">
-            <span className="sidebar-brand-title">Дипломаты</span>
-            <span className="sidebar-brand-subtitle">будущего</span>
-          </div>
+          {!isSidebarCollapsed && (
+            <div className="sidebar-brand-text">
+              <span className="sidebar-brand-title">Дипломаты</span>
+              <span className="sidebar-brand-subtitle">будущего</span>
+            </div>
+          )}
         </div>
 
-        <div className="sidebar-profile">
-          <div className="sidebar-avatar">
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="Аватар" />
-            ) : (
-              getInitials(profile?.full_name)
-            )}
+        {!isSidebarCollapsed && (
+          <div className="sidebar-profile">
+            <div className="sidebar-avatar">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="Аватар" />
+              ) : (
+                getInitials(profile?.full_name)
+              )}
+            </div>
+            <div className="sidebar-profile-info">
+              <div className="sidebar-profile-name">{profile?.full_name}</div>
+              <div className="sidebar-profile-role">{profile?.role}</div>
+            </div>
           </div>
-          <div className="sidebar-profile-info">
-            <div className="sidebar-profile-name">{profile?.full_name}</div>
-            <div className="sidebar-profile-role">{profile?.role}</div>
-          </div>
-        </div>
+        )}
 
         <nav className="sidebar-nav">
           {menuItems.map((item) => (
@@ -258,59 +271,81 @@ export default function Layout({ children, profile }) {
               to={item.path}
               className={`sidebar-link ${isActive(item.path) ? 'active' : ''}`}
               onClick={() => {
-                if (window.innerWidth < 1024) {
-                  setIsSidebarOpen(false);
+                if (isMobile) {
+                  setIsMobileSidebarOpen(false);
                 }
               }}
+              title={isSidebarCollapsed ? item.label : ''}
             >
               <span className="sidebar-link-icon">{item.icon}</span>
-              <span className="sidebar-link-label">{item.label}</span>
+              {!isSidebarCollapsed && (
+                <span className="sidebar-link-label">{item.label}</span>
+              )}
             </Link>
           ))}
         </nav>
 
         <div className="sidebar-footer">
-          <button className="sidebar-logout" onClick={handleLogout}>
-            Выйти
+          <button
+            className="sidebar-logout"
+            onClick={handleLogout}
+            title={isSidebarCollapsed ? 'Выйти' : ''}
+          >
+            <span className="sidebar-link-icon">🚪</span>
+            {!isSidebarCollapsed && <span>Выйти</span>}
           </button>
         </div>
       </aside>
 
-      {/* ОВЕРЛЕЙ ДЛЯ МОБИЛЬНОГО */}
-      {window.innerWidth < 1024 && isSidebarOpen && (
-        <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)} />
+      {/* ОВЕРЛЕЙ ДЛЯ МОБИЛЬНОГО САЙДБАРА */}
+      {isMobile && isMobileSidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setIsMobileSidebarOpen(false)} />
       )}
 
       {/* ОСНОВНОЙ КОНТЕНТ */}
-      <main className="main-content">
-        {/* ХЕДЕР — ТОЛЬКО БУРГЕР, УВЕДОМЛЕНИЯ, ПРОФИЛЬ */}
+      <main
+        className="main-content"
+        style={{
+          marginLeft: isMobile ? 0 : sidebarWidth,
+          transition: 'margin-left 0.3s ease'
+        }}
+      >
+        {/* ХЕДЕР */}
         <header className="main-header">
-          <button
-            className="main-header-toggle"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            aria-label="Toggle menu"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
+          <div className="main-header-left">
+            <button
+              className="main-header-toggle"
+              onClick={() => {
+                if (isMobile) {
+                  setIsMobileSidebarOpen(!isMobileSidebarOpen);
+                } else {
+                  setIsSidebarCollapsed(!isSidebarCollapsed);
+                }
+              }}
+              aria-label="Toggle menu"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
 
-          <div className="main-header-title">
-            {location.pathname === '/dashboard' && 'Дашборд'}
-            {location.pathname === '/events' && 'Мероприятия'}
-            {location.pathname === '/calendar' && 'Календарь'}
-            {location.pathname === '/clubs' && 'КЮДы'}
-            {location.pathname === '/participants' && 'Участники'}
-            {location.pathname === '/profile' && 'Профиль'}
-            {location.pathname === '/reports' && 'Отчёты'}
-            {location.pathname === '/analytics' && 'Аналитика'}
-            {location.pathname === '/appeals' && 'Обращения'}
-            {location.pathname === '/documents-center' && 'Центр документов'}
-            {location.pathname === '/manage-achievements' && 'Управление достижениями'}
-            {location.pathname === '/my-achievements' && 'Мои достижения'}
-            {location.pathname === '/clubs-management' && 'Управление КЮДами'}
+            <div className="main-header-title">
+              {location.pathname === '/dashboard' && 'Дашборд'}
+              {location.pathname === '/events' && 'Мероприятия'}
+              {location.pathname === '/calendar' && 'Календарь'}
+              {location.pathname === '/clubs' && 'КЮДы'}
+              {location.pathname === '/participants' && 'Участники'}
+              {location.pathname === '/profile' && 'Профиль'}
+              {location.pathname === '/reports' && 'Отчёты'}
+              {location.pathname === '/analytics' && 'Аналитика'}
+              {location.pathname === '/appeals' && 'Обращения'}
+              {location.pathname === '/documents-center' && 'Центр документов'}
+              {location.pathname === '/manage-achievements' && 'Управление достижениями'}
+              {location.pathname === '/my-achievements' && 'Мои достижения'}
+              {location.pathname === '/clubs-management' && 'Управление КЮДами'}
+            </div>
           </div>
 
           <div className="main-header-right">
@@ -418,49 +453,46 @@ export default function Layout({ children, profile }) {
           display: flex;
           min-height: 100vh;
           background: #F5F6F8;
+          width: 100%;
         }
 
         /* ============================================================
            SIDEBAR
            ============================================================ */
         .sidebar {
-          width: 260px;
-          min-height: 100vh;
-          background: #0B1F3A;
-          color: white;
-          display: flex;
-          flex-direction: column;
           position: fixed;
           top: 0;
           left: 0;
           bottom: 0;
           z-index: 1000;
-          transition: transform 0.3s ease;
-          overflow-y: auto;
+          background: #0B1F3A;
+          color: white;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          transition: width 0.3s ease, transform 0.3s ease;
           flex-shrink: 0;
+          height: 100vh;
         }
 
-        .sidebar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .sidebar::-webkit-scrollbar-thumb {
-          background: rgba(255,255,255,0.2);
-          border-radius: 2px;
-        }
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
 
         .sidebar-brand {
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 20px 20px 16px;
+          padding: 20px 16px;
           border-bottom: 1px solid rgba(255,255,255,0.06);
           flex-shrink: 0;
+          min-height: 72px;
         }
 
         .sidebar-logo {
-          height: 36px;
+          height: 32px;
           width: auto;
           filter: brightness(0) invert(1);
+          flex-shrink: 0;
         }
 
         .sidebar-brand-title {
@@ -468,20 +500,22 @@ export default function Layout({ children, profile }) {
           font-size: 18px;
           font-weight: 700;
           color: white;
+          white-space: nowrap;
         }
-
         .sidebar-brand-subtitle {
           font-size: 11px;
           color: rgba(255,255,255,0.4);
+          white-space: nowrap;
         }
 
         .sidebar-profile {
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 14px 20px;
+          padding: 14px 16px;
           border-bottom: 1px solid rgba(255,255,255,0.06);
           flex-shrink: 0;
+          min-height: 64px;
         }
 
         .sidebar-avatar {
@@ -498,34 +532,35 @@ export default function Layout({ children, profile }) {
           flex-shrink: 0;
           overflow: hidden;
         }
-        .sidebar-avatar img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
+        .sidebar-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
         .sidebar-profile-name {
           font-size: 13px;
           font-weight: 500;
           color: white;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
-
         .sidebar-profile-role {
           font-size: 11px;
           color: rgba(255,255,255,0.4);
+          text-transform: capitalize;
+          white-space: nowrap;
         }
 
         .sidebar-nav {
           flex: 1;
-          padding: 12px 12px 8px;
+          padding: 12px 8px 8px;
           overflow-y: auto;
+          overflow-x: hidden;
         }
 
         .sidebar-link {
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 9px 14px;
+          padding: 9px 12px;
           border-radius: 8px;
           color: rgba(255,255,255,0.5);
           text-decoration: none;
@@ -533,6 +568,9 @@ export default function Layout({ children, profile }) {
           font-weight: 400;
           transition: all 0.2s ease;
           margin-bottom: 1px;
+          white-space: nowrap;
+          min-height: 40px;
+          overflow: hidden;
         }
 
         .sidebar-link:hover {
@@ -556,8 +594,13 @@ export default function Layout({ children, profile }) {
           flex-shrink: 0;
         }
 
+        .sidebar-link-label {
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
         .sidebar-footer {
-          padding: 12px 20px 20px;
+          padding: 12px 8px 16px;
           border-top: 1px solid rgba(255,255,255,0.06);
           flex-shrink: 0;
         }
@@ -565,8 +608,8 @@ export default function Layout({ children, profile }) {
         .sidebar-logout {
           display: flex;
           align-items: center;
-          gap: 10px;
-          padding: 8px 14px;
+          gap: 12px;
+          padding: 9px 12px;
           border: none;
           background: rgba(255,255,255,0.04);
           border-radius: 8px;
@@ -576,11 +619,27 @@ export default function Layout({ children, profile }) {
           cursor: pointer;
           transition: all 0.2s ease;
           width: 100%;
+          min-height: 40px;
+          overflow: hidden;
+          white-space: nowrap;
         }
 
         .sidebar-logout:hover {
           background: rgba(179, 38, 46, 0.2);
           color: #FED7D7;
+        }
+
+        /* ============================================================
+           МОБИЛЬНЫЙ САЙДБАР
+           ============================================================ */
+        @media (max-width: 1024px) {
+          .sidebar {
+            transform: translateX(-100%);
+            width: 280px !important;
+          }
+          .sidebar.mobile-open {
+            transform: translateX(0);
+          }
         }
 
         .sidebar-overlay {
@@ -591,6 +650,12 @@ export default function Layout({ children, profile }) {
           height: 100%;
           background: rgba(0,0,0,0.4);
           z-index: 999;
+          animation: overlayFade 0.3s ease;
+        }
+
+        @keyframes overlayFade {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
         /* ============================================================
@@ -598,10 +663,11 @@ export default function Layout({ children, profile }) {
            ============================================================ */
         .main-content {
           flex: 1;
-          margin-left: 260px;
           min-height: 100vh;
           display: flex;
           flex-direction: column;
+          transition: margin-left 0.3s ease;
+          width: 100%;
         }
 
         /* ============================================================
@@ -611,7 +677,7 @@ export default function Layout({ children, profile }) {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 10px 32px;
+          padding: 10px 24px;
           background: white;
           border-bottom: 1px solid #E4E7EC;
           position: sticky;
@@ -619,6 +685,15 @@ export default function Layout({ children, profile }) {
           z-index: 100;
           min-height: 60px;
           gap: 16px;
+          width: 100%;
+        }
+
+        .main-header-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex: 1;
+          min-width: 0;
         }
 
         .main-header-toggle {
@@ -642,12 +717,14 @@ export default function Layout({ children, profile }) {
         }
 
         .main-header-title {
-          flex: 1;
           font-family: 'Playfair Display', serif;
           font-size: 18px;
           font-weight: 600;
           color: #0B1F3A;
           letter-spacing: -0.2px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .main-header-right {
@@ -657,432 +734,124 @@ export default function Layout({ children, profile }) {
           flex-shrink: 0;
         }
 
-        /* ============================================================
-           УВЕДОМЛЕНИЯ
-           ============================================================ */
-        .header-notifications {
-          position: relative;
-        }
-
-        .header-notif-btn {
-          width: 38px;
-          height: 38px;
-          border: none;
-          background: transparent;
-          border-radius: 50%;
-          cursor: pointer;
-          color: #667085;
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          position: relative;
-        }
-
-        .header-notif-btn:hover {
-          background: #F4F6F9;
-          color: #0B1F3A;
-        }
-
-        .header-notif-badge {
-          position: absolute;
-          top: 4px;
-          right: 4px;
-          background: #B3262E;
-          color: white;
-          font-size: 10px;
-          font-weight: 700;
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .header-notif-dropdown {
-          position: absolute;
-          top: calc(100% + 8px);
-          right: -8px;
-          width: 360px;
-          max-height: 440px;
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 12px 48px rgba(11, 31, 58, 0.15);
-          border: 1px solid #E4E7EC;
-          overflow: hidden;
-          z-index: 1000;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .header-notif-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 12px 16px;
-          border-bottom: 1px solid #F4F6F9;
-          font-weight: 600;
-          font-size: 14px;
-          color: #0B1F3A;
-          flex-shrink: 0;
-        }
-
-        .header-notif-markall {
-          background: none;
-          border: none;
-          color: #667085;
-          font-size: 12px;
-          cursor: pointer;
-          font-weight: 500;
-        }
-
-        .header-notif-markall:hover {
-          color: #0B1F3A;
-        }
-
-        .header-notif-list {
-          overflow-y: auto;
-          flex: 1;
-        }
-
-        .header-notif-item {
-          padding: 10px 16px;
-          border-bottom: 1px solid #F4F6F9;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .header-notif-item:hover {
-          background: #F8FAFC;
-        }
-
-        .header-notif-item.unread {
-          background: #FBF4DC;
-          border-left: 3px solid #C9A227;
-        }
-
-        .header-notif-title {
-          font-weight: 600;
-          font-size: 13px;
-          color: #0B1F3A;
-        }
-
-        .header-notif-message {
-          font-size: 13px;
-          color: #667085;
-          margin-top: 2px;
-        }
-
-        .header-notif-time {
-          font-size: 11px;
-          color: #98A2B3;
-          margin-top: 4px;
-        }
-
-        .header-notif-empty {
-          padding: 30px;
-          text-align: center;
-          color: #98A2B3;
-          font-size: 14px;
-        }
-
-        .header-notif-all {
-          display: block;
-          padding: 10px 16px;
-          text-align: center;
-          border-top: 1px solid #F4F6F9;
-          color: #174A7E;
-          text-decoration: none;
-          font-size: 13px;
-          font-weight: 500;
-          flex-shrink: 0;
-        }
-
-        .header-notif-all:hover {
-          background: #F8FAFC;
-        }
-
-        /* ============================================================
-           ПРОФИЛЬ
-           ============================================================ */
-        .header-profile {
-          position: relative;
-        }
-
-        .header-profile-btn {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 4px 12px 4px 4px;
-          border: none;
-          background: transparent;
-          border-radius: 30px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          font-family: inherit;
-          font-size: 13px;
-          color: #0B1F3A;
-        }
-
-        .header-profile-btn:hover {
-          background: #F4F6F9;
-        }
-
-        .header-avatar {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #0B1F3A, #174A7E);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 12px;
-          font-weight: 600;
-          flex-shrink: 0;
-          overflow: hidden;
-        }
-        .header-avatar img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .header-profile-name {
-          font-size: 13px;
-          font-weight: 500;
-          color: #0B1F3A;
-          max-width: 120px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .header-profile-btn svg {
-          color: #98A2B3;
-          flex-shrink: 0;
-        }
-
-        .header-profile-dropdown {
-          position: absolute;
-          top: calc(100% + 8px);
-          right: 0;
-          width: 200px;
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 12px 48px rgba(11, 31, 58, 0.15);
-          border: 1px solid #E4E7EC;
-          overflow: hidden;
-          z-index: 1000;
-        }
-
-        .header-dropdown-item {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 10px 16px;
-          color: #0B1F3A;
-          text-decoration: none;
-          font-size: 13px;
-          transition: all 0.2s ease;
-          border: none;
-          background: none;
-          width: 100%;
-          cursor: pointer;
-          font-family: inherit;
-          text-align: left;
-        }
-
-        .header-dropdown-item:hover {
-          background: #F4F6F9;
-        }
-
-        .header-dropdown-divider {
-          height: 1px;
-          background: #F4F6F9;
-          margin: 4px 12px;
-        }
-
-        .header-dropdown-logout {
-          color: #B3262E;
-        }
-
-        .header-dropdown-logout:hover {
-          background: #FCEBEC;
-        }
-
         .main-content-body {
           flex: 1;
           padding: 24px 32px 40px;
+          width: 100%;
+          max-width: 100%;
+          overflow-x: hidden;
         }
 
         /* ============================================================
-           АДАПТИВНОСТЬ
+           АДАПТИВНОСТЬ ХЕДЕРА И КОНТЕНТА
            ============================================================ */
         @media (max-width: 1024px) {
-          .sidebar {
-            transform: translateX(-100%);
-          }
-
-          .sidebar.open {
-            transform: translateX(0);
-          }
-
-          .main-content {
-            margin-left: 0;
-          }
-
-          .main-header {
-            padding: 8px 20px;
-            min-height: 56px;
-          }
-
-          .main-content-body {
-            padding: 16px 20px 32px;
-          }
-
-          .main-header-title {
-            font-size: 16px;
-          }
-
-          .header-profile-name {
-            display: none;
-          }
+          .main-header { padding: 8px 20px; min-height: 56px; }
+          .main-content-body { padding: 16px 20px 32px; }
+          .main-header-title { font-size: 16px; }
         }
 
         @media (max-width: 768px) {
-          .main-header {
-            padding: 6px 16px;
-            min-height: 52px;
-            gap: 10px;
-          }
-
-          .main-content-body {
-            padding: 12px 16px 24px;
-          }
-
-          .main-header-title {
-            font-size: 15px;
-          }
-
-          .header-notif-dropdown {
-            width: 320px;
-            right: -50px;
-          }
-
-          .header-profile-dropdown {
-            width: 180px;
-          }
-
-          .sidebar {
-            width: 280px;
-          }
+          .main-header { padding: 6px 16px; min-height: 52px; gap: 10px; }
+          .main-content-body { padding: 12px 16px 24px; }
+          .main-header-title { font-size: 15px; }
+          .header-profile-name { display: none; }
         }
 
         @media (max-width: 480px) {
-          .main-header {
-            padding: 4px 12px;
-            min-height: 48px;
-          }
+          .main-header { padding: 4px 12px; min-height: 48px; }
+          .main-content-body { padding: 8px 12px 16px; }
+          .main-header-title { font-size: 13px; }
+          .main-header-toggle { width: 32px; height: 32px; }
+          .main-header-toggle svg { width: 20px; height: 20px; }
+          .header-notif-btn { width: 32px; height: 32px; }
+          .header-notif-btn svg { width: 18px; height: 18px; }
+          .header-notif-badge { width: 16px; height: 16px; font-size: 9px; top: 2px; right: 2px; }
+          .header-profile-btn { padding: 4px; }
+          .header-avatar { width: 28px; height: 28px; font-size: 10px; }
+        }
 
-          .main-content-body {
-            padding: 8px 12px 16px;
-          }
+        /* ============================================================
+           УВЕДОМЛЕНИЯ
+           ============================================================ */
+        .header-notifications { position: relative; }
+        .header-notif-btn {
+          width: 38px; height: 38px; border: none; background: transparent; border-radius: 50%;
+          cursor: pointer; color: #667085; transition: all 0.2s ease;
+          display: flex; align-items: center; justify-content: center; position: relative;
+        }
+        .header-notif-btn:hover { background: #F4F6F9; color: #0B1F3A; }
+        .header-notif-badge {
+          position: absolute; top: 4px; right: 4px; background: #B3262E; color: white;
+          font-size: 10px; font-weight: 700; width: 18px; height: 18px; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .header-notif-dropdown {
+          position: absolute; top: calc(100% + 8px); right: -8px; width: 360px; max-height: 440px;
+          background: white; border-radius: 12px; box-shadow: 0 12px 48px rgba(11,31,58,0.15);
+          border: 1px solid #E4E7EC; overflow: hidden; z-index: 1000; display: flex; flex-direction: column;
+        }
+        .header-notif-header {
+          display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;
+          border-bottom: 1px solid #F4F6F9; font-weight: 600; font-size: 14px; color: #0B1F3A; flex-shrink: 0;
+        }
+        .header-notif-markall { background: none; border: none; color: #667085; font-size: 12px; cursor: pointer; font-weight: 500; }
+        .header-notif-markall:hover { color: #0B1F3A; }
+        .header-notif-list { overflow-y: auto; flex: 1; }
+        .header-notif-item { padding: 10px 16px; border-bottom: 1px solid #F4F6F9; cursor: pointer; transition: all 0.2s ease; }
+        .header-notif-item:hover { background: #F8FAFC; }
+        .header-notif-item.unread { background: #FBF4DC; border-left: 3px solid #C9A227; }
+        .header-notif-title { font-weight: 600; font-size: 13px; color: #0B1F3A; }
+        .header-notif-message { font-size: 13px; color: #667085; margin-top: 2px; }
+        .header-notif-time { font-size: 11px; color: #98A2B3; margin-top: 4px; }
+        .header-notif-empty { padding: 30px; text-align: center; color: #98A2B3; font-size: 14px; }
+        .header-notif-all {
+          display: block; padding: 10px 16px; text-align: center; border-top: 1px solid #F4F6F9;
+          color: #174A7E; text-decoration: none; font-size: 13px; font-weight: 500; flex-shrink: 0;
+        }
+        .header-notif-all:hover { background: #F8FAFC; }
+        @media (max-width: 768px) {
+          .header-notif-dropdown { width: 320px; right: -50px; }
+        }
+        @media (max-width: 480px) {
+          .header-notif-dropdown { width: 290px; right: -60px; }
+        }
 
-          .main-header-title {
-            font-size: 13px;
-          }
-
-          .main-header-toggle {
-            width: 32px;
-            height: 32px;
-          }
-
-          .main-header-toggle svg {
-            width: 20px;
-            height: 20px;
-          }
-
-          .header-notif-btn {
-            width: 32px;
-            height: 32px;
-          }
-
-          .header-notif-btn svg {
-            width: 18px;
-            height: 18px;
-          }
-
-          .header-notif-badge {
-            width: 16px;
-            height: 16px;
-            font-size: 9px;
-            top: 2px;
-            right: 2px;
-          }
-
-          .header-notif-dropdown {
-            width: 290px;
-            right: -60px;
-          }
-
-          .header-profile-btn {
-            padding: 4px;
-          }
-
-          .header-avatar {
-            width: 28px;
-            height: 28px;
-            font-size: 10px;
-          }
-
-          .header-profile-dropdown {
-            width: 160px;
-            right: -20px;
-          }
-
-          .header-dropdown-item {
-            padding: 8px 14px;
-            font-size: 12px;
-          }
-
-          .sidebar {
-            width: 100%;
-            max-width: 300px;
-          }
-
-          .sidebar-brand {
-            padding: 14px 16px;
-          }
-
-          .sidebar-brand-title {
-            font-size: 16px;
-          }
-
-          .sidebar-profile {
-            padding: 10px 16px;
-          }
-
-          .sidebar-avatar {
-            width: 32px;
-            height: 32px;
-            font-size: 12px;
-          }
-
-          .sidebar-profile-name {
-            font-size: 12px;
-          }
-
-          .sidebar-link {
-            padding: 8px 12px;
-            font-size: 12px;
-          }
-
-          .sidebar-link-icon {
-            font-size: 16px;
-            width: 20px;
-          }
+        /* ============================================================
+           ПРОФИЛЬ В ХЕДЕРЕ
+           ============================================================ */
+        .header-profile { position: relative; }
+        .header-profile-btn {
+          display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px;
+          border: none; background: transparent; border-radius: 30px; cursor: pointer;
+          transition: all 0.2s ease; font-family: inherit; font-size: 13px; color: #0B1F3A;
+        }
+        .header-profile-btn:hover { background: #F4F6F9; }
+        .header-avatar {
+          width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0B1F3A, #174A7E);
+          display: flex; align-items: center; justify-content: center; color: white;
+          font-size: 12px; font-weight: 600; flex-shrink: 0; overflow: hidden;
+        }
+        .header-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .header-profile-name { font-size: 13px; font-weight: 500; color: #0B1F3A; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .header-profile-btn svg { color: #98A2B3; flex-shrink: 0; }
+        .header-profile-dropdown {
+          position: absolute; top: calc(100% + 8px); right: 0; width: 200px;
+          background: white; border-radius: 12px; box-shadow: 0 12px 48px rgba(11,31,58,0.15);
+          border: 1px solid #E4E7EC; overflow: hidden; z-index: 1000;
+        }
+        .header-dropdown-item {
+          display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+          color: #0B1F3A; text-decoration: none; font-size: 13px; transition: all 0.2s ease;
+          border: none; background: none; width: 100%; cursor: pointer; font-family: inherit; text-align: left;
+        }
+        .header-dropdown-item:hover { background: #F4F6F9; }
+        .header-dropdown-divider { height: 1px; background: #F4F6F9; margin: 4px 12px; }
+        .header-dropdown-logout { color: #B3262E; }
+        .header-dropdown-logout:hover { background: #FCEBEC; }
+        @media (max-width: 480px) {
+          .header-profile-dropdown { width: 160px; right: -20px; }
+          .header-dropdown-item { padding: 8px 14px; font-size: 12px; }
         }
       `}</style>
     </div>

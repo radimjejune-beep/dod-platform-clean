@@ -47,7 +47,7 @@ export default function Navigation({ profile }) {
   }, [profile, notificationsLoaded]);
 
   // ============================================================
-  // ЗАКРЫТИЕ ПОПАПОВ
+  // ЗАКРЫТИЕ ПОПАПОВ ПРИ КЛИКЕ СНАРУЖИ
   // ============================================================
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -75,7 +75,7 @@ export default function Navigation({ profile }) {
   };
 
   // ============================================================
-  // УВЕДОМЛЕНИЯ
+  // УВЕДОМЛЕНИЯ: ОТМЕТКА О ПРОЧТЕНИИ
   // ============================================================
   const handleNotificationClick = async (id) => {
     try {
@@ -124,26 +124,29 @@ export default function Navigation({ profile }) {
   };
 
   // ============================================================
-  // МЕНЮ
+  // ПОЛУЧЕНИЕ ПУНКТОВ МЕНЮ ПО РОЛИ
   // ============================================================
   const getMenuItems = () => {
     const role = profile?.role;
     const items = [];
 
+    // Дашборд есть у всех
     items.push({ path: '/dashboard', label: 'Дашборд' });
 
+    // Роль: Участник или Родитель
     if (role === 'participant' || role === 'parent') {
       items.push({ path: '/events', label: 'Мероприятия' });
       items.push({ path: '/calendar', label: 'Календарь' });
       items.push({ path: '/my-achievements', label: 'Достижения' });
       items.push({ path: '/my-reviews', label: 'Оценки' });
       if (profile?.is_president) {
-        items.push({ path: '/president-tasks', label: 'Задания' });
+        items.push({ path: '/president-tasks', label: 'Задания президента' });
       }
     }
 
+    // Роль: Координатор КЮДа
     if (role === 'club_coordinator') {
-      items.push({ path: '/clubs', label: 'КЮД' });
+      items.push({ path: '/clubs', label: 'Мой КЮД' });
       items.push({ path: '/events', label: 'Мероприятия' });
       items.push({ path: '/participants', label: 'Участники' });
       items.push({ path: '/manage-achievements', label: 'Достижения' });
@@ -151,46 +154,49 @@ export default function Navigation({ profile }) {
       items.push({ path: '/appeals', label: 'Обращения' });
       items.push({ path: '/staff', label: 'Сотрудники' });
       items.push({ path: '/calendar', label: 'Календарь' });
-      items.push({ path: '/documents-center', label: 'Документы' });
+      items.push({ path: '/documents-center', label: 'Центр документов' });
     }
 
+    // Роль: Тьютор
     if (role === 'tutor') {
       items.push({ path: '/clubs', label: 'КЮДы' });
       items.push({ path: '/events', label: 'Мероприятия' });
       items.push({ path: '/participants', label: 'Участники' });
       items.push({ path: '/achievements', label: 'Достижения' });
       items.push({ path: '/my-reviews', label: 'Оценки' });
-      items.push({ path: '/my-journal', label: 'Журнал' });
+      items.push({ path: '/my-journal', label: 'Мой журнал' });
       items.push({ path: '/staff-calendar', label: 'Календарь' });
       items.push({ path: '/tutor-assignments', label: 'Назначения' });
       items.push({ path: '/reports', label: 'Отчёты' });
     }
 
+    // Роль: Администратор или Координатор движения
     if (role === 'movement_coordinator' || role === 'admin') {
       items.push({ path: '/clubs', label: 'КЮДы' });
-      items.push({ path: '/clubs-management', label: 'Управление' });
+      items.push({ path: '/clubs-management', label: 'Управление КЮДами' });
       items.push({ path: '/events', label: 'Мероприятия' });
       items.push({ path: '/participants', label: 'Участники' });
       items.push({ path: '/achievements', label: 'Достижения' });
-      items.push({ path: '/achievements-categories', label: 'Категории' });
+      items.push({ path: '/achievements-categories', label: 'Категории достижений' });
       items.push({ path: '/reports', label: 'Отчёты' });
       items.push({ path: '/analytics', label: 'Аналитика' });
       items.push({ path: '/appeals', label: 'Обращения' });
-      items.push({ path: '/documents-center', label: 'Документы' });
-      items.push({ path: '/mass-notifications', label: 'Уведомления' });
-      items.push({ path: '/notification-history', label: 'История' });
-      items.push({ path: '/activity-log', label: 'Журнал' });
+      items.push({ path: '/documents-center', label: 'Центр документов' });
+      items.push({ path: '/mass-notifications', label: 'Массовые уведомления' });
+      items.push({ path: '/notification-history', label: 'История уведомлений' });
+      items.push({ path: '/activity-log', label: 'Журнал действий' });
       items.push({ path: '/consents-management', label: 'Согласия' });
-      items.push({ path: '/goals', label: 'Цели' });
-      items.push({ path: '/tasks-planner', label: 'Планировщик' });
+      items.push({ path: '/goals', label: 'Цели и KPI' });
+      items.push({ path: '/tasks-planner', label: 'Планировщик задач' });
       items.push({ path: '/admin/users', label: 'Пользователи' });
       if (role === 'admin') {
         items.push({ path: '/admin/invite', label: 'Пригласить' });
-        items.push({ path: '/import-participants', label: 'Импорт' });
+        items.push({ path: '/import-participants', label: 'Импорт участников' });
         items.push({ path: '/settings', label: 'Настройки' });
       }
     }
 
+    // Роль: Президент или Вице-президент
     if (role === 'president' || role === 'vice_president') {
       items.push({ path: '/clubs', label: 'КЮДы' });
       items.push({ path: '/events', label: 'Мероприятия' });
@@ -199,8 +205,8 @@ export default function Navigation({ profile }) {
       items.push({ path: '/reports', label: 'Отчёты' });
       items.push({ path: '/analytics', label: 'Аналитика' });
       items.push({ path: '/appeals', label: 'Обращения' });
-      items.push({ path: '/documents-center', label: 'Документы' });
-      items.push({ path: '/president-tasks', label: 'Задания' });
+      items.push({ path: '/documents-center', label: 'Центр документов' });
+      items.push({ path: '/president-tasks', label: 'Задания президента' });
       items.push({ path: '/club-rating', label: 'Рейтинг' });
     }
 
@@ -210,7 +216,7 @@ export default function Navigation({ profile }) {
   const menuItems = getMenuItems();
 
   // ============================================================
-  // ЕСЛИ НЕТ ПРОФИЛЯ — ПУБЛИЧНАЯ ВЕРСИЯ
+  // ПУБЛИЧНАЯ ВЕРСИЯ (БЕЗ ПРОФИЛЯ)
   // ============================================================
   if (!profile) {
     return (
@@ -221,7 +227,7 @@ export default function Navigation({ profile }) {
             <span>Дипломаты будущего</span>
           </Link>
           <div className="nav-right">
-            <Link to="/login" className="btn-login">Вход</Link>
+            <Link to="/login" className="btn btn-gold btn-sm">Вход</Link>
           </div>
         </div>
         <style>{`
@@ -241,7 +247,6 @@ export default function Navigation({ profile }) {
             align-items: center;
             justify-content: space-between;
             height: 64px;
-            gap: 16px;
           }
           .nav-logo {
             display: flex;
@@ -253,7 +258,10 @@ export default function Navigation({ profile }) {
             font-weight: 700;
             color: #0B1F3A;
           }
-          .nav-logo img { height: 32px; width: auto; }
+          .nav-logo img {
+            height: 32px;
+            width: auto;
+          }
           .btn-login {
             padding: 8px 24px;
             background: linear-gradient(135deg, #C9A227, #B8921F);
@@ -283,6 +291,7 @@ export default function Navigation({ profile }) {
   return (
     <nav className="nav">
       <div className="nav-container">
+
         {/* ЛОГОТИП */}
         <Link to="/" className="nav-logo">
           <img src={logo} alt="ДОД" />
@@ -304,13 +313,18 @@ export default function Navigation({ profile }) {
 
         {/* ПРАВАЯ ЧАСТЬ */}
         <div className="nav-right">
+
           {/* УВЕДОМЛЕНИЯ */}
           <div className="nav-notifications" ref={notificationRef}>
             <button
               className="nav-notif-btn"
               onClick={() => setShowNotifications(!showNotifications)}
+              aria-label="Уведомления"
             >
-              🔔
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
               {unreadCount > 0 && (
                 <span className="nav-notif-badge">{unreadCount}</span>
               )}
@@ -326,6 +340,7 @@ export default function Navigation({ profile }) {
                     </button>
                   )}
                 </div>
+
                 {notifications.length === 0 ? (
                   <div className="nav-notif-empty">Нет уведомлений</div>
                 ) : (
@@ -345,6 +360,7 @@ export default function Navigation({ profile }) {
                     ))}
                   </div>
                 )}
+
                 <Link to="/notification-history" className="nav-notif-all">
                   Все уведомления →
                 </Link>
@@ -357,6 +373,7 @@ export default function Navigation({ profile }) {
             <button
               className="nav-profile-btn"
               onClick={() => setIsProfileOpen(!isProfileOpen)}
+              aria-label="Профиль"
             >
               <div className="nav-avatar">
                 {profile?.avatar_url ? (
@@ -366,7 +383,9 @@ export default function Navigation({ profile }) {
                 )}
               </div>
               <span className="nav-profile-name">{profile?.full_name}</span>
-              <span className="nav-profile-arrow">▾</span>
+              <svg width="12" height="12" viewBox="0 0 12 8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <path d="M1 1.5L6 6.5L11 1.5" />
+              </svg>
             </button>
 
             {isProfileOpen && (
@@ -384,18 +403,37 @@ export default function Navigation({ profile }) {
                     <div className="nav-profile-role">{profile?.role}</div>
                   </div>
                 </div>
+
                 <div className="nav-profile-divider" />
-                <Link to="/profile" className="nav-profile-item" onClick={() => setIsProfileOpen(false)}>
+
+                <Link
+                  to="/profile"
+                  className="nav-profile-item"
+                  onClick={() => setIsProfileOpen(false)}
+                >
                   Профиль
                 </Link>
-                <Link to="/my-achievements" className="nav-profile-item" onClick={() => setIsProfileOpen(false)}>
+                <Link
+                  to="/my-achievements"
+                  className="nav-profile-item"
+                  onClick={() => setIsProfileOpen(false)}
+                >
                   Достижения
                 </Link>
-                <Link to="/my-reviews" className="nav-profile-item" onClick={() => setIsProfileOpen(false)}>
+                <Link
+                  to="/my-reviews"
+                  className="nav-profile-item"
+                  onClick={() => setIsProfileOpen(false)}
+                >
                   Оценки
                 </Link>
+
                 <div className="nav-profile-divider" />
-                <button className="nav-profile-item nav-profile-logout" onClick={handleLogout}>
+
+                <button
+                  className="nav-profile-item nav-profile-logout"
+                  onClick={handleLogout}
+                >
                   Выйти
                 </button>
               </div>
@@ -406,13 +444,19 @@ export default function Navigation({ profile }) {
           <button
             className="nav-mobile-toggle"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label="Меню"
           >
-            ☰
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
           </button>
+
         </div>
       </div>
 
-      {/* МОБИЛЬНОЕ МЕНЮ */}
+      {/* МОБИЛЬНОЕ МЕНЮ (ВЫПАДАЮЩЕЕ) */}
       {isMenuOpen && (
         <div className="nav-mobile" ref={menuRef}>
           {menuItems.map((item) => (
@@ -426,10 +470,17 @@ export default function Navigation({ profile }) {
             </Link>
           ))}
           <div className="nav-mobile-divider" />
-          <Link to="/profile" className="nav-mobile-link" onClick={() => setIsMenuOpen(false)}>
+          <Link
+            to="/profile"
+            className="nav-mobile-link"
+            onClick={() => setIsMenuOpen(false)}
+          >
             Профиль
           </Link>
-          <button className="nav-mobile-logout" onClick={handleLogout}>
+          <button
+            className="nav-mobile-logout"
+            onClick={handleLogout}
+          >
             Выйти
           </button>
         </div>
@@ -476,6 +527,9 @@ export default function Navigation({ profile }) {
           width: auto;
         }
 
+        /* ============================================================
+           ДЕСКТОПНОЕ МЕНЮ
+           ============================================================ */
         .nav-desktop {
           display: flex;
           align-items: center;
@@ -506,6 +560,9 @@ export default function Navigation({ profile }) {
           color: #8A6A00;
         }
 
+        /* ============================================================
+           ПРАВАЯ ЧАСТЬ
+           ============================================================ */
         .nav-right {
           display: flex;
           align-items: center;
@@ -527,12 +584,12 @@ export default function Navigation({ profile }) {
           background: transparent;
           border-radius: 50%;
           cursor: pointer;
-          font-size: 20px;
-          position: relative;
+          color: #667085;
           transition: all 0.2s ease;
           display: flex;
           align-items: center;
           justify-content: center;
+          position: relative;
         }
 
         .nav-notif-btn:hover {
@@ -715,9 +772,9 @@ export default function Navigation({ profile }) {
           white-space: nowrap;
         }
 
-        .nav-profile-arrow {
-          font-size: 12px;
+        .nav-profile-btn svg {
           color: #98A2B3;
+          flex-shrink: 0;
         }
 
         .nav-profile-dropdown {
@@ -815,7 +872,6 @@ export default function Navigation({ profile }) {
           display: none;
           background: none;
           border: none;
-          font-size: 24px;
           cursor: pointer;
           color: #0B1F3A;
           padding: 8px 4px;
@@ -900,10 +956,6 @@ export default function Navigation({ profile }) {
           .nav-profile-name {
             display: none;
           }
-
-          .nav-profile-arrow {
-            display: none;
-          }
         }
 
         @media (max-width: 768px) {
@@ -919,11 +971,6 @@ export default function Navigation({ profile }) {
             width: 320px;
             right: -40px;
           }
-
-          .nav-profile-dropdown {
-            width: 200px;
-            right: -10px;
-          }
         }
 
         @media (max-width: 480px) {
@@ -934,11 +981,6 @@ export default function Navigation({ profile }) {
           .nav-notif-dropdown {
             width: 290px;
             right: -60px;
-          }
-
-          .nav-profile-dropdown {
-            width: 180px;
-            right: -20px;
           }
 
           .nav-profile-btn {

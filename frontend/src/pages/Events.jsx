@@ -39,6 +39,9 @@ export default function Events() {
   const [tutorRole, setTutorRole] = useState('tutor');
   const [tutorNotes, setTutorNotes] = useState('');
   
+  // ===== ЭКСПОРТ =====
+  const [exporting, setExporting] = useState(false);
+  
   const [filters, setFilters] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -67,6 +70,7 @@ export default function Events() {
   const canCreate = profile && ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(profile.role);
   const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
   const canAssignTutor = ['admin', 'movement_coordinator', 'club_coordinator'].includes(profile?.role);
+  const canApproveClub = ['admin', 'movement_coordinator'].includes(profile?.role);
 
   const getCoordinatorClubId = () => {
     if (!isClubCoordinator) return null;
@@ -159,6 +163,18 @@ export default function Events() {
         filteredEvents = eventsData;
       }
 
+      // Загружаем статус регистрации для каждого мероприятия (для участников)
+      if (userData.role === 'participant') {
+        for (const event of filteredEvents) {
+          try {
+            const status = await checkRegistrationStatus(event.id);
+            event.user_registration = status;
+          } catch (e) {
+            // ignore
+          }
+        }
+      }
+
       setAllEvents(filteredEvents);
       
       if (['admin', 'movement_coordinator'].includes(userData.role)) {
@@ -212,9 +228,10 @@ export default function Events() {
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       const data = await response.json();
-      setRegistrationStatus(data);
+      return data;
     } catch (err) {
       console.error('Ошибка проверки статуса:', err);
+      return null;
     }
   };
 
@@ -241,9 +258,8 @@ export default function Events() {
         setMessage('❌ ' + data.error);
         setMessageType('error');
       } else {
-        setMessage('✅ Вы успешно записались на мероприятие!');
+        setMessage(data.message || '✅ Вы успешно записались на мероприятие!');
         setMessageType('success');
-        await checkRegistrationStatus(eventId);
         await loadData();
       }
       setTimeout(() => setMessage(''), 3000);
@@ -276,7 +292,6 @@ export default function Events() {
       } else {
         setMessage('✅ Вы отписались от мероприятия');
         setMessageType('success');
-        setRegistrationStatus(null);
         await loadData();
       }
       setTimeout(() => setMessage(''), 3000);
@@ -317,6 +332,82 @@ export default function Events() {
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
+    }
+  };
+
+  // ============================================================
+  // ОДОБРЕНИЕ ЗАЯВКИ КЛУБА (ДЛЯ КООРДИНАТОРА ДВИЖЕНИЯ)
+  // ============================================================
+  const handleApproveClub = async (registrationId, status) => {
+    if (!confirm(`Подтвердить ${status === 'approved' ? 'одобрение' : 'отклонение'} заявки клуба?`)) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `https://dod-backend.relaxdev.ru/api/event-registrations/${registrationId}/approve-club`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status })
+        }
+      );
+
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+
+      setMessage(status === 'approved' ? '✅ Заявка клуба одобрена!' : '❌ Заявка клуба отклонена');
+      setMessageType(status === 'approved' ? 'success' : 'error');
+      await loadRegistrations(selectedEventForRegistrations?.id);
+      await loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
+
+  // ============================================================
+  // ЭКСПОРТ В EXCEL
+  // ============================================================
+  const handleExport = async (eventId, eventTitle) => {
+    setExporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `https://dod-backend.relaxdev.ru/api/events/${eventId}/export`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Ошибка экспорта');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Участники_${eventTitle}_${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setMessage('✅ Список участников выгружен!');
+      setMessageType('success');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -809,9 +900,6 @@ export default function Events() {
                 </div>
               </div>
 
-              {/* ============================================================
-                 НОВЫЕ ПОЛЯ: ДЕДЛАЙН И МАКСИМУМ УЧАСТНИКОВ
-                 ============================================================ */}
               <div className="grid-2">
                 <div className="form-group">
                   <label>Дедлайн регистрации</label>
@@ -839,9 +927,18 @@ export default function Events() {
                 </div>
               </div>
               
+              {/* ССЫЛКА НА ФОРМУ */}
               <div className="form-group">
-                <label>Ссылка на форму</label>
-                <input type="url" value={form.form_url} onChange={(e) => setForm({ ...form, form_url: e.target.value })} />
+                <label>Ссылка на форму / мероприятие</label>
+                <input 
+                  type="url" 
+                  value={form.form_url} 
+                  onChange={(e) => setForm({ ...form, form_url: e.target.value })} 
+                  placeholder="https://example.com/event-form"
+                />
+                <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                  📎 Ссылка, которую увидят участники (Google Form, сайт и т.д.)
+                </div>
               </div>
               
               <div style={{ display: 'flex', gap: '12px' }}>
@@ -869,6 +966,7 @@ export default function Events() {
                 const canAssignTutorLocal = ['admin', 'movement_coordinator', 'club_coordinator'].includes(profile?.role);
                 const canViewRegs = canViewRegistrations(event);
                 const isParticipant = profile?.role === 'participant';
+                const isClubCoord = profile?.role === 'club_coordinator';
                 
                 // Проверяем статус регистрации для участника
                 const userRegistration = event.user_registration || null;
@@ -883,7 +981,21 @@ export default function Events() {
                   : false;
                 
                 // Проверяем заполненность
-                const isFull = event.max_participants > 0 && event.registrations_count >= event.max_participants;
+                const isFull = event.max_participants > 0 && (event.registrations_count || 0) >= event.max_participants;
+                
+                // Выездное/глобальное — участник не может записаться сам
+                const isOutgoingOrGlobal = event.type === 'outgoing' || event.type === 'global_forum' || event.is_global === true;
+                
+                // Может ли пользователь записаться
+                let canRegister = false;
+                if (isParticipant && !isOutgoingOrGlobal) {
+                  canRegister = true;
+                } else if (isClubCoord && isOutgoingOrGlobal) {
+                  canRegister = true;
+                }
+                
+                // Для координатора клуба — показываем статус заявки клуба
+                const clubRegistration = event.club_registration || null;
                 
                 return (
                   <div
@@ -947,64 +1059,147 @@ export default function Events() {
                     {event.description && <div className="meta">{event.description}</div>}
                     
                     {/* ============================================================
-                       БЛОК РЕГИСТРАЦИИ ДЛЯ УЧАСТНИКА
+                       ССЫЛКА НА ФОРМУ
                        ============================================================ */}
-                    {isParticipant && event.moderation_status === 'approved' && (
+                    {event.form_url && (
+                      <div style={{ marginTop: '6px' }}>
+                        <a 
+                          href={event.form_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          style={{ 
+                            color: '#174A7E', 
+                            textDecoration: 'underline',
+                            fontSize: '13px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          onMouseEnter={(e) => e.target.style.color = '#C9A227'}
+                          onMouseLeave={(e) => e.target.style.color = '#174A7E'}
+                        >
+                          📎 Ссылка на мероприятие
+                        </a>
+                      </div>
+                    )}
+                    
+                    {/* ============================================================
+                       БЛОК РЕГИСТРАЦИИ
+                       ============================================================ */}
+                    {canRegister && event.moderation_status === 'approved' && (
                       <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                        {isRejected && (
-                          <span style={{ color: '#B3262E', fontSize: '13px', fontWeight: '500' }}>
-                            ❌ Ваша заявка отклонена
-                          </span>
-                        )}
-                        {isPending && (
-                          <span style={{ color: '#C9A227', fontSize: '13px', fontWeight: '500' }}>
-                            ⏳ Заявка на рассмотрении
-                          </span>
-                        )}
-                        {isConfirmed && (
-                          <span style={{ color: '#16845B', fontSize: '13px', fontWeight: '500' }}>
-                            ✅ Вы записаны
-                            {userRegistration?.confirmed_at && (
-                              <span style={{ fontSize: '11px', color: '#98A2B3', marginLeft: '8px' }}>
-                                (с {new Date(userRegistration.confirmed_at).toLocaleDateString('ru-RU')})
+                        {/* Для участника — внутренние мероприятия */}
+                        {isParticipant && !isOutgoingOrGlobal && (
+                          <>
+                            {isRejected && (
+                              <span style={{ color: '#B3262E', fontSize: '13px', fontWeight: '500' }}>
+                                ❌ Ваша заявка отклонена
                               </span>
                             )}
-                          </span>
+                            {isPending && (
+                              <span style={{ color: '#C9A227', fontSize: '13px', fontWeight: '500' }}>
+                                ⏳ Заявка на рассмотрении
+                              </span>
+                            )}
+                            {isConfirmed && (
+                              <span style={{ color: '#16845B', fontSize: '13px', fontWeight: '500' }}>
+                                ✅ Вы записаны
+                                {userRegistration?.confirmed_at && (
+                                  <span style={{ fontSize: '11px', color: '#98A2B3', marginLeft: '8px' }}>
+                                    (с {new Date(userRegistration.confirmed_at).toLocaleDateString('ru-RU')})
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                            {!isRegistered && !isDeadlinePassed && !isFull && (
+                              <button
+                                className="btn-success btn-sm"
+                                onClick={() => handleRegister(event.id)}
+                                disabled={registering}
+                              >
+                                {registering ? '⏳' : '📝 Записаться'}
+                              </button>
+                            )}
+                            {isPending && (
+                              <button
+                                className="btn-danger btn-sm"
+                                onClick={() => handleUnregister(userRegistration.id)}
+                              >
+                                ❌ Отменить заявку
+                              </button>
+                            )}
+                            {isConfirmed && (
+                              <button
+                                className="btn-secondary btn-sm"
+                                onClick={() => handleUnregister(userRegistration.id)}
+                              >
+                                ❌ Отписаться
+                              </button>
+                            )}
+                            {isDeadlinePassed && !isRegistered && (
+                              <span style={{ color: '#98A2B3', fontSize: '13px' }}>
+                                ⛔ Регистрация закрыта
+                              </span>
+                            )}
+                            {isFull && !isRegistered && (
+                              <span style={{ color: '#B3262E', fontSize: '13px' }}>
+                                ⚠️ Все места заняты
+                              </span>
+                            )}
+                          </>
                         )}
-                        {!isRegistered && !isDeadlinePassed && !isFull && (
-                          <button
-                            className="btn-success btn-sm"
-                            onClick={() => handleRegister(event.id)}
-                            disabled={registering}
-                          >
-                            {registering ? '⏳' : '📝 Записаться'}
-                          </button>
-                        )}
-                        {isPending && (
-                          <button
-                            className="btn-danger btn-sm"
-                            onClick={() => handleUnregister(userRegistration.id)}
-                          >
-                            ❌ Отменить заявку
-                          </button>
-                        )}
-                        {isConfirmed && (
-                          <button
-                            className="btn-secondary btn-sm"
-                            onClick={() => handleUnregister(userRegistration.id)}
-                          >
-                            ❌ Отписаться
-                          </button>
-                        )}
-                        {isDeadlinePassed && !isRegistered && (
-                          <span style={{ color: '#98A2B3', fontSize: '13px' }}>
-                            ⛔ Регистрация закрыта
-                          </span>
-                        )}
-                        {isFull && !isRegistered && (
-                          <span style={{ color: '#B3262E', fontSize: '13px' }}>
-                            ⚠️ Все места заняты
-                          </span>
+                        
+                        {/* Для координатора клуба — выездные/глобальные */}
+                        {isClubCoord && isOutgoingOrGlobal && (
+                          <>
+                            {clubRegistration?.status === 'pending' && (
+                              <span style={{ color: '#C9A227', fontSize: '13px', fontWeight: '500' }}>
+                                ⏳ Заявка клуба на рассмотрении
+                              </span>
+                            )}
+                            {clubRegistration?.status === 'confirmed' && (
+                              <span style={{ color: '#16845B', fontSize: '13px', fontWeight: '500' }}>
+                                ✅ Заявка клуба одобрена
+                                {clubRegistration?.confirmed_at && (
+                                  <span style={{ fontSize: '11px', color: '#98A2B3', marginLeft: '8px' }}>
+                                    (с {new Date(clubRegistration.confirmed_at).toLocaleDateString('ru-RU')})
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                            {clubRegistration?.status === 'rejected' && (
+                              <span style={{ color: '#B3262E', fontSize: '13px', fontWeight: '500' }}>
+                                ❌ Заявка клуба отклонена
+                              </span>
+                            )}
+                            {!clubRegistration && !isDeadlinePassed && !isFull && (
+                              <button
+                                className="btn-gold btn-sm"
+                                onClick={() => handleRegister(event.id)}
+                                disabled={registering}
+                              >
+                                {registering ? '⏳' : '📝 Подать заявку от клуба'}
+                              </button>
+                            )}
+                            {clubRegistration?.status === 'pending' && (
+                              <button
+                                className="btn-danger btn-sm"
+                                onClick={() => handleUnregister(clubRegistration.id)}
+                              >
+                                ❌ Отменить заявку
+                              </button>
+                            )}
+                            {isDeadlinePassed && !clubRegistration && (
+                              <span style={{ color: '#98A2B3', fontSize: '13px' }}>
+                                ⛔ Регистрация закрыта
+                              </span>
+                            )}
+                            {isFull && !clubRegistration && (
+                              <span style={{ color: '#B3262E', fontSize: '13px' }}>
+                                ⚠️ Все места заняты
+                              </span>
+                            )}
+                          </>
                         )}
                       </div>
                     )}
@@ -1049,17 +1244,27 @@ export default function Events() {
                         </>
                       )}
                       {canViewRegs && event.moderation_status === 'approved' && (
-                        <button
-                          className="btn-primary btn-sm"
-                          style={{ background: '#6B46C1', color: 'white' }}
-                          onClick={async () => {
-                            setSelectedEventForRegistrations(event);
-                            await loadRegistrations(event.id);
-                            setShowRegistrationsModal(true);
-                          }}
-                        >
-                          👥 Участники ({event.registrations_count || 0})
-                        </button>
+                        <>
+                          <button
+                            className="btn-primary btn-sm"
+                            style={{ background: '#6B46C1', color: 'white' }}
+                            onClick={async () => {
+                              setSelectedEventForRegistrations(event);
+                              await loadRegistrations(event.id);
+                              setShowRegistrationsModal(true);
+                            }}
+                          >
+                            👥 Участники ({event.registrations_count || 0})
+                          </button>
+                          <button
+                            className="btn-primary btn-sm"
+                            style={{ background: '#16845B', color: 'white' }}
+                            onClick={() => handleExport(event.id, event.title)}
+                            disabled={exporting}
+                          >
+                            {exporting ? '⏳' : '📊 Excel'}
+                          </button>
+                        </>
                       )}
                       {canAssignTutorLocal && (
                         <button
@@ -1140,6 +1345,18 @@ export default function Events() {
                   </div>
                 )}
 
+                {/* Кнопка экспорта */}
+                <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    className="btn-primary btn-sm"
+                    style={{ background: '#16845B', color: 'white' }}
+                    onClick={() => handleExport(selectedEventForRegistrations.id, selectedEventForRegistrations.title)}
+                    disabled={exporting}
+                  >
+                    {exporting ? '⏳' : '📊 Выгрузить в Excel'}
+                  </button>
+                </div>
+
                 {/* Таблица участников */}
                 <div className="table-wrapper">
                   <table className="table">
@@ -1147,96 +1364,130 @@ export default function Events() {
                       <tr>
                         <th>Участник</th>
                         <th>Контакт</th>
+                        <th>Клуб</th>
                         <th>Статус</th>
                         <th>Дата заявки</th>
                         <th>Действия</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {registrations.map((reg) => (
-                        <tr key={reg.id}>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <div style={{
-                                width: '32px',
-                                height: '32px',
-                                borderRadius: '50%',
-                                background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'white',
-                                fontSize: '12px',
-                                fontWeight: 'bold'
-                              }}>
-                                {reg.full_name?.charAt(0) || '?'}
-                              </div>
-                              <div>
-                                <div style={{ fontWeight: '500', fontSize: '14px' }}>{reg.full_name}</div>
-                                <div style={{ fontSize: '12px', color: '#98A2B3' }}>
-                                  {reg.school || 'Школа не указана'} • {reg.class_name || '—'}
+                      {registrations.map((reg) => {
+                        const isClubRegistration = reg.registration_type === 'club';
+                        return (
+                          <tr key={reg.id}>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '50%',
+                                  background: isClubRegistration ? 'linear-gradient(135deg, #C9A227, #E8D9A8)' : 'linear-gradient(135deg, #0B1F3A, #174A7E)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: isClubRegistration ? '#0B1F3A' : 'white',
+                                  fontSize: '12px',
+                                  fontWeight: 'bold'
+                                }}>
+                                  {isClubRegistration ? '🏫' : (reg.full_name?.charAt(0) || '?')}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: '500', fontSize: '14px' }}>
+                                    {reg.full_name}
+                                    {isClubRegistration && (
+                                      <span className="tag" style={{ marginLeft: '8px', background: '#FBF4DC', color: '#8A6A00', fontSize: '9px' }}>
+                                        🏫 Заявка от клуба
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{ fontSize: '12px', color: '#98A2B3' }}>
+                                    {reg.school || 'Школа не указана'} • {reg.class_name || '—'}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </td>
-                          <td>
-                            <div style={{ fontSize: '13px', color: '#667085' }}>
-                              {reg.email}
-                              {reg.phone && <div style={{ fontSize: '12px', color: '#98A2B3' }}>📞 {reg.phone}</div>}
-                            </div>
-                          </td>
-                          <td>
-                            <span className="tag" style={{
-                              background: reg.status === 'confirmed' ? '#E8F5EF' :
-                                        reg.status === 'pending' ? '#FBF4DC' :
-                                        reg.status === 'rejected' ? '#FCEBEC' : '#F4F6F9',
-                              color: reg.status === 'confirmed' ? '#16845B' :
-                                     reg.status === 'pending' ? '#8A6A00' :
-                                     reg.status === 'rejected' ? '#B3262E' : '#667085',
-                              padding: '4px 12px',
-                              fontSize: '12px'
-                            }}>
-                              {reg.status === 'confirmed' ? '✅ Подтверждён' :
-                               reg.status === 'pending' ? '⏳ Ожидает' :
-                               reg.status === 'rejected' ? '❌ Отклонён' : reg.status}
-                            </span>
-                          </td>
-                          <td style={{ fontSize: '13px', color: '#98A2B3' }}>
-                            {new Date(reg.registered_at).toLocaleDateString('ru-RU')}
-                            {reg.confirmed_at && (
-                              <div style={{ fontSize: '11px', color: '#16845B' }}>
-                                ✅ {new Date(reg.confirmed_at).toLocaleDateString('ru-RU')}
+                            </td>
+                            <td>
+                              <div style={{ fontSize: '13px', color: '#667085' }}>
+                                {reg.email}
+                                {reg.phone && <div style={{ fontSize: '12px', color: '#98A2B3' }}>📞 {reg.phone}</div>}
                               </div>
-                            )}
-                          </td>
-                          <td>
-                            {reg.status === 'pending' && (
-                              <div style={{ display: 'flex', gap: '4px' }}>
-                                <button
-                                  className="btn-success btn-sm"
-                                  onClick={() => handleRegistrationStatus(reg.id, 'confirmed')}
-                                  style={{ padding: '2px 10px', fontSize: '11px' }}
-                                >
-                                  ✅
-                                </button>
-                                <button
-                                  className="btn-danger btn-sm"
-                                  onClick={() => handleRegistrationStatus(reg.id, 'rejected')}
-                                  style={{ padding: '2px 10px', fontSize: '11px' }}
-                                >
-                                  ❌
-                                </button>
-                              </div>
-                            )}
-                            {reg.status === 'confirmed' && (
-                              <span style={{ color: '#16845B', fontSize: '12px' }}>✅ Подтверждён</span>
-                            )}
-                            {reg.status === 'rejected' && (
-                              <span style={{ color: '#B3262E', fontSize: '12px' }}>❌ Отклонён</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td>
+                              <span className="tag" style={{ background: '#EAF2FA', color: '#174A7E', fontSize: '11px' }}>
+                                {reg.club_name || '—'}
+                              </span>
+                            </td>
+                            <td>
+                              <span className="tag" style={{
+                                background: reg.status === 'confirmed' ? '#E8F5EF' :
+                                          reg.status === 'pending' ? '#FBF4DC' :
+                                          reg.status === 'rejected' ? '#FCEBEC' : '#F4F6F9',
+                                color: reg.status === 'confirmed' ? '#16845B' :
+                                       reg.status === 'pending' ? '#8A6A00' :
+                                       reg.status === 'rejected' ? '#B3262E' : '#667085',
+                                padding: '4px 12px',
+                                fontSize: '12px'
+                              }}>
+                                {reg.status === 'confirmed' ? '✅ Подтверждён' :
+                                 reg.status === 'pending' ? '⏳ Ожидает' :
+                                 reg.status === 'rejected' ? '❌ Отклонён' : reg.status}
+                              </span>
+                            </td>
+                            <td style={{ fontSize: '13px', color: '#98A2B3' }}>
+                              {new Date(reg.registered_at).toLocaleDateString('ru-RU')}
+                              {reg.confirmed_at && (
+                                <div style={{ fontSize: '11px', color: '#16845B' }}>
+                                  ✅ {new Date(reg.confirmed_at).toLocaleDateString('ru-RU')}
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              {reg.status === 'pending' && !isClubRegistration && (
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  <button
+                                    className="btn-success btn-sm"
+                                    onClick={() => handleRegistrationStatus(reg.id, 'confirmed')}
+                                    style={{ padding: '2px 10px', fontSize: '11px' }}
+                                  >
+                                    ✅
+                                  </button>
+                                  <button
+                                    className="btn-danger btn-sm"
+                                    onClick={() => handleRegistrationStatus(reg.id, 'rejected')}
+                                    style={{ padding: '2px 10px', fontSize: '11px' }}
+                                  >
+                                    ❌
+                                  </button>
+                                </div>
+                              )}
+                              {reg.status === 'pending' && isClubRegistration && canApproveClub && (
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  <button
+                                    className="btn-success btn-sm"
+                                    onClick={() => handleApproveClub(reg.id, 'approved')}
+                                    style={{ padding: '2px 10px', fontSize: '11px' }}
+                                  >
+                                    ✅ Одобрить клуб
+                                  </button>
+                                  <button
+                                    className="btn-danger btn-sm"
+                                    onClick={() => handleApproveClub(reg.id, 'rejected')}
+                                    style={{ padding: '2px 10px', fontSize: '11px' }}
+                                  >
+                                    ❌ Отклонить
+                                  </button>
+                                </div>
+                              )}
+                              {reg.status === 'confirmed' && (
+                                <span style={{ color: '#16845B', fontSize: '12px' }}>✅ Подтверждён</span>
+                              )}
+                              {reg.status === 'rejected' && (
+                                <span style={{ color: '#B3262E', fontSize: '12px' }}>❌ Отклонён</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

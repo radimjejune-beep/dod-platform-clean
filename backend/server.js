@@ -3372,14 +3372,15 @@ app.post('/api/create-test-user', async (req, res) => {
 
 // backend/server.js — ДОБАВИТЬ ЭТИ ЭНДПОИНТЫ
 
-// ============================================================
-// РЕГИСТРАЦИЯ НА МЕРОПРИЯТИЯ (event_registrations)
-// ============================================================
+// backend/server.js — ДОБАВИТЬ/ОБНОВИТЬ ЭНДПОИНТЫ
 
-// 1. Записаться на мероприятие
+// ============================================================
+// 1. РЕГИСТРАЦИЯ НА МЕРОПРИЯТИЕ (ОБНОВЛЁННАЯ)
+// ============================================================
 app.post('/api/event-registrations', authenticate, async (req, res) => {
   try {
     const userId = req.user.userId;
+    const userRole = req.user.role;
     const { event_id } = req.body;
 
     if (!event_id) {
@@ -3388,8 +3389,9 @@ app.post('/api/event-registrations', authenticate, async (req, res) => {
 
     // Проверяем мероприятие
     const eventCheck = await pool.query(
-      `SELECT id, title, registration_deadline, max_participants, club_id 
-       FROM events WHERE id = $1`,
+      `SELECT e.*, 
+              (SELECT COUNT(*) FROM event_registrations WHERE event_id = e.id AND status = 'confirmed') as current_count
+       FROM events e WHERE e.id = $1`,
       [event_id]
     );
 
@@ -3398,6 +3400,61 @@ app.post('/api/event-registrations', authenticate, async (req, res) => {
     }
 
     const event = eventCheck.rows[0];
+    const currentCount = parseInt(event.current_count);
+
+    // ✅ НОВОЕ: Проверка типа мероприятия
+    // Выездные и глобальные — только через координатора
+    if (['outgoing', 'global_forum'].includes(event.type) || event.is_global === true) {
+      // Проверяем, является ли пользователь координатором клуба
+      if (userRole === 'club_coordinator') {
+        // Координатор может подать заявку от клуба
+        const clubCheck = await pool.query(
+          'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
+          [userId, event.club_id]
+        );
+        if (clubCheck.rows.length === 0 && event.club_id) {
+          // Если мероприятие привязано к клубу, проверяем что координатор из этого клуба
+          const userClubCheck = await pool.query(
+            'SELECT club_id FROM users WHERE id = $1',
+            [userId]
+          );
+          if (userClubCheck.rows[0]?.club_id !== event.club_id) {
+            return res.status(403).json({ 
+              error: 'На выездные/глобальные мероприятия могут подавать заявки только координаторы клубов' 
+            });
+          }
+        }
+      } else if (userRole === 'admin' || userRole === 'movement_coordinator') {
+        // Админ и координатор движения могут записывать любые клубы
+        // Разрешаем
+      } else {
+        return res.status(403).json({ 
+          error: 'На выездные/глобальные мероприятия могут подавать заявки только координаторы клубов' 
+        });
+      }
+    } else {
+      // Внутренние мероприятия — участник может записаться сам
+      if (userRole === 'participant') {
+        // Разрешаем
+      } else if (userRole === 'club_coordinator') {
+        // Координатор может записывать участников своего клуба
+        const clubCheck = await pool.query(
+          'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+          [userId]
+        );
+        if (clubCheck.rows.length > 0) {
+          const userClubCheck = await pool.query(
+            'SELECT club_id FROM users WHERE id = $1',
+            [userId]
+          );
+          if (userClubCheck.rows[0]?.club_id !== event.club_id) {
+            return res.status(403).json({ 
+              error: 'Вы можете записывать только участников своего клуба' 
+            });
+          }
+        }
+      }
+    }
 
     // Проверяем дедлайн
     if (event.registration_deadline) {
@@ -3409,15 +3466,8 @@ app.post('/api/event-registrations', authenticate, async (req, res) => {
     }
 
     // Проверяем лимит участников
-    if (event.max_participants > 0) {
-      const countResult = await pool.query(
-        'SELECT COUNT(*) FROM event_registrations WHERE event_id = $1 AND status = $2',
-        [event_id, 'confirmed']
-      );
-      const currentCount = parseInt(countResult.rows[0].count);
-      if (currentCount >= event.max_participants) {
-        return res.status(400).json({ error: 'Нет свободных мест' });
-      }
+    if (event.max_participants > 0 && currentCount >= event.max_participants) {
+      return res.status(400).json({ error: 'Нет свободных мест' });
     }
 
     // Проверяем, не записан ли уже пользователь
@@ -3439,15 +3489,30 @@ app.post('/api/event-registrations', authenticate, async (req, res) => {
       }
     }
 
+    // ✅ НОВОЕ: Для выездных/глобальных — статус 'pending' (ожидает одобрения координатора движения)
+    let status = 'pending';
+    if (['internal'].includes(event.type) && !event.is_global) {
+      // Внутренние мероприятия — сразу confirmed (если не требуется модерация)
+      status = 'confirmed';
+    }
+
     // Создаём регистрацию
     const result = await pool.query(
-      `INSERT INTO event_registrations (event_id, user_id, status, registered_at)
-       VALUES ($1, $2, 'pending', NOW())
+      `INSERT INTO event_registrations (event_id, user_id, status, registered_at, confirmed_at)
+       VALUES ($1, $2, $3, NOW(), $4)
        RETURNING *`,
-      [event_id, userId]
+      [event_id, userId, status, status === 'confirmed' ? new Date() : null]
     );
 
-    // Уведомление координатору клуба
+    // Если статус confirmed — обновляем количество
+    if (status === 'confirmed') {
+      await pool.query(
+        `UPDATE events SET registrations_count = registrations_count + 1 WHERE id = $1`,
+        [event_id]
+      );
+    }
+
+    // Уведомление
     if (event.club_id) {
       const coordinators = await pool.query(
         `SELECT profile_id FROM club_coordinators WHERE club_id = $1`,
@@ -3457,14 +3522,29 @@ app.post('/api/event-registrations', authenticate, async (req, res) => {
       for (const coord of coordinators.rows) {
         await pool.query(
           `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
-           VALUES ($1, 'registration', 'Новая заявка на мероприятие', $2, '/events', 'high', NOW())`,
+           VALUES ($1, 'registration', '📝 Новая заявка на мероприятие', $2, '/events', 'high', NOW())`,
           [coord.profile_id, `Новая заявка на участие в "${event.title}"`]
         );
       }
     }
 
+    // ✅ Если выездное/глобальное — уведомление координатору движения
+    if (['outgoing', 'global_forum'].includes(event.type) || event.is_global === true) {
+      const movementCoords = await pool.query(
+        "SELECT id FROM users WHERE role IN ('movement_coordinator', 'admin')"
+      );
+      for (const coord of movementCoords.rows) {
+        await pool.query(
+          `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
+           VALUES ($1, 'registration', '🌍 Заявка на выездное мероприятие', $2, '/events', 'high', NOW())`,
+          [coord.id, `Заявка от клуба на "${event.title}" требует одобрения`]
+        );
+      }
+    }
+
     res.status(201).json({
-      message: 'Вы успешно записались на мероприятие',
+      success: true,
+      message: status === 'confirmed' ? 'Вы успешно записались на мероприятие' : 'Заявка отправлена на рассмотрение',
       registration: result.rows[0]
     });
 
@@ -3474,42 +3554,10 @@ app.post('/api/event-registrations', authenticate, async (req, res) => {
   }
 });
 
-// 2. Отписаться от мероприятия
-app.delete('/api/event-registrations/:id', authenticate, async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const { id } = req.params;
-
-    const check = await pool.query(
-      'SELECT id, user_id, status FROM event_registrations WHERE id = $1',
-      [id]
-    );
-
-    if (check.rows.length === 0) {
-      return res.status(404).json({ error: 'Запись не найдена' });
-    }
-
-    const registration = check.rows[0];
-
-    if (registration.user_id !== userId && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'У вас нет прав' });
-    }
-
-    if (registration.status === 'confirmed') {
-      return res.status(400).json({ error: 'Вы не можете отписаться после подтверждения' });
-    }
-
-    await pool.query('DELETE FROM event_registrations WHERE id = $1', [id]);
-
-    res.json({ message: 'Вы отписались от мероприятия' });
-  } catch (error) {
-    console.error('❌ Ошибка отписки:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 3. Получить список зарегистрированных на мероприятие
-app.get('/api/events/:eventId/registrations', authenticate, async (req, res) => {
+// ============================================================
+// 2. ЭКСПОРТ УЧАСТНИКОВ В EXCEL
+// ============================================================
+app.get('/api/events/:eventId/export', authenticate, async (req, res) => {
   try {
     const { eventId } = req.params;
     const userId = req.user.userId;
@@ -3517,7 +3565,7 @@ app.get('/api/events/:eventId/registrations', authenticate, async (req, res) => 
 
     // Проверяем права
     const eventCheck = await pool.query(
-      'SELECT club_id, created_by FROM events WHERE id = $1',
+      'SELECT club_id, created_by, title FROM events WHERE id = $1',
       [eventId]
     );
 
@@ -3528,7 +3576,7 @@ app.get('/api/events/:eventId/registrations', authenticate, async (req, res) => 
     const event = eventCheck.rows[0];
     let canView = false;
 
-    if (['admin', 'movement_coordinator'].includes(userRole)) {
+    if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
       canView = true;
     } else if (userRole === 'club_coordinator') {
       const coordCheck = await pool.query(
@@ -3542,49 +3590,90 @@ app.get('/api/events/:eventId/registrations', authenticate, async (req, res) => 
       return res.status(403).json({ error: 'У вас нет прав' });
     }
 
+    // Получаем данные
     const result = await pool.query(
-      `SELECT r.*, 
+      `SELECT r.status as registration_status, r.registered_at, r.confirmed_at,
               u.full_name, u.email, u.phone, u.school, u.class_name,
-              u.avatar_url
+              u.birth_date, c.name as club_name
        FROM event_registrations r
        LEFT JOIN users u ON r.user_id = u.id
+       LEFT JOIN clubs c ON u.club_id = c.id
        WHERE r.event_id = $1
        ORDER BY r.registered_at ASC`,
       [eventId]
     );
 
-    const stats = await pool.query(
-      `SELECT status, COUNT(*) as count 
-       FROM event_registrations 
-       WHERE event_id = $1 
-       GROUP BY status`,
-      [eventId]
-    );
+    // Формируем CSV
+    const headers = [
+      'ФИО',
+      'Email',
+      'Телефон',
+      'Школа',
+      'Класс',
+      'Клуб',
+      'Статус',
+      'Дата регистрации',
+      'Дата подтверждения'
+    ];
 
-    res.json({
-      registrations: result.rows,
-      stats: stats.rows
-    });
+    let csv = headers.join(';') + '\n';
+    
+    for (const row of result.rows) {
+      const statusMap = {
+        'pending': 'Ожидает',
+        'confirmed': 'Подтверждён',
+        'rejected': 'Отклонён'
+      };
+      
+      csv += [
+        row.full_name || '',
+        row.email || '',
+        row.phone || '',
+        row.school || '',
+        row.class_name || '',
+        row.club_name || '',
+        statusMap[row.registration_status] || row.registration_status,
+        row.registered_at ? new Date(row.registered_at).toLocaleString('ru-RU') : '',
+        row.confirmed_at ? new Date(row.confirmed_at).toLocaleString('ru-RU') : ''
+      ].join(';') + '\n';
+    }
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="Участники_${event.title}_${new Date().toISOString().slice(0,10)}.csv"`);
+    res.setHeader('Content-Length', Buffer.byteLength(csv, 'utf8'));
+    
+    // Добавляем BOM для Excel
+    const bom = '\uFEFF';
+    res.send(bom + csv);
+
   } catch (error) {
-    console.error('❌ Ошибка:', error);
+    console.error('❌ Ошибка экспорта:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// 4. Изменить статус заявки
-app.patch('/api/event-registrations/:id/status', authenticate, async (req, res) => {
+// ============================================================
+// 3. ОДОБРЕНИЕ ЗАЯВКИ КЛУБА (ДЛЯ КООРДИНАТОРА ДВИЖЕНИЯ)
+// ============================================================
+app.patch('/api/event-registrations/:id/approve-club', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, comment } = req.body;
+    const { status } = req.body; // 'approved' или 'rejected'
     const userId = req.user.userId;
     const userRole = req.user.role;
 
-    if (!['pending', 'confirmed', 'rejected'].includes(status)) {
-      return res.status(400).json({ error: 'Некорректный статус' });
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ 
+        error: 'Только координатор движения может одобрять заявки клубов' 
+      });
+    }
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Статус должен быть "approved" или "rejected"' });
     }
 
     const regCheck = await pool.query(
-      `SELECT r.*, e.club_id, e.title 
+      `SELECT r.*, e.title, e.club_id 
        FROM event_registrations r
        LEFT JOIN events e ON r.event_id = e.id
        WHERE r.id = $1`,
@@ -3596,96 +3685,63 @@ app.patch('/api/event-registrations/:id/status', authenticate, async (req, res) 
     }
 
     const registration = regCheck.rows[0];
-    let canManage = false;
 
-    if (['admin', 'movement_coordinator'].includes(userRole)) {
-      canManage = true;
-    } else if (userRole === 'club_coordinator') {
-      const coordCheck = await pool.query(
-        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-        [userId, registration.club_id]
-      );
-      if (coordCheck.rows.length > 0) canManage = true;
+    // Проверяем, что это выездное/глобальное мероприятие
+    const eventCheck = await pool.query(
+      'SELECT type, is_global FROM events WHERE id = $1',
+      [registration.event_id]
+    );
+
+    const event = eventCheck.rows[0];
+    if (!['outgoing', 'global_forum'].includes(event.type) && !event.is_global) {
+      return res.status(400).json({ 
+        error: 'Это мероприятие не требует одобрения координатора движения' 
+      });
     }
 
-    if (!canManage) {
-      return res.status(403).json({ error: 'У вас нет прав' });
-    }
+    const newStatus = status === 'approved' ? 'confirmed' : 'rejected';
+    const confirmedAt = status === 'approved' ? new Date() : null;
 
     const result = await pool.query(
       `UPDATE event_registrations 
-       SET status = $1, 
-           confirmed_at = CASE WHEN $1 = 'confirmed' THEN NOW() ELSE confirmed_at END,
-           coordinator_comment = $2
-       WHERE id = $3
+       SET status = $1, confirmed_at = $2, coordinator_comment = $3
+       WHERE id = $4
        RETURNING *`,
-      [status, comment || null, id]
+      [newStatus, confirmedAt, req.body.comment || null, id]
     );
 
-    // Уведомление участнику
-    await pool.query(
-      `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
-       VALUES ($1, 'registration', 'Статус заявки обновлён', $2, '/my-registrations', 'high', NOW())`,
-      [registration.user_id, `Ваша заявка на "${registration.title}" ${status === 'confirmed' ? 'подтверждена' : 'отклонена'}`]
+    // Если одобрено — обновляем количество участников
+    if (status === 'approved') {
+      await pool.query(
+        `UPDATE events SET registrations_count = registrations_count + 1 WHERE id = $1`,
+        [registration.event_id]
+      );
+    }
+
+    // Уведомление координатору клуба
+    const clubCoord = await pool.query(
+      'SELECT profile_id FROM club_coordinators WHERE club_id = $1',
+      [registration.club_id]
     );
-
-    res.json({
-      message: `Заявка ${status === 'confirmed' ? 'подтверждена' : 'отклонена'}`,
-      registration: result.rows[0]
-    });
-  } catch (error) {
-    console.error('❌ Ошибка:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 5. Мои регистрации (для участника)
-app.get('/api/my-registrations', authenticate, async (req, res) => {
-  try {
-    const userId = req.user.userId;
-
-    const result = await pool.query(
-      `SELECT r.*, 
-              e.title, e.event_date, e.location, e.type, e.is_global,
-              c.name as club_name
-       FROM event_registrations r
-       LEFT JOIN events e ON r.event_id = e.id
-       LEFT JOIN clubs c ON e.club_id = c.id
-       WHERE r.user_id = $1
-       ORDER BY e.event_date ASC`,
-      [userId]
-    );
-
-    res.json(result.rows);
-  } catch (error) {
-    console.error('❌ Ошибка:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 6. Проверить статус регистрации на мероприятие
-app.get('/api/events/:eventId/registration-status', authenticate, async (req, res) => {
-  try {
-    const { eventId } = req.params;
-    const userId = req.user.userId;
-
-    const result = await pool.query(
-      `SELECT status, registered_at, confirmed_at
-       FROM event_registrations
-       WHERE event_id = $1 AND user_id = $2`,
-      [eventId, userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.json({ status: null, isRegistered: false });
+    
+    if (clubCoord.rows.length > 0) {
+      const message = status === 'approved' 
+        ? `✅ Заявка на "${registration.title}" одобрена!` 
+        : `❌ Заявка на "${registration.title}" отклонена`;
+      
+      await pool.query(
+        `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
+         VALUES ($1, 'registration', '📝 Статус заявки обновлён', $2, '/events', 'high', NOW())`,
+        [clubCoord.rows[0].profile_id, message]
+      );
     }
 
     res.json({
-      status: result.rows[0].status,
-      isRegistered: true,
-      registeredAt: result.rows[0].registered_at,
-      confirmedAt: result.rows[0].confirmed_at
+      success: true,
+      message: status === 'approved' ? 'Заявка клуба одобрена' : 'Заявка клуба отклонена',
+      registration: result.rows[0]
     });
+
   } catch (error) {
     console.error('❌ Ошибка:', error);
     res.status(500).json({ error: error.message });

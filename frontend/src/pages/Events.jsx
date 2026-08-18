@@ -20,6 +20,18 @@ export default function Events() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [moderationComment, setModerationComment] = useState('');
   
+  // ===== МОДАЛКА УЧАСТНИКОВ =====
+  const [showRegistrationsModal, setShowRegistrationsModal] = useState(false);
+  const [selectedEventForRegistrations, setSelectedEventForRegistrations] = useState(null);
+  const [registrations, setRegistrations] = useState([]);
+  const [registrationsStats, setRegistrationsStats] = useState([]);
+  const [loadingRegistrations, setLoadingRegistrations] = useState(false);
+  
+  // ===== РЕГИСТРАЦИЯ НА МЕРОПРИЯТИЕ =====
+  const [registering, setRegistering] = useState(false);
+  const [registrationStatus, setRegistrationStatus] = useState(null);
+  
+  // ===== НАЗНАЧЕНИЕ ТЬЮТОРА =====
   const [showTutorModal, setShowTutorModal] = useState(false);
   const [selectedEventForTutor, setSelectedEventForTutor] = useState(null);
   const [selectedTutor, setSelectedTutor] = useState('');
@@ -43,13 +55,12 @@ export default function Events() {
     capacity: 20,
     club_id: '',
     form_url: '',
-    is_global: false
+    is_global: false,
+    registration_deadline: '',
+    max_participants: 0
   });
   const navigate = useNavigate();
 
-  // ============================================================
-  // ОПРЕДЕЛЯЕМ РОЛИ
-  // ============================================================
   const isClubCoordinator = profile?.role === 'club_coordinator';
   const isMovementCoordinator = profile?.role === 'movement_coordinator';
   const isAdmin = profile?.role === 'admin';
@@ -57,7 +68,6 @@ export default function Events() {
   const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
   const canAssignTutor = ['admin', 'movement_coordinator', 'club_coordinator'].includes(profile?.role);
 
-  // Получаем ID клуба координатора
   const getCoordinatorClubId = () => {
     if (!isClubCoordinator) return null;
     let clubId = profile?.club_id;
@@ -114,9 +124,6 @@ export default function Events() {
 
       setClubs(clubsData || []);
       
-      // ============================================================
-      // ФИЛЬТРАЦИЯ СОБЫТИЙ ДЛЯ КООРДИНАТОРА КЮДА
-      // ============================================================
       let filteredEvents = eventsData || [];
       
       if (userData.role === 'club_coordinator') {
@@ -138,10 +145,6 @@ export default function Events() {
         }
 
         if (coordinatorClubId) {
-          // Координатор видит:
-          // 1. Внутренние мероприятия своего клуба
-          // 2. Выездные (outgoing) — все
-          // 3. Глобальные (global_forum) — все
           filteredEvents = eventsData.filter(e => {
             if (e.type === 'internal' || e.is_club_event) {
               return e.club_id === coordinatorClubId;
@@ -158,8 +161,6 @@ export default function Events() {
 
       setAllEvents(filteredEvents);
       
-      // ✅ НЕ ЗАГРУЖАЕМ users — у координатора нет прав!
-      // Загружаем тьюторов только если есть права
       if (['admin', 'movement_coordinator'].includes(userData.role)) {
         try {
           const usersData = await api.getUsers().catch(() => []);
@@ -176,6 +177,146 @@ export default function Events() {
       console.error('Ошибка:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ============================================================
+  // ЗАГРУЗКА РЕГИСТРАЦИЙ НА МЕРОПРИЯТИЕ
+  // ============================================================
+  const loadRegistrations = async (eventId) => {
+    try {
+      setLoadingRegistrations(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `https://dod-backend.relaxdev.ru/api/events/${eventId}/registrations`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      const data = await response.json();
+      setRegistrations(data.registrations || []);
+      setRegistrationsStats(data.stats || []);
+    } catch (err) {
+      console.error('Ошибка загрузки регистраций:', err);
+    } finally {
+      setLoadingRegistrations(false);
+    }
+  };
+
+  // ============================================================
+  // ПРОВЕРКА СТАТУСА РЕГИСТРАЦИИ
+  // ============================================================
+  const checkRegistrationStatus = async (eventId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `https://dod-backend.relaxdev.ru/api/events/${eventId}/registration-status`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      const data = await response.json();
+      setRegistrationStatus(data);
+    } catch (err) {
+      console.error('Ошибка проверки статуса:', err);
+    }
+  };
+
+  // ============================================================
+  // ЗАПИСЬ НА МЕРОПРИЯТИЕ
+  // ============================================================
+  const handleRegister = async (eventId) => {
+    setRegistering(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        'https://dod-backend.relaxdev.ru/api/event-registrations',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ event_id: eventId })
+        }
+      );
+      const data = await response.json();
+      if (data.error) {
+        setMessage('❌ ' + data.error);
+        setMessageType('error');
+      } else {
+        setMessage('✅ Вы успешно записались на мероприятие!');
+        setMessageType('success');
+        await checkRegistrationStatus(eventId);
+        await loadData();
+      }
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  // ============================================================
+  // ОТПИСКА ОТ МЕРОПРИЯТИЯ
+  // ============================================================
+  const handleUnregister = async (registrationId) => {
+    if (!confirm('Отписаться от мероприятия?')) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `https://dod-backend.relaxdev.ru/api/event-registrations/${registrationId}`,
+        {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+      const data = await response.json();
+      if (data.error) {
+        setMessage('❌ ' + data.error);
+        setMessageType('error');
+      } else {
+        setMessage('✅ Вы отписались от мероприятия');
+        setMessageType('success');
+        setRegistrationStatus(null);
+        await loadData();
+      }
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
+
+  // ============================================================
+  // ИЗМЕНЕНИЕ СТАТУСА ЗАЯВКИ (ДЛЯ КООРДИНАТОРА)
+  // ============================================================
+  const handleRegistrationStatus = async (registrationId, status) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `https://dod-backend.relaxdev.ru/api/event-registrations/${registrationId}/status`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status })
+        }
+      );
+      const data = await response.json();
+      if (data.error) {
+        setMessage('❌ ' + data.error);
+        setMessageType('error');
+      } else {
+        setMessage(`✅ Заявка ${status === 'confirmed' ? 'подтверждена' : 'отклонена'}`);
+        setMessageType('success');
+        await loadRegistrations(selectedEventForRegistrations?.id);
+        await loadData();
+      }
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
     }
   };
 
@@ -250,7 +391,7 @@ export default function Events() {
   const filteredEvents = getFilteredEvents();
 
   // ============================================================
-  // ПРОВЕРКА ПРАВ НА РЕДАКТИРОВАНИЕ/УДАЛЕНИЕ
+  // ПРОВЕРКА ПРАВ
   // ============================================================
   const canEdit = (event) => {
     const role = profile?.role;
@@ -266,6 +407,15 @@ export default function Events() {
     const role = profile?.role;
     if (role === 'admin') return true;
     if (role === 'movement_coordinator') return true;
+    return false;
+  };
+
+  const canViewRegistrations = (event) => {
+    const role = profile?.role;
+    if (['admin', 'movement_coordinator'].includes(role)) return true;
+    if (role === 'club_coordinator') {
+      return event.club_id === coordinatorClubId;
+    }
     return false;
   };
 
@@ -291,10 +441,11 @@ export default function Events() {
         club_id: form.club_id || null,
         form_url: form.form_url || null,
         is_global: form.is_global || false,
-        is_club_event: !!form.club_id
+        is_club_event: !!form.club_id,
+        registration_deadline: form.registration_deadline || null,
+        max_participants: parseInt(form.max_participants) || 0
       };
 
-      // Для координатора КЮДа — автоматически подставляем его клуб
       if (isClubCoordinator && coordinatorClubId) {
         if (form.type === 'internal' || !form.is_global) {
           eventData.club_id = coordinatorClubId;
@@ -363,7 +514,9 @@ export default function Events() {
       capacity: 20,
       club_id: '',
       form_url: '',
-      is_global: false
+      is_global: false,
+      registration_deadline: '',
+      max_participants: 0
     });
     setShowForm(false);
   };
@@ -382,7 +535,9 @@ export default function Events() {
       capacity: event.capacity || 20,
       club_id: event.club_id || '',
       form_url: event.form_url || '',
-      is_global: event.is_global || false
+      is_global: event.is_global || false,
+      registration_deadline: event.registration_deadline || '',
+      max_participants: event.max_participants || 0
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -653,6 +808,36 @@ export default function Events() {
                   <input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} min="1" />
                 </div>
               </div>
+
+              {/* ============================================================
+                 НОВЫЕ ПОЛЯ: ДЕДЛАЙН И МАКСИМУМ УЧАСТНИКОВ
+                 ============================================================ */}
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Дедлайн регистрации</label>
+                  <input 
+                    type="datetime-local" 
+                    value={form.registration_deadline} 
+                    onChange={(e) => setForm({ ...form, registration_deadline: e.target.value })} 
+                  />
+                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                    После этой даты запись будет закрыта
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Максимум участников</label>
+                  <input 
+                    type="number" 
+                    value={form.max_participants} 
+                    onChange={(e) => setForm({ ...form, max_participants: e.target.value })} 
+                    min="0"
+                    placeholder="0 = без ограничений"
+                  />
+                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                    0 = без ограничений
+                  </div>
+                </div>
+              </div>
               
               <div className="form-group">
                 <label>Ссылка на форму</label>
@@ -682,6 +867,23 @@ export default function Events() {
                 const userCanEdit = canEdit(event);
                 const userCanDelete = canDelete(event);
                 const canAssignTutorLocal = ['admin', 'movement_coordinator', 'club_coordinator'].includes(profile?.role);
+                const canViewRegs = canViewRegistrations(event);
+                const isParticipant = profile?.role === 'participant';
+                
+                // Проверяем статус регистрации для участника
+                const userRegistration = event.user_registration || null;
+                const isRegistered = userRegistration?.status === 'pending' || userRegistration?.status === 'confirmed';
+                const isPending = userRegistration?.status === 'pending';
+                const isConfirmed = userRegistration?.status === 'confirmed';
+                const isRejected = userRegistration?.status === 'rejected';
+                
+                // Проверяем дедлайн
+                const isDeadlinePassed = event.registration_deadline 
+                  ? new Date() > new Date(event.registration_deadline) 
+                  : false;
+                
+                // Проверяем заполненность
+                const isFull = event.max_participants > 0 && event.registrations_count >= event.max_participants;
                 
                 return (
                   <div
@@ -722,19 +924,95 @@ export default function Events() {
                           ❌ Отклонено
                         </span>
                       )}
+                      {isFull && (
+                        <span className="tag" style={{ marginLeft: '8px', background: '#FCEBEC', color: '#B3262E', fontSize: '10px' }}>
+                          ⚠️ Мест нет
+                        </span>
+                      )}
+                      {isDeadlinePassed && (
+                        <span className="tag" style={{ marginLeft: '8px', background: '#F4F6F9', color: '#667085', fontSize: '10px' }}>
+                          ⛔ Регистрация закрыта
+                        </span>
+                      )}
                     </div>
                     <div className="subtitle">
                       📅 {event.event_date ? new Date(event.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
                       {event.location && ` 📍 ${event.location}`}
                       {event.club_name && ` 🏫 ${event.club_name}`}
+                      {event.max_participants > 0 && ` 👥 ${event.registrations_count || 0}/${event.max_participants}`}
+                      {event.registration_deadline && (
+                        ` ⏰ Дедлайн: ${new Date(event.registration_deadline).toLocaleDateString('ru-RU')}`
+                      )}
                     </div>
                     {event.description && <div className="meta">{event.description}</div>}
+                    
+                    {/* ============================================================
+                       БЛОК РЕГИСТРАЦИИ ДЛЯ УЧАСТНИКА
+                       ============================================================ */}
+                    {isParticipant && event.moderation_status === 'approved' && (
+                      <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {isRejected && (
+                          <span style={{ color: '#B3262E', fontSize: '13px', fontWeight: '500' }}>
+                            ❌ Ваша заявка отклонена
+                          </span>
+                        )}
+                        {isPending && (
+                          <span style={{ color: '#C9A227', fontSize: '13px', fontWeight: '500' }}>
+                            ⏳ Заявка на рассмотрении
+                          </span>
+                        )}
+                        {isConfirmed && (
+                          <span style={{ color: '#16845B', fontSize: '13px', fontWeight: '500' }}>
+                            ✅ Вы записаны
+                            {userRegistration?.confirmed_at && (
+                              <span style={{ fontSize: '11px', color: '#98A2B3', marginLeft: '8px' }}>
+                                (с {new Date(userRegistration.confirmed_at).toLocaleDateString('ru-RU')})
+                              </span>
+                            )}
+                          </span>
+                        )}
+                        {!isRegistered && !isDeadlinePassed && !isFull && (
+                          <button
+                            className="btn-success btn-sm"
+                            onClick={() => handleRegister(event.id)}
+                            disabled={registering}
+                          >
+                            {registering ? '⏳' : '📝 Записаться'}
+                          </button>
+                        )}
+                        {isPending && (
+                          <button
+                            className="btn-danger btn-sm"
+                            onClick={() => handleUnregister(userRegistration.id)}
+                          >
+                            ❌ Отменить заявку
+                          </button>
+                        )}
+                        {isConfirmed && (
+                          <button
+                            className="btn-secondary btn-sm"
+                            onClick={() => handleUnregister(userRegistration.id)}
+                          >
+                            ❌ Отписаться
+                          </button>
+                        )}
+                        {isDeadlinePassed && !isRegistered && (
+                          <span style={{ color: '#98A2B3', fontSize: '13px' }}>
+                            ⛔ Регистрация закрыта
+                          </span>
+                        )}
+                        {isFull && !isRegistered && (
+                          <span style={{ color: '#B3262E', fontSize: '13px' }}>
+                            ⚠️ Все места заняты
+                          </span>
+                        )}
+                      </div>
+                    )}
                     
                     <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       {userCanEdit && (
                         <button
-                          className="btn-secondary"
-                          style={{ padding: '4px 12px', fontSize: '12px' }}
+                          className="btn-secondary btn-sm"
                           onClick={() => handleEdit(event)}
                         >
                           ✏️ Редактировать
@@ -742,8 +1020,7 @@ export default function Events() {
                       )}
                       {userCanDelete && (
                         <button
-                          className="btn-danger"
-                          style={{ padding: '4px 12px', fontSize: '12px' }}
+                          className="btn-danger btn-sm"
                           onClick={() => handleDelete(event.id)}
                         >
                           🗑️ Удалить
@@ -752,8 +1029,7 @@ export default function Events() {
                       {canModerate && event.moderation_status === 'pending' && (
                         <>
                           <button
-                            className="btn-success"
-                            style={{ padding: '4px 12px', fontSize: '12px' }}
+                            className="btn-success btn-sm"
                             onClick={() => {
                               setSelectedEvent(event);
                               setShowModerationModal(true);
@@ -762,8 +1038,7 @@ export default function Events() {
                             ✅ Одобрить
                           </button>
                           <button
-                            className="btn-danger"
-                            style={{ padding: '4px 12px', fontSize: '12px' }}
+                            className="btn-danger btn-sm"
                             onClick={() => {
                               setSelectedEvent(event);
                               setShowModerationModal(true);
@@ -773,10 +1048,23 @@ export default function Events() {
                           </button>
                         </>
                       )}
+                      {canViewRegs && event.moderation_status === 'approved' && (
+                        <button
+                          className="btn-primary btn-sm"
+                          style={{ background: '#6B46C1', color: 'white' }}
+                          onClick={async () => {
+                            setSelectedEventForRegistrations(event);
+                            await loadRegistrations(event.id);
+                            setShowRegistrationsModal(true);
+                          }}
+                        >
+                          👥 Участники ({event.registrations_count || 0})
+                        </button>
+                      )}
                       {canAssignTutorLocal && (
                         <button
-                          className="btn-primary"
-                          style={{ padding: '4px 12px', fontSize: '12px', background: '#6B46C1', color: 'white' }}
+                          className="btn-primary btn-sm"
+                          style={{ background: '#6B46C1', color: 'white' }}
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedEventForTutor(event);
@@ -797,49 +1085,223 @@ export default function Events() {
         </div>
       </div>
 
-      {/* МОДАЛЬНОЕ ОКНО МОДЕРАЦИИ */}
-      {showModerationModal && selectedEvent && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(11, 31, 58, 0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={() => setShowModerationModal(false)}>
-          <div className="card" style={{ maxWidth: '500px', width: '100%', padding: '32px' }} onClick={(e) => e.stopPropagation()}>
-            <h3>📋 Модерация</h3>
-            <p><strong>{selectedEvent.title}</strong><br />🏫 {selectedEvent.club_name || 'Без клуба'}</p>
-            <div className="form-group"><label>Комментарий</label><textarea rows="3" value={moderationComment} onChange={(e) => setModerationComment(e.target.value)} placeholder="Причина..." /></div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button className="btn-success" style={{ flex: 1 }} onClick={() => handleModerate(selectedEvent.id, 'approved')}>✅ Одобрить</button>
-              <button className="btn-danger" style={{ flex: 1 }} onClick={() => handleModerate(selectedEvent.id, 'rejected')}>❌ Отклонить</button>
+      {/* ============================================================
+         МОДАЛЬНОЕ ОКНО: СПИСОК УЧАСТНИКОВ
+         ============================================================ */}
+      {showRegistrationsModal && selectedEventForRegistrations && (
+        <div className="modal-overlay" onClick={() => setShowRegistrationsModal(false)}>
+          <div className="modal modal-large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                👥 Участники мероприятия
+              </h3>
+              <button className="modal-close" onClick={() => setShowRegistrationsModal(false)}>✕</button>
             </div>
-            <button className="btn-secondary" style={{ width: '100%', marginTop: '12px' }} onClick={() => setShowModerationModal(false)}>Отмена</button>
+
+            <p style={{ color: '#667085', marginBottom: '12px' }}>
+              <strong>{selectedEventForRegistrations.title}</strong>
+              {selectedEventForRegistrations.max_participants > 0 && (
+                <span style={{ marginLeft: '12px' }}>
+                  👥 {selectedEventForRegistrations.registrations_count || 0}/{selectedEventForRegistrations.max_participants}
+                </span>
+              )}
+            </p>
+
+            {loadingRegistrations ? (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <div className="spinner" style={{ margin: '0 auto' }} />
+              </div>
+            ) : registrations.length === 0 ? (
+              <div className="empty-state">
+                <div className="icon">👀</div>
+                <p>Пока нет зарегистрированных участников</p>
+              </div>
+            ) : (
+              <>
+                {/* Статистика */}
+                {registrationsStats.length > 0 && (
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                    {registrationsStats.map((stat) => (
+                      <span key={stat.status} className="tag" style={{
+                        background: stat.status === 'confirmed' ? '#E8F5EF' :
+                                  stat.status === 'pending' ? '#FBF4DC' :
+                                  stat.status === 'rejected' ? '#FCEBEC' : '#F4F6F9',
+                        color: stat.status === 'confirmed' ? '#16845B' :
+                               stat.status === 'pending' ? '#8A6A00' :
+                               stat.status === 'rejected' ? '#B3262E' : '#667085',
+                        padding: '4px 14px',
+                        fontSize: '13px'
+                      }}>
+                        {stat.status === 'confirmed' ? '✅ Подтверждено' :
+                         stat.status === 'pending' ? '⏳ Ожидает' :
+                         stat.status === 'rejected' ? '❌ Отклонено' : stat.status}: {stat.count}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Таблица участников */}
+                <div className="table-wrapper">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Участник</th>
+                        <th>Контакт</th>
+                        <th>Статус</th>
+                        <th>Дата заявки</th>
+                        <th>Действия</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {registrations.map((reg) => (
+                        <tr key={reg.id}>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}>
+                                {reg.full_name?.charAt(0) || '?'}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: '500', fontSize: '14px' }}>{reg.full_name}</div>
+                                <div style={{ fontSize: '12px', color: '#98A2B3' }}>
+                                  {reg.school || 'Школа не указана'} • {reg.class_name || '—'}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ fontSize: '13px', color: '#667085' }}>
+                              {reg.email}
+                              {reg.phone && <div style={{ fontSize: '12px', color: '#98A2B3' }}>📞 {reg.phone}</div>}
+                            </div>
+                          </td>
+                          <td>
+                            <span className="tag" style={{
+                              background: reg.status === 'confirmed' ? '#E8F5EF' :
+                                        reg.status === 'pending' ? '#FBF4DC' :
+                                        reg.status === 'rejected' ? '#FCEBEC' : '#F4F6F9',
+                              color: reg.status === 'confirmed' ? '#16845B' :
+                                     reg.status === 'pending' ? '#8A6A00' :
+                                     reg.status === 'rejected' ? '#B3262E' : '#667085',
+                              padding: '4px 12px',
+                              fontSize: '12px'
+                            }}>
+                              {reg.status === 'confirmed' ? '✅ Подтверждён' :
+                               reg.status === 'pending' ? '⏳ Ожидает' :
+                               reg.status === 'rejected' ? '❌ Отклонён' : reg.status}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: '13px', color: '#98A2B3' }}>
+                            {new Date(reg.registered_at).toLocaleDateString('ru-RU')}
+                            {reg.confirmed_at && (
+                              <div style={{ fontSize: '11px', color: '#16845B' }}>
+                                ✅ {new Date(reg.confirmed_at).toLocaleDateString('ru-RU')}
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            {reg.status === 'pending' && (
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <button
+                                  className="btn-success btn-sm"
+                                  onClick={() => handleRegistrationStatus(reg.id, 'confirmed')}
+                                  style={{ padding: '2px 10px', fontSize: '11px' }}
+                                >
+                                  ✅
+                                </button>
+                                <button
+                                  className="btn-danger btn-sm"
+                                  onClick={() => handleRegistrationStatus(reg.id, 'rejected')}
+                                  style={{ padding: '2px 10px', fontSize: '11px' }}
+                                >
+                                  ❌
+                                </button>
+                              </div>
+                            )}
+                            {reg.status === 'confirmed' && (
+                              <span style={{ color: '#16845B', fontSize: '12px' }}>✅ Подтверждён</span>
+                            )}
+                            {reg.status === 'rejected' && (
+                              <span style={{ color: '#B3262E', fontSize: '12px' }}>❌ Отклонён</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
+              <button className="btn-secondary" onClick={() => setShowRegistrationsModal(false)}>
+                Закрыть
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* МОДАЛЬНОЕ ОКНО: НАЗНАЧЕНИЕ ТЬЮТОРА */}
+      {/* ============================================================
+         МОДАЛЬНОЕ ОКНО МОДЕРАЦИИ
+         ============================================================ */}
+      {showModerationModal && selectedEvent && (
+        <div className="modal-overlay" onClick={() => setShowModerationModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">📋 Модерация</h3>
+              <button className="modal-close" onClick={() => setShowModerationModal(false)}>✕</button>
+            </div>
+
+            <p><strong>{selectedEvent.title}</strong><br />🏫 {selectedEvent.club_name || 'Без клуба'}</p>
+
+            <div className="form-group">
+              <label>Комментарий</label>
+              <textarea
+                rows="3"
+                className="form-control"
+                value={moderationComment}
+                onChange={(e) => setModerationComment(e.target.value)}
+                placeholder="Причина..."
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button className="btn-success" style={{ flex: 1 }} onClick={() => handleModerate(selectedEvent.id, 'approved')}>
+                ✅ Одобрить
+              </button>
+              <button className="btn-danger" style={{ flex: 1 }} onClick={() => handleModerate(selectedEvent.id, 'rejected')}>
+                ❌ Отклонить
+              </button>
+            </div>
+            <button className="btn-secondary" style={{ width: '100%', marginTop: '12px' }} onClick={() => setShowModerationModal(false)}>
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================
+         МОДАЛЬНОЕ ОКНО: НАЗНАЧЕНИЕ ТЬЮТОРА
+         ============================================================ */}
       {showTutorModal && selectedEventForTutor && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(11, 31, 58, 0.5)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '20px'
-          }}
-          onClick={() => setShowTutorModal(false)}
-        >
-          <div
-            className="card"
-            style={{ maxWidth: '500px', width: '100%', padding: '32px' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
-              🧑‍🏫 Назначить тьютора
-            </h3>
+        <div className="modal-overlay" onClick={() => setShowTutorModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">🧑‍🏫 Назначить тьютора</h3>
+              <button className="modal-close" onClick={() => setShowTutorModal(false)}>✕</button>
+            </div>
+
             <p style={{ color: '#667085', marginBottom: '16px' }}>
               Мероприятие: <strong>{selectedEventForTutor.title}</strong>
             </p>
@@ -847,15 +1309,9 @@ export default function Events() {
             <div className="form-group">
               <label>Выберите тьютора *</label>
               <select
+                className="form-control"
                 value={selectedTutor}
                 onChange={(e) => setSelectedTutor(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '1.5px solid #D5DCE7',
-                  borderRadius: '10px',
-                  fontSize: '14px'
-                }}
               >
                 <option value="">— Выберите тьютора —</option>
                 {tutors.map((t) => (
@@ -869,15 +1325,9 @@ export default function Events() {
             <div className="form-group">
               <label>Роль</label>
               <select
+                className="form-control"
                 value={tutorRole}
                 onChange={(e) => setTutorRole(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '1.5px solid #D5DCE7',
-                  borderRadius: '10px',
-                  fontSize: '14px'
-                }}
               >
                 <option value="tutor">📚 Тьютор</option>
                 <option value="lead_tutor">⭐ Старший тьютор</option>
@@ -889,25 +1339,15 @@ export default function Events() {
               <label>Примечание</label>
               <textarea
                 rows="3"
+                className="form-control"
                 value={tutorNotes}
                 onChange={(e) => setTutorNotes(e.target.value)}
                 placeholder="Дополнительная информация..."
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '1.5px solid #D5DCE7',
-                  borderRadius: '10px',
-                  fontSize: '14px'
-                }}
               />
             </div>
 
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                className="btn-success"
-                style={{ flex: 1 }}
-                onClick={handleAssignTutor}
-              >
+              <button className="btn-success" style={{ flex: 1 }} onClick={handleAssignTutor}>
                 ✅ Назначить
               </button>
               <button
@@ -926,6 +1366,18 @@ export default function Events() {
       )}
 
       <style>{`
+        .page-background {
+          min-height: 100vh;
+          background: #F0EDE8;
+        }
+
+        .container-page {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 24px 32px 48px;
+        }
+
+        /* ===== КНОПКИ ===== */
         .btn-gold {
           display: inline-flex;
           align-items: center;
@@ -941,16 +1393,15 @@ export default function Events() {
           font-weight: 600;
           cursor: pointer;
           transition: all 0.3s ease;
-          text-decoration: none;
-          box-shadow: 0 2px 16px rgba(201, 162, 39, 0.25);
+          box-shadow: 0 2px 16px rgba(201,162,39,0.25);
           min-height: 44px;
           min-width: 80px;
         }
         .btn-gold:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
+          box-shadow: 0 8px 32px rgba(201,162,39,0.35);
         }
-        
+
         .btn-success {
           background: #1A7A4C;
           color: white;
@@ -961,19 +1412,18 @@ export default function Events() {
           transform: translateY(-2px);
           box-shadow: 0 8px 32px rgba(26,122,76,0.3);
         }
-        
+
         .btn-secondary {
           background: transparent;
           color: #0A1628;
           border: 1.5px solid #E4DFD8;
-          box-shadow: none;
         }
         .btn-secondary:hover {
           background: #F8F6F2;
           border-color: #C9A227;
           transform: translateY(-2px);
         }
-        
+
         .btn-danger {
           background: #B3262E;
           color: white;
@@ -984,7 +1434,7 @@ export default function Events() {
           transform: translateY(-2px);
           box-shadow: 0 8px 32px rgba(179,38,46,0.3);
         }
-        
+
         .btn-primary {
           background: #6B46C1;
           color: white;
@@ -994,7 +1444,21 @@ export default function Events() {
           background: #5A3AAD;
           transform: translateY(-2px);
         }
-        
+
+        .btn-sm {
+          padding: 6px 14px;
+          font-size: 12px;
+          min-height: 32px;
+          min-width: 60px;
+        }
+
+        .btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          pointer-events: none;
+        }
+
+        /* ===== ФОРМЫ ===== */
         .form-group {
           margin-bottom: 16px;
         }
@@ -1029,7 +1493,7 @@ export default function Events() {
           resize: vertical;
           min-height: 80px;
         }
-        
+
         .grid-2 {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -1040,7 +1504,8 @@ export default function Events() {
           grid-template-columns: repeat(3, 1fr);
           gap: 16px;
         }
-        
+
+        /* ===== КАРТОЧКИ ===== */
         .card {
           background: white;
           border-radius: 12px;
@@ -1049,7 +1514,7 @@ export default function Events() {
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           margin-bottom: 20px;
         }
-        
+
         .list-item {
           padding: 14px 18px;
           border-left: 3px solid #0B1F3A;
@@ -1076,7 +1541,7 @@ export default function Events() {
           color: #98A2B3;
           margin-top: 4px;
         }
-        
+
         .tag {
           display: inline-block;
           padding: 2px 10px;
@@ -1084,7 +1549,8 @@ export default function Events() {
           font-size: 10px;
           font-weight: 500;
         }
-        
+
+        /* ===== СООБЩЕНИЯ ===== */
         .message-success {
           padding: 12px 16px;
           background: #E8F5EF;
@@ -1101,7 +1567,8 @@ export default function Events() {
           margin-bottom: 16px;
           border-left: 4px solid #B3262E;
         }
-        
+
+        /* ===== EMPTY STATE ===== */
         .empty-state {
           text-align: center;
           padding: 40px 20px;
@@ -1115,17 +1582,143 @@ export default function Events() {
           color: #667085;
           font-size: 14px;
         }
-        
-        .page-background {
-          min-height: 100vh;
-          background: #F0EDE8;
+
+        /* ===== МОДАЛЬНОЕ ОКНО ===== */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(10, 22, 40, 0.5);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          padding: 20px;
         }
-        .container-page {
-          max-width: 1200px;
+
+        .modal {
+          background: white;
+          border-radius: 16px;
+          padding: 32px;
+          max-width: 560px;
+          width: 100%;
+          box-shadow: 0 24px 64px rgba(10,22,40,0.2);
+          border: 1px solid #E4DFD8;
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+
+        .modal-large {
+          max-width: 800px;
+        }
+
+        .modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 16px;
+        }
+
+        .modal-title {
+          font-family: 'Playfair Display', serif;
+          font-size: 20px;
+          font-weight: 600;
+          color: #0A1628;
+          margin: 0;
+        }
+
+        .modal-close {
+          background: none;
+          border: none;
+          font-size: 24px;
+          color: #A8A29A;
+          cursor: pointer;
+          transition: color 0.2s ease;
+          padding: 4px 8px;
+        }
+        .modal-close:hover { color: #0A1628; }
+
+        .form-control {
+          width: 100%;
+          padding: 10px 14px;
+          border: 1.5px solid #E4DFD8;
+          border-radius: 8px;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          color: #0A1628;
+          background: white;
+          transition: all 0.3s ease;
+          outline: none;
+          min-height: 44px;
+        }
+        .form-control:focus {
+          border-color: #C9A227;
+          box-shadow: 0 0 0 3px rgba(201,162,39,0.08);
+        }
+
+        /* ===== ТАБЛИЦА ===== */
+        .table-wrapper {
+          overflow-x: auto;
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #E4DFD8;
+        }
+
+        .table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 14px;
+          min-width: 600px;
+        }
+
+        .table thead {
+          background: #F8F6F2;
+          border-bottom: 1px solid #E4DFD8;
+        }
+
+        .table thead th {
+          text-align: left;
+          padding: 12px 16px;
+          font-size: 11px;
+          font-weight: 600;
+          color: #8A8480;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+
+        .table tbody td {
+          padding: 12px 16px;
+          border-bottom: 1px solid #F0EDE8;
+          color: #4D4744;
+        }
+
+        .table tbody tr:hover td {
+          background: #F8F6F2;
+        }
+
+        .table tbody tr:last-child td {
+          border-bottom: none;
+        }
+
+        /* ===== СПИННЕР ===== */
+        .spinner {
+          width: 36px;
+          height: 36px;
+          border: 3px solid #E4DFD8;
+          border-top-color: #C9A227;
+          border-radius: 50%;
+          animation: spin 0.7s linear infinite;
           margin: 0 auto;
-          padding: 24px 32px 48px;
         }
-        
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        /* ===== АДАПТИВНОСТЬ ===== */
         @media (max-width: 768px) {
           .container-page {
             padding: 16px;
@@ -1136,7 +1729,14 @@ export default function Events() {
           .card {
             padding: 16px;
           }
+          .modal {
+            padding: 20px;
+          }
+          .modal-large {
+            max-width: 100%;
+          }
         }
+
         @media (max-width: 480px) {
           .container-page {
             padding: 12px;
@@ -1144,6 +1744,20 @@ export default function Events() {
           .btn-gold {
             width: 100%;
             justify-content: center;
+          }
+          .table {
+            min-width: 480px;
+            font-size: 12px;
+          }
+          .table thead th,
+          .table tbody td {
+            padding: 8px 12px;
+          }
+          .list-item {
+            padding: 12px 14px;
+          }
+          .list-item .title {
+            font-size: 14px;
           }
         }
       `}</style>

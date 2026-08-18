@@ -3,36 +3,75 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import Navigation from '../components/Navigation';
 
 export default function Clubs() {
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
+  const [showAllClubs, setShowAllClubs] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/login');
-          return;
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const user = await api.getMe();
+      setProfile(user);
+
+      const data = await api.getClubs();
+      
+      // ============================================================
+      // ФИЛЬТРАЦИЯ ДЛЯ КООРДИНАТОРА КЮДА
+      // ============================================================
+      if (user.role === 'club_coordinator') {
+        // Ищем клуб координатора
+        let coordinatorClubId = user.club_id;
+        
+        if (!coordinatorClubId) {
+          try {
+            const coordResponse = await fetch(
+              `https://dod-backend.relaxdev.ru/api/club-coordinators?profile_id=${user.id}`,
+              { headers: { 'Authorization': `Bearer ${token}` } }
+            );
+            const coordData = await coordResponse.json();
+            if (coordData && coordData.length > 0) {
+              coordinatorClubId = coordData[0].club_id;
+            }
+          } catch (e) {
+            console.log('Ошибка получения координатора:', e);
+          }
         }
 
-        const user = await api.getMe();
-        setProfile(user);
-
-        const data = await api.getClubs();
+        if (coordinatorClubId) {
+          const userClub = data.find(c => c.id === coordinatorClubId);
+          if (userClub) {
+            setClubs([userClub]); // ✅ ТОЛЬКО СВОЙ КЛУБ
+            console.log('🏫 Координатор КЮДа: показан только свой клуб');
+          } else {
+            setClubs([]);
+          }
+        } else {
+          setClubs([]);
+        }
+      } else {
+        // Админ, координатор движения и другие видят все клубы
         setClubs(data || []);
-      } catch (err) {
-        console.error('Ошибка загрузки клубов:', err);
-      } finally {
-        setLoading(false);
       }
-    };
-
-    loadData();
-  }, [navigate]);
+    } catch (err) {
+      console.error('Ошибка загрузки клубов:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -42,30 +81,71 @@ export default function Clubs() {
     );
   }
 
+  // Для координатора КЮДа показываем специальный заголовок
+  const isClubCoordinator = profile?.role === 'club_coordinator';
+  const title = isClubCoordinator ? 'Мой КЮД' : 'КЮДы';
+  const subtitle = isClubCoordinator 
+    ? 'Информация о вашем клубе юных дипломатов' 
+    : 'Клубы юных дипломатов';
+
   return (
-    <div className="container-page">
-      {clubs.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">🏫</div>
-          <h3>Нет клубов</h3>
-          <p>Клубы юных дипломатов пока не созданы</p>
+    <div className="page-background">
+      {/* ✅ ДОБАВЛЕН Navigation */}
+      <Navigation profile={profile} />
+      
+      <div className="container-page">
+        {/* ✅ ЗАГОЛОВОК БЕЗ ДУБЛИРОВАНИЯ */}
+        <div style={{ marginBottom: '24px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#0B1F3A', margin: 0 }}>
+            🏫 {title}
+          </h1>
+          <p style={{ color: '#667085', margin: '4px 0 0 0' }}>{subtitle}</p>
         </div>
-      ) : (
-        <div className="clubs-grid">
-          {clubs.map((club) => (
-            <Link key={club.id} to={`/club/${club.id}`} className="club-card">
-              <div className="club-card-icon">🏫</div>
-              <h3>{club.name}</h3>
-              <p>{club.city || 'Город не указан'}</p>
-              <div className="club-card-stats">
-                <span>👥 {club.participants_count || 0} участников</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
+
+        {clubs.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">🏫</div>
+            <h3>Нет клубов</h3>
+            <p>Клубы юных дипломатов пока не созданы</p>
+          </div>
+        ) : (
+          <div className="clubs-grid">
+            {clubs.map((club) => (
+              <Link 
+                key={club.id} 
+                to={`/club/${club.id}`} 
+                className="club-card"
+                onClick={(e) => {
+                  // Для координатора КЮДа — только его клуб, так что редирект на детальную страницу
+                  if (isClubCoordinator) {
+                    e.preventDefault();
+                    navigate(`/club/${club.id}`);
+                  }
+                }}
+              >
+                <div className="club-card-icon">🏫</div>
+                <h3>{club.name}</h3>
+                <p>{club.city || 'Город не указан'}</p>
+                <div className="club-card-stats">
+                  <span>👥 {club.participants_count || 0} участников</span>
+                </div>
+                {isClubCoordinator && (
+                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#C9A227' }}>
+                    👑 Ваш КЮД
+                  </div>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
 
       <style>{`
+        .page-background {
+          min-height: 100vh;
+          background: #F0EDE8;
+        }
+
         .container-page {
           max-width: 1200px;
           margin: 0 auto;
@@ -89,6 +169,7 @@ export default function Clubs() {
           color: #0A1628;
           transition: all 0.3s ease;
           text-align: center;
+          cursor: pointer;
         }
 
         .club-card:hover {
@@ -128,7 +209,6 @@ export default function Clubs() {
           background: white;
           border-radius: 12px;
           border: 1px dashed #E4DFD8;
-          grid-column: 1 / -1;
         }
 
         .empty-state-icon {

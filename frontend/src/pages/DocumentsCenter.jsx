@@ -3,726 +3,886 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import Navigation from '../components/Navigation';
 
 export default function DocumentsCenter() {
-  const [profile, setProfile] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingDoc, setEditingDoc] = useState(null);
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState('success');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [clubs, setClubs] = useState([]);
+  const [profile, setProfile] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState(null);
-  const [form, setForm] = useState({
+  const [editingDoc, setEditingDoc] = useState(null);
+  const [formData, setFormData] = useState({
     title: '',
     content: '',
     category: 'general',
     document_type: 'pdf',
     is_public: true,
-    club_id: '',
+    club_id: null,
     tags: []
   });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
   const navigate = useNavigate();
 
+  // ============================================================
+  // ЗАГРУЗКА ДАННЫХ
+  // ============================================================
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const userData = await api.getMe();
-      if (!userData || !userData.id) {
-        navigate('/login');
-        return;
-      }
-
-      const isPresident = userData.is_president || false;
-      if (userData.role === 'participant' || userData.role === 'parent' || isPresident) {
-        navigate('/dashboard');
-        return;
-      }
-
-      setProfile(userData);
-
-      const clubsData = await api.getClubs();
-      setClubs(clubsData || []);
-
-      const token = localStorage.getItem('token');
-      console.log('📥 Загрузка документов...');
-      
-      const response = await fetch('https://dod-backend.relaxdev.ru/api/documents', {
-        headers: {
-          'Authorization': `Bearer ${token}`
+    const loadData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/login');
+          return;
         }
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Ошибка ${response.status}`);
+        const user = await api.getMe();
+        setProfile(user);
+
+        const docs = await api.getDocuments();
+        setDocuments(docs || []);
+      } catch (err) {
+        console.error('Ошибка загрузки документов:', err);
+        setError('Ошибка загрузки документов');
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const data = await response.json();
-      console.log('📥 Загружено документов:', data?.length || 0);
-      setDocuments(data || []);
+    loadData();
+  }, [navigate]);
 
-    } catch (err) {
-      console.error('❌ Ошибка загрузки:', err);
-      setMessage('❌ Ошибка загрузки: ' + err.message);
-      setMessageType('error');
-    } finally {
-      setLoading(false);
+  // ============================================================
+  // ПРОВЕРКА ПРАВ НА РЕДАКТИРОВАНИЕ
+  // ============================================================
+  const canEditDocument = (doc) => {
+    const role = profile?.role;
+    
+    // Администратор может всё
+    if (role === 'admin') return true;
+    
+    // Координатор движения может редактировать только свои документы
+    if (role === 'movement_coordinator') {
+      return doc.created_by === profile?.id;
     }
+    
+    // Координатор КЮДа — может редактировать ТОЛЬКО СВОИ документы
+    if (role === 'club_coordinator') {
+      return doc.created_by === profile?.id;
+    }
+    
+    // Остальные не могут редактировать
+    return false;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage('');
-    setLoading(true);
+  // ============================================================
+  // ПРОВЕРКА ПРАВ НА УДАЛЕНИЕ
+  // ============================================================
+  const canDeleteDocument = (doc) => {
+    const role = profile?.role;
+    
+    // Администратор может всё
+    if (role === 'admin') return true;
+    
+    // Координатор движения может удалять только свои документы
+    if (role === 'movement_coordinator') {
+      return doc.created_by === profile?.id;
+    }
+    
+    // Координатор КЮДа — может удалять ТОЛЬКО СВОИ документы
+    if (role === 'club_coordinator') {
+      return doc.created_by === profile?.id;
+    }
+    
+    // Остальные не могут удалять
+    return false;
+  };
+
+  // ============================================================
+  // СОЗДАНИЕ ДОКУМЕНТА
+  // ============================================================
+  const handleCreate = async () => {
+    if (!formData.title.trim()) {
+      setError('Название документа обязательно');
+      return;
+    }
 
     try {
-      if (!form.title.trim()) {
-        setMessage('❌ Заголовок обязателен');
-        setMessageType('error');
-        setLoading(false);
-        return;
+      // Для координатора КЮДа автоматически подставляем его club_id
+      if (profile?.role === 'club_coordinator' && profile?.club_id) {
+        formData.club_id = profile.club_id;
       }
 
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Нет авторизации');
-      }
-
-      const data = {
-        title: form.title.trim(),
-        content: form.content || '',
-        category: form.category || 'general',
-        document_type: form.document_type || 'pdf',
-        is_public: form.is_public !== undefined ? form.is_public : true,
-        club_id: form.club_id || null,
-        tags: form.tags || []
-      };
-
-      console.log('📤 Отправка документа:', { 
-        title: data.title, 
-        category: data.category,
-        is_public: data.is_public,
-        club_id: data.club_id
+      const doc = await api.createDocument(formData);
+      setDocuments([doc, ...documents]);
+      setShowModal(false);
+      setFormData({
+        title: '',
+        content: '',
+        category: 'general',
+        document_type: 'pdf',
+        is_public: true,
+        club_id: null,
+        tags: []
       });
-
-      let response;
-      let result;
-
-      if (editingDoc) {
-        response = await fetch(`https://dod-backend.relaxdev.ru/api/documents/${editingDoc.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(data)
-        });
-        result = await response.json();
-        console.log('📥 Ответ сервера (PUT):', result);
-      } else {
-        response = await fetch('https://dod-backend.relaxdev.ru/api/documents', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(data)
-        });
-        result = await response.json();
-        console.log('📥 Ответ сервера (POST):', result);
-      }
-
-      if (!response.ok) {
-        throw new Error(result.error || result.detail || 'Ошибка сохранения документа');
-      }
-
-      setMessage(editingDoc ? '✅ Документ обновлён!' : '✅ Документ создан!');
-      setMessageType('success');
-      resetForm();
-      loadData();
-      setTimeout(() => setMessage(''), 3000);
+      setSuccess('Документ создан');
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка: ' + err.message);
-      setMessageType('error');
-    } finally {
-      setLoading(false);
+      console.error('Ошибка создания:', err);
+      setError('Ошибка создания документа');
     }
   };
 
-  const resetForm = () => {
-    setForm({
-      title: '',
-      content: '',
-      category: 'general',
-      document_type: 'pdf',
-      is_public: true,
-      club_id: '',
-      tags: []
-    });
-    setEditingDoc(null);
-    setShowForm(false);
-  };
-
+  // ============================================================
+  // РЕДАКТИРОВАНИЕ ДОКУМЕНТА
+  // ============================================================
   const handleEdit = (doc) => {
+    // Проверка прав
+    if (!canEditDocument(doc)) {
+      setError('У вас нет прав на редактирование этого документа');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
     setEditingDoc(doc);
-    setForm({
+    setFormData({
       title: doc.title || '',
       content: doc.content || '',
       category: doc.category || 'general',
       document_type: doc.document_type || 'pdf',
       is_public: doc.is_public !== undefined ? doc.is_public : true,
-      club_id: doc.club_id || '',
+      club_id: doc.club_id || null,
       tags: doc.tags || []
     });
-    setShowForm(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleDelete = async (id) => {
-    if (!confirm('Удалить документ?')) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`https://dod-backend.relaxdev.ru/api/documents/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Ошибка удаления');
-      }
-
-      setMessage('✅ Документ удалён');
-      setMessageType('success');
-      loadData();
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
-      console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка: ' + err.message);
-      setMessageType('error');
-    }
-  };
-
-  const handleOpenModal = (doc) => {
-    setSelectedDocument(doc);
     setShowModal(true);
-    // Отметка о прочтении
-    markAsRead(doc.id);
   };
 
-  const markAsRead = async (docId) => {
+  // ============================================================
+  // СОХРАНЕНИЕ ИЗМЕНЕНИЙ
+  // ============================================================
+  const handleUpdate = async () => {
+    if (!formData.title.trim()) {
+      setError('Название документа обязательно');
+      return;
+    }
+
     try {
-      const token = localStorage.getItem('token');
-      await fetch(`https://dod-backend.relaxdev.ru/api/documents/${docId}/read`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const updated = await api.updateDocument(editingDoc.id, formData);
+      setDocuments(documents.map(d => d.id === updated.id ? updated : d));
+      setShowModal(false);
+      setEditingDoc(null);
+      setFormData({
+        title: '',
+        content: '',
+        category: 'general',
+        document_type: 'pdf',
+        is_public: true,
+        club_id: null,
+        tags: []
       });
+      setSuccess('Документ обновлён');
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      console.error('Ошибка отметки о прочтении:', err);
+      console.error('Ошибка обновления:', err);
+      setError('Ошибка обновления документа');
     }
   };
 
-  const categories = [
-    { id: 'all', label: '📄 Все' },
-    { id: 'general', label: '📄 Общие' },
-    { id: 'regulations', label: '📋 Регламенты' },
-    { id: 'instructions', label: '📖 Инструкции' },
-    { id: 'templates', label: '📝 Шаблоны' },
-    { id: 'reports', label: '📊 Отчёты' }
-  ];
-
-  const canManage = profile && ['admin', 'movement_coordinator', 'club_coordinator'].includes(profile.role);
-
-  const filteredDocuments = documents.filter(doc => {
-    if (selectedCategory !== 'all' && doc.category !== selectedCategory) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return doc.title?.toLowerCase().includes(q) ||
-             doc.content?.toLowerCase().includes(q) ||
-             doc.tags?.some(t => t.toLowerCase().includes(q));
+  // ============================================================
+  // УДАЛЕНИЕ ДОКУМЕНТА
+  // ============================================================
+  const handleDelete = async (doc) => {
+    // Проверка прав
+    if (!canDeleteDocument(doc)) {
+      setError('У вас нет прав на удаление этого документа');
+      setTimeout(() => setError(''), 3000);
+      return;
     }
-    return true;
-  });
+
+    if (!window.confirm(`Удалить документ «${doc.title}»?`)) return;
+
+    try {
+      await api.deleteDocument(doc.id);
+      setDocuments(documents.filter(d => d.id !== doc.id));
+      setSuccess('Документ удалён');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      console.error('Ошибка удаления:', err);
+      setError('Ошибка удаления документа');
+    }
+  };
+
+  // ============================================================
+  // ОТОБРАЖЕНИЕ СТАТУСА ДОКУМЕНТА
+  // ============================================================
+  const getDocumentStatus = (doc) => {
+    if (doc.is_public) {
+      return <span className="badge badge-success">Публичный</span>;
+    }
+    return <span className="badge badge-info">Приватный</span>;
+  };
+
+  // ============================================================
+  // ФОРМАТИРОВАНИЕ ДАТЫ
+  // ============================================================
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  // ============================================================
+  // ЗАКРЫТИЕ МОДАЛЬНОГО ОКНА
+  // ============================================================
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingDoc(null);
+    setError('');
+    setFormData({
+      title: '',
+      content: '',
+      category: 'general',
+      document_type: 'pdf',
+      is_public: true,
+      club_id: null,
+      tags: []
+    });
+  };
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F5F6F8' }}>
         <div className="spinner" />
       </div>
     );
   }
 
+  const canCreate = ['admin', 'movement_coordinator', 'club_coordinator'].includes(profile?.role);
+
   return (
-    <div className="page-background">
-      <Navigation profile={profile} />
-      <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📁</span>
+    <div className="container-page">
+      {/* ============================================================
+      ЗАГОЛОВОК
+      ============================================================ */}
+      <div className="page-header">
+        <div className="page-header-left">
+          <div className="page-header-icon">📁</div>
           <div>
             <h1>Центр документов</h1>
-            <p>Централизованное хранилище документов движения</p>
+            <p>Управление документами и материалами</p>
           </div>
-          {canManage && (
-            <button
-              className="btn-primary"
-              style={{ marginLeft: 'auto' }}
-              onClick={() => {
-                resetForm();
-                setShowForm(!showForm);
-              }}
-            >
-              {showForm ? '✖ Закрыть' : '➕ Добавить документ'}
+        </div>
+        {canCreate && (
+          <div className="page-header-actions">
+            <button className="btn btn-gold" onClick={() => {
+              setEditingDoc(null);
+              setFormData({
+                title: '',
+                content: '',
+                category: 'general',
+                document_type: 'pdf',
+                is_public: true,
+                club_id: profile?.club_id || null,
+                tags: []
+              });
+              setShowModal(true);
+            }}>
+              + Создать документ
             </button>
-          )}
-        </div>
-
-        {message && (
-          <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
-            {message}
           </div>
         )}
-
-        {showForm && canManage && (
-          <div className="card" style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-              {editingDoc ? '✏️ Редактировать документ' : '📝 Добавить документ'}
-            </h3>
-            <form onSubmit={handleSubmit}>
-              <div className="grid-2">
-                <div className="form-group">
-                  <label>Заголовок *</label>
-                  <input
-                    type="text"
-                    value={form.title}
-                    onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    required
-                    placeholder="Название документа"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Категория</label>
-                  <select
-                    value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  >
-                    <option value="general">📄 Общие</option>
-                    <option value="regulations">📋 Регламенты</option>
-                    <option value="instructions">📖 Инструкции</option>
-                    <option value="templates">📝 Шаблоны</option>
-                    <option value="reports">📊 Отчёты</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Тип документа</label>
-                  <select
-                    value={form.document_type}
-                    onChange={(e) => setForm({ ...form, document_type: e.target.value })}
-                  >
-                    <option value="pdf">📄 PDF</option>
-                    <option value="docx">📝 DOCX</option>
-                    <option value="xlsx">📊 XLSX</option>
-                    <option value="link">🔗 Ссылка</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Клуб (если для конкретного)</label>
-                  <select
-                    value={form.club_id}
-                    onChange={(e) => setForm({ ...form, club_id: e.target.value })}
-                  >
-                    <option value="">Для всех клубов</option>
-                    {clubs.map((club) => (
-                      <option key={club.id} value={club.id}>{club.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label>Содержание</label>
-                  <textarea
-                    rows="6"
-                    value={form.content}
-                    onChange={(e) => setForm({ ...form, content: e.target.value })}
-                    placeholder="Текст документа или ссылка..."
-                  />
-                </div>
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label>Теги (через запятую)</label>
-                  <input
-                    type="text"
-                    value={form.tags.join(', ')}
-                    onChange={(e) => setForm({
-                      ...form,
-                      tags: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
-                    })}
-                    placeholder="важный, шаблон, инструкция"
-                  />
-                </div>
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={form.is_public}
-                      onChange={(e) => setForm({ ...form, is_public: e.target.checked })}
-                      style={{ width: '18px', height: '18px' }}
-                    />
-                    <span style={{ fontWeight: '500', color: '#0B1F3A' }}>
-                      🌍 Доступен для всех
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Сохранение...' : editingDoc ? '💾 Обновить' : '✅ Добавить'}
-                </button>
-                <button type="button" className="btn-secondary" onClick={resetForm}>
-                  ❌ Отмена
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* ФИЛЬТРЫ */}
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          marginBottom: '20px',
-          flexWrap: 'wrap',
-          alignItems: 'center'
-        }}>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                className={selectedCategory === cat.id ? 'btn-primary' : 'btn-secondary'}
-                style={{ padding: '6px 16px', fontSize: '12px' }}
-                onClick={() => setSelectedCategory(cat.id)}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="🔍 Поиск по документам..."
-              style={{
-                width: '100%',
-                padding: '8px 14px',
-                border: '1.5px solid #D5DCE7',
-                borderRadius: '10px',
-                fontSize: '13px',
-                outline: 'none'
-              }}
-            />
-          </div>
-        </div>
-
-        {/* СПИСОК ДОКУМЕНТОВ */}
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
-              📋 Все документы
-            </h3>
-            <span style={{ fontSize: '13px', color: '#667085' }}>
-              {filteredDocuments.length} документов
-            </span>
-          </div>
-
-          {filteredDocuments.length === 0 ? (
-            <div className="empty-state">
-              <div className="icon">📁</div>
-              <p>Документов пока нет</p>
-              {canManage && (
-                <p style={{ fontSize: '13px', color: '#98A2B3' }}>
-                  Нажмите <strong>"Добавить документ"</strong> чтобы создать первый документ
-                </p>
-              )}
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {filteredDocuments.map((doc) => {
-                const category = categories.find(c => c.id === doc.category);
-                const canEdit = canManage && (profile?.role === 'admin' || 
-                              profile?.role === 'movement_coordinator' || 
-                              doc.created_by === profile?.id);
-                const canDelete = profile?.role === 'admin' || profile?.role === 'movement_coordinator';
-                
-                return (
-                  <div
-                    key={doc.id}
-                    className="list-item"
-                    style={{ 
-                      borderLeftColor: doc.is_public ? '#174A7E' : '#C9A227',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onClick={() => handleOpenModal(doc)}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#F8FAFC';
-                      e.currentTarget.style.transform = 'translateX(4px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.transform = 'translateX(0)';
-                    }}
-                  >
-                    <div className="title">
-                      {doc.title}
-                      <span className="tag tag-blue" style={{ marginLeft: '8px', fontSize: '10px' }}>
-                        {category?.label || doc.category}
-                      </span>
-                      {doc.is_public && (
-                        <span className="tag" style={{ marginLeft: '8px', background: '#EDE7F6', color: '#6B46C1', fontSize: '10px' }}>
-                          🌍 Общий
-                        </span>
-                      )}
-                      {doc.club_name && (
-                        <span className="tag" style={{ marginLeft: '8px', background: '#EAF2FA', color: '#174A7E', fontSize: '10px' }}>
-                          🏫 {doc.club_name}
-                        </span>
-                      )}
-                    </div>
-                    <div className="subtitle">
-                      📄 {doc.document_type}
-                      {doc.created_by_name && ` • 👤 ${doc.created_by_name}`}
-                      {doc.created_at && ` • 📅 ${new Date(doc.created_at).toLocaleDateString('ru-RU')}`}
-                      {doc.tags && doc.tags.length > 0 && ` • 🏷️ ${doc.tags.join(', ')}`}
-                    </div>
-                    {doc.content && (
-                      <div className="meta">
-                        {doc.content.length > 150 ? doc.content.substring(0, 150) + '...' : doc.content}
-                      </div>
-                    )}
-                    <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <button
-                        className="btn-primary"
-                        style={{ padding: '4px 12px', fontSize: '12px' }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenModal(doc);
-                        }}
-                      >
-                        👁️ Открыть
-                      </button>
-                      {canEdit && (
-                        <button
-                          className="btn-secondary"
-                          style={{ padding: '4px 12px', fontSize: '12px' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(doc);
-                          }}
-                        >
-                          ✏️ Редактировать
-                        </button>
-                      )}
-                      {canDelete && (
-                        <button
-                          className="btn-danger"
-                          style={{ padding: '4px 12px', fontSize: '12px' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(doc.id);
-                          }}
-                        >
-                          🗑️ Удалить
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* ===== МОДАЛЬНОЕ ОКНО ПРОСМОТРА ДОКУМЕНТА ===== */}
-      {showModal && selectedDocument && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(11, 31, 58, 0.5)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '20px'
-          }}
-          onClick={() => setShowModal(false)}
-        >
-          <div
-            className="card"
-            style={{
-              maxWidth: '700px',
-              width: '100%',
-              padding: '32px',
-              maxHeight: '80vh',
-              overflow: 'auto',
-              position: 'relative',
-              animation: 'modalSlideIn 0.3s ease'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setShowModal(false)}
-              style={{
-                position: 'absolute',
-                top: '12px',
-                right: '16px',
-                background: 'none',
-                border: 'none',
-                fontSize: '28px',
-                color: '#98A2B3',
-                cursor: 'pointer',
-                transition: 'color 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.target.style.color = '#0B1F3A'}
-              onMouseLeave={(e) => e.target.style.color = '#98A2B3'}
-            >
-              ✕
+      {/* ============================================================
+      СООБЩЕНИЯ
+      ============================================================ */}
+      {error && (
+        <div className="message message-error">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="message message-success">
+          {success}
+        </div>
+      )}
+
+      {/* ============================================================
+      ФИЛЬТРЫ ПО КАТЕГОРИЯМ
+      ============================================================ */}
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
+        <button className="btn btn-primary btn-sm">Все документы</button>
+        <button className="btn btn-outline btn-sm">Общие</button>
+        <button className="btn btn-outline btn-sm">Инструкции</button>
+        <button className="btn btn-outline btn-sm">Шаблоны</button>
+        <button className="btn btn-outline btn-sm">Приказы</button>
+        <button className="btn btn-outline btn-sm">Другое</button>
+      </div>
+
+      {/* ============================================================
+      СПИСОК ДОКУМЕНТОВ
+      ============================================================ */}
+      {documents.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">📄</div>
+          <h3>Нет документов</h3>
+          <p>Документы пока не добавлены</p>
+          {canCreate && (
+            <button className="btn btn-gold" style={{ marginTop: '16px' }} onClick={() => {
+              setEditingDoc(null);
+              setFormData({
+                title: '',
+                content: '',
+                category: 'general',
+                document_type: 'pdf',
+                is_public: true,
+                club_id: profile?.club_id || null,
+                tags: []
+              });
+              setShowModal(true);
+            }}>
+              Создать первый документ
             </button>
+          )}
+        </div>
+      ) : (
+        <div className="table-wrapper">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Название</th>
+                <th>Категория</th>
+                <th>Тип</th>
+                <th>Статус</th>
+                <th>Автор</th>
+                <th>Дата</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              {documents.map((doc) => {
+                const canEdit = canEditDocument(doc);
+                const canDelete = canDeleteDocument(doc);
+                
+                return (
+                  <tr key={doc.id}>
+                    <td>
+                      <strong>{doc.title}</strong>
+                    </td>
+                    <td>
+                      <span className="badge badge-info">{doc.category}</span>
+                    </td>
+                    <td>{doc.document_type}</td>
+                    <td>{getDocumentStatus(doc)}</td>
+                    <td>{doc.created_by_name || 'Неизвестно'}</td>
+                    <td>{formatDate(doc.created_at)}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        <button 
+                          className="btn btn-primary btn-sm" 
+                          onClick={() => handleEdit(doc)}
+                          disabled={!canEdit}
+                          style={{ 
+                            opacity: canEdit ? 1 : 0.4, 
+                            cursor: canEdit ? 'pointer' : 'not-allowed' 
+                          }}
+                          title={!canEdit ? 'Нет прав на редактирование (можно редактировать только свои документы)' : ''}
+                        >
+                          Редактировать
+                        </button>
+                        <button 
+                          className="btn btn-danger btn-sm" 
+                          onClick={() => handleDelete(doc)}
+                          disabled={!canDelete}
+                          style={{ 
+                            opacity: canDelete ? 1 : 0.4, 
+                            cursor: canDelete ? 'pointer' : 'not-allowed' 
+                          }}
+                          title={!canDelete ? 'Нет прав на удаление (можно удалять только свои документы)' : ''}
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '28px' }}>📄</span>
-                <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0B1F3A', margin: 0 }}>
-                  {selectedDocument.title}
-                </h2>
-              </div>
-
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                <span className="tag" style={{ background: '#F4F6F9', color: '#667085' }}>
-                  {categories.find(c => c.id === selectedDocument.category)?.label || selectedDocument.category}
-                </span>
-                <span className="tag" style={{ background: '#F4F6F9', color: '#667085' }}>
-                  📄 {selectedDocument.document_type}
-                </span>
-                {selectedDocument.is_public && (
-                  <span className="tag" style={{ background: '#EDE7F6', color: '#6B46C1' }}>
-                    🌍 Общий
-                  </span>
-                )}
-                {selectedDocument.club_name && (
-                  <span className="tag" style={{ background: '#EAF2FA', color: '#174A7E' }}>
-                    🏫 {selectedDocument.club_name}
-                  </span>
-                )}
-                {selectedDocument.tags && selectedDocument.tags.length > 0 && (
-                  <span className="tag" style={{ background: '#F4F6F9', color: '#667085' }}>
-                    🏷️ {selectedDocument.tags.join(', ')}
-                  </span>
-                )}
-              </div>
-
-              <div style={{ fontSize: '13px', color: '#98A2B3', marginTop: '8px' }}>
-                👤 {selectedDocument.created_by_name || 'Неизвестно'}
-                {' • '}
-                📅 {new Date(selectedDocument.created_at).toLocaleDateString('ru-RU', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric'
-                })}
-                {selectedDocument.updated_at && selectedDocument.updated_at !== selectedDocument.created_at && (
-                  <> • ✏️ Обновлён: {new Date(selectedDocument.updated_at).toLocaleDateString('ru-RU')}</>
-                )}
-              </div>
+      {/* ============================================================
+      МОДАЛЬНОЕ ОКНО (СОЗДАНИЕ / РЕДАКТИРОВАНИЕ)
+      ============================================================ */}
+      {showModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3 className="modal-title">
+                {editingDoc ? 'Редактировать документ' : 'Создать документ'}
+              </h3>
+              <button className="modal-close" onClick={closeModal}>
+                ✕
+              </button>
             </div>
 
-            <div style={{
-              padding: '20px',
-              background: '#F8FAFC',
-              borderRadius: '12px',
-              borderLeft: '4px solid #C9A227',
-              marginBottom: '16px',
-              maxHeight: '300px',
-              overflow: 'auto'
-            }}>
-              <p style={{ 
-                fontSize: '15px', 
-                color: '#0B1F3A', 
-                lineHeight: '1.8', 
-                whiteSpace: 'pre-wrap',
-                margin: 0
-              }}>
-                {selectedDocument.content || 'Содержание документа отсутствует'}
-              </p>
+            {/* Название */}
+            <div className="form-group">
+              <label className="form-label">Название документа *</label>
+              <input
+                type="text"
+                className="form-control"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Введите название документа"
+              />
             </div>
 
-            <div style={{
-              display: 'flex',
-              gap: '12px',
-              flexWrap: 'wrap',
-              justifyContent: 'flex-end',
-              borderTop: '1px solid #E2E7EF',
-              paddingTop: '16px'
-            }}>
-              {canManage && (
-                <>
-                  <button
-                    className="btn-secondary"
-                    onClick={() => {
-                      setShowModal(false);
-                      handleEdit(selectedDocument);
-                    }}
-                  >
-                    ✏️ Редактировать
-                  </button>
-                  <button
-                    className="btn-danger"
-                    onClick={() => {
-                      setShowModal(false);
-                      handleDelete(selectedDocument.id);
-                    }}
-                  >
-                    🗑️ Удалить
-                  </button>
-                </>
-              )}
-              <button className="btn-primary" onClick={() => setShowModal(false)}>
-                Закрыть
+            {/* Содержание */}
+            <div className="form-group">
+              <label className="form-label">Содержание</label>
+              <textarea
+                className="form-control"
+                rows="6"
+                value={formData.content}
+                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                placeholder="Введите текст документа"
+              />
+            </div>
+
+            {/* Категория */}
+            <div className="form-group">
+              <label className="form-label">Категория</label>
+              <select
+                className="form-control"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              >
+                <option value="general">Общие</option>
+                <option value="instructions">Инструкции</option>
+                <option value="templates">Шаблоны</option>
+                <option value="orders">Приказы</option>
+                <option value="other">Другое</option>
+              </select>
+            </div>
+
+            {/* Тип документа */}
+            <div className="form-group">
+              <label className="form-label">Тип документа</label>
+              <select
+                className="form-control"
+                value={formData.document_type}
+                onChange={(e) => setFormData({ ...formData, document_type: e.target.value })}
+              >
+                <option value="pdf">PDF</option>
+                <option value="doc">DOC</option>
+                <option value="docx">DOCX</option>
+                <option value="xlsx">XLSX</option>
+                <option value="other">Другое</option>
+              </select>
+            </div>
+
+            {/* Публичность */}
+            <div className="form-group">
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={formData.is_public}
+                  onChange={(e) => setFormData({ ...formData, is_public: e.target.checked })}
+                />
+                Публичный документ (доступен всем)
+              </label>
+            </div>
+
+            {/* Клуб (только для админа) */}
+            {profile?.role === 'admin' && (
+              <div className="form-group">
+                <label className="form-label">Клуб (ID)</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={formData.club_id || ''}
+                  onChange={(e) => setFormData({ ...formData, club_id: e.target.value || null })}
+                  placeholder="ID клуба (оставьте пустым для общего доступа)"
+                />
+              </div>
+            )}
+
+            {/* Информация о клубе для координатора КЮДа */}
+            {profile?.role === 'club_coordinator' && (
+              <div className="form-group" style={{ opacity: 0.6 }}>
+                <label className="form-label">Клуб</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={profile?.club_name || 'Ваш КЮД'}
+                  disabled
+                />
+                <small style={{ color: '#98A2B3', display: 'block', marginTop: '4px' }}>
+                  Документ будет привязан к вашему КЮДу
+                </small>
+              </div>
+            )}
+
+            {/* Кнопки */}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button
+                className="btn btn-gold"
+                onClick={editingDoc ? handleUpdate : handleCreate}
+                style={{ flex: 1 }}
+              >
+                {editingDoc ? 'Сохранить изменения' : 'Создать документ'}
+              </button>
+              <button
+                className="btn btn-outline"
+                onClick={closeModal}
+              >
+                Отмена
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* ============================================================
+      СТИЛИ
+      ============================================================ */}
       <style>{`
-        @keyframes modalSlideIn {
-          from {
-            opacity: 0;
-            transform: translateY(30px) scale(0.95);
+        .badge {
+          display: inline-block;
+          padding: 3px 12px;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: 500;
+        }
+        .badge-success {
+          background: #E8F5EF;
+          color: #16845B;
+        }
+        .badge-info {
+          background: #EAF2FA;
+          color: #174A7E;
+        }
+        .btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed !important;
+          pointer-events: none !important;
+        }
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(10, 22, 40, 0.5);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          padding: 20px;
+        }
+        .modal {
+          background: white;
+          border-radius: 16px;
+          padding: 32px;
+          max-width: 560px;
+          width: 100%;
+          box-shadow: 0 24px 64px rgba(10, 22, 40, 0.2);
+          border: 1px solid #E4DFD8;
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+        .modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 20px;
+        }
+        .modal-title {
+          font-family: 'Playfair Display', serif;
+          font-size: 20px;
+          font-weight: 600;
+          color: #0A1628;
+        }
+        .modal-close {
+          background: none;
+          border: none;
+          font-size: 24px;
+          color: #A8A29A;
+          cursor: pointer;
+          transition: color 0.2s ease;
+        }
+        .modal-close:hover {
+          color: #0A1628;
+        }
+        .form-group {
+          margin-bottom: 18px;
+        }
+        .form-label {
+          display: block;
+          font-size: 13px;
+          font-weight: 500;
+          color: #6B6561;
+          margin-bottom: 4px;
+        }
+        .form-control {
+          width: 100%;
+          padding: 10px 14px;
+          border: 1.5px solid #E4DFD8;
+          border-radius: 8px;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          color: #0A1628;
+          background: white;
+          transition: all 0.3s ease;
+          outline: none;
+          min-height: 44px;
+        }
+        .form-control:focus {
+          border-color: #C9A227;
+          box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.08);
+        }
+        .form-control:disabled {
+          background: #F8F6F2;
+          cursor: not-allowed;
+        }
+        textarea.form-control {
+          resize: vertical;
+          min-height: 100px;
+        }
+        .message {
+          padding: 14px 20px;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          font-size: 14px;
+          font-weight: 500;
+          border-left: 4px solid transparent;
+        }
+        .message-success {
+          background: #E8F5EF;
+          color: #1A7A4C;
+          border-left-color: #1A7A4C;
+        }
+        .message-error {
+          background: #FCEBEC;
+          color: #B3262E;
+          border-left-color: #B3262E;
+        }
+        .empty-state {
+          text-align: center;
+          padding: 60px 20px;
+          background: white;
+          border-radius: 12px;
+          border: 1px dashed #E4DFD8;
+        }
+        .empty-state-icon {
+          font-size: 48px;
+          margin-bottom: 12px;
+          opacity: 0.6;
+        }
+        .empty-state h3 {
+          font-family: 'Playfair Display', serif;
+          font-size: 18px;
+          color: #4D4744;
+          margin-bottom: 4px;
+        }
+        .empty-state p {
+          font-size: 14px;
+          color: #8A8480;
+        }
+        .page-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 24px 28px;
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 2px 12px rgba(10, 22, 40, 0.04);
+          margin-bottom: 24px;
+          flex-wrap: wrap;
+          gap: 16px;
+        }
+        .page-header-left {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+        .page-header-icon {
+          font-size: 32px;
+        }
+        .page-header h1 {
+          font-family: 'Playfair Display', serif;
+          font-size: 24px;
+          font-weight: 700;
+          color: #0A1628;
+          margin: 0;
+        }
+        .page-header p {
+          font-size: 14px;
+          color: #8A8480;
+          margin: 0;
+        }
+        .page-header-actions {
+          display: flex;
+          gap: 10px;
+        }
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 10px 22px;
+          border: none;
+          border-radius: 8px;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          text-decoration: none;
+          letter-spacing: 0.01em;
+          min-height: 40px;
+          min-width: 80px;
+          white-space: nowrap;
+        }
+        .btn-gold {
+          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
+          color: #0A1628;
+          box-shadow: 0 2px 16px rgba(201, 162, 39, 0.25);
+        }
+        .btn-gold:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
+        }
+        .btn-primary {
+          background: #0A1628;
+          color: white;
+          box-shadow: 0 4px 16px rgba(10, 22, 40, 0.15);
+        }
+        .btn-primary:hover {
+          background: #1A3555;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(10, 22, 40, 0.25);
+        }
+        .btn-danger {
+          background: #B3262E;
+          color: white;
+          box-shadow: 0 4px 16px rgba(179, 38, 46, 0.2);
+        }
+        .btn-danger:hover {
+          background: #8A1C22;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(179, 38, 46, 0.3);
+        }
+        .btn-outline {
+          background: transparent;
+          color: #0A1628;
+          border: 1.5px solid #E4DFD8;
+          box-shadow: none;
+        }
+        .btn-outline:hover {
+          background: #F8F6F2;
+          border-color: #C9A227;
+          transform: translateY(-2px);
+        }
+        .btn-sm {
+          padding: 6px 14px;
+          font-size: 12px;
+          min-height: 32px;
+          min-width: 60px;
+        }
+        .table-wrapper {
+          overflow-x: auto;
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 2px 12px rgba(10, 22, 40, 0.04);
+          width: 100%;
+        }
+        .table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 14px;
+          min-width: 700px;
+        }
+        .table thead {
+          background: #F8F6F2;
+          border-bottom: 1px solid #E4DFD8;
+        }
+        .table thead th {
+          text-align: left;
+          padding: 12px 16px;
+          font-size: 11px;
+          font-weight: 600;
+          color: #8A8480;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+        .table tbody td {
+          padding: 12px 16px;
+          border-bottom: 1px solid #F0EDE8;
+          color: #4D4744;
+        }
+        .table tbody tr:hover td {
+          background: #F8F6F2;
+        }
+        .table tbody tr:last-child td {
+          border-bottom: none;
+        }
+        @media (max-width: 768px) {
+          .page-header {
+            flex-direction: column;
+            align-items: flex-start;
           }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
+          .page-header-actions {
+            width: 100%;
+          }
+          .page-header-actions .btn {
+            width: 100%;
+            justify-content: center;
+          }
+          .modal {
+            padding: 20px;
+            margin: 10px;
+          }
+        }
+        @media (max-width: 480px) {
+          .page-header {
+            padding: 16px 18px;
+          }
+          .page-header h1 {
+            font-size: 20px;
+          }
+          .table {
+            min-width: 500px;
+            font-size: 12px;
+          }
+          .table thead th,
+          .table tbody td {
+            padding: 8px 12px;
+          }
+          .btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            min-height: 32px;
+            min-width: 50px;
+          }
+          .btn-sm {
+            padding: 4px 10px;
+            font-size: 11px;
+            min-height: 26px;
+            min-width: 40px;
+          }
+          .modal {
+            padding: 16px;
+          }
+          .modal-title {
+            font-size: 18px;
           }
         }
       `}</style>

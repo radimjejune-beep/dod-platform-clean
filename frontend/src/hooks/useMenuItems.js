@@ -4,388 +4,165 @@ import { useMemo } from 'react';
 
 export function useMenuItems(profile) {
   return useMemo(() => {
-    const role = profile?.role;
-    const isPresident = profile?.is_president || false;
+    if (!profile) return [];
+
+    const role = profile.role;
     const items = [];
 
     // ============================================================
-    // БАЗОВЫЕ ПУНКТЫ
+    // БАЗОВЫЕ ПУНКТЫ ДЛЯ ВСЕХ АВТОРИЗОВАННЫХ
     // ============================================================
-    const baseItems = [
-      { 
-        id: 'dashboard', 
-        label: 'Дашборд', 
-        path: '/dashboard',
-        icon: '📊'
-      },
+    const commonItems = [
+      { id: 'dashboard', path: '/dashboard', icon: '📊', label: 'Дашборд' },
+      { id: 'events', path: '/events', icon: '📅', label: 'Мероприятия' },
+      { id: 'calendar', path: '/calendar', icon: '📆', label: 'Календарь' },
+      { id: 'profile', path: '/profile', icon: '👤', label: 'Профиль' },
+      { id: 'my-achievements', path: '/my-achievements', icon: '🏆', label: 'Мои достижения' },
+      { id: 'my-reviews', path: '/my-reviews', icon: '📊', label: 'Мои оценки' },
     ];
 
     // ============================================================
-    // ПУНКТЫ ПО РОЛЯМ (С ПОДМЕНЮ)
+    // АДМИНИСТРАТОР
     // ============================================================
-    const roleItems = {
-      admin: [
-        { 
-          id: 'management', 
-          label: 'Управление', 
-          icon: '⚙️',
-          children: [
-            { id: 'clubs', label: 'КЮДы', path: '/clubs' },
-            { id: 'clubs-management', label: 'Управление КЮДами', path: '/clubs-management' },
-            { id: 'users', label: 'Пользователи', path: '/admin/users' },
-            { id: 'invite', label: 'Пригласить', path: '/admin/invite' },
-            { id: 'import', label: 'Импорт', path: '/import-participants' },
-            { id: 'settings', label: 'Настройки', path: '/settings' },
-          ]
-        },
-        { 
-          id: 'content', 
-          label: 'Контент', 
-          icon: '📝',
-          children: [
-            { id: 'events', label: 'Мероприятия', path: '/events' },
-            { id: 'participants', label: 'Участники', path: '/participants' },
-            { id: 'achievements', label: 'Достижения', path: '/achievements' },
-            { id: 'achievements-categories', label: 'Категории достижений', path: '/achievements-categories' },
-            { id: 'news', label: 'Новости', path: '/admin/news' },
-          ]
-        },
-        { 
-          id: 'reports', 
-          label: 'Отчёты и аналитика', 
-          icon: '📊',
-          children: [
-            { id: 'reports', label: 'Отчёты', path: '/reports' },
-            { id: 'analytics', label: 'Аналитика', path: '/analytics' },
-            { id: 'activity-log', label: 'Журнал действий', path: '/activity-log' },
-          ]
-        },
-        { 
-          id: 'communication', 
-          label: 'Коммуникация', 
-          icon: '💬',
-          children: [
-            { id: 'appeals', label: 'Обращения', path: '/appeals' },
-            { id: 'mass-notifications', label: 'Массовые уведомления', path: '/mass-notifications' },
-            { id: 'notification-history', label: 'История уведомлений', path: '/notification-history' },
-          ]
-        },
-        { 
-          id: 'documents', 
-          label: 'Документы', 
-          path: '/documents-center',
-          icon: '📁'
-        },
-        { 
-          id: 'goals', 
-          label: 'Цели и KPI', 
-          path: '/goals',
-          icon: '🎯'
-        },
-        { 
-          id: 'consents', 
-          label: 'Согласия', 
-          path: '/consents-management',
-          icon: '📝'
-        },
-        { 
-          id: 'tasks', 
-          label: 'Планировщик задач', 
-          path: '/tasks-planner',
-          icon: '📅'
-        },
-      ],
-
-      movement_coordinator: [
-        { 
-          id: 'management', 
-          label: 'Управление', 
-          icon: '⚙️',
-          children: [
-            { id: 'clubs', label: 'КЮДы', path: '/clubs' },
-            { id: 'clubs-management', label: 'Управление КЮДами', path: '/clubs-management' },
-          ]
-        },
-        { 
-          id: 'content', 
-          label: 'Контент', 
-          icon: '📝',
-          children: [
-            { id: 'events', label: 'Мероприятия', path: '/events' },
-            { id: 'participants', label: 'Участники', path: '/participants' },
-            { id: 'achievements', label: 'Достижения', path: '/achievements' },
-          ]
-        },
-        { 
-          id: 'reports', 
-          label: 'Отчёты и аналитика', 
-          icon: '📊',
-          children: [
-            { id: 'reports', label: 'Отчёты', path: '/reports' },
-            { id: 'analytics', label: 'Аналитика', path: '/analytics' },
-          ]
-        },
-        { 
-          id: 'communication', 
-          label: 'Коммуникация', 
-          icon: '💬',
-          children: [
-            { id: 'appeals', label: 'Обращения', path: '/appeals' },
-          ]
-        },
-        { id: 'documents', label: 'Документы', path: '/documents-center', icon: '📁' },
-        { id: 'goals', label: 'Цели и KPI', path: '/goals', icon: '🎯' },
-        { id: 'consents', label: 'Согласия', path: '/consents-management', icon: '📝' },
-      ],
-
-      club_coordinator: [
-        { 
-          id: 'club', 
-          label: 'Мой КЮД', 
-          icon: '🏫',
-          children: [
-            { id: 'clubs', label: 'Информация о КЮДе', path: '/clubs' },
-            { id: 'participants', label: 'Участники', path: '/participants' },
-            { id: 'manage-achievements', label: 'Достижения', path: '/manage-achievements' },
-            { id: 'staff', label: 'Сотрудники', path: '/staff' },
-          ]
-        },
-        { 
-          id: 'events', 
-          label: 'Мероприятия', 
-          path: '/events',
-          icon: '📅'
-        },
-        { 
-          id: 'reports', 
-          label: 'Отчёты', 
-          path: '/reports',
-          icon: '📋'
-        },
-        { 
-          id: 'communication', 
-          label: 'Коммуникация', 
-          icon: '💬',
-          children: [
-            { id: 'appeals', label: 'Обращения', path: '/appeals' },
-          ]
-        },
-        { 
-          id: 'documents', 
-          label: 'Документы', 
-          path: '/documents-center',
-          icon: '📁'
-        },
-        { 
-          id: 'calendar', 
-          label: 'Календарь', 
-          path: '/calendar',
-          icon: '📆'
-        },
-        { 
-          id: 'rating', 
-          label: 'Рейтинг', 
-          path: '/club-rating',
-          icon: '🏆'
-        },
-      ],
-
-      tutor: [
-        { 
-          id: 'tutor', 
-          label: 'Тьюторство', 
-          icon: '📚',
-          children: [
-            { id: 'participants', label: 'Участники', path: '/participants' },
-            { id: 'achievements', label: 'Достижения', path: '/achievements' },
-            { id: 'my-reviews', label: 'Оценки', path: '/my-reviews' },
-            { id: 'my-journal', label: 'Мой журнал', path: '/my-journal' },
-            { id: 'tutor-assignments', label: 'Назначения', path: '/tutor-assignments' },
-          ]
-        },
-        { 
-          id: 'events', 
-          label: 'Мероприятия', 
-          path: '/events',
-          icon: '📅'
-        },
-        { 
-          id: 'reports', 
-          label: 'Отчёты', 
-          path: '/reports',
-          icon: '📋'
-        },
-        { 
-          id: 'calendar', 
-          label: 'Календарь', 
-          path: '/staff-calendar',
-          icon: '📆'
-        },
-        { 
-          id: 'clubs', 
-          label: 'КЮДы', 
-          path: '/clubs',
-          icon: '🏫'
-        },
-        { 
-          id: 'tutor-requests', 
-          label: 'Запросы', 
-          path: '/tutor-requests',
-          icon: '📨'
-        },
-      ],
-
-      participant: [
-        { 
-          id: 'participant', 
-          label: 'Участнику', 
-          icon: '👤',
-          children: [
-            { id: 'events', label: 'Мероприятия', path: '/events' },
-            { id: 'calendar', label: 'Календарь', path: '/calendar' },
-            { id: 'my-achievements', label: 'Мои достижения', path: '/my-achievements' },
-            { id: 'my-reviews', label: 'Мои оценки', path: '/my-reviews' },
-          ]
-        },
-        { 
-          id: 'participant-dashboard', 
-          label: 'Мой профиль', 
-          path: '/participant-dashboard',
-          icon: '👤'
-        },
-      ],
-
-      president: [
-        { 
-          id: 'president', 
-          label: 'Президенту', 
-          icon: '👑',
-          children: [
-            { id: 'clubs', label: 'КЮДы', path: '/clubs' },
-            { id: 'events', label: 'Мероприятия', path: '/events' },
-            { id: 'participants', label: 'Участники', path: '/participants' },
-            { id: 'achievements', label: 'Достижения', path: '/achievements' },
-            { id: 'president-tasks', label: 'Задания', path: '/president-tasks' },
-          ]
-        },
-        { 
-          id: 'reports', 
-          label: 'Отчёты', 
-          path: '/reports',
-          icon: '📋'
-        },
-        { 
-          id: 'analytics', 
-          label: 'Аналитика', 
-          path: '/analytics',
-          icon: '📊'
-        },
-        { 
-          id: 'communication', 
-          label: 'Коммуникация', 
-          icon: '💬',
-          children: [
-            { id: 'appeals', label: 'Обращения', path: '/appeals' },
-          ]
-        },
-        { 
-          id: 'rating', 
-          label: 'Рейтинг', 
-          path: '/club-rating',
-          icon: '🏆'
-        },
-        { 
-          id: 'documents', 
-          label: 'Документы', 
-          path: '/documents-center',
-          icon: '📁'
-        },
-      ],
-
-      vice_president: [
-        { 
-          id: 'vice-president', 
-          label: 'Вице-президенту', 
-          icon: '⭐',
-          children: [
-            { id: 'clubs', label: 'КЮДы', path: '/clubs' },
-            { id: 'events', label: 'Мероприятия', path: '/events' },
-            { id: 'participants', label: 'Участники', path: '/participants' },
-            { id: 'achievements', label: 'Достижения', path: '/achievements' },
-            { id: 'president-tasks', label: 'Задания', path: '/president-tasks' },
-          ]
-        },
-        { 
-          id: 'reports', 
-          label: 'Отчёты', 
-          path: '/reports',
-          icon: '📋'
-        },
-        { 
-          id: 'analytics', 
-          label: 'Аналитика', 
-          path: '/analytics',
-          icon: '📊'
-        },
-        { 
-          id: 'documents', 
-          label: 'Документы', 
-          path: '/documents-center',
-          icon: '📁'
-        },
-      ],
-
-      parent: [
-        { 
-          id: 'parent', 
-          label: 'Родителю', 
-          icon: '👨‍👩‍👦',
-          children: [
-            { id: 'events', label: 'Мероприятия', path: '/events' },
-            { id: 'calendar', label: 'Календарь', path: '/calendar' },
-            { id: 'my-achievements', label: 'Достижения детей', path: '/my-achievements' },
-          ]
-        },
-        { 
-          id: 'parent-dashboard', 
-          label: 'Мой профиль', 
-          path: '/parent-dashboard',
-          icon: '👤'
-        },
-      ],
-    };
-
-    // ============================================================
-    // СБОРКА МЕНЮ
-    // ============================================================
-    // Добавляем дашборд
-    items.push({ 
-      id: 'dashboard', 
-      label: 'Дашборд', 
-      path: '/dashboard',
-      icon: '📊'
-    });
-
-    // Добавляем пункты по роли
-    if (role && roleItems[role]) {
-      for (const item of roleItems[role]) {
-        items.push(item);
-      }
+    if (role === 'admin') {
+      return [
+        ...commonItems,
+        { id: 'admin-users', path: '/admin/users', icon: '👥', label: 'Пользователи' },
+        { id: 'clubs', path: '/clubs', icon: '🏫', label: 'КЮДы' },
+        { id: 'participants', path: '/participants', icon: '👤', label: 'Участники' },
+        { id: 'achievements', path: '/achievements', icon: '🏆', label: 'Достижения' },
+        { id: 'reports', path: '/reports', icon: '📋', label: 'Отчёты' },
+        { id: 'analytics', path: '/analytics', icon: '📊', label: 'Аналитика' },
+        { id: 'appeals', path: '/appeals', icon: '📨', label: 'Обращения' },
+        { id: 'admin-news', path: '/admin/news', icon: '📰', label: 'Новости' },
+        { id: 'documents-center', path: '/documents-center', icon: '📁', label: 'Документы' },
+        { id: 'mass-notifications', path: '/mass-notifications', icon: '📨', label: 'Уведомления' },
+        { id: 'consents-management', path: '/consents-management', icon: '📝', label: 'Согласия' },
+        { id: 'settings', path: '/settings', icon: '⚙️', label: 'Настройки' },
+        { id: 'import-participants', path: '/import-participants', icon: '📥', label: 'Импорт участников' },
+        { id: 'activity-log', path: '/activity-log', icon: '📋', label: 'Журнал действий' },
+        { id: 'notification-history', path: '/notification-history', icon: '📨', label: 'История уведомлений' },
+      ];
     }
 
-    // Для участника-президента добавляем задания
-    if (role === 'participant' && isPresident) {
-      const hasTasks = items.some(i => i.id === 'president-tasks');
-      if (!hasTasks) {
-        items.push({
-          id: 'president-tasks',
-          label: 'Задания президента',
-          path: '/president-tasks',
-          icon: '👑'
-        });
-      }
+    // ============================================================
+    // КООРДИНАТОР ДВИЖЕНИЯ
+    // ============================================================
+    if (role === 'movement_coordinator') {
+      return [
+        ...commonItems,
+        { id: 'coordinator-dashboard', path: '/coordinator-dashboard', icon: '📊', label: 'Дашборд координатора' },
+        { id: 'clubs-management', path: '/clubs-management', icon: '🏫', label: 'Управление КЮДами' },
+        { id: 'admin-users', path: '/admin/users', icon: '👥', label: 'Пользователи' },
+        { id: 'participants', path: '/participants', icon: '👤', label: 'Участники' },
+        { id: 'achievements', path: '/achievements', icon: '🏆', label: 'Достижения' },
+        { id: 'reports', path: '/reports', icon: '📋', label: 'Отчёты' },
+        { id: 'analytics', path: '/analytics', icon: '📊', label: 'Аналитика' },
+        { id: 'appeals', path: '/appeals', icon: '📨', label: 'Обращения' },
+        { id: 'admin-news', path: '/admin/news', icon: '📰', label: 'Новости' },
+        { id: 'documents-center', path: '/documents-center', icon: '📁', label: 'Документы' },
+        { id: 'mass-notifications', path: '/mass-notifications', icon: '📨', label: 'Уведомления' },
+        { id: 'consents-management', path: '/consents-management', icon: '📝', label: 'Согласия' },
+        { id: 'settings', path: '/settings', icon: '⚙️', label: 'Настройки' },
+        { id: 'import-participants', path: '/import-participants', icon: '📥', label: 'Импорт участников' },
+        { id: 'activity-log', path: '/activity-log', icon: '📋', label: 'Журнал действий' },
+        { id: 'notification-history', path: '/notification-history', icon: '📨', label: 'История уведомлений' },
+        { id: 'tasks-planner', path: '/tasks-planner', icon: '📅', label: 'Планировщик задач' },
+        { id: 'goals', path: '/goals', icon: '🎯', label: 'Цели и KPI' },
+        { id: 'club-analytics', path: '/club-analytics', icon: '📊', label: 'Аналитика КЮДов' },
+        { id: 'staff', path: '/staff', icon: '👥', label: 'Сотрудники' },
+        { id: 'staff-calendar', path: '/staff-calendar', icon: '📆', label: 'Календарь сотрудников' },
+      ];
     }
 
-    return items;
+    // ============================================================
+    // КООРДИНАТОР КЛУБА
+    // ============================================================
+    if (role === 'club_coordinator') {
+      return [
+        ...commonItems,
+        { id: 'clubs', path: '/clubs', icon: '🏫', label: 'Мой КЮД' },
+        { id: 'participants', path: '/participants', icon: '👤', label: 'Участники' },
+        { id: 'manage-achievements', path: '/manage-achievements', icon: '🏆', label: 'Достижения' },
+        { id: 'reports', path: '/reports', icon: '📋', label: 'Отчёты' },
+        { id: 'appeals', path: '/appeals', icon: '📨', label: 'Обращения' },
+        { id: 'club-analytics', path: '/club-analytics', icon: '📊', label: 'Аналитика клуба' },
+        { id: 'club-calendar', path: '/club-calendar', icon: '📆', label: 'Календарь клуба' },
+        { id: 'my-club-events', path: '/my-club-events', icon: '📅', label: 'Мероприятия клуба' },
+        { id: 'tutor-requests', path: '/tutor-requests', icon: '🤝', label: 'Запрос тьютора' },
+        { id: 'tutor-invitations', path: '/tutor-invitations', icon: '📨', label: 'Приглашения тьюторов' },
+        { id: 'club-rating', path: '/club-rating', icon: '🏆', label: 'Рейтинг клуба' },
+        // Назначение президента — добавляем отдельно, если есть клуб
+        ...(profile.club_id ? [
+          { id: 'club-president', path: `/club/${profile.club_id}/president`, icon: '👑', label: 'Назначить президента' },
+        ] : []),
+      ];
+    }
+
+    // ============================================================
+    // УЧАСТНИК
+    // ============================================================
+    if (role === 'participant') {
+      return [
+        ...commonItems,
+        { id: 'participant-dashboard', path: '/participant-dashboard', icon: '📊', label: 'Мой дашборд' },
+        { id: 'events', path: '/events', icon: '📅', label: 'Мероприятия' },
+        { id: 'calendar', path: '/calendar', icon: '📆', label: 'Календарь' },
+        { id: 'my-achievements', path: '/my-achievements', icon: '🏆', label: 'Мои достижения' },
+        { id: 'my-reviews', path: '/my-reviews', icon: '📊', label: 'Мои оценки' },
+      ];
+    }
+
+    // ============================================================
+    // ТЬЮТОР
+    // ============================================================
+    if (role === 'tutor') {
+      return [
+        ...commonItems,
+        { id: 'tutor-dashboard', path: '/tutor-dashboard', icon: '📊', label: 'Дашборд тьютора' },
+        { id: 'tutor-assignments', path: '/tutor-assignments', icon: '📅', label: 'Мои назначения' },
+        { id: 'tutor-invitations', path: '/tutor-invitations', icon: '📨', label: 'Приглашения' },
+        { id: 'my-journal', path: '/my-journal', icon: '📓', label: 'Мой журнал' },
+        { id: 'participants', path: '/participants', icon: '👤', label: 'Участники' },
+        { id: 'staff-calendar', path: '/staff-calendar', icon: '📆', label: 'Календарь' },
+        { id: 'achievements', path: '/achievements', icon: '🏆', label: 'Достижения' },
+      ];
+    }
+
+    // ============================================================
+    // ПРЕЗИДЕНТ / ВИЦЕ-ПРЕЗИДЕНТ
+    // ============================================================
+    if (role === 'president' || role === 'vice_president') {
+      return [
+        ...commonItems,
+        { id: 'president-tasks', path: '/president-tasks', icon: '👑', label: 'Задания' },
+        { id: 'clubs', path: '/clubs', icon: '🏫', label: 'КЮДы' },
+        { id: 'participants', path: '/participants', icon: '👤', label: 'Участники' },
+        { id: 'reports', path: '/reports', icon: '📋', label: 'Отчёты' },
+        { id: 'documents', path: '/documents', icon: '📁', label: 'Документы' },
+        { id: 'appeals', path: '/appeals', icon: '📨', label: 'Обращения' },
+        { id: 'events', path: '/events', icon: '📅', label: 'Мероприятия' },
+      ];
+    }
+
+    // ============================================================
+    // РОДИТЕЛЬ
+    // ============================================================
+    if (role === 'parent') {
+      return [
+        ...commonItems,
+        { id: 'parent-dashboard', path: '/parent-dashboard', icon: '👨‍👩‍👦', label: 'Дашборд родителя' },
+        { id: 'events', path: '/events', icon: '📅', label: 'Мероприятия' },
+        { id: 'calendar', path: '/calendar', icon: '📆', label: 'Календарь' },
+        { id: 'my-achievements', path: '/my-achievements', icon: '🏆', label: 'Достижения детей' },
+      ];
+    }
+
+    // ============================================================
+    // ПО УМОЛЧАНИЮ
+    // ============================================================
+    return commonItems;
   }, [profile]);
 }
+
+export default useMenuItems;

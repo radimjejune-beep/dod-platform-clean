@@ -22,9 +22,6 @@ export default function Navigation({ profile }) {
 
   const menuItems = useMenuItems(profile);
 
-  // ============================================================
-  // РАСКРЫТИЕ ПОДМЕНЮ
-  // ============================================================
   const toggleMenu = (id) => {
     setExpandedMenus(prev => ({
       ...prev,
@@ -32,28 +29,6 @@ export default function Navigation({ profile }) {
     }));
   };
 
-  // ============================================================
-  // ЗАКРЫТИЕ САЙДБАРА ПРИ КЛИКЕ ВНЕ
-  // ============================================================
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
-        setIsSidebarOpen(false);
-      }
-      if (profileRef.current && !profileRef.current.contains(event.target)) {
-        setIsProfileOpen(false);
-      }
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-        setShowNotifications(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // ============================================================
-  // ЗАГРУЗКА УВЕДОМЛЕНИЙ
-  // ============================================================
   const loadNotifications = async () => {
     if (notificationsLoaded) return;
     try {
@@ -79,18 +54,28 @@ export default function Navigation({ profile }) {
     }
   }, [profile, notificationsLoaded]);
 
-  // ============================================================
-  // ВЫХОД
-  // ============================================================
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
+        setIsSidebarOpen(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setIsProfileOpen(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
   };
 
-  // ============================================================
-  // УВЕДОМЛЕНИЯ
-  // ============================================================
   const handleNotificationClick = async (id) => {
     try {
       const token = localStorage.getItem('token');
@@ -121,9 +106,6 @@ export default function Navigation({ profile }) {
     }
   };
 
-  // ============================================================
-  // ВСПОМОГАТЕЛЬНЫЕ
-  // ============================================================
   const getInitials = (name) => {
     if (!name) return '?';
     const parts = name.split(' ');
@@ -142,9 +124,6 @@ export default function Navigation({ profile }) {
     return children.some(child => isActive(child.path));
   };
 
-  // ============================================================
-  // РЕНДЕР ПУНКТА МЕНЮ (ДЛЯ САЙДБАРА)
-  // ============================================================
   const renderSidebarItem = (item) => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedMenus[item.id] || false;
@@ -193,16 +172,13 @@ export default function Navigation({ profile }) {
     );
   };
 
-  // ============================================================
-  // ПУБЛИЧНАЯ ВЕРСИЯ (БЕЗ ПРОФИЛЯ)
-  // ============================================================
   if (!profile) {
     return (
       <nav className="nav">
         <div className="nav-container">
           <Link to="/" className="nav-logo">
             <img src={logo} alt="ДОД" />
-            <span className="nav-logo-text">Дипломаты будущего</span>
+            <span>Дипломаты будущего</span>
           </Link>
           <div className="nav-right">
             <Link to="/login" className="btn-gold">Войти</Link>
@@ -236,7 +212,6 @@ export default function Navigation({ profile }) {
             color: #0A1628;
           }
           .nav-logo img { height: 34px; width: auto; }
-          .nav-logo-text { letter-spacing: -0.02em; }
           .btn-gold {
             display: inline-flex;
             align-items: center;
@@ -261,23 +236,18 @@ export default function Navigation({ profile }) {
           }
           @media (max-width: 768px) {
             .nav { padding: 0 16px; }
-            .nav-logo-text { display: none; }
+            .nav-logo span { display: none; }
           }
         `}</style>
       </nav>
     );
   }
 
-  // ============================================================
-  // ОСНОВНАЯ ВЕРСИЯ
-  // ============================================================
   return (
     <>
-      {/* ВЕРХНЯЯ ПАНЕЛЬ */}
+      {/* ВЕРХНЯЯ ПАНЕЛЬ — БЕЗ ЛОГОТИПА, ТОЛЬКО БУРГЕР + УВЕДОМЛЕНИЯ + ПРОФИЛЬ */}
       <nav className="nav">
         <div className="nav-container">
-
-          {/* ЛОГОТИП + БУРГЕР */}
           <div className="nav-left">
             <button
               className="nav-burger"
@@ -290,16 +260,9 @@ export default function Navigation({ profile }) {
                 <line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             </button>
-            <Link to="/" className="nav-logo">
-              <img src={logo} alt="ДОД" />
-              <span className="nav-logo-text">Дипломаты будущего</span>
-            </Link>
           </div>
 
-          {/* ПРАВАЯ ЧАСТЬ */}
           <div className="nav-right">
-
-            {/* УВЕДОМЛЕНИЯ */}
             <div className="nav-notifications" ref={notificationRef}>
               <button
                 className="nav-notif-btn"
@@ -350,7 +313,6 @@ export default function Navigation({ profile }) {
               )}
             </div>
 
-            {/* ПРОФИЛЬ */}
             <div className="nav-profile" ref={profileRef}>
               <button
                 className="nav-profile-btn"
@@ -401,30 +363,27 @@ export default function Navigation({ profile }) {
                 </div>
               )}
             </div>
-
           </div>
         </div>
       </nav>
 
-      {/* ОВЕРЛЕЙ (ЗАТЕМНЕНИЕ) */}
+      {/* ОВЕРЛЕЙ */}
       {isSidebarOpen && (
         <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)} />
       )}
 
-      {/* БОКОВОЕ МЕНЮ (ВЫЕЗЖАЕТ СЛЕВА) */}
+      {/* САЙДБАР */}
       <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`} ref={sidebarRef}>
-        {/* ЗАКРЫТИЕ */}
         <div className="sidebar-header">
-          <button
-            className="sidebar-close"
-            onClick={() => setIsSidebarOpen(false)}
-          >
+          <div className="sidebar-brand">
+            <img src={logo} alt="ДОД" className="sidebar-brand-logo" />
+            <span className="sidebar-brand-title">Дипломаты будущего</span>
+          </div>
+          <button className="sidebar-close" onClick={() => setIsSidebarOpen(false)}>
             ✕
           </button>
-          <span className="sidebar-title">Меню</span>
         </div>
 
-        {/* ПРОФИЛЬ В САЙДБАРЕ */}
         <div className="sidebar-profile">
           <div className="sidebar-avatar">
             {profile?.avatar_url ? (
@@ -439,12 +398,10 @@ export default function Navigation({ profile }) {
           </div>
         </div>
 
-        {/* МЕНЮ */}
         <nav className="sidebar-nav">
           {menuItems.map((item) => renderSidebarItem(item))}
         </nav>
 
-        {/* ВЫХОД */}
         <div className="sidebar-footer">
           <button className="sidebar-logout" onClick={handleLogout}>
             Выйти
@@ -454,7 +411,7 @@ export default function Navigation({ profile }) {
 
       <style>{`
         /* ============================================================
-           ВЕРХНЯЯ ПАНЕЛЬ
+           ВЕРХНЯЯ ПАНЕЛЬ (БЕЗ ЛОГОТИПА)
            ============================================================ */
         .nav {
           background: white;
@@ -472,14 +429,13 @@ export default function Navigation({ profile }) {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          height: 68px;
+          height: 64px;
           gap: 16px;
         }
 
         .nav-left {
           display: flex;
           align-items: center;
-          gap: 12px;
         }
 
         .nav-burger {
@@ -496,20 +452,6 @@ export default function Navigation({ profile }) {
           transition: all 0.25s ease;
         }
         .nav-burger:hover { background: #F8F6F2; }
-
-        .nav-logo {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          text-decoration: none;
-          font-family: 'Playfair Display', serif;
-          font-size: 20px;
-          font-weight: 700;
-          color: #0A1628;
-          flex-shrink: 0;
-        }
-        .nav-logo img { height: 34px; width: auto; }
-        .nav-logo-text { letter-spacing: -0.02em; }
 
         .nav-right {
           display: flex;
@@ -573,7 +515,7 @@ export default function Navigation({ profile }) {
         .nav-notif-all:hover { background: #F8F6F2; }
 
         /* ============================================================
-           ПРОФИЛЬ В ВЕРХНЕЙ ПАНЕЛИ
+           ПРОФИЛЬ
            ============================================================ */
         .nav-profile { position: relative; }
         .nav-profile-btn {
@@ -647,7 +589,7 @@ export default function Navigation({ profile }) {
         }
 
         /* ============================================================
-           БОКОВОЕ МЕНЮ (ВЫЕЗЖАЕТ)
+           САЙДБАР
            ============================================================ */
         .sidebar {
           position: fixed;
@@ -676,6 +618,22 @@ export default function Navigation({ profile }) {
           border-bottom: 1px solid #F0EDE8;
           flex-shrink: 0;
         }
+        .sidebar-brand {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          text-decoration: none;
+        }
+        .sidebar-brand-logo {
+          height: 34px;
+          width: auto;
+        }
+        .sidebar-brand-title {
+          font-family: 'Playfair Display', serif;
+          font-size: 18px;
+          font-weight: 700;
+          color: #0A1628;
+        }
         .sidebar-close {
           width: 36px;
           height: 36px;
@@ -691,12 +649,6 @@ export default function Navigation({ profile }) {
           justify-content: center;
         }
         .sidebar-close:hover { background: #F8F6F2; }
-        .sidebar-title {
-          font-family: 'Playfair Display', serif;
-          font-size: 18px;
-          font-weight: 600;
-          color: #0A1628;
-        }
 
         .sidebar-profile {
           display: flex;
@@ -804,12 +756,8 @@ export default function Navigation({ profile }) {
         }
         .sidebar-logout:hover { background: #FCEBEC; }
 
-        /* ============================================================
-           АДАПТИВНОСТЬ
-           ============================================================ */
         @media (max-width: 768px) {
           .nav { padding: 0 16px; }
-          .nav-logo-text { display: none; }
           .nav-profile-name { display: none; }
           .nav-notif-dropdown { width: 320px; right: -40px; }
           .sidebar { width: 280px; }
@@ -822,6 +770,8 @@ export default function Navigation({ profile }) {
           .nav-avatar { width: 32px; height: 32px; font-size: 12px; }
           .nav-profile-dropdown { width: 200px; right: -10px; }
           .sidebar { width: 100%; max-width: 300px; }
+          .sidebar-brand-title { font-size: 16px; }
+          .sidebar-brand-logo { height: 28px; }
         }
       `}</style>
     </>

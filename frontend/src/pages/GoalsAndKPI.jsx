@@ -13,6 +13,9 @@ export default function GoalsAndKPI() {
   const [editingGoal, setEditingGoal] = useState(null);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
+  const [clubs, setClubs] = useState([]);
+  const [users, setUsers] = useState([]);
+  
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -26,8 +29,7 @@ export default function GoalsAndKPI() {
     assigned_to: '',
     club_id: ''
   });
-  const [clubs, setClubs] = useState([]);
-  const [users, setUsers] = useState([]);
+  
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,7 +44,7 @@ export default function GoalsAndKPI() {
         return;
       }
 
-      if (userData.role !== 'movement_coordinator' && userData.role !== 'admin') {
+      if (!['admin', 'movement_coordinator'].includes(userData.role)) {
         navigate('/dashboard');
         return;
       }
@@ -61,6 +63,8 @@ export default function GoalsAndKPI() {
 
     } catch (err) {
       console.error('Ошибка загрузки:', err);
+      setMessage('❌ Ошибка загрузки данных');
+      setMessageType('error');
     } finally {
       setLoading(false);
     }
@@ -184,7 +188,7 @@ export default function GoalsAndKPI() {
       'events': '📅 Мероприятий',
       'clubs': '🏫 Клубов',
       'achievements': '🏆 Достижений',
-      'percent': '📊 Процентов'
+      'percent': '📊 %'
     };
     return labels[unit] || unit;
   };
@@ -294,7 +298,7 @@ export default function GoalsAndKPI() {
                     <option value="events">📅 Мероприятий</option>
                     <option value="clubs">🏫 Клубов</option>
                     <option value="achievements">🏆 Достижений</option>
-                    <option value="percent">📊 Процентов</option>
+                    <option value="percent">📊 %</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -325,7 +329,7 @@ export default function GoalsAndKPI() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Назначить</label>
+                  <label>Назначить ответственного</label>
                   <select
                     value={form.assigned_to}
                     onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
@@ -413,10 +417,11 @@ export default function GoalsAndKPI() {
                       🎯 {getUnitLabel(goal.unit)}: {goal.current_value} / {goal.target_value}
                       {goal.assigned_to && ` • 👤 ${getUserName(goal.assigned_to)}`}
                       {goal.club_id && ` • 🏫 ${getClubName(goal.club_id)}`}
+                      {goal.start_date && ` • 📅 с ${new Date(goal.start_date).toLocaleDateString('ru-RU')}`}
+                      {goal.end_date && ` до ${new Date(goal.end_date).toLocaleDateString('ru-RU')}`}
                     </div>
                     {goal.description && <div className="meta">{goal.description}</div>}
                     
-                    {/* Прогресс-бар */}
                     <div style={{ marginTop: '8px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#98A2B3' }}>
                         <span>Прогресс</span>

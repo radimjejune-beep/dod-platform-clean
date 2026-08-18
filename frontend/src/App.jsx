@@ -57,6 +57,7 @@ import TasksPlanner from './pages/TasksPlanner';
 import ActivityLog from './pages/ActivityLog';
 import AchievementsCategories from './pages/AchievementsCategories';
 import NotificationHistory from './pages/NotificationHistory';
+import GoalsAndKPI from './pages/GoalsAndKPI';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -147,6 +148,7 @@ function App() {
         <Route path="/notification-history" element={<NotificationHistory />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/goals" element={<GoalsAndKPI />} />
       </Routes>
     </BrowserRouter>
   );

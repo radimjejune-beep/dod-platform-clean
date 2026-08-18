@@ -27,6 +27,35 @@ export default function Reports() {
   });
   const navigate = useNavigate();
 
+  // ============================================================
+  // ОПРЕДЕЛЯЕМ РОЛИ
+  // ============================================================
+  const isClubCoordinator = profile?.role === 'club_coordinator';
+  const isAdmin = profile?.role === 'admin';
+  const isMovementCoordinator = profile?.role === 'movement_coordinator';
+  
+  const canCreate = profile && (isAdmin || isMovementCoordinator || isClubCoordinator);
+  const canFilterByClub = isAdmin || isMovementCoordinator;
+
+  // Получаем ID клуба координатора
+  const getCoordinatorClubId = () => {
+    if (!isClubCoordinator) return null;
+    let clubId = profile?.club_id;
+    if (!clubId) {
+      const found = clubs.find(c => 
+        c.coordinator_id === profile?.id || 
+        c.leader_id === profile?.id
+      );
+      if (found) clubId = found.id;
+    }
+    return clubId;
+  };
+
+  const coordinatorClubId = getCoordinatorClubId();
+
+  // ============================================================
+  // ЗАГРУЗКА ДАННЫХ
+  // ============================================================
   useEffect(() => {
     loadData();
   }, []);
@@ -57,6 +86,9 @@ export default function Reports() {
 
       let filteredReports = [];
 
+      // ============================================================
+      // КООРДИНАТОР КЮДА - ТОЛЬКО СВОЙ КЛУБ
+      // ============================================================
       if (role === 'club_coordinator') {
         let coordinatorClubId = userData.club_id;
         
@@ -77,21 +109,27 @@ export default function Reports() {
 
         if (coordinatorClubId) {
           filteredReports = reportsData.filter(r => r.club_id === coordinatorClubId);
-          console.log(`🏫 Координатор КЮДа: показано ${filteredReports.length} отчётов для клуба ${coordinatorClubId}`);
+          console.log(`🏫 Координатор КЮДа: показано ${filteredReports.length} отчётов для клуба`);
         } else {
           filteredReports = [];
           console.log('❌ Клуб координатора не найден');
         }
-      } else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
+      } 
+      // ============================================================
+      // АДМИН, КООРДИНАТОР ДВИЖЕНИЯ - ВСЕ ОТЧЁТЫ
+      // ============================================================
+      else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
         filteredReports = reportsData || [];
         console.log(`👑 ${role}: показано ${filteredReports.length} отчётов`);
-      } else {
+      } 
+      else {
         filteredReports = [];
       }
 
       setAllReports(filteredReports);
       setReports(filteredReports);
 
+      // Для координатора КЮДа предзаполняем клуб в форме
       if (role === 'club_coordinator') {
         const coordClubId = userData.club_id || filteredReports[0]?.club_id;
         if (coordClubId) {
@@ -108,8 +146,7 @@ export default function Reports() {
     }
   };
 
-  const canFilterByClub = profile?.role === 'admin' || profile?.role === 'movement_coordinator' || profile?.role === 'president' || profile?.role === 'vice_president';
-
+  // Фильтр по клубу (только для админа и координатора движения)
   useEffect(() => {
     if (selectedClubId && canFilterByClub) {
       setReports(allReports.filter(r => r.club_id === selectedClubId));
@@ -118,15 +155,30 @@ export default function Reports() {
     }
   }, [selectedClubId, allReports, canFilterByClub]);
 
-  const canCreate = profile && (profile.role === 'admin' || profile.role === 'movement_coordinator' || profile.role === 'club_coordinator');
-
+  // ============================================================
+  // СОЗДАНИЕ/ОБНОВЛЕНИЕ ОТЧЁТА
+  // ============================================================
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
     setLoading(true);
 
     try {
-      if (!form.club_id) {
+      let clubId = form.club_id;
+      
+      // Для координатора КЮДа — автоматически подставляем его клуб
+      if (isClubCoordinator) {
+        if (coordinatorClubId) {
+          clubId = coordinatorClubId;
+        } else {
+          setMessage('❌ Вы не привязаны ни к одному КЮДу');
+          setMessageType('error');
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (!clubId) {
         setMessage('❌ Выберите клуб');
         setMessageType('error');
         setLoading(false);
@@ -146,7 +198,7 @@ export default function Reports() {
       }
 
       const data = {
-        club_id: form.club_id,
+        club_id: clubId,
         report_month: form.report_month,
         report_text: form.report_text || '',
         events_count: parseInt(form.events_count) || 0,
@@ -188,7 +240,7 @@ export default function Reports() {
       setMessageType('success');
       setForm({
         id: null,
-        club_id: profile?.role === 'club_coordinator' ? profile?.club_id || '' : '',
+        club_id: isClubCoordinator ? (coordinatorClubId || '') : '',
         report_month: '',
         report_text: '',
         events_count: 0,
@@ -204,6 +256,18 @@ export default function Reports() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setForm({
+      id: null,
+      club_id: isClubCoordinator ? (coordinatorClubId || '') : '',
+      report_month: '',
+      report_text: '',
+      events_count: 0,
+      participants_count: 0
+    });
+    setShowForm(false);
   };
 
   const handleEdit = (report) => {
@@ -348,9 +412,12 @@ export default function Reports() {
     return badges[status] || badges['draft'];
   };
 
-  const canView = profile && (profile.role === 'admin' || profile.role === 'movement_coordinator' || profile.role === 'club_coordinator' || profile.role === 'president' || profile.role === 'vice_president');
+  const canView = profile && (isAdmin || isMovementCoordinator || isClubCoordinator || 
+    profile.role === 'president' || profile.role === 'vice_president');
 
-  const isClubCoordinator = profile?.role === 'club_coordinator';
+  const coordinatorClubName = isClubCoordinator 
+    ? clubs.find(c => c.id === coordinatorClubId)?.name || 'вашего клуба'
+    : '';
 
   if (loading) {
     return (
@@ -375,15 +442,51 @@ export default function Reports() {
     );
   }
 
-  const coordinatorClubName = isClubCoordinator 
-    ? clubs.find(c => c.id === profile?.club_id)?.name || 'вашего клуба'
-    : '';
-
   return (
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* ============================================================
+           ШАПКА С КНОПКОЙ СОЗДАНИЯ
+           ============================================================ */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '20px',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div>
+            <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#0B1F3A', margin: 0 }}>
+              📋 Отчёты
+            </h1>
+            <p style={{ color: '#667085', margin: '4px 0 0 0' }}>
+              {isClubCoordinator 
+                ? `Ежемесячные отчёты вашего клуба (${reports.length})` 
+                : `Проверка и утверждение отчётов всех КЮДов (${reports.length})`}
+            </p>
+          </div>
+          {canCreate && (
+            <button
+              className="btn-gold"
+              onClick={() => {
+                setForm({
+                  id: null,
+                  club_id: isClubCoordinator ? (coordinatorClubId || '') : '',
+                  report_month: new Date().toISOString().slice(0, 7),
+                  report_text: '',
+                  events_count: 0,
+                  participants_count: 0
+                });
+                setShowForm(!showForm);
+              }}
+              style={{ padding: '10px 24px', fontSize: '14px' }}
+            >
+              {showForm ? '✖ Закрыть' : '➕ Создать отчёт'}
+            </button>
+          )}
+        </div>
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
@@ -450,6 +553,23 @@ export default function Reports() {
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
               {form.id ? '✏️ Редактировать отчёт' : '📝 Новый отчёт'}
             </h3>
+            
+            {isClubCoordinator && coordinatorClubId && (
+              <div style={{ 
+                padding: '10px 16px', 
+                background: '#EAF2FA', 
+                borderRadius: '8px', 
+                marginBottom: '16px',
+                fontSize: '14px',
+                color: '#174A7E',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                🏫 <strong>Отчёт для вашего клуба:</strong> {clubs.find(c => c.id === coordinatorClubId)?.name || 'КЮД'}
+              </div>
+            )}
+
             <form onSubmit={handleSubmit}>
               <div className="form-group">
                 <label>Клуб *</label>
@@ -540,7 +660,7 @@ export default function Reports() {
               <p>{isClubCoordinator ? 'У вашего клуба пока нет отчётов' : 'Отчётов пока нет'}</p>
               {canCreate && (
                 <p style={{ fontSize: '13px', color: '#98A2B3' }}>
-                  Создайте первый отчёт или используйте шаблон
+                  Создайте первый отчёт
                 </p>
               )}
             </div>
@@ -550,7 +670,6 @@ export default function Reports() {
                 const status = getStatusBadge(report.status);
                 const isDraft = report.status === 'draft';
                 const isSubmitted = report.status === 'submitted';
-                const canEdit = isClubCoordinator || profile?.role === 'admin' || profile?.role === 'movement_coordinator';
                 
                 return (
                   <div
@@ -560,14 +679,6 @@ export default function Reports() {
                       borderLeftColor: status.color,
                       cursor: 'pointer',
                       transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#F8FAFC';
-                      e.currentTarget.style.transform = 'translateX(4px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.transform = 'translateX(0)';
                     }}
                     onClick={() => {
                       setSelectedReport(report);
@@ -589,15 +700,9 @@ export default function Reports() {
                     {report.created_by_name && (
                       <div className="meta">👤 Создал: {report.created_by_name}</div>
                     )}
-                    {report.content && (
-                      <div className="meta">
-                        {report.content.length > 200 ? report.content.substring(0, 200) + '...' : report.content}
-                      </div>
-                    )}
                     <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <button
-                        className="btn-primary"
-                        style={{ padding: '4px 12px', fontSize: '12px' }}
+                        className="btn-primary btn-sm"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedReport(report);
@@ -607,11 +712,10 @@ export default function Reports() {
                         👁️ Открыть
                       </button>
                       
-                      {canCreate && isDraft && canEdit && (
+                      {canCreate && isDraft && (
                         <>
                           <button
-                            className="btn-secondary"
-                            style={{ padding: '4px 12px', fontSize: '12px' }}
+                            className="btn-secondary btn-sm"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleEdit(report);
@@ -620,8 +724,7 @@ export default function Reports() {
                             ✏️ Редактировать
                           </button>
                           <button
-                            className="btn-primary"
-                            style={{ padding: '4px 12px', fontSize: '12px', background: '#C9A227', color: '#0B1F3A' }}
+                            className="btn-gold btn-sm"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSubmitReport(report.id);
@@ -632,11 +735,11 @@ export default function Reports() {
                         </>
                       )}
                       
-                      {isSubmitted && (profile?.role === 'admin' || profile?.role === 'movement_coordinator' || profile?.role === 'president' || profile?.role === 'vice_president') && (
+                      {isSubmitted && (isAdmin || isMovementCoordinator || 
+                        profile?.role === 'president' || profile?.role === 'vice_president') && (
                         <>
                           <button
-                            className="btn-success"
-                            style={{ padding: '4px 12px', fontSize: '12px' }}
+                            className="btn-success btn-sm"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleApproveReport(report.id);
@@ -645,8 +748,7 @@ export default function Reports() {
                             ✅ Утвердить
                           </button>
                           <button
-                            className="btn-danger"
-                            style={{ padding: '4px 12px', fontSize: '12px' }}
+                            className="btn-danger btn-sm"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleRejectReport(report.id);
@@ -657,10 +759,9 @@ export default function Reports() {
                         </>
                       )}
                       
-                      {(profile?.role === 'admin' || profile?.role === 'movement_coordinator') && (
+                      {(isAdmin || isMovementCoordinator) && (
                         <button
-                          className="btn-danger"
-                          style={{ padding: '4px 12px', fontSize: '12px' }}
+                          className="btn-danger btn-sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDelete(report.id);
@@ -713,8 +814,6 @@ export default function Reports() {
             <button
               onClick={() => setShowModal(false)}
               style={{ position: 'absolute', top: '12px', right: '16px', background: 'none', border: 'none', fontSize: '24px', color: '#98A2B3', cursor: 'pointer' }}
-              onMouseEnter={(e) => e.target.style.color = '#0B1F3A'}
-              onMouseLeave={(e) => e.target.style.color = '#98A2B3'}
             >
               ✕
             </button>
@@ -806,6 +905,209 @@ export default function Reports() {
       )}
 
       <style>{`
+        .btn-gold {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 10px 24px;
+          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
+          color: #0A1628;
+          border: none;
+          border-radius: 8px;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          text-decoration: none;
+          box-shadow: 0 2px 16px rgba(201, 162, 39, 0.25);
+          min-height: 44px;
+          min-width: 80px;
+        }
+        .btn-gold:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
+        }
+        
+        .btn-success {
+          background: #1A7A4C;
+          color: white;
+          box-shadow: 0 4px 16px rgba(26,122,76,0.2);
+        }
+        .btn-success:hover {
+          background: #13663E;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(26,122,76,0.3);
+        }
+        
+        .btn-secondary {
+          background: transparent;
+          color: #0A1628;
+          border: 1.5px solid #E4DFD8;
+          box-shadow: none;
+        }
+        .btn-secondary:hover {
+          background: #F8F6F2;
+          border-color: #C9A227;
+          transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+          background: #B3262E;
+          color: white;
+          box-shadow: 0 4px 16px rgba(179,38,46,0.2);
+        }
+        .btn-danger:hover {
+          background: #8A1C22;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(179,38,46,0.3);
+        }
+        
+        .btn-primary {
+          background: #0A1628;
+          color: white;
+          box-shadow: 0 4px 16px rgba(10,22,40,0.15);
+        }
+        .btn-primary:hover {
+          background: #1A3555;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(10,22,40,0.25);
+        }
+        
+        .btn-sm {
+          padding: 6px 14px;
+          font-size: 12px;
+          min-height: 32px;
+          min-width: 60px;
+        }
+        
+        .form-group {
+          margin-bottom: 16px;
+        }
+        .form-group label {
+          display: block;
+          font-weight: 500;
+          color: #0B1F3A;
+          margin-bottom: 4px;
+          font-size: 13px;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+          width: 100%;
+          padding: 10px 14px;
+          border: 1.5px solid #D5DCE7;
+          border-radius: 8px;
+          font-size: 14px;
+          outline: none;
+          transition: all 0.3s ease;
+          background: white;
+          font-family: inherit;
+          color: #0B1F3A;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+          border-color: #C9A227;
+          box-shadow: 0 0 0 3px rgba(201,162,39,0.1);
+        }
+        .form-group textarea {
+          resize: vertical;
+          min-height: 80px;
+        }
+        
+        .grid-2 {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        
+        .card {
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
+          margin-bottom: 20px;
+        }
+        
+        .list-item {
+          padding: 14px 18px;
+          border-left: 3px solid #0B1F3A;
+          background: #F8FAFC;
+          border-radius: 0 8px 8px 0;
+          transition: all 0.2s ease;
+        }
+        .list-item:hover {
+          background: #F0EDE8;
+          transform: translateX(4px);
+        }
+        .list-item .title {
+          font-weight: 600;
+          color: #0B1F3A;
+          font-size: 15px;
+        }
+        .list-item .subtitle {
+          font-size: 13px;
+          color: #667085;
+          margin-top: 2px;
+        }
+        .list-item .meta {
+          font-size: 12px;
+          color: #98A2B3;
+          margin-top: 4px;
+        }
+        
+        .tag {
+          display: inline-block;
+          padding: 2px 10px;
+          border-radius: 12px;
+          font-size: 10px;
+          font-weight: 500;
+        }
+        
+        .message-success {
+          padding: 12px 16px;
+          background: #E8F5EF;
+          color: #16845B;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          border-left: 4px solid #16845B;
+        }
+        .message-error {
+          padding: 12px 16px;
+          background: #FCEBEC;
+          color: #B3262E;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          border-left: 4px solid #B3262E;
+        }
+        
+        .empty-state {
+          text-align: center;
+          padding: 40px 20px;
+        }
+        .empty-state .icon {
+          font-size: 48px;
+          margin-bottom: 12px;
+          opacity: 0.6;
+        }
+        .empty-state p {
+          color: #667085;
+          font-size: 14px;
+        }
+        
+        .page-background {
+          min-height: 100vh;
+          background: #F0EDE8;
+        }
+        .container-page {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 24px 32px 48px;
+        }
+        
         @keyframes modalSlideIn {
           from {
             opacity: 0;
@@ -814,6 +1116,27 @@ export default function Reports() {
           to {
             opacity: 1;
             transform: translateY(0) scale(1);
+          }
+        }
+        
+        @media (max-width: 768px) {
+          .container-page {
+            padding: 16px;
+          }
+          .grid-2 {
+            grid-template-columns: 1fr;
+          }
+          .card {
+            padding: 16px;
+          }
+        }
+        @media (max-width: 480px) {
+          .container-page {
+            padding: 12px;
+          }
+          .btn-gold {
+            width: 100%;
+            justify-content: center;
           }
         }
       `}</style>

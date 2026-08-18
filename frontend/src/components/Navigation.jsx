@@ -21,14 +21,8 @@ export default function Navigation({ profile }) {
   const notificationRef = useRef(null);
   const menuRef = useRef(null);
 
-  // ============================================================
-  // ЕДИНОЕ МЕНЮ
-  // ============================================================
   const menuItems = useMenuItems(profile);
 
-  // ============================================================
-  // РАСКРЫТИЕ ПОДМЕНЮ
-  // ============================================================
   const toggleMenu = (id) => {
     setExpandedMenus(prev => ({
       ...prev,
@@ -36,9 +30,6 @@ export default function Navigation({ profile }) {
     }));
   };
 
-  // ============================================================
-  // ЗАГРУЗКА УВЕДОМЛЕНИЙ
-  // ============================================================
   const loadNotifications = async () => {
     if (notificationsLoaded) return;
     try {
@@ -64,9 +55,6 @@ export default function Navigation({ profile }) {
     }
   }, [profile, notificationsLoaded]);
 
-  // ============================================================
-  // ЗАКРЫТИЕ ПОПАПОВ
-  // ============================================================
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
@@ -83,18 +71,12 @@ export default function Navigation({ profile }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ============================================================
-  // ВЫХОД
-  // ============================================================
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
   };
 
-  // ============================================================
-  // УВЕДОМЛЕНИЯ
-  // ============================================================
   const handleNotificationClick = async (id) => {
     try {
       const token = localStorage.getItem('token');
@@ -125,9 +107,6 @@ export default function Navigation({ profile }) {
     }
   };
 
-  // ============================================================
-  // ВСПОМОГАТЕЛЬНЫЕ
-  // ============================================================
   const getInitials = (name) => {
     if (!name) return '?';
     const parts = name.split(' ');
@@ -146,9 +125,6 @@ export default function Navigation({ profile }) {
     return children.some(child => isActive(child.path));
   };
 
-  // ============================================================
-  // РЕНДЕР ПУНКТА МЕНЮ (С ПОДМЕНЮ)
-  // ============================================================
   const renderMenuItem = (item) => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedMenus[item.id] || false;
@@ -195,9 +171,6 @@ export default function Navigation({ profile }) {
     );
   };
 
-  // ============================================================
-  // РЕНДЕР МОБИЛЬНОГО МЕНЮ
-  // ============================================================
   const renderMobileMenuItem = (item) => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedMenus[item.id] || false;
@@ -245,9 +218,6 @@ export default function Navigation({ profile }) {
     );
   };
 
-  // ============================================================
-  // ПУБЛИЧНАЯ ВЕРСИЯ
-  // ============================================================
   if (!profile) {
     return (
       <nav className="nav">
@@ -320,28 +290,21 @@ export default function Navigation({ profile }) {
     );
   }
 
-  // ============================================================
-  // ОСНОВНАЯ ВЕРСИЯ
-  // ============================================================
   return (
     <nav className="nav">
       <div className="nav-container">
 
-        {/* ЛОГОТИП */}
         <Link to="/" className="nav-logo">
           <img src={logo} alt="ДОД" />
           <span className="nav-logo-text">Дипломаты будущего</span>
         </Link>
 
-        {/* ДЕСКТОПНОЕ МЕНЮ */}
         <div className="nav-desktop">
           {menuItems.map((item) => renderMenuItem(item))}
         </div>
 
-        {/* ПРАВАЯ ЧАСТЬ */}
         <div className="nav-right">
 
-          {/* УВЕДОМЛЕНИЯ */}
           <div className="nav-notifications" ref={notificationRef}>
             <button
               className="nav-notif-btn"
@@ -392,7 +355,6 @@ export default function Navigation({ profile }) {
             )}
           </div>
 
-          {/* ПРОФИЛЬ */}
           <div className="nav-profile" ref={profileRef}>
             <button
               className="nav-profile-btn"
@@ -444,7 +406,6 @@ export default function Navigation({ profile }) {
             )}
           </div>
 
-          {/* МОБИЛЬНЫЙ БУРГЕР */}
           <button
             className="nav-mobile-toggle"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -459,7 +420,6 @@ export default function Navigation({ profile }) {
         </div>
       </div>
 
-      {/* МОБИЛЬНОЕ МЕНЮ */}
       {isMobileMenuOpen && (
         <div className="nav-mobile" ref={menuRef}>
           {menuItems.map((item) => renderMobileMenuItem(item))}
@@ -508,9 +468,6 @@ export default function Navigation({ profile }) {
         .nav-logo img { height: 34px; width: auto; }
         .nav-logo-text { letter-spacing: -0.02em; }
 
-        /* ============================================================
-           ДЕСКТОПНОЕ МЕНЮ
-           ============================================================ */
         .nav-desktop {
           display: flex;
           align-items: center;
@@ -539,9 +496,6 @@ export default function Navigation({ profile }) {
         .nav-link.active { background: #FBF4DC; color: #C9A227; font-weight: 600; }
         .nav-link-icon { font-size: 18px; }
 
-        /* ============================================================
-           ГРУППЫ МЕНЮ (РАСКРЫВАЮЩИЕСЯ)
-           ============================================================ */
         .nav-group { position: relative; }
 
         .nav-group-toggle {
@@ -559,6 +513,8 @@ export default function Navigation({ profile }) {
           cursor: pointer;
           transition: all 0.25s ease;
           white-space: nowrap;
+          pointer-events: auto !important;
+          z-index: 10 !important;
         }
         .nav-group-toggle:hover { background: #F8F6F2; color: #0A1628; }
         .nav-group-toggle.active { background: #FBF4DC; color: #C9A227; }
@@ -566,15 +522,9 @@ export default function Navigation({ profile }) {
           margin-left: 4px;
           font-size: 12px;
           color: #A8A29A;
-          transition: transform 0.3s ease;
-        }
-        .nav-group-toggle.active .nav-group-arrow {
-          transform: rotate(90deg);
+          pointer-events: none;
         }
 
-        /* ============================================================
-           ВЫПАДАЮЩЕЕ ПОДМЕНЮ
-           ============================================================ */
         .nav-group-children {
           position: absolute;
           top: calc(100% + 4px);
@@ -601,10 +551,12 @@ export default function Navigation({ profile }) {
         }
         .nav-child:hover { background: #F8F6F2; }
         .nav-child .nav-link-icon { font-size: 16px; }
+        .nav-child {
+          pointer-events: auto !important;
+          cursor: pointer !important;
+          z-index: 20 !important;
+        }
 
-        /* ============================================================
-           ПРАВАЯ ЧАСТЬ
-           ============================================================ */
         .nav-right {
           display: flex;
           align-items: center;
@@ -612,14 +564,13 @@ export default function Navigation({ profile }) {
           flex-shrink: 0;
         }
 
-        /* ============================================================
-           УВЕДОМЛЕНИЯ
-           ============================================================ */
         .nav-notifications { position: relative; }
         .nav-notif-btn {
           width: 40px; height: 40px; border: none; background: transparent; border-radius: 50%;
           cursor: pointer; color: #6B6561; transition: all 0.25s ease;
           display: flex; align-items: center; justify-content: center; position: relative;
+          pointer-events: auto !important;
+          z-index: 10 !important;
         }
         .nav-notif-btn:hover { background: #F8F6F2; color: #0A1628; }
         .nav-notif-badge {
@@ -666,15 +617,14 @@ export default function Navigation({ profile }) {
         }
         .nav-notif-all:hover { background: #F8F6F2; }
 
-        /* ============================================================
-           ПРОФИЛЬ
-           ============================================================ */
         .nav-profile { position: relative; }
         .nav-profile-btn {
           display: flex; align-items: center; gap: 8px;
           padding: 4px 14px 4px 4px; border: none; background: transparent;
           border-radius: 30px; cursor: pointer; transition: all 0.25s ease;
           font-family: 'Inter', sans-serif; font-size: 14px; color: #0A1628;
+          pointer-events: auto !important;
+          z-index: 10 !important;
         }
         .nav-profile-btn:hover { background: #F8F6F2; }
         .nav-avatar {
@@ -717,17 +667,18 @@ export default function Navigation({ profile }) {
           font-size: 14px; transition: all 0.2s ease;
           border: none; background: none; width: 100%; cursor: pointer;
           font-family: 'Inter', sans-serif; text-align: left;
+          pointer-events: auto !important;
+          z-index: 10 !important;
         }
         .nav-profile-item:hover { background: #F8F6F2; }
         .nav-profile-logout { color: #B3262E; }
         .nav-profile-logout:hover { background: #FCEBEC; }
 
-        /* ============================================================
-           МОБИЛЬНОЕ МЕНЮ
-           ============================================================ */
         .nav-mobile-toggle {
           display: none; background: none; border: none;
           cursor: pointer; color: #0A1628; padding: 8px 4px;
+          pointer-events: auto !important;
+          z-index: 10 !important;
         }
 
         .nav-mobile {
@@ -743,6 +694,9 @@ export default function Navigation({ profile }) {
           padding: 10px 14px; border-radius: 8px; text-decoration: none;
           color: #0A1628; font-size: 14px; font-weight: 500;
           transition: all 0.2s ease;
+          pointer-events: auto !important;
+          cursor: pointer !important;
+          z-index: 10 !important;
         }
         .nav-mobile-link:hover { background: #F8F6F2; }
         .nav-mobile-link.active { background: #FBF4DC; color: #C9A227; }
@@ -756,6 +710,8 @@ export default function Navigation({ profile }) {
           cursor: pointer; transition: all 0.2s ease;
           font-family: 'Inter', sans-serif;
           border-radius: 8px;
+          pointer-events: auto !important;
+          z-index: 10 !important;
         }
         .nav-mobile-group-toggle:hover { background: #F8F6F2; }
         .nav-mobile-group-toggle.active { background: #FBF4DC; color: #C9A227; }
@@ -774,12 +730,11 @@ export default function Navigation({ profile }) {
           font-size: 14px; color: #B3262E; cursor: pointer; border-radius: 8px;
           font-weight: 500; font-family: 'Inter', sans-serif;
           transition: all 0.2s ease;
+          pointer-events: auto !important;
+          z-index: 10 !important;
         }
         .nav-mobile-logout:hover { background: #FCEBEC; }
 
-        /* ============================================================
-           АДАПТИВНОСТЬ
-           ============================================================ */
         @media (max-width: 1024px) {
           .nav-desktop { display: none; }
           .nav-mobile-toggle { display: block; }
@@ -811,6 +766,41 @@ export default function Navigation({ profile }) {
           .nav-profile-btn { padding: 4px; }
           .nav-avatar { width: 32px; height: 32px; font-size: 12px; }
           .nav-profile-dropdown { width: 200px; right: -10px; }
+        }
+
+        /* ============================================================
+           ФИКС КНОПОК — ЧТОБЫ КЛИКАЛИСЬ
+           ============================================================ */
+        button,
+        .btn,
+        .nav-group-toggle,
+        .nav-mobile-group-toggle,
+        .nav-profile-btn,
+        .nav-notif-btn,
+        .nav-mobile-logout,
+        .nav-mobile-toggle {
+          pointer-events: auto !important;
+          cursor: pointer !important;
+          user-select: none !important;
+          z-index: 10 !important;
+          position: relative !important;
+        }
+
+        .nav-group-children .nav-link,
+        .nav-mobile-group-children .nav-mobile-link {
+          pointer-events: auto !important;
+          cursor: pointer !important;
+          z-index: 20 !important;
+          position: relative !important;
+        }
+
+        .nav-group-arrow {
+          pointer-events: none !important;
+        }
+
+        .nav-group-toggle:active,
+        .nav-mobile-group-toggle:active {
+          transform: scale(0.97);
         }
       `}</style>
     </nav>

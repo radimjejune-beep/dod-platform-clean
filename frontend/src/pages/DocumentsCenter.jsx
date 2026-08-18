@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import Navigation from '../components/Navigation';
 
 export default function DocumentsCenter() {
   const [documents, setDocuments] = useState([]);
@@ -67,11 +68,10 @@ export default function DocumentsCenter() {
   }, [activeCategory, documents]);
 
   // ============================================================
-  // ПРОВЕРКА ПРАВ НА РЕДАКТИРОВАНИЕ
+  // ПРОВЕРКА ПРАВ
   // ============================================================
   const canEditDocument = (doc) => {
     const role = profile?.role;
-    
     if (role === 'admin') return true;
     if (role === 'movement_coordinator') {
       return doc.created_by === profile?.id;
@@ -82,12 +82,8 @@ export default function DocumentsCenter() {
     return false;
   };
 
-  // ============================================================
-  // ПРОВЕРКА ПРАВ НА УДАЛЕНИЕ
-  // ============================================================
   const canDeleteDocument = (doc) => {
     const role = profile?.role;
-    
     if (role === 'admin') return true;
     if (role === 'movement_coordinator') {
       return doc.created_by === profile?.id;
@@ -228,7 +224,7 @@ export default function DocumentsCenter() {
   };
 
   // ============================================================
-  // ОТОБРАЖЕНИЕ СТАТУСА ДОКУМЕНТА
+  // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
   // ============================================================
   const getDocumentStatus = (doc) => {
     if (doc.is_public) {
@@ -237,9 +233,6 @@ export default function DocumentsCenter() {
     return <span className="badge badge-info">Приватный</span>;
   };
 
-  // ============================================================
-  // ФОРМАТИРОВАНИЕ ДАТЫ
-  // ============================================================
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString('ru-RU', {
       day: 'numeric',
@@ -248,9 +241,6 @@ export default function DocumentsCenter() {
     });
   };
 
-  // ============================================================
-  // ПОЛУЧЕНИЕ КАТЕГОРИЙ ДЛЯ ФИЛЬТРОВ
-  // ============================================================
   const getCategories = () => {
     const cats = new Set();
     documents.forEach(doc => {
@@ -261,9 +251,6 @@ export default function DocumentsCenter() {
 
   const categories = getCategories();
 
-  // ============================================================
-  // ПОДСЧЁТ ДОКУМЕНТОВ ПО КАТЕГОРИЯМ
-  // ============================================================
   const getCountByCategory = (category) => {
     if (category === 'all') return documents.length;
     return documents.filter(doc => doc.category === category).length;
@@ -277,6 +264,8 @@ export default function DocumentsCenter() {
     other: 'Другое'
   };
 
+  const canCreate = ['admin', 'movement_coordinator', 'club_coordinator'].includes(profile?.role);
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F5F6F8' }}>
@@ -285,181 +274,175 @@ export default function DocumentsCenter() {
     );
   }
 
-  const canCreate = ['admin', 'movement_coordinator', 'club_coordinator'].includes(profile?.role);
-
   return (
-    <div className="documents-center-page">
+    <div className="page-background">
       {/* ============================================================
-      ЗАГОЛОВОК
-      ============================================================ */}
-      <div className="page-header">
-        <div className="page-header-left">
-          <div className="page-header-icon">📁</div>
-          <div>
-            <h1>Центр документов</h1>
+         НАВИГАЦИЯ
+         ============================================================ */}
+      <Navigation profile={profile} />
+
+      {/* ============================================================
+         ОСНОВНОЙ КОНТЕНТ
+         ============================================================ */}
+      <div className="documents-page">
+        {/* ЗАГОЛОВОК */}
+        <div className="documents-header">
+          <div className="documents-header-left">
+            <h1>📁 Центр документов</h1>
             <p>Управление документами и материалами</p>
           </div>
-        </div>
-        {canCreate && (
-          <div className="page-header-actions">
-            <button className="btn btn-gold" onClick={() => {
-              setEditingDoc(null);
-              setFormData({
-                title: '',
-                content: '',
-                category: 'general',
-                document_type: 'pdf',
-                is_public: true,
-                club_id: profile?.club_id || null,
-                tags: []
-              });
-              setShowModal(true);
-            }}>
+          {canCreate && (
+            <button
+              className="btn btn-gold"
+              onClick={() => {
+                setEditingDoc(null);
+                setFormData({
+                  title: '',
+                  content: '',
+                  category: 'general',
+                  document_type: 'pdf',
+                  is_public: true,
+                  club_id: profile?.club_id || null,
+                  tags: []
+                });
+                setShowModal(true);
+              }}
+            >
               + Создать документ
             </button>
+          )}
+        </div>
+
+        {/* СООБЩЕНИЯ */}
+        {error && <div className="message message-error">{error}</div>}
+        {success && <div className="message message-success">{success}</div>}
+
+        {/* КАТЕГОРИИ */}
+        <div className="category-filters">
+          <button
+            className={`category-filter-btn ${activeCategory === 'all' ? 'active' : ''}`}
+            onClick={() => setActiveCategory('all')}
+          >
+            Все документы
+            <span className="category-count">{getCountByCategory('all')}</span>
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              className={`category-filter-btn ${activeCategory === cat ? 'active' : ''}`}
+              onClick={() => setActiveCategory(cat)}
+            >
+              {categoryLabels[cat] || cat}
+              <span className="category-count">{getCountByCategory(cat)}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* ============================================================
+           СПИСОК ДОКУМЕНТОВ
+           ============================================================ */}
+        {filteredDocuments.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">📄</div>
+            <h3>{activeCategory === 'all' ? 'Нет документов' : `Нет документов в категории «${categoryLabels[activeCategory] || activeCategory}»`}</h3>
+            <p>{activeCategory === 'all' ? 'Документы пока не добавлены' : 'Попробуйте выбрать другую категорию'}</p>
+            {canCreate && (
+              <button
+                className="btn btn-gold"
+                style={{ marginTop: '16px' }}
+                onClick={() => {
+                  setEditingDoc(null);
+                  setFormData({
+                    title: '',
+                    content: '',
+                    category: 'general',
+                    document_type: 'pdf',
+                    is_public: true,
+                    club_id: profile?.club_id || null,
+                    tags: []
+                  });
+                  setShowModal(true);
+                }}
+              >
+                Создать первый документ
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Название</th>
+                  <th>Категория</th>
+                  <th>Тип</th>
+                  <th>Статус</th>
+                  <th>Автор</th>
+                  <th>Дата</th>
+                  <th>Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredDocuments.map((doc) => {
+                  const canEdit = canEditDocument(doc);
+                  const canDelete = canDeleteDocument(doc);
+
+                  return (
+                    <tr key={doc.id}>
+                      <td>
+                        <strong>{doc.title}</strong>
+                      </td>
+                      <td>
+                        <span className="badge badge-info">{categoryLabels[doc.category] || doc.category}</span>
+                      </td>
+                      <td>{doc.document_type}</td>
+                      <td>{getDocumentStatus(doc)}</td>
+                      <td>{doc.created_by_name || 'Неизвестно'}</td>
+                      <td>{formatDate(doc.created_at)}</td>
+                      <td>
+                        <div className="action-buttons">
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handleEdit(doc)}
+                            disabled={!canEdit}
+                            title={!canEdit ? 'Нет прав на редактирование' : ''}
+                          >
+                            Редактировать
+                          </button>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => handleDelete(doc)}
+                            disabled={!canDelete}
+                            title={!canDelete ? 'Нет прав на удаление' : ''}
+                          >
+                            Удалить
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
 
       {/* ============================================================
-      СООБЩЕНИЯ
-      ============================================================ */}
-      {error && (
-        <div className="message message-error">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="message message-success">
-          {success}
-        </div>
-      )}
-
-      {/* ============================================================
-      ФИЛЬТРЫ ПО КАТЕГОРИЯМ — РАБОЧИЕ
-      ============================================================ */}
-      <div className="category-filters">
-        <button
-          className={`category-filter-btn ${activeCategory === 'all' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('all')}
-        >
-          Все документы
-          <span className="category-count">{getCountByCategory('all')}</span>
-        </button>
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            className={`category-filter-btn ${activeCategory === cat ? 'active' : ''}`}
-            onClick={() => setActiveCategory(cat)}
-          >
-            {categoryLabels[cat] || cat}
-            <span className="category-count">{getCountByCategory(cat)}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* ============================================================
-      СПИСОК ДОКУМЕНТОВ
-      ============================================================ */}
-      {filteredDocuments.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">📄</div>
-          <h3>{activeCategory === 'all' ? 'Нет документов' : `Нет документов в категории «${categoryLabels[activeCategory] || activeCategory}»`}</h3>
-          <p>{activeCategory === 'all' ? 'Документы пока не добавлены' : 'Попробуйте выбрать другую категорию'}</p>
-          {canCreate && (
-            <button className="btn btn-gold" style={{ marginTop: '16px' }} onClick={() => {
-              setEditingDoc(null);
-              setFormData({
-                title: '',
-                content: '',
-                category: 'general',
-                document_type: 'pdf',
-                is_public: true,
-                club_id: profile?.club_id || null,
-                tags: []
-              });
-              setShowModal(true);
-            }}>
-              Создать первый документ
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="table-wrapper">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Название</th>
-                <th>Категория</th>
-                <th>Тип</th>
-                <th>Статус</th>
-                <th>Автор</th>
-                <th>Дата</th>
-                <th>Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredDocuments.map((doc) => {
-                const canEdit = canEditDocument(doc);
-                const canDelete = canDeleteDocument(doc);
-                
-                return (
-                  <tr key={doc.id}>
-                    <td>
-                      <strong>{doc.title}</strong>
-                    </td>
-                    <td>
-                      <span className="badge badge-info">{categoryLabels[doc.category] || doc.category}</span>
-                    </td>
-                    <td>{doc.document_type}</td>
-                    <td>{getDocumentStatus(doc)}</td>
-                    <td>{doc.created_by_name || 'Неизвестно'}</td>
-                    <td>{formatDate(doc.created_at)}</td>
-                    <td>
-                      <div className="action-buttons">
-                        <button 
-                          className="btn btn-primary btn-sm" 
-                          onClick={() => handleEdit(doc)}
-                          disabled={!canEdit}
-                          title={!canEdit ? 'Нет прав на редактирование (можно редактировать только свои документы)' : ''}
-                        >
-                          Редактировать
-                        </button>
-                        <button 
-                          className="btn btn-danger btn-sm" 
-                          onClick={() => handleDelete(doc)}
-                          disabled={!canDelete}
-                          title={!canDelete ? 'Нет прав на удаление (можно удалять только свои документы)' : ''}
-                        >
-                          Удалить
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* ============================================================
-      МОДАЛЬНОЕ ОКНО
-      ============================================================ */}
+         МОДАЛЬНОЕ ОКНО
+         ============================================================ */}
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal">
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">
-                {editingDoc ? 'Редактировать документ' : 'Создать документ'}
+                {editingDoc ? '✏️ Редактировать документ' : '📝 Создать документ'}
               </h3>
-              <button className="modal-close" onClick={closeModal}>
-                ✕
-              </button>
+              <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Название документа *</label>
+              <label>Название документа <span className="required">*</span></label>
               <input
                 type="text"
                 className="form-control"
@@ -470,7 +453,7 @@ export default function DocumentsCenter() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Содержание</label>
+              <label>Содержание</label>
               <textarea
                 className="form-control"
                 rows="6"
@@ -481,7 +464,7 @@ export default function DocumentsCenter() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Категория</label>
+              <label>Категория</label>
               <select
                 className="form-control"
                 value={formData.category}
@@ -496,7 +479,7 @@ export default function DocumentsCenter() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Тип документа</label>
+              <label>Тип документа</label>
               <select
                 className="form-control"
                 value={formData.document_type}
@@ -511,7 +494,7 @@ export default function DocumentsCenter() {
             </div>
 
             <div className="form-group">
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label className="checkbox-label">
                 <input
                   type="checkbox"
                   checked={formData.is_public}
@@ -523,7 +506,7 @@ export default function DocumentsCenter() {
 
             {profile?.role === 'admin' && (
               <div className="form-group">
-                <label className="form-label">Клуб (ID)</label>
+                <label>Клуб (ID)</label>
                 <input
                   type="text"
                   className="form-control"
@@ -536,7 +519,7 @@ export default function DocumentsCenter() {
 
             {profile?.role === 'club_coordinator' && (
               <div className="form-group" style={{ opacity: 0.6 }}>
-                <label className="form-label">Клуб</label>
+                <label>Клуб</label>
                 <input
                   type="text"
                   className="form-control"
@@ -549,77 +532,161 @@ export default function DocumentsCenter() {
 
             <div className="modal-actions">
               <button
-                className="btn btn-gold"
+                className="btn btn-success"
                 onClick={editingDoc ? handleUpdate : handleCreate}
               >
-                {editingDoc ? 'Сохранить изменения' : 'Создать документ'}
+                {editingDoc ? '💾 Сохранить изменения' : '✅ Создать документ'}
               </button>
               <button
                 className="btn btn-outline"
                 onClick={closeModal}
               >
-                Отмена
+                ❌ Отмена
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ============================================================
-      СТИЛИ
-      ============================================================ */}
       <style>{`
-        .documents-center-page {
-          padding: 24px 32px 48px;
-          max-width: 1400px;
+        /* ============================================================
+           СТРАНИЦА
+           ============================================================ */
+        .page-background {
+          min-height: 100vh;
+          background: #F0EDE8;
+        }
+
+        .documents-page {
+          max-width: 1200px;
           margin: 0 auto;
+          padding: 24px 32px 48px;
           width: 100%;
         }
 
         /* ============================================================
-        ЗАГОЛОВОК
-        ============================================================ */
-        .page-header {
+           ЗАГОЛОВОК
+           ============================================================ */
+        .documents-header {
           display: flex;
-          align-items: center;
           justify-content: space-between;
-          padding: 24px 28px;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 16px;
+          margin-bottom: 24px;
+          padding: 20px 28px;
           background: white;
           border-radius: 12px;
           border: 1px solid #E4DFD8;
-          box-shadow: 0 2px 12px rgba(10, 22, 40, 0.04);
-          margin-bottom: 24px;
-          flex-wrap: wrap;
-          gap: 16px;
+          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
         }
-        .page-header-left {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-        .page-header-icon {
-          font-size: 32px;
-        }
-        .page-header h1 {
+
+        .documents-header-left h1 {
           font-family: 'Playfair Display', serif;
           font-size: 24px;
           font-weight: 700;
           color: #0A1628;
           margin: 0;
         }
-        .page-header p {
+
+        .documents-header-left p {
           font-size: 14px;
           color: #8A8480;
-          margin: 0;
-        }
-        .page-header-actions {
-          display: flex;
-          gap: 10px;
+          margin: 4px 0 0 0;
         }
 
         /* ============================================================
-        СООБЩЕНИЯ
-        ============================================================ */
+           КНОПКИ
+           ============================================================ */
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 10px 24px;
+          border: none;
+          border-radius: 8px;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          text-decoration: none;
+          min-height: 44px;
+          min-width: 80px;
+        }
+
+        .btn-gold {
+          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
+          color: #0A1628;
+          box-shadow: 0 2px 16px rgba(201,162,39,0.25);
+        }
+        .btn-gold:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(201,162,39,0.35);
+        }
+
+        .btn-primary {
+          background: #0A1628;
+          color: white;
+          box-shadow: 0 4px 16px rgba(10,22,40,0.15);
+        }
+        .btn-primary:hover {
+          background: #1A3555;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(10,22,40,0.25);
+        }
+
+        .btn-success {
+          background: #1A7A4C;
+          color: white;
+          box-shadow: 0 4px 16px rgba(26,122,76,0.2);
+        }
+        .btn-success:hover {
+          background: #13663E;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(26,122,76,0.3);
+        }
+
+        .btn-danger {
+          background: #B3262E;
+          color: white;
+          box-shadow: 0 4px 16px rgba(179,38,46,0.2);
+        }
+        .btn-danger:hover {
+          background: #8A1C22;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(179,38,46,0.3);
+        }
+
+        .btn-outline {
+          background: transparent;
+          color: #0A1628;
+          border: 1.5px solid #E4DFD8;
+          box-shadow: none;
+        }
+        .btn-outline:hover {
+          background: #F8F6F2;
+          border-color: #C9A227;
+          transform: translateY(-2px);
+        }
+
+        .btn-sm {
+          padding: 6px 14px;
+          font-size: 12px;
+          min-height: 32px;
+          min-width: 60px;
+        }
+
+        .btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed !important;
+          pointer-events: none !important;
+        }
+
+        /* ============================================================
+           СООБЩЕНИЯ
+           ============================================================ */
         .message {
           padding: 14px 20px;
           border-radius: 8px;
@@ -628,11 +695,13 @@ export default function DocumentsCenter() {
           font-weight: 500;
           border-left: 4px solid transparent;
         }
+
         .message-success {
           background: #E8F5EF;
           color: #1A7A4C;
           border-left-color: #1A7A4C;
         }
+
         .message-error {
           background: #FCEBEC;
           color: #B3262E;
@@ -640,14 +709,15 @@ export default function DocumentsCenter() {
         }
 
         /* ============================================================
-        ФИЛЬТРЫ
-        ============================================================ */
+           ФИЛЬТРЫ
+           ============================================================ */
         .category-filters {
           display: flex;
           gap: 8px;
           flex-wrap: wrap;
           margin-bottom: 20px;
         }
+
         .category-filter-btn {
           display: flex;
           align-items: center;
@@ -663,17 +733,20 @@ export default function DocumentsCenter() {
           cursor: pointer;
           transition: all 0.25s ease;
         }
+
         .category-filter-btn:hover {
           border-color: #C9A227;
           color: #0A1628;
           background: #FBF4DC;
         }
+
         .category-filter-btn.active {
           border-color: #C9A227;
           background: #FBF4DC;
           color: #0A1628;
           font-weight: 600;
         }
+
         .category-count {
           background: #F8F6F2;
           padding: 1px 8px;
@@ -681,32 +754,36 @@ export default function DocumentsCenter() {
           font-size: 11px;
           color: #8A8480;
         }
+
         .category-filter-btn.active .category-count {
           background: #E8D9A8;
           color: #0A1628;
         }
 
         /* ============================================================
-        ТАБЛИЦА
-        ============================================================ */
+           ТАБЛИЦА
+           ============================================================ */
         .table-wrapper {
           overflow-x: auto;
           background: white;
           border-radius: 12px;
           border: 1px solid #E4DFD8;
-          box-shadow: 0 2px 12px rgba(10, 22, 40, 0.04);
+          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           width: 100%;
         }
+
         .table {
           width: 100%;
           border-collapse: collapse;
           font-size: 14px;
           min-width: 700px;
         }
+
         .table thead {
           background: #F8F6F2;
           border-bottom: 1px solid #E4DFD8;
         }
+
         .table thead th {
           text-align: left;
           padding: 12px 16px;
@@ -716,14 +793,17 @@ export default function DocumentsCenter() {
           text-transform: uppercase;
           letter-spacing: 0.06em;
         }
+
         .table tbody td {
           padding: 12px 16px;
           border-bottom: 1px solid #F0EDE8;
           color: #4D4744;
         }
+
         .table tbody tr:hover td {
           background: #F8F6F2;
         }
+
         .table tbody tr:last-child td {
           border-bottom: none;
         }
@@ -735,8 +815,8 @@ export default function DocumentsCenter() {
         }
 
         /* ============================================================
-        БЕЙДЖИ
-        ============================================================ */
+           БЕЙДЖИ
+           ============================================================ */
         .badge {
           display: inline-block;
           padding: 3px 12px;
@@ -744,92 +824,25 @@ export default function DocumentsCenter() {
           font-size: 11px;
           font-weight: 500;
         }
+
         .badge-success {
           background: #E8F5EF;
           color: #16845B;
         }
+
         .badge-info {
           background: #EAF2FA;
           color: #174A7E;
         }
 
-        /* ============================================================
-        КНОПКИ
-        ============================================================ */
-        .btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 10px 22px;
-          border: none;
-          border-radius: 8px;
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          text-decoration: none;
-          letter-spacing: 0.01em;
-          min-height: 40px;
-          min-width: 80px;
-          white-space: nowrap;
-        }
-        .btn:disabled {
-          opacity: 0.4;
-          cursor: not-allowed !important;
-          pointer-events: none !important;
-        }
-        .btn-gold {
-          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
-          color: #0A1628;
-          box-shadow: 0 2px 16px rgba(201, 162, 39, 0.25);
-        }
-        .btn-gold:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
-        }
-        .btn-primary {
-          background: #0A1628;
-          color: white;
-          box-shadow: 0 4px 16px rgba(10, 22, 40, 0.15);
-        }
-        .btn-primary:hover {
-          background: #1A3555;
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(10, 22, 40, 0.25);
-        }
-        .btn-danger {
-          background: #B3262E;
-          color: white;
-          box-shadow: 0 4px 16px rgba(179, 38, 46, 0.2);
-        }
-        .btn-danger:hover {
-          background: #8A1C22;
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(179, 38, 46, 0.3);
-        }
-        .btn-outline {
-          background: transparent;
-          color: #0A1628;
-          border: 1.5px solid #E4DFD8;
-          box-shadow: none;
-        }
-        .btn-outline:hover {
-          background: #F8F6F2;
-          border-color: #C9A227;
-          transform: translateY(-2px);
-        }
-        .btn-sm {
-          padding: 6px 14px;
-          font-size: 12px;
-          min-height: 32px;
-          min-width: 60px;
+        .badge-blue {
+          background: #EAF2FA;
+          color: #174A7E;
         }
 
         /* ============================================================
-        EMPTY STATE
-        ============================================================ */
+           EMPTY STATE
+           ============================================================ */
         .empty-state {
           text-align: center;
           padding: 60px 20px;
@@ -837,25 +850,28 @@ export default function DocumentsCenter() {
           border-radius: 12px;
           border: 1px dashed #E4DFD8;
         }
+
         .empty-state-icon {
           font-size: 48px;
           margin-bottom: 12px;
           opacity: 0.6;
         }
+
         .empty-state h3 {
           font-family: 'Playfair Display', serif;
           font-size: 18px;
           color: #4D4744;
           margin-bottom: 4px;
         }
+
         .empty-state p {
           font-size: 14px;
           color: #8A8480;
         }
 
         /* ============================================================
-        МОДАЛЬНОЕ ОКНО
-        ============================================================ */
+           МОДАЛЬНОЕ ОКНО
+           ============================================================ */
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -870,29 +886,33 @@ export default function DocumentsCenter() {
           z-index: 1000;
           padding: 20px;
         }
+
         .modal {
           background: white;
           border-radius: 16px;
           padding: 32px;
           max-width: 560px;
           width: 100%;
-          box-shadow: 0 24px 64px rgba(10, 22, 40, 0.2);
+          box-shadow: 0 24px 64px rgba(10,22,40,0.2);
           border: 1px solid #E4DFD8;
           max-height: 90vh;
           overflow-y: auto;
         }
+
         .modal-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
           margin-bottom: 20px;
         }
+
         .modal-title {
           font-family: 'Playfair Display', serif;
           font-size: 20px;
           font-weight: 600;
           color: #0A1628;
         }
+
         .modal-close {
           background: none;
           border: none;
@@ -901,31 +921,40 @@ export default function DocumentsCenter() {
           cursor: pointer;
           transition: color 0.2s ease;
         }
+
         .modal-close:hover {
           color: #0A1628;
         }
+
         .modal-actions {
           display: flex;
-          gap: 10px;
+          gap: 12px;
           margin-top: 20px;
         }
+
         .modal-actions .btn {
           flex: 1;
         }
 
         /* ============================================================
-        ФОРМЫ
-        ============================================================ */
+           ФОРМЫ
+           ============================================================ */
         .form-group {
           margin-bottom: 18px;
         }
-        .form-label {
+
+        .form-group label {
           display: block;
           font-size: 13px;
           font-weight: 500;
           color: #6B6561;
           margin-bottom: 4px;
         }
+
+        .required {
+          color: #B3262E;
+        }
+
         .form-control {
           width: 100%;
           padding: 10px 14px;
@@ -939,18 +968,37 @@ export default function DocumentsCenter() {
           outline: none;
           min-height: 44px;
         }
+
         .form-control:focus {
           border-color: #C9A227;
-          box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.08);
+          box-shadow: 0 0 0 3px rgba(201,162,39,0.08);
         }
+
         .form-control:disabled {
           background: #F8F6F2;
           cursor: not-allowed;
         }
+
         textarea.form-control {
           resize: vertical;
           min-height: 100px;
         }
+
+        .checkbox-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          font-weight: 400;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+          width: 18px;
+          height: 18px;
+          accent-color: #C9A227;
+          cursor: pointer;
+        }
+
         small {
           font-size: 12px;
           color: #8A8480;
@@ -959,91 +1007,114 @@ export default function DocumentsCenter() {
         }
 
         /* ============================================================
-        АДАПТИВНОСТЬ
-        ============================================================ */
+           АДАПТИВНОСТЬ
+           ============================================================ */
         @media (max-width: 1024px) {
-          .documents-center-page {
+          .documents-page {
             padding: 20px 24px 36px;
           }
         }
 
         @media (max-width: 768px) {
-          .documents-center-page {
+          .documents-page {
             padding: 16px 16px 28px;
           }
-          .page-header {
+
+          .documents-header {
             flex-direction: column;
             align-items: flex-start;
           }
-          .page-header-actions {
-            width: 100%;
-          }
-          .page-header-actions .btn {
+
+          .documents-header .btn {
             width: 100%;
             justify-content: center;
           }
+
           .modal {
             padding: 20px;
             margin: 10px;
           }
+
           .modal-actions {
             flex-direction: column;
           }
+
           .modal-actions .btn {
             width: 100%;
           }
-        }
 
-        @media (max-width: 480px) {
-          .documents-center-page {
-            padding: 12px 12px 20px;
-          }
-          .page-header {
-            padding: 16px 18px;
-          }
-          .page-header h1 {
-            font-size: 20px;
-          }
-          .page-header-icon {
-            font-size: 24px;
-          }
           .table {
             min-width: 500px;
-            font-size: 12px;
+            font-size: 13px;
           }
-          .table thead th,
-          .table tbody td {
-            padding: 8px 12px;
+
+          .category-filters {
+            gap: 6px;
           }
-          .btn {
-            padding: 6px 12px;
-            font-size: 12px;
-            min-height: 32px;
-            min-width: 50px;
-          }
-          .btn-sm {
-            padding: 4px 10px;
-            font-size: 11px;
-            min-height: 26px;
-            min-width: 40px;
-          }
+
           .category-filter-btn {
             padding: 6px 12px;
             font-size: 12px;
           }
+        }
+
+        @media (max-width: 480px) {
+          .documents-page {
+            padding: 12px 12px 20px;
+          }
+
+          .documents-header {
+            padding: 14px 16px;
+          }
+
+          .documents-header-left h1 {
+            font-size: 20px;
+          }
+
+          .table {
+            min-width: 400px;
+            font-size: 12px;
+          }
+
+          .table thead th,
+          .table tbody td {
+            padding: 8px 12px;
+          }
+
+          .btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            min-height: 36px;
+          }
+
+          .btn-sm {
+            padding: 4px 10px;
+            font-size: 11px;
+            min-height: 28px;
+            min-width: 40px;
+          }
+
           .modal {
             padding: 16px;
           }
+
           .modal-title {
             font-size: 18px;
           }
+
           .action-buttons {
             flex-direction: column;
             gap: 4px;
           }
+
           .action-buttons .btn {
             width: 100%;
             justify-content: center;
+          }
+
+          .category-filter-btn {
+            padding: 4px 10px;
+            font-size: 11px;
           }
         }
       `}</style>

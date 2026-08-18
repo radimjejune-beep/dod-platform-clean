@@ -6,10 +6,12 @@ import api from '../lib/api';
 
 export default function DocumentsCenter() {
   const [documents, setDocuments] = useState([]);
+  const [filteredDocuments, setFilteredDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [editingDoc, setEditingDoc] = useState(null);
+  const [activeCategory, setActiveCategory] = useState('all');
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -41,6 +43,7 @@ export default function DocumentsCenter() {
 
         const docs = await api.getDocuments();
         setDocuments(docs || []);
+        setFilteredDocuments(docs || []);
       } catch (err) {
         console.error('Ошибка загрузки документов:', err);
         setError('Ошибка загрузки документов');
@@ -53,25 +56,29 @@ export default function DocumentsCenter() {
   }, [navigate]);
 
   // ============================================================
+  // ФИЛЬТРАЦИЯ ПО КАТЕГОРИЯМ
+  // ============================================================
+  useEffect(() => {
+    if (activeCategory === 'all') {
+      setFilteredDocuments(documents);
+    } else {
+      setFilteredDocuments(documents.filter(doc => doc.category === activeCategory));
+    }
+  }, [activeCategory, documents]);
+
+  // ============================================================
   // ПРОВЕРКА ПРАВ НА РЕДАКТИРОВАНИЕ
   // ============================================================
   const canEditDocument = (doc) => {
     const role = profile?.role;
     
-    // Администратор может всё
     if (role === 'admin') return true;
-    
-    // Координатор движения может редактировать только свои документы
     if (role === 'movement_coordinator') {
       return doc.created_by === profile?.id;
     }
-    
-    // Координатор КЮДа — может редактировать ТОЛЬКО СВОИ документы
     if (role === 'club_coordinator') {
       return doc.created_by === profile?.id;
     }
-    
-    // Остальные не могут редактировать
     return false;
   };
 
@@ -81,20 +88,13 @@ export default function DocumentsCenter() {
   const canDeleteDocument = (doc) => {
     const role = profile?.role;
     
-    // Администратор может всё
     if (role === 'admin') return true;
-    
-    // Координатор движения может удалять только свои документы
     if (role === 'movement_coordinator') {
       return doc.created_by === profile?.id;
     }
-    
-    // Координатор КЮДа — может удалять ТОЛЬКО СВОИ документы
     if (role === 'club_coordinator') {
       return doc.created_by === profile?.id;
     }
-    
-    // Остальные не могут удалять
     return false;
   };
 
@@ -108,7 +108,6 @@ export default function DocumentsCenter() {
     }
 
     try {
-      // Для координатора КЮДа автоматически подставляем его club_id
       if (profile?.role === 'club_coordinator' && profile?.club_id) {
         formData.club_id = profile.club_id;
       }
@@ -137,7 +136,6 @@ export default function DocumentsCenter() {
   // РЕДАКТИРОВАНИЕ ДОКУМЕНТА
   // ============================================================
   const handleEdit = (doc) => {
-    // Проверка прав
     if (!canEditDocument(doc)) {
       setError('У вас нет прав на редактирование этого документа');
       setTimeout(() => setError(''), 3000);
@@ -192,7 +190,6 @@ export default function DocumentsCenter() {
   // УДАЛЕНИЕ ДОКУМЕНТА
   // ============================================================
   const handleDelete = async (doc) => {
-    // Проверка прав
     if (!canDeleteDocument(doc)) {
       setError('У вас нет прав на удаление этого документа');
       setTimeout(() => setError(''), 3000);
@@ -210,6 +207,24 @@ export default function DocumentsCenter() {
       console.error('Ошибка удаления:', err);
       setError('Ошибка удаления документа');
     }
+  };
+
+  // ============================================================
+  // ЗАКРЫТИЕ МОДАЛЬНОГО ОКНА
+  // ============================================================
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingDoc(null);
+    setError('');
+    setFormData({
+      title: '',
+      content: '',
+      category: 'general',
+      document_type: 'pdf',
+      is_public: true,
+      club_id: null,
+      tags: []
+    });
   };
 
   // ============================================================
@@ -234,21 +249,32 @@ export default function DocumentsCenter() {
   };
 
   // ============================================================
-  // ЗАКРЫТИЕ МОДАЛЬНОГО ОКНА
+  // ПОЛУЧЕНИЕ КАТЕГОРИЙ ДЛЯ ФИЛЬТРОВ
   // ============================================================
-  const closeModal = () => {
-    setShowModal(false);
-    setEditingDoc(null);
-    setError('');
-    setFormData({
-      title: '',
-      content: '',
-      category: 'general',
-      document_type: 'pdf',
-      is_public: true,
-      club_id: null,
-      tags: []
+  const getCategories = () => {
+    const cats = new Set();
+    documents.forEach(doc => {
+      if (doc.category) cats.add(doc.category);
     });
+    return Array.from(cats);
+  };
+
+  const categories = getCategories();
+
+  // ============================================================
+  // ПОДСЧЁТ ДОКУМЕНТОВ ПО КАТЕГОРИЯМ
+  // ============================================================
+  const getCountByCategory = (category) => {
+    if (category === 'all') return documents.length;
+    return documents.filter(doc => doc.category === category).length;
+  };
+
+  const categoryLabels = {
+    general: 'Общие',
+    instructions: 'Инструкции',
+    templates: 'Шаблоны',
+    orders: 'Приказы',
+    other: 'Другое'
   };
 
   if (loading) {
@@ -262,7 +288,7 @@ export default function DocumentsCenter() {
   const canCreate = ['admin', 'movement_coordinator', 'club_coordinator'].includes(profile?.role);
 
   return (
-    <div className="container-page">
+    <div className="documents-center-page">
       {/* ============================================================
       ЗАГОЛОВОК
       ============================================================ */}
@@ -310,25 +336,36 @@ export default function DocumentsCenter() {
       )}
 
       {/* ============================================================
-      ФИЛЬТРЫ ПО КАТЕГОРИЯМ
+      ФИЛЬТРЫ ПО КАТЕГОРИЯМ — РАБОЧИЕ
       ============================================================ */}
-      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
-        <button className="btn btn-primary btn-sm">Все документы</button>
-        <button className="btn btn-outline btn-sm">Общие</button>
-        <button className="btn btn-outline btn-sm">Инструкции</button>
-        <button className="btn btn-outline btn-sm">Шаблоны</button>
-        <button className="btn btn-outline btn-sm">Приказы</button>
-        <button className="btn btn-outline btn-sm">Другое</button>
+      <div className="category-filters">
+        <button
+          className={`category-filter-btn ${activeCategory === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('all')}
+        >
+          Все документы
+          <span className="category-count">{getCountByCategory('all')}</span>
+        </button>
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            className={`category-filter-btn ${activeCategory === cat ? 'active' : ''}`}
+            onClick={() => setActiveCategory(cat)}
+          >
+            {categoryLabels[cat] || cat}
+            <span className="category-count">{getCountByCategory(cat)}</span>
+          </button>
+        ))}
       </div>
 
       {/* ============================================================
       СПИСОК ДОКУМЕНТОВ
       ============================================================ */}
-      {documents.length === 0 ? (
+      {filteredDocuments.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">📄</div>
-          <h3>Нет документов</h3>
-          <p>Документы пока не добавлены</p>
+          <h3>{activeCategory === 'all' ? 'Нет документов' : `Нет документов в категории «${categoryLabels[activeCategory] || activeCategory}»`}</h3>
+          <p>{activeCategory === 'all' ? 'Документы пока не добавлены' : 'Попробуйте выбрать другую категорию'}</p>
           {canCreate && (
             <button className="btn btn-gold" style={{ marginTop: '16px' }} onClick={() => {
               setEditingDoc(null);
@@ -362,7 +399,7 @@ export default function DocumentsCenter() {
               </tr>
             </thead>
             <tbody>
-              {documents.map((doc) => {
+              {filteredDocuments.map((doc) => {
                 const canEdit = canEditDocument(doc);
                 const canDelete = canDeleteDocument(doc);
                 
@@ -372,22 +409,18 @@ export default function DocumentsCenter() {
                       <strong>{doc.title}</strong>
                     </td>
                     <td>
-                      <span className="badge badge-info">{doc.category}</span>
+                      <span className="badge badge-info">{categoryLabels[doc.category] || doc.category}</span>
                     </td>
                     <td>{doc.document_type}</td>
                     <td>{getDocumentStatus(doc)}</td>
                     <td>{doc.created_by_name || 'Неизвестно'}</td>
                     <td>{formatDate(doc.created_at)}</td>
                     <td>
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      <div className="action-buttons">
                         <button 
                           className="btn btn-primary btn-sm" 
                           onClick={() => handleEdit(doc)}
                           disabled={!canEdit}
-                          style={{ 
-                            opacity: canEdit ? 1 : 0.4, 
-                            cursor: canEdit ? 'pointer' : 'not-allowed' 
-                          }}
                           title={!canEdit ? 'Нет прав на редактирование (можно редактировать только свои документы)' : ''}
                         >
                           Редактировать
@@ -396,10 +429,6 @@ export default function DocumentsCenter() {
                           className="btn btn-danger btn-sm" 
                           onClick={() => handleDelete(doc)}
                           disabled={!canDelete}
-                          style={{ 
-                            opacity: canDelete ? 1 : 0.4, 
-                            cursor: canDelete ? 'pointer' : 'not-allowed' 
-                          }}
                           title={!canDelete ? 'Нет прав на удаление (можно удалять только свои документы)' : ''}
                         >
                           Удалить
@@ -415,7 +444,7 @@ export default function DocumentsCenter() {
       )}
 
       {/* ============================================================
-      МОДАЛЬНОЕ ОКНО (СОЗДАНИЕ / РЕДАКТИРОВАНИЕ)
+      МОДАЛЬНОЕ ОКНО
       ============================================================ */}
       {showModal && (
         <div className="modal-overlay">
@@ -429,7 +458,6 @@ export default function DocumentsCenter() {
               </button>
             </div>
 
-            {/* Название */}
             <div className="form-group">
               <label className="form-label">Название документа *</label>
               <input
@@ -441,7 +469,6 @@ export default function DocumentsCenter() {
               />
             </div>
 
-            {/* Содержание */}
             <div className="form-group">
               <label className="form-label">Содержание</label>
               <textarea
@@ -453,7 +480,6 @@ export default function DocumentsCenter() {
               />
             </div>
 
-            {/* Категория */}
             <div className="form-group">
               <label className="form-label">Категория</label>
               <select
@@ -469,7 +495,6 @@ export default function DocumentsCenter() {
               </select>
             </div>
 
-            {/* Тип документа */}
             <div className="form-group">
               <label className="form-label">Тип документа</label>
               <select
@@ -485,7 +510,6 @@ export default function DocumentsCenter() {
               </select>
             </div>
 
-            {/* Публичность */}
             <div className="form-group">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <input
@@ -497,7 +521,6 @@ export default function DocumentsCenter() {
               </label>
             </div>
 
-            {/* Клуб (только для админа) */}
             {profile?.role === 'admin' && (
               <div className="form-group">
                 <label className="form-label">Клуб (ID)</label>
@@ -511,7 +534,6 @@ export default function DocumentsCenter() {
               </div>
             )}
 
-            {/* Информация о клубе для координатора КЮДа */}
             {profile?.role === 'club_coordinator' && (
               <div className="form-group" style={{ opacity: 0.6 }}>
                 <label className="form-label">Клуб</label>
@@ -521,18 +543,14 @@ export default function DocumentsCenter() {
                   value={profile?.club_name || 'Ваш КЮД'}
                   disabled
                 />
-                <small style={{ color: '#98A2B3', display: 'block', marginTop: '4px' }}>
-                  Документ будет привязан к вашему КЮДу
-                </small>
+                <small>Документ будет привязан к вашему КЮДу</small>
               </div>
             )}
 
-            {/* Кнопки */}
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+            <div className="modal-actions">
               <button
                 className="btn btn-gold"
                 onClick={editingDoc ? handleUpdate : handleCreate}
-                style={{ flex: 1 }}
               >
                 {editingDoc ? 'Сохранить изменения' : 'Создать документ'}
               </button>
@@ -551,6 +569,174 @@ export default function DocumentsCenter() {
       СТИЛИ
       ============================================================ */}
       <style>{`
+        .documents-center-page {
+          padding: 24px 32px 48px;
+          max-width: 1400px;
+          margin: 0 auto;
+          width: 100%;
+        }
+
+        /* ============================================================
+        ЗАГОЛОВОК
+        ============================================================ */
+        .page-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 24px 28px;
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 2px 12px rgba(10, 22, 40, 0.04);
+          margin-bottom: 24px;
+          flex-wrap: wrap;
+          gap: 16px;
+        }
+        .page-header-left {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+        .page-header-icon {
+          font-size: 32px;
+        }
+        .page-header h1 {
+          font-family: 'Playfair Display', serif;
+          font-size: 24px;
+          font-weight: 700;
+          color: #0A1628;
+          margin: 0;
+        }
+        .page-header p {
+          font-size: 14px;
+          color: #8A8480;
+          margin: 0;
+        }
+        .page-header-actions {
+          display: flex;
+          gap: 10px;
+        }
+
+        /* ============================================================
+        СООБЩЕНИЯ
+        ============================================================ */
+        .message {
+          padding: 14px 20px;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          font-size: 14px;
+          font-weight: 500;
+          border-left: 4px solid transparent;
+        }
+        .message-success {
+          background: #E8F5EF;
+          color: #1A7A4C;
+          border-left-color: #1A7A4C;
+        }
+        .message-error {
+          background: #FCEBEC;
+          color: #B3262E;
+          border-left-color: #B3262E;
+        }
+
+        /* ============================================================
+        ФИЛЬТРЫ
+        ============================================================ */
+        .category-filters {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-bottom: 20px;
+        }
+        .category-filter-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 18px;
+          border: 1.5px solid #E4DFD8;
+          border-radius: 8px;
+          background: white;
+          color: #6B6561;
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.25s ease;
+        }
+        .category-filter-btn:hover {
+          border-color: #C9A227;
+          color: #0A1628;
+          background: #FBF4DC;
+        }
+        .category-filter-btn.active {
+          border-color: #C9A227;
+          background: #FBF4DC;
+          color: #0A1628;
+          font-weight: 600;
+        }
+        .category-count {
+          background: #F8F6F2;
+          padding: 1px 8px;
+          border-radius: 12px;
+          font-size: 11px;
+          color: #8A8480;
+        }
+        .category-filter-btn.active .category-count {
+          background: #E8D9A8;
+          color: #0A1628;
+        }
+
+        /* ============================================================
+        ТАБЛИЦА
+        ============================================================ */
+        .table-wrapper {
+          overflow-x: auto;
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 2px 12px rgba(10, 22, 40, 0.04);
+          width: 100%;
+        }
+        .table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 14px;
+          min-width: 700px;
+        }
+        .table thead {
+          background: #F8F6F2;
+          border-bottom: 1px solid #E4DFD8;
+        }
+        .table thead th {
+          text-align: left;
+          padding: 12px 16px;
+          font-size: 11px;
+          font-weight: 600;
+          color: #8A8480;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+        .table tbody td {
+          padding: 12px 16px;
+          border-bottom: 1px solid #F0EDE8;
+          color: #4D4744;
+        }
+        .table tbody tr:hover td {
+          background: #F8F6F2;
+        }
+        .table tbody tr:last-child td {
+          border-bottom: none;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+
+        /* ============================================================
+        БЕЙДЖИ
+        ============================================================ */
         .badge {
           display: inline-block;
           padding: 3px 12px;
@@ -566,11 +752,110 @@ export default function DocumentsCenter() {
           background: #EAF2FA;
           color: #174A7E;
         }
+
+        /* ============================================================
+        КНОПКИ
+        ============================================================ */
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 10px 22px;
+          border: none;
+          border-radius: 8px;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          text-decoration: none;
+          letter-spacing: 0.01em;
+          min-height: 40px;
+          min-width: 80px;
+          white-space: nowrap;
+        }
         .btn:disabled {
           opacity: 0.4;
           cursor: not-allowed !important;
           pointer-events: none !important;
         }
+        .btn-gold {
+          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
+          color: #0A1628;
+          box-shadow: 0 2px 16px rgba(201, 162, 39, 0.25);
+        }
+        .btn-gold:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
+        }
+        .btn-primary {
+          background: #0A1628;
+          color: white;
+          box-shadow: 0 4px 16px rgba(10, 22, 40, 0.15);
+        }
+        .btn-primary:hover {
+          background: #1A3555;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(10, 22, 40, 0.25);
+        }
+        .btn-danger {
+          background: #B3262E;
+          color: white;
+          box-shadow: 0 4px 16px rgba(179, 38, 46, 0.2);
+        }
+        .btn-danger:hover {
+          background: #8A1C22;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(179, 38, 46, 0.3);
+        }
+        .btn-outline {
+          background: transparent;
+          color: #0A1628;
+          border: 1.5px solid #E4DFD8;
+          box-shadow: none;
+        }
+        .btn-outline:hover {
+          background: #F8F6F2;
+          border-color: #C9A227;
+          transform: translateY(-2px);
+        }
+        .btn-sm {
+          padding: 6px 14px;
+          font-size: 12px;
+          min-height: 32px;
+          min-width: 60px;
+        }
+
+        /* ============================================================
+        EMPTY STATE
+        ============================================================ */
+        .empty-state {
+          text-align: center;
+          padding: 60px 20px;
+          background: white;
+          border-radius: 12px;
+          border: 1px dashed #E4DFD8;
+        }
+        .empty-state-icon {
+          font-size: 48px;
+          margin-bottom: 12px;
+          opacity: 0.6;
+        }
+        .empty-state h3 {
+          font-family: 'Playfair Display', serif;
+          font-size: 18px;
+          color: #4D4744;
+          margin-bottom: 4px;
+        }
+        .empty-state p {
+          font-size: 14px;
+          color: #8A8480;
+        }
+
+        /* ============================================================
+        МОДАЛЬНОЕ ОКНО
+        ============================================================ */
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -619,6 +904,18 @@ export default function DocumentsCenter() {
         .modal-close:hover {
           color: #0A1628;
         }
+        .modal-actions {
+          display: flex;
+          gap: 10px;
+          margin-top: 20px;
+        }
+        .modal-actions .btn {
+          flex: 1;
+        }
+
+        /* ============================================================
+        ФОРМЫ
+        ============================================================ */
         .form-group {
           margin-bottom: 18px;
         }
@@ -654,187 +951,26 @@ export default function DocumentsCenter() {
           resize: vertical;
           min-height: 100px;
         }
-        .message {
-          padding: 14px 20px;
-          border-radius: 8px;
-          margin-bottom: 16px;
-          font-size: 14px;
-          font-weight: 500;
-          border-left: 4px solid transparent;
-        }
-        .message-success {
-          background: #E8F5EF;
-          color: #1A7A4C;
-          border-left-color: #1A7A4C;
-        }
-        .message-error {
-          background: #FCEBEC;
-          color: #B3262E;
-          border-left-color: #B3262E;
-        }
-        .empty-state {
-          text-align: center;
-          padding: 60px 20px;
-          background: white;
-          border-radius: 12px;
-          border: 1px dashed #E4DFD8;
-        }
-        .empty-state-icon {
-          font-size: 48px;
-          margin-bottom: 12px;
-          opacity: 0.6;
-        }
-        .empty-state h3 {
-          font-family: 'Playfair Display', serif;
-          font-size: 18px;
-          color: #4D4744;
-          margin-bottom: 4px;
-        }
-        .empty-state p {
-          font-size: 14px;
-          color: #8A8480;
-        }
-        .page-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 24px 28px;
-          background: white;
-          border-radius: 12px;
-          border: 1px solid #E4DFD8;
-          box-shadow: 0 2px 12px rgba(10, 22, 40, 0.04);
-          margin-bottom: 24px;
-          flex-wrap: wrap;
-          gap: 16px;
-        }
-        .page-header-left {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-        .page-header-icon {
-          font-size: 32px;
-        }
-        .page-header h1 {
-          font-family: 'Playfair Display', serif;
-          font-size: 24px;
-          font-weight: 700;
-          color: #0A1628;
-          margin: 0;
-        }
-        .page-header p {
-          font-size: 14px;
-          color: #8A8480;
-          margin: 0;
-        }
-        .page-header-actions {
-          display: flex;
-          gap: 10px;
-        }
-        .btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 10px 22px;
-          border: none;
-          border-radius: 8px;
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          text-decoration: none;
-          letter-spacing: 0.01em;
-          min-height: 40px;
-          min-width: 80px;
-          white-space: nowrap;
-        }
-        .btn-gold {
-          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
-          color: #0A1628;
-          box-shadow: 0 2px 16px rgba(201, 162, 39, 0.25);
-        }
-        .btn-gold:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
-        }
-        .btn-primary {
-          background: #0A1628;
-          color: white;
-          box-shadow: 0 4px 16px rgba(10, 22, 40, 0.15);
-        }
-        .btn-primary:hover {
-          background: #1A3555;
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(10, 22, 40, 0.25);
-        }
-        .btn-danger {
-          background: #B3262E;
-          color: white;
-          box-shadow: 0 4px 16px rgba(179, 38, 46, 0.2);
-        }
-        .btn-danger:hover {
-          background: #8A1C22;
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(179, 38, 46, 0.3);
-        }
-        .btn-outline {
-          background: transparent;
-          color: #0A1628;
-          border: 1.5px solid #E4DFD8;
-          box-shadow: none;
-        }
-        .btn-outline:hover {
-          background: #F8F6F2;
-          border-color: #C9A227;
-          transform: translateY(-2px);
-        }
-        .btn-sm {
-          padding: 6px 14px;
+        small {
           font-size: 12px;
-          min-height: 32px;
-          min-width: 60px;
-        }
-        .table-wrapper {
-          overflow-x: auto;
-          background: white;
-          border-radius: 12px;
-          border: 1px solid #E4DFD8;
-          box-shadow: 0 2px 12px rgba(10, 22, 40, 0.04);
-          width: 100%;
-        }
-        .table {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 14px;
-          min-width: 700px;
-        }
-        .table thead {
-          background: #F8F6F2;
-          border-bottom: 1px solid #E4DFD8;
-        }
-        .table thead th {
-          text-align: left;
-          padding: 12px 16px;
-          font-size: 11px;
-          font-weight: 600;
           color: #8A8480;
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
+          display: block;
+          margin-top: 4px;
         }
-        .table tbody td {
-          padding: 12px 16px;
-          border-bottom: 1px solid #F0EDE8;
-          color: #4D4744;
+
+        /* ============================================================
+        АДАПТИВНОСТЬ
+        ============================================================ */
+        @media (max-width: 1024px) {
+          .documents-center-page {
+            padding: 20px 24px 36px;
+          }
         }
-        .table tbody tr:hover td {
-          background: #F8F6F2;
-        }
-        .table tbody tr:last-child td {
-          border-bottom: none;
-        }
+
         @media (max-width: 768px) {
+          .documents-center-page {
+            padding: 16px 16px 28px;
+          }
           .page-header {
             flex-direction: column;
             align-items: flex-start;
@@ -850,13 +986,26 @@ export default function DocumentsCenter() {
             padding: 20px;
             margin: 10px;
           }
+          .modal-actions {
+            flex-direction: column;
+          }
+          .modal-actions .btn {
+            width: 100%;
+          }
         }
+
         @media (max-width: 480px) {
+          .documents-center-page {
+            padding: 12px 12px 20px;
+          }
           .page-header {
             padding: 16px 18px;
           }
           .page-header h1 {
             font-size: 20px;
+          }
+          .page-header-icon {
+            font-size: 24px;
           }
           .table {
             min-width: 500px;
@@ -878,11 +1027,23 @@ export default function DocumentsCenter() {
             min-height: 26px;
             min-width: 40px;
           }
+          .category-filter-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+          }
           .modal {
             padding: 16px;
           }
           .modal-title {
             font-size: 18px;
+          }
+          .action-buttons {
+            flex-direction: column;
+            gap: 4px;
+          }
+          .action-buttons .btn {
+            width: 100%;
+            justify-content: center;
           }
         }
       `}</style>

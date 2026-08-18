@@ -1215,8 +1215,8 @@ export default function Events() {
                 const isRejected = userRegistration?.status === 'rejected';
                 
                 const isDeadlinePassed = event.registration_deadline 
-                  ? new Date() > new Date(event.registration_deadline) 
-                  : false;
+                ? new Date().getTime() > new Date(event.registration_deadline).getTime()
+                : false;
                 
                 const isFull = event.max_participants > 0 && (event.registrations_count || 0) >= event.max_participants;
                 const isOutgoingOrGlobal = event.type === 'outgoing' || event.type === 'global_forum' || event.is_global === true;

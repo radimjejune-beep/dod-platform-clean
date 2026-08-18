@@ -984,7 +984,7 @@ app.get('/api/events', authenticate, async (req, res) => {
 });
 
 // ============================================================
-// СОЗДАНИЕ СОБЫТИЯ
+// СОЗДАНИЕ СОБЫТИЯ (ОБНОВЛЁННАЯ ВЕРСИЯ)
 // ============================================================
 app.post('/api/events', authenticate, async (req, res) => {
   try {
@@ -1004,7 +1004,8 @@ app.post('/api/events', authenticate, async (req, res) => {
       club_id, 
       form_url, 
       is_global,
-      is_club_event
+      is_club_event,
+      target_clubs // 🆕 МАССИВ ID КЛУБОВ ДЛЯ РАССЫЛКИ
     } = req.body;
 
     if (!title || !event_date) {
@@ -1014,17 +1015,18 @@ app.post('/api/events', authenticate, async (req, res) => {
     let finalClubId = club_id || null;
     let finalIsGlobal = is_global || false;
     let finalIsClubEvent = is_club_event || false;
+    let finalTargetClubs = target_clubs || [];
 
     console.log(`📝 СОЗДАНИЕ СОБЫТИЯ:`);
     console.log(`  📌 Название: ${title}`);
     console.log(`  👤 Пользователь: ${userId} (${userRole})`);
     console.log(`  🏫 Клуб: ${finalClubId}`);
     console.log(`  🌍 Глобальное: ${finalIsGlobal}`);
+    console.log(`  🎯 Целевые клубы: ${finalTargetClubs.length}`);
 
-    // Если координатор клуба — проверяем доступ к клубу
+    // Если координатор клуба — проверяем доступ
     if (userRole === 'club_coordinator') {
       if (!finalClubId) {
-        // Если клуб не указан, берём из привязки
         const clubResult = await pool.query(
           'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
           [userId]
@@ -1033,12 +1035,10 @@ app.post('/api/events', authenticate, async (req, res) => {
           finalClubId = clubResult.rows[0].club_id;
           finalIsClubEvent = true;
           finalIsGlobal = false;
-          console.log(`  🏫 Автоматически привязан к клубу: ${finalClubId}`);
         } else {
           return res.status(400).json({ error: 'Вы не привязаны ни к одному КЮДу' });
         }
       } else {
-        // Проверяем, что координатор имеет доступ к указанному клубу
         const clubCheck = await pool.query(
           'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
           [userId, finalClubId]
@@ -1057,7 +1057,13 @@ app.post('/api/events', authenticate, async (req, res) => {
         finalIsGlobal = true;
         finalClubId = null;
         finalIsClubEvent = false;
+        finalTargetClubs = [];
         console.log(`  🌍 Создаётся глобальное событие`);
+      }
+      
+      // Если указаны целевые клубы — сохраняем их
+      if (finalTargetClubs.length > 0 && !finalIsGlobal) {
+        console.log(`  🎯 Мероприятие для ${finalTargetClubs.length} клубов`);
       }
     }
 
@@ -1066,6 +1072,7 @@ app.post('/api/events', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Участники не могут создавать мероприятия' });
     }
 
+    // Создаём мероприятие
     const result = await pool.query(
       `INSERT INTO events (
         title, description, location, event_date, end_date, start_time, end_time,
@@ -1090,8 +1097,22 @@ app.post('/api/events', authenticate, async (req, res) => {
       ]
     );
 
-    console.log(`✅ Событие создано: ${result.rows[0].id}`);
-    res.status(201).json(result.rows[0]);
+    const event = result.rows[0];
+
+    // ✅ Сохраняем целевые клубы (если есть)
+    if (finalTargetClubs.length > 0 && !finalIsGlobal) {
+      for (const clubId of finalTargetClubs) {
+        await pool.query(
+          `INSERT INTO event_club_targets (event_id, club_id) 
+           VALUES ($1, $2) ON CONFLICT (event_id, club_id) DO NOTHING`,
+          [event.id, clubId]
+        );
+      }
+      console.log(`  ✅ Привязано ${finalTargetClubs.length} клубов`);
+    }
+
+    console.log(`✅ Событие создано: ${event.id}`);
+    res.status(201).json(event);
   } catch (error) {
     console.error('❌ Ошибка создания события:', error);
     res.status(500).json({ error: error.message });

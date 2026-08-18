@@ -85,12 +85,59 @@ export default function Events() {
       ]);
 
       setClubs(clubsData || []);
-      setAllEvents(eventsData || []);
       
+      // ============================================================
+      // ФИЛЬТРАЦИЯ СОБЫТИЙ ДЛЯ КООРДИНАТОРА КЮДА
+      // ============================================================
+      let filteredEvents = eventsData || [];
+      
+      if (userData.role === 'club_coordinator') {
+        // Находим клуб координатора
+        let coordinatorClubId = userData.club_id;
+        
+        if (!coordinatorClubId) {
+          try {
+            const coordResponse = await fetch(
+              `https://dod-backend.relaxdev.ru/api/club-coordinators?profile_id=${userData.id}`,
+              { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+            );
+            const coordData = await coordResponse.json();
+            if (coordData && coordData.length > 0) {
+              coordinatorClubId = coordData[0].club_id;
+            }
+          } catch (e) {
+            console.log('Ошибка получения координатора:', e);
+          }
+        }
+
+        if (coordinatorClubId) {
+          // ✅ Координатор видит:
+          // 1. Внутренние мероприятия своего клуба
+          // 2. Выездные мероприятия (outgoing)
+          // 3. Глобальные форумы (global_forum)
+          filteredEvents = eventsData.filter(e => {
+            // Если мероприятие внутреннее — только для своего клуба
+            if (e.type === 'internal' || e.is_club_event) {
+              return e.club_id === coordinatorClubId;
+            }
+            // Выездные и глобальные — видят все
+            return ['outgoing', 'global_forum'].includes(e.type) || e.is_global === true;
+          });
+          console.log(`🏫 Координатор КЮДа: показано ${filteredEvents.length} мероприятий`);
+        } else {
+          filteredEvents = [];
+        }
+      } else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userData.role)) {
+        filteredEvents = eventsData;
+      }
+
+      setAllEvents(filteredEvents);
+      
+      // Загружаем тьюторов
       const tutorList = usersData.filter(u => u.role === 'tutor');
       setTutors(tutorList || []);
       
-      const pending = eventsData.filter(e => e.moderation_status === 'pending');
+      const pending = filteredEvents.filter(e => e.moderation_status === 'pending');
       setPendingEvents(pending || []);
     } catch (err) {
       console.error('Ошибка:', err);
@@ -166,14 +213,43 @@ export default function Events() {
 
   const filteredEvents = getFilteredEvents();
 
+  // ============================================================
+  // ПРОВЕРКА ПРАВ
+  // ============================================================
+  const isClubCoordinator = profile?.role === 'club_coordinator';
+  const isMovementCoordinator = profile?.role === 'movement_coordinator';
+  const isAdmin = profile?.role === 'admin';
+  
+  // Координатор КЮДа может создавать мероприятия
+  const canCreate = profile && ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(profile.role);
+  const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
+  const canAssignTutor = ['admin', 'movement_coordinator', 'club_coordinator'].includes(profile?.role);
+  
+  // Получаем клуб координатора
+  const getCoordinatorClubId = () => {
+    if (!isClubCoordinator) return null;
+    let clubId = profile?.club_id;
+    if (!clubId) {
+      // Пытаемся найти через club_coordinators
+      const found = clubs.find(c => 
+        c.coordinator_id === profile?.id || 
+        c.leader_id === profile?.id
+      );
+      if (found) clubId = found.id;
+    }
+    return clubId;
+  };
+
+  const coordinatorClubId = getCoordinatorClubId();
+
   const canEdit = (event) => {
     const role = profile?.role;
     const userId = profile?.id;
     if (['admin', 'movement_coordinator'].includes(role)) return true;
     if (['president', 'vice_president'].includes(role)) return true;
     if (role === 'club_coordinator') {
-      const userClub = clubs.find(c => c.coordinator_id === userId || c.leader_id === userId);
-      if (userClub && event.club_id === userClub.id) return true;
+      // Координатор может редактировать только мероприятия своего клуба
+      return event.club_id === coordinatorClubId;
     }
     return false;
   };
@@ -185,59 +261,16 @@ export default function Events() {
     return false;
   };
 
-  const canCreate = profile && ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(profile.role);
-  const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
-  const isClubCoordinator = profile?.role === 'club_coordinator';
-  const isMovementCoordinator = profile?.role === 'movement_coordinator';
-
-  const handleAssignTutor = async () => {
-    if (!selectedTutor) {
-      setMessage('❌ Выберите тьютора');
-      setMessageType('error');
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`https://dod-backend.relaxdev.ru/api/events/${selectedEventForTutor.id}/tutors`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          tutor_id: selectedTutor,
-          role: tutorRole,
-          notes: tutorNotes
-        })
-      });
-
-      const result = await response.json();
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      setMessage('✅ Тьютор назначен на мероприятие!');
-      setMessageType('success');
-      setShowTutorModal(false);
-      setSelectedTutor('');
-      setTutorNotes('');
-      loadData();
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
-      setMessageType('error');
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
     setLoading(true);
 
     try {
-      const eventData = {
+      // ============================================================
+      // ДЛЯ КООРДИНАТОРА КЮДА — ПРИВЯЗКА К СВОЕМУ КЛУБУ
+      // ============================================================
+      let eventData = {
         title: form.title,
         description: form.description,
         location: form.location,
@@ -253,22 +286,25 @@ export default function Events() {
         is_club_event: !!form.club_id
       };
 
+      // Для координатора КЮДа — автоматически подставляем его клуб
+      if (isClubCoordinator && coordinatorClubId) {
+        // Если мероприятие внутреннее (internal) — привязываем к клубу
+        if (form.type === 'internal' || !form.is_global) {
+          eventData.club_id = coordinatorClubId;
+          eventData.is_club_event = true;
+          eventData.is_global = false;
+        } else {
+          // Выездное или глобальное — не привязываем к клубу
+          eventData.club_id = null;
+          eventData.is_club_event = false;
+          eventData.is_global = true;
+        }
+      }
+
       if (isMovementCoordinator) {
         eventData.is_global = true;
         eventData.is_club_event = false;
         eventData.club_id = null;
-      }
-
-      if (isClubCoordinator && !form.club_id) {
-        const userClub = clubs.find(c => 
-          c.coordinator_id === profile.id || 
-          c.leader_id === profile.id
-        );
-        if (userClub) {
-          eventData.club_id = userClub.id;
-          eventData.is_club_event = true;
-          eventData.is_global = false;
-        }
       }
 
       let result;
@@ -390,6 +426,47 @@ export default function Events() {
     }
   };
 
+  const handleAssignTutor = async () => {
+    if (!selectedTutor) {
+      setMessage('❌ Выберите тьютора');
+      setMessageType('error');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/events/${selectedEventForTutor.id}/tutors`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          tutor_id: selectedTutor,
+          role: tutorRole,
+          notes: tutorNotes
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      setMessage('✅ Тьютор назначен на мероприятие!');
+      setMessageType('success');
+      setShowTutorModal(false);
+      setSelectedTutor('');
+      setTutorNotes('');
+      loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
@@ -402,8 +479,6 @@ export default function Events() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
-
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
             {message}
@@ -454,7 +529,7 @@ export default function Events() {
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3>{form.id ? '✏️ Редактировать' : '📝 Создать'}</h3>
             
-            {form.club_id && (
+            {isClubCoordinator && coordinatorClubId && (
               <div style={{ 
                 padding: '10px 16px', 
                 background: '#EAF2FA', 
@@ -466,26 +541,7 @@ export default function Events() {
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                🏫 <strong>Внутреннее мероприятие для клуба:</strong> {clubs.find(c => c.id === form.club_id)?.name || '—'}
-                <button
-                  type="button"
-                  style={{ 
-                    marginLeft: 'auto', 
-                    background: 'none', 
-                    border: 'none', 
-                    color: '#B3262E', 
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                  onClick={() => {
-                    setForm({ ...form, club_id: '' });
-                    setMessage('❌ Клуб для мероприятия очищен');
-                    setMessageType('error');
-                    setTimeout(() => setMessage(''), 3000);
-                  }}
-                >
-                  ✕ Очистить
-                </button>
+                🏫 <strong>Мероприятие для вашего клуба:</strong> {clubs.find(c => c.id === coordinatorClubId)?.name || 'КЮД'}
               </div>
             )}
 
@@ -557,7 +613,7 @@ export default function Events() {
                   <input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} min="1" />
                 </div>
                 
-                {!isMovementCoordinator && (
+                {!isMovementCoordinator && !isClubCoordinator && (
                   <div className="form-group">
                     <label>Клуб</label>
                     <select value={form.club_id} onChange={(e) => setForm({ ...form, club_id: e.target.value })}>
@@ -566,6 +622,26 @@ export default function Events() {
                     </select>
                     <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
                       {form.club_id ? '🏫 Это мероприятие увидят только участники этого клуба' : '🌍 Это мероприятие увидят все пользователи'}
+                    </div>
+                  </div>
+                )}
+
+                {/* Для координатора КЮДа — показываем информацию о типе мероприятия */}
+                {isClubCoordinator && (
+                  <div className="form-group">
+                    <div style={{ 
+                      padding: '10px 14px', 
+                      background: '#F8FAFC', 
+                      borderRadius: '8px', 
+                      border: '1px solid #E4DFD8',
+                      fontSize: '13px',
+                      color: '#667085'
+                    }}>
+                      {form.type === 'internal' ? (
+                        <>🔒 <strong>Внутреннее мероприятие</strong><br />Увидят только участники вашего КЮДа</>
+                      ) : (
+                        <>🌍 <strong>Выездное или глобальное мероприятие</strong><br />Увидят все участники движения</>
+                      )}
                     </div>
                   </div>
                 )}
@@ -580,8 +656,13 @@ export default function Events() {
                 <div className="form-group">
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <input type="checkbox" checked={form.is_global} onChange={(e) => setForm({ ...form, is_global: e.target.checked })} />
-                    🌍 Глобальное мероприятие
+                    🌍 Глобальное мероприятие (увидят все)
                   </label>
+                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                    {form.is_global 
+                      ? '🌍 Мероприятие увидят все пользователи' 
+                      : '🔒 Мероприятие увидят только участники вашего КЮДа'}
+                  </div>
                 </div>
               )}
               
@@ -631,6 +712,11 @@ export default function Events() {
                       {event.is_club_event && (
                         <span className="tag" style={{ marginLeft: '8px', background: '#EAF2FA', color: '#174A7E', fontSize: '10px' }}>
                           🏫 Внутреннее
+                        </span>
+                      )}
+                      {event.type === 'outgoing' && (
+                        <span className="tag" style={{ marginLeft: '8px', background: '#FBF4DC', color: '#8A6A00', fontSize: '10px' }}>
+                          🌍 Выездное
                         </span>
                       )}
                       {event.moderation_status === 'pending' && (

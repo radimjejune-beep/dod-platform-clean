@@ -723,72 +723,107 @@ app.get('/api/participants', authenticate, async (req, res) => {
 });
 
 // ============================================================
-// ОБНОВЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
+// ОБНОВЛЕНИЕ ПРОФИЛЯ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ (PATCH /api/profile)
 // ============================================================
-app.patch('/api/users/:id', authenticate, async (req, res) => {
+app.patch('/api/profile', authenticate, async (req, res) => {
   try {
-    const { id } = req.params;
-    const { full_name, role, phone, school, class_name, club_id, status, position } = req.body;
+    const userId = req.user.userId;
+    const {
+      full_name,
+      phone,
+      school,
+      class_name,
+      interests,
+      bio,
+      city,
+      birth_date,
+      social_links,
+      skills,
+      education,
+      achievements,
+      telegram,
+      vk,
+      parent_full_name,
+      parent_phone,
+      parent_email,
+      consent_personal_data,
+      consent_photo_publication,
+      consent_event_participation,
+      consent_agreement_date,
+      charter_acceptance_date
+    } = req.body;
 
-    const check = await pool.query('SELECT id, role, club_id FROM users WHERE id = $1', [id]);
-    if (check.rows.length === 0) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
-    }
+    console.log(`📝 ОБНОВЛЕНИЕ ПРОФИЛЯ: userId=${userId}`);
 
-    const oldRole = check.rows[0].role;
-    const oldClubId = check.rows[0].club_id;
-
-    if (role && role !== oldRole && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Только администратор может изменять роль' });
-    }
+    // ✅ Обработка дат
+    const formatDate = (val) => {
+      if (!val || val === '' || val === 'Invalid Date') return null;
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return null;
+      return d.toISOString().split('T')[0];
+    };
 
     const result = await pool.query(
       `UPDATE users 
        SET full_name = COALESCE($1, full_name),
-           role = COALESCE($2, role),
-           phone = COALESCE($3, phone),
-           school = COALESCE($4, school),
-           class_name = COALESCE($5, class_name),
-           status = COALESCE($6, status),
-           position = COALESCE($7, position),
-           club_id = COALESCE($8, club_id)
-       WHERE id = $9
-       RETURNING id, email, full_name, role, phone, school, class_name, status, position, club_id`,
-      [full_name, role, phone, school, class_name, status, position, club_id, id]
+           phone = COALESCE($2, phone),
+           school = COALESCE($3, school),
+           class_name = COALESCE($4, class_name),
+           interests = COALESCE($5, interests),
+           bio = COALESCE($6, bio),
+           city = COALESCE($7, city),
+           birth_date = $8,
+           social_links = COALESCE($9, social_links),
+           skills = COALESCE($10, skills),
+           education = COALESCE($11, education),
+           achievements = COALESCE($12, achievements),
+           telegram = COALESCE($13, telegram),
+           vk = COALESCE($14, vk),
+           parent_full_name = COALESCE($15, parent_full_name),
+           parent_phone = COALESCE($16, parent_phone),
+           parent_email = COALESCE($17, parent_email),
+           consent_personal_data = COALESCE($18, consent_personal_data),
+           consent_photo_publication = COALESCE($19, consent_photo_publication),
+           consent_event_participation = COALESCE($20, consent_event_participation),
+           consent_agreement_date = $21,
+           charter_acceptance_date = $22,
+           updated_at = NOW()
+       WHERE id = $23
+       RETURNING *`,
+      [
+        full_name,
+        phone,
+        school,
+        class_name,
+        interests,
+        bio,
+        city,
+        formatDate(birth_date),
+        social_links,
+        skills,
+        education,
+        achievements,
+        telegram,
+        vk,
+        parent_full_name,
+        parent_phone,
+        parent_email,
+        consent_personal_data,
+        consent_photo_publication,
+        consent_event_participation,
+        formatDate(consent_agreement_date),
+        formatDate(charter_acceptance_date),
+        userId
+      ]
     );
 
-    const user = result.rows[0];
-    const newRole = role || oldRole;
-    const newClubId = club_id || oldClubId;
-
-    if (newRole === 'club_coordinator' && newClubId) {
-      await pool.query(
-        `INSERT INTO club_coordinators (profile_id, club_id, created_at)
-         VALUES ($1, $2, NOW()) ON CONFLICT (profile_id, club_id) DO NOTHING`,
-        [id, newClubId]
-      );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
     }
 
-    if (newRole === 'participant' && newClubId) {
-      await pool.query(
-        `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
-         VALUES ($1, $2, 'active', NOW()) ON CONFLICT (profile_id, club_id) DO NOTHING`,
-        [id, newClubId]
-      );
-    }
-
-    const userResult = await pool.query(
-      `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
-              u.status, u.position, u.club_id, u.avatar_url, c.name as club_name
-       FROM users u
-       LEFT JOIN clubs c ON u.club_id = c.id
-       WHERE u.id = $1`,
-      [id]
-    );
-
-    res.json(userResult.rows[0]);
+    res.json(result.rows[0]);
   } catch (error) {
-    console.error('❌ Ошибка редактирования пользователя:', error);
+    console.error('❌ Ошибка обновления профиля:', error);
     res.status(500).json({ error: error.message });
   }
 });

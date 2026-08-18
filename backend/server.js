@@ -1082,7 +1082,9 @@ app.post('/api/events', authenticate, async (req, res) => {
   }
 });
 
-// 2. ПОЛУЧЕНИЕ СОБЫТИЙ
+// ============================================================
+// ПОЛУЧЕНИЕ СОБЫТИЙ (ИСПРАВЛЕННАЯ ВЕРСИЯ — КООРДИНАТОР ВИДИТ ВСЁ!)
+// ============================================================
 app.get('/api/events', authenticate, async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -1091,6 +1093,9 @@ app.get('/api/events', authenticate, async (req, res) => {
     console.log(`📋 ЗАПРОС СОБЫТИЙ:`);
     console.log(`  👤 Пользователь: ${userId} (${userRole})`);
 
+    // ============================================================
+    // БАЗОВЫЙ ЗАПРОС
+    // ============================================================
     let query = `
       SELECT e.*, 
              c.name as club_name,
@@ -1108,19 +1113,32 @@ app.get('/api/events', authenticate, async (req, res) => {
     const params = [];
     const conditions = [];
 
+    // ============================================================
+    // АДМИН / КООРДИНАТОР ДВИЖЕНИЯ / ПРЕЗИДЕНТ — ВИДЯТ ВСЁ
+    // ============================================================
     if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
       console.log('  👑 Высокие права — видит всё');
+      // НЕ ДОБАВЛЯЕМ УСЛОВИЙ
     } 
+    // ============================================================
+    // КООРДИНАТОР КЛУБА — ВИДИТ ВСЁ, ГДЕ ЕСТЬ ЕГО КЛУБ
+    // ============================================================
     else if (userRole === 'club_coordinator') {
-      console.log('  🏫 Координатор КЮДа — фильтруем по клубу');
+      // Получаем ID клуба координатора
       let clubId = null;
       
-      const userClub = await pool.query('SELECT club_id FROM users WHERE id = $1', [userId]);
+      // 1. Сначала проверяем club_id в профиле
+      const userClub = await pool.query(
+        'SELECT club_id FROM users WHERE id = $1',
+        [userId]
+      );
+      
       if (userClub.rows.length > 0 && userClub.rows[0].club_id) {
         clubId = userClub.rows[0].club_id;
-        console.log(`  📌 Клуб из профиля: ${clubId}`);
+        console.log(`  🏫 Клуб из профиля: ${clubId}`);
       }
       
+      // 2. Если нет — проверяем таблицу club_coordinators
       if (!clubId) {
         const coordResult = await pool.query(
           'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
@@ -1128,11 +1146,17 @@ app.get('/api/events', authenticate, async (req, res) => {
         );
         if (coordResult.rows.length > 0) {
           clubId = coordResult.rows[0].club_id;
-          console.log(`  📌 Клуб из club_coordinators: ${clubId}`);
+          console.log(`  🏫 Клуб из club_coordinators: ${clubId}`);
         }
       }
       
       if (clubId) {
+        // ✅ КООРДИНАТОР ВИДИТ:
+        // 1. Глобальные мероприятия (is_global = true)
+        // 2. Выездные/форумы (type = outgoing, global_forum)
+        // 3. Мероприятия его клуба (club_id = его клуб)
+        // 4. Мероприятия, отправленные его клубу (через event_club_targets)
+        // 5. Мероприятия, созданные кем угодно, но с его клубом
         conditions.push(`
           (e.is_global = true 
            OR e.type IN ('outgoing', 'global_forum')
@@ -1141,30 +1165,73 @@ app.get('/api/events', authenticate, async (req, res) => {
           )
         `);
         params.push(clubId);
-        console.log(`  ✅ Координатор видит всё, что касается клуба ${clubId}`);
+        console.log(`  ✅ Координатор видит ВСЕ мероприятия, где есть клуб ${clubId}`);
       } else {
+        // Если координатор не привязан к клубу — только глобальные и выездные
         conditions.push(`(e.is_global = true OR e.type IN ('outgoing', 'global_forum'))`);
         console.log(`  ⚠️ Координатор без клуба — только глобальные и выездные`);
       }
     } 
+    // ============================================================
+    // УЧАСТНИК — ТОЛЬКО СВОЙ КЛУБ И ГЛОБАЛЬНЫЕ
+    // ============================================================
     else if (userRole === 'participant') {
-      console.log('  👤 Участник — фильтруем по клубу');
       const user = await pool.query('SELECT club_id FROM users WHERE id = $1', [userId]);
       if (user.rows.length > 0 && user.rows[0].club_id) {
         const clubId = user.rows[0].club_id;
         conditions.push(`(e.club_id = $${params.length + 1} OR e.is_global = true)`);
         params.push(clubId);
-        console.log(`  ✅ Участник клуба ${clubId} + глобальные`);
+        console.log(`  👤 Участник клуба ${clubId} + глобальные`);
       } else {
         conditions.push(`e.is_global = true`);
         console.log(`  ⚠️ Участник без клуба — только глобальные`);
       }
     } 
+    // ============================================================
+    // ТЬЮТОР — СВОИ НАЗНАЧЕНИЯ И ГЛОБАЛЬНЫЕ
+    // ============================================================
+    else if (userRole === 'tutor') {
+      const assignments = await pool.query(
+        'SELECT event_id FROM event_tutor_assignments WHERE tutor_id = $1 AND status = $2',
+        [userId, 'accepted']
+      );
+      if (assignments.rows.length > 0) {
+        const eventIds = assignments.rows.map(r => r.event_id);
+        conditions.push(`(e.id = ANY($${params.length + 1}::uuid[]) OR e.is_global = true)`);
+        params.push(eventIds);
+        console.log(`  📚 Тьютор — ${assignments.rows.length} назначений + глобальные`);
+      } else {
+        conditions.push(`e.is_global = true`);
+        console.log(`  ⚠️ Тьютор без назначений — только глобальные`);
+      }
+    } 
+    // ============================================================
+    // РОДИТЕЛЬ — МЕРОПРИЯТИЯ ДЕТЕЙ
+    // ============================================================
+    else if (userRole === 'parent') {
+      const children = await pool.query(
+        'SELECT child_id FROM child_parent WHERE parent_id = $1 AND status = $2',
+        [userId, 'active']
+      );
+      if (children.rows.length > 0) {
+        const childIds = children.rows.map(r => r.child_id);
+        conditions.push(`(e.id IN (SELECT event_id FROM registrations WHERE user_id = ANY($${params.length + 1}::uuid[])) OR e.is_global = true)`);
+        params.push(childIds);
+        console.log(`  👨‍👩‍👦 Родитель — ${children.rows.length} детей`);
+      } else {
+        conditions.push(`e.is_global = true`);
+        console.log(`  ⚠️ Родитель без детей — только глобальные`);
+      }
+    } 
+    // ============================================================
+    // ОСТАЛЬНЫЕ — ТОЛЬКО ГЛОБАЛЬНЫЕ
+    // ============================================================
     else {
       conditions.push(`e.is_global = true`);
       console.log(`  ⚠️ Другая роль — только глобальные`);
     }
 
+    // Добавляем условия в запрос
     if (conditions.length > 0) {
       query += ' AND (' + conditions.join(' OR ') + ')';
     }

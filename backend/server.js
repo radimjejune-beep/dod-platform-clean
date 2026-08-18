@@ -755,7 +755,7 @@ app.patch('/api/profile', authenticate, async (req, res) => {
 
     console.log(`📝 ОБНОВЛЕНИЕ ПРОФИЛЯ: userId=${userId}`);
 
-    // ✅ Обработка дат
+    // Безопасная обработка дат
     const formatDate = (val) => {
       if (!val || val === '' || val === 'Invalid Date') return null;
       const d = new Date(val);
@@ -763,59 +763,55 @@ app.patch('/api/profile', authenticate, async (req, res) => {
       return d.toISOString().split('T')[0];
     };
 
-    // ✅ ИСПРАВЛЕНО: убрана колонка updated_at
-    const result = await pool.query(
-      `UPDATE users 
-       SET full_name = COALESCE($1, full_name),
-           phone = COALESCE($2, phone),
-           school = COALESCE($3, school),
-           class_name = COALESCE($4, class_name),
-           interests = COALESCE($5, interests),
-           bio = COALESCE($6, bio),
-           city = COALESCE($7, city),
-           birth_date = $8,
-           social_links = COALESCE($9, social_links),
-           skills = COALESCE($10, skills),
-           education = COALESCE($11, education),
-           achievements = COALESCE($12, achievements),
-           telegram = COALESCE($13, telegram),
-           vk = COALESCE($14, vk),
-           parent_full_name = COALESCE($15, parent_full_name),
-           parent_phone = COALESCE($16, parent_phone),
-           parent_email = COALESCE($17, parent_email),
-           consent_personal_data = COALESCE($18, consent_personal_data),
-           consent_photo_publication = COALESCE($19, consent_photo_publication),
-           consent_event_participation = COALESCE($20, consent_event_participation),
-           consent_agreement_date = $21,
-           charter_acceptance_date = $22
-       WHERE id = $23
-       RETURNING *`,
-      [
-        full_name,
-        phone,
-        school,
-        class_name,
-        interests,
-        bio,
-        city,
-        formatDate(birth_date),
-        social_links,
-        skills,
-        education,
-        achievements,
-        telegram,
-        vk,
-        parent_full_name,
-        parent_phone,
-        parent_email,
-        consent_personal_data,
-        consent_photo_publication,
-        consent_event_participation,
-        formatDate(consent_agreement_date),
-        formatDate(charter_acceptance_date),
-        userId
-      ]
-    );
+    // Обновляем только переданные поля
+    const fields = [];
+    const values = [];
+    let paramIndex = 1;
+
+    const addField = (field, value) => {
+      if (value !== undefined) {
+        fields.push(`${field} = $${paramIndex}`);
+        values.push(value);
+        paramIndex++;
+      }
+    };
+
+    addField('full_name', full_name);
+    addField('phone', phone);
+    addField('school', school);
+    addField('class_name', class_name);
+    addField('interests', interests);
+    addField('bio', bio);
+    addField('city', city);
+    addField('birth_date', formatDate(birth_date));
+    addField('social_links', social_links);
+    addField('skills', skills);
+    addField('education', education);
+    addField('achievements', achievements);
+    addField('telegram', telegram);
+    addField('vk', vk);
+    addField('parent_full_name', parent_full_name);
+    addField('parent_phone', parent_phone);
+    addField('parent_email', parent_email);
+    addField('consent_personal_data', consent_personal_data);
+    addField('consent_photo_publication', consent_photo_publication);
+    addField('consent_event_participation', consent_event_participation);
+    addField('consent_agreement_date', formatDate(consent_agreement_date));
+    addField('charter_acceptance_date', formatDate(charter_acceptance_date));
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'Нет данных для обновления' });
+    }
+
+    values.push(userId);
+    const query = `
+      UPDATE users 
+      SET ${fields.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
+
+    const result = await pool.query(query, values);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Пользователь не найден' });

@@ -123,6 +123,29 @@ export default function Profile() {
 
   const consentStatus = getConsentStatus();
 
+  const getInitials = (name) => {
+    if (!name) return '?';
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return parts[0][0] + parts[1][0];
+    }
+    return name[0];
+  };
+
+  const getRoleLabel = (role) => {
+    const labels = {
+      'admin': '🔧 Администратор',
+      'movement_coordinator': '⭐ Координатор движения',
+      'club_coordinator': '🏫 Координатор КЮДа',
+      'tutor': '📚 Тьютор',
+      'participant': '👤 Участник',
+      'parent': '👨‍👩‍👦 Родитель',
+      'president': '👑 Президент',
+      'vice_president': '⭐ Вице-президент'
+    };
+    return labels[role] || role;
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
@@ -144,7 +167,17 @@ export default function Profile() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        
+        {/* ============================================================
+           ЗАГОЛОВОК
+           ============================================================ */}
+        <div className="page-header">
+          <span style={{ fontSize: '32px' }}>👤</span>
+          <div>
+            <h1>Профиль</h1>
+            <p>Управление вашими данными и настройками</p>
+          </div>
+        </div>
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
@@ -152,55 +185,97 @@ export default function Profile() {
           </div>
         )}
 
-        <div className="card">
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            marginBottom: '24px',
-            paddingBottom: '20px',
-            borderBottom: '1px solid #E2E7EF'
-          }}>
-            <AvatarUpload
-              currentAvatar={profile?.avatar_url}
-              onAvatarUpdated={handleAvatarUpdated}
-              userId={profile?.id}
-            />
-          </div>
-
-          <div style={{
-            display: 'flex',
-            gap: '4px',
-            marginBottom: '24px',
-            borderBottom: '2px solid #E2E7EF',
-            paddingBottom: '4px',
-            flexWrap: 'wrap'
-          }}>
-            {tabs.map((tab) => (
+        {/* ============================================================
+           КАРТОЧКА ПРОФИЛЯ
+           ============================================================ */}
+        <div className="profile-card">
+          <div className="profile-card-header">
+            <div className="profile-avatar-section">
+              <AvatarUpload
+                currentAvatar={profile?.avatar_url}
+                onAvatarUpdated={handleAvatarUpdated}
+                userId={profile?.id}
+              />
+            </div>
+            <div className="profile-info-section">
+              <h2>{profile?.full_name}</h2>
+              <div className="profile-badges">
+                <span className="badge-role">{getRoleLabel(profile?.role)}</span>
+                <span className={`badge-status ${profile?.status === 'active' ? 'active' : 'inactive'}`}>
+                  {profile?.status === 'active' ? '🟢 Активен' : '🔴 Неактивен'}
+                </span>
+                {profile?.club_name && (
+                  <span className="badge-club">🏫 {profile.club_name}</span>
+                )}
+              </div>
+              <div className="profile-contact-info">
+                {profile?.email && (
+                  <span className="contact-item">📧 {profile.email}</span>
+                )}
+                {profile?.phone && (
+                  <span className="contact-item">📞 {profile.phone}</span>
+                )}
+                {profile?.city && (
+                  <span className="contact-item">📍 {profile.city}</span>
+                )}
+              </div>
+            </div>
+            <div className="profile-actions">
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  padding: '8px 16px',
-                  border: 'none',
-                  background: activeTab === tab.id ? '#0B1F3A' : 'transparent',
-                  color: activeTab === tab.id ? 'white' : '#667085',
-                  borderRadius: '8px 8px 0 0',
-                  cursor: 'pointer',
-                  fontWeight: activeTab === tab.id ? '600' : '500',
-                  fontSize: '13px',
-                  transition: 'all 0.3s ease'
-                }}
+                type="submit"
+                className="btn-save"
+                onClick={handleSave}
+                disabled={saving}
               >
-                {tab.label}
+                {saving ? '⏳ Сохранение...' : '💾 Сохранить'}
               </button>
-            ))}
+            </div>
           </div>
 
+          {/* Статус согласий */}
+          <div className="profile-consent-status">
+            <div className="consent-status-label">
+              <span>📝 Согласия</span>
+              <span className="consent-count">{consentStatus.given} из {consentStatus.total}</span>
+            </div>
+            <div className="consent-progress-bar">
+              <div 
+                className="consent-progress-fill" 
+                style={{ 
+                  width: `${consentStatus.percentage}%`,
+                  background: consentStatus.percentage === 100 
+                    ? 'linear-gradient(90deg, #16845B, #1A7A4C)' 
+                    : 'linear-gradient(90deg, #C9A227, #E8D9A8)'
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ============================================================
+           ВКЛАДКИ
+           ============================================================ */}
+        <div className="tabs-container">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ============================================================
+           ФОРМА
+           ============================================================ */}
+        <div className="form-container">
           <form onSubmit={handleSave}>
             {/* ===== ВКЛАДКА: ОСНОВНОЕ ===== */}
             {activeTab === 'main' && (
-              <div>
-                <div className="grid-2">
+              <div className="tab-content">
+                <div className="form-grid">
                   <div className="form-group">
                     <label>ФИО *</label>
                     <input
@@ -209,6 +284,7 @@ export default function Profile() {
                       value={profile?.full_name || ''}
                       onChange={handleChange}
                       required
+                      className="form-input"
                     />
                   </div>
                   <div className="form-group">
@@ -217,7 +293,7 @@ export default function Profile() {
                       type="email"
                       value={profile?.email || ''}
                       disabled
-                      style={{ background: '#F4F6F9', cursor: 'not-allowed' }}
+                      className="form-input disabled"
                     />
                   </div>
                   <div className="form-group">
@@ -227,10 +303,9 @@ export default function Profile() {
                       name="birth_date"
                       value={profile?.birth_date || ''}
                       onChange={handleChange}
+                      className="form-input"
                     />
-                    <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                      📅 Дата рождения используется для определения возраста и доступа к мероприятиям
-                    </div>
+                    <div className="form-hint">📅 Используется для определения возраста</div>
                   </div>
                   <div className="form-group">
                     <label>Город</label>
@@ -240,6 +315,7 @@ export default function Profile() {
                       value={profile?.city || ''}
                       onChange={handleChange}
                       placeholder="Москва"
+                      className="form-input"
                     />
                   </div>
                   <div className="form-group">
@@ -250,6 +326,7 @@ export default function Profile() {
                       value={profile?.school || ''}
                       onChange={handleChange}
                       placeholder="Школа №1"
+                      className="form-input"
                     />
                   </div>
                   <div className="form-group">
@@ -260,6 +337,7 @@ export default function Profile() {
                       value={profile?.class_name || ''}
                       onChange={handleChange}
                       placeholder="8А"
+                      className="form-input"
                     />
                   </div>
                 </div>
@@ -268,8 +346,8 @@ export default function Profile() {
 
             {/* ===== ВКЛАДКА: КОНТАКТЫ ===== */}
             {activeTab === 'contacts' && (
-              <div>
-                <div className="grid-2">
+              <div className="tab-content">
+                <div className="form-grid">
                   <div className="form-group">
                     <label>Телефон</label>
                     <input
@@ -278,10 +356,9 @@ export default function Profile() {
                       value={profile?.phone || ''}
                       onChange={handleChange}
                       placeholder="+7 999 123 45 67"
+                      className="form-input"
                     />
-                    <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                      📞 Номер для экстренной связи
-                    </div>
+                    <div className="form-hint">📞 Номер для экстренной связи</div>
                   </div>
                   <div className="form-group">
                     <label>Telegram</label>
@@ -291,10 +368,9 @@ export default function Profile() {
                       value={profile?.telegram || ''}
                       onChange={handleChange}
                       placeholder="@username"
+                      className="form-input"
                     />
-                    <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                      💬 Основной мессенджер для оперативной связи
-                    </div>
+                    <div className="form-hint">💬 Основной мессенджер</div>
                   </div>
                   <div className="form-group">
                     <label>VK</label>
@@ -304,6 +380,7 @@ export default function Profile() {
                       value={profile?.vk || ''}
                       onChange={handleChange}
                       placeholder="https://vk.com/id..."
+                      className="form-input"
                     />
                   </div>
                   <div className="form-group">
@@ -314,6 +391,7 @@ export default function Profile() {
                       value={profile?.social_links || ''}
                       onChange={handleChange}
                       placeholder="Ссылки через запятую"
+                      className="form-input"
                     />
                   </div>
                 </div>
@@ -322,46 +400,43 @@ export default function Profile() {
 
             {/* ===== ВКЛАДКА: ИНТЕРЕСЫ ===== */}
             {activeTab === 'interests' && (
-              <div>
-                <div className="form-group">
-                  <label>Интересы</label>
-                  <input
-                    type="text"
-                    name="interests"
-                    value={profile?.interests || ''}
-                    onChange={handleChange}
-                    placeholder="Дипломатия, история, иностранные языки, спорт"
-                  />
-                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                    🎯 Расскажите, что вам интересно — это поможет нам подбирать мероприятия
+              <div className="tab-content">
+                <div className="form-grid single">
+                  <div className="form-group">
+                    <label>Интересы</label>
+                    <input
+                      type="text"
+                      name="interests"
+                      value={profile?.interests || ''}
+                      onChange={handleChange}
+                      placeholder="Дипломатия, история, иностранные языки, спорт"
+                      className="form-input"
+                    />
+                    <div className="form-hint">🎯 Расскажите, что вам интересно</div>
                   </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Навыки</label>
-                  <input
-                    type="text"
-                    name="skills"
-                    value={profile?.skills || ''}
-                    onChange={handleChange}
-                    placeholder="Публичные выступления, переговоры, английский язык"
-                  />
-                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                    💪 Навыки, которыми вы владеете или хотите развить
+                  <div className="form-group">
+                    <label>Навыки</label>
+                    <input
+                      type="text"
+                      name="skills"
+                      value={profile?.skills || ''}
+                      onChange={handleChange}
+                      placeholder="Публичные выступления, переговоры, английский язык"
+                      className="form-input"
+                    />
+                    <div className="form-hint">💪 Навыки, которыми вы владеете</div>
                   </div>
-                </div>
-
-                <div className="form-group">
-                  <label>О себе</label>
-                  <textarea
-                    name="bio"
-                    rows="3"
-                    value={profile?.bio || ''}
-                    onChange={handleChange}
-                    placeholder="Расскажите о себе..."
-                  />
-                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                    📝 Эта информация будет видна другим участникам и организаторам
+                  <div className="form-group">
+                    <label>О себе</label>
+                    <textarea
+                      name="bio"
+                      rows="4"
+                      value={profile?.bio || ''}
+                      onChange={handleChange}
+                      placeholder="Расскажите о себе..."
+                      className="form-textarea"
+                    />
+                    <div className="form-hint">📝 Эта информация будет видна другим участникам</div>
                   </div>
                 </div>
               </div>
@@ -369,29 +444,21 @@ export default function Profile() {
 
             {/* ===== ВКЛАДКА: РОДИТЕЛИ ===== */}
             {activeTab === 'parents' && (
-              <div>
-                <div className="info-box" style={{
-                  padding: '12px 16px',
-                  background: '#EAF2FA',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  color: '#174A7E',
-                  marginBottom: '16px'
-                }}>
+              <div className="tab-content">
+                <div className="info-box">
                   ℹ️ <strong>Для чего это нужно?</strong><br />
-                  Данные родителя или законного представителя используются для связи в экстренных случаях,
-                  а также для получения согласия на участие в мероприятиях (для участников младше 18 лет).
+                  Данные родителя используются для связи в экстренных случаях и получения согласия на участие в мероприятиях.
                 </div>
-
-                <div className="grid-2">
+                <div className="form-grid">
                   <div className="form-group">
-                    <label>ФИО родителя/законного представителя</label>
+                    <label>ФИО родителя</label>
                     <input
                       type="text"
                       name="parent_full_name"
                       value={profile?.parent_full_name || ''}
                       onChange={handleChange}
                       placeholder="Иванова Мария Петровна"
+                      className="form-input"
                     />
                   </div>
                   <div className="form-group">
@@ -402,9 +469,10 @@ export default function Profile() {
                       value={profile?.parent_phone || ''}
                       onChange={handleChange}
                       placeholder="+7 999 123 45 67"
+                      className="form-input"
                     />
                   </div>
-                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <div className="form-group full-width">
                     <label>Email родителя</label>
                     <input
                       type="email"
@@ -412,153 +480,98 @@ export default function Profile() {
                       value={profile?.parent_email || ''}
                       onChange={handleChange}
                       placeholder="parent@example.com"
+                      className="form-input"
                     />
                   </div>
                 </div>
-                <div style={{
-                  padding: '12px 16px',
-                  background: '#FBF4DC',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  color: '#8A6A00',
-                  marginTop: '8px'
-                }}>
-                  ⚠️ Для участников младше 18 лет обязательно указание родителя или законного представителя
+                <div className="warning-box">
+                  ⚠️ Для участников младше 18 лет обязательно указание родителя
                 </div>
               </div>
             )}
 
             {/* ===== ВКЛАДКА: СОГЛАСИЯ ===== */}
             {activeTab === 'consents' && (
-              <div>
-                <div style={{
-                  padding: '12px 16px',
-                  background: '#EAF2FA',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  color: '#174A7E',
-                  marginBottom: '16px'
-                }}>
-                  ℹ️ <strong>Статус согласий:</strong>{' '}
-                  {consentStatus.given} из {consentStatus.total} дано ({consentStatus.percentage}%)
-                  <div style={{
-                    width: '100%',
-                    height: '6px',
-                    background: '#E2E7EF',
-                    borderRadius: '3px',
-                    marginTop: '6px',
-                    overflow: 'hidden'
-                  }}>
-                    <div style={{
-                      width: `${consentStatus.percentage}%`,
-                      height: '100%',
-                      background: consentStatus.percentage === 100 ? '#16845B' : '#C9A227',
-                      borderRadius: '3px',
-                      transition: 'width 0.5s ease'
-                    }} />
+              <div className="tab-content">
+                <div className="consents-info">
+                  <div className="consents-status-large">
+                    <span className="consents-icon">
+                      {consentStatus.percentage === 100 ? '✅' : '⚠️'}
+                    </span>
+                    <div>
+                      <div className="consents-title">Статус согласий</div>
+                      <div className="consents-text">
+                        {consentStatus.given} из {consentStatus.total} дано ({consentStatus.percentage}%)
+                      </div>
+                    </div>
+                  </div>
+                  <div className="consents-progress">
+                    <div className="consents-progress-bar">
+                      <div 
+                        className="consents-progress-fill"
+                        style={{ 
+                          width: `${consentStatus.percentage}%`,
+                          background: consentStatus.percentage === 100 
+                            ? 'linear-gradient(90deg, #16845B, #1A7A4C)' 
+                            : 'linear-gradient(90deg, #C9A227, #E8D9A8)'
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="form-group" style={{
-                  padding: '16px',
-                  border: profile?.consent_personal_data ? '2px solid #16845B' : '1px solid #E2E7EF',
-                  borderRadius: '10px',
-                  background: profile?.consent_personal_data ? '#F6FEF9' : 'transparent',
-                  transition: 'all 0.3s ease'
-                }}>
-                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
+                <div className="consent-item">
+                  <label className="consent-label">
                     <input
                       type="checkbox"
                       name="consent_personal_data"
                       checked={profile?.consent_personal_data || false}
                       onChange={handleChange}
-                      style={{ marginTop: '3px', width: '18px', height: '18px', flexShrink: 0 }}
                     />
                     <div>
-                      <strong style={{ color: '#0B1F3A' }}>Согласие на обработку персональных данных</strong>
-                      <div style={{ fontSize: '12px', color: '#667085', marginTop: '4px', lineHeight: '1.5' }}>
-                        <p style={{ margin: '0 0 6px 0' }}>
-                          Я, {'«Дипломаты будущего»'}, даю своё добровольное согласие на обработку моих персональных данных
-                          в соответствии с Федеральным законом от 27.07.2006 № 152-ФЗ «О персональных данных».
-                        </p>
-                        <p style={{ margin: '0', fontSize: '11px', color: '#98A2B3' }}>
-                          ⚖️ <strong>Перечень данных:</strong> ФИО, дата рождения, контактные данные, школа, класс.
-                          <br />
-                          🎯 <strong>Цель:</strong> Организация и проведение мероприятий, ведение реестра участников.
-                          <br />
-                          📋 <strong>Срок:</strong> До достижения целей обработки или отзыва согласия.
-                        </p>
+                      <strong>Согласие на обработку персональных данных</strong>
+                      <div className="consent-description">
+                        Я даю согласие на обработку моих персональных данных в соответствии с Федеральным законом № 152-ФЗ.
                       </div>
                     </div>
                   </label>
                 </div>
 
-                <div className="form-group" style={{
-                  padding: '16px',
-                  border: profile?.consent_photo_publication ? '2px solid #16845B' : '1px solid #E2E7EF',
-                  borderRadius: '10px',
-                  background: profile?.consent_photo_publication ? '#F6FEF9' : 'transparent',
-                  transition: 'all 0.3s ease'
-                }}>
-                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
+                <div className="consent-item">
+                  <label className="consent-label">
                     <input
                       type="checkbox"
                       name="consent_photo_publication"
                       checked={profile?.consent_photo_publication || false}
                       onChange={handleChange}
-                      style={{ marginTop: '3px', width: '18px', height: '18px', flexShrink: 0 }}
                     />
                     <div>
-                      <strong style={{ color: '#0B1F3A' }}>Согласие на публикацию фото и видео</strong>
-                      <div style={{ fontSize: '12px', color: '#667085', marginTop: '4px', lineHeight: '1.5' }}>
-                        <p style={{ margin: '0 0 6px 0' }}>
-                          Я даю согласие на использование моих изображений (фото и видео) в официальных источниках
-                          ДОД «Дипломаты будущего»: сайт, социальные сети, печатные материалы.
-                        </p>
-                        <p style={{ margin: '0', fontSize: '11px', color: '#98A2B3' }}>
-                          📸 <strong>Где публикуются:</strong> Официальный сайт, Telegram, ВКонтакте, фотоальбомы.
-                          <br />
-                          📅 <strong>Срок:</strong> Бессрочно до отзыва согласия.
-                        </p>
+                      <strong>Согласие на публикацию фото и видео</strong>
+                      <div className="consent-description">
+                        Я даю согласие на использование моих изображений в официальных источниках движения.
                       </div>
                     </div>
                   </label>
                 </div>
 
-                <div className="form-group" style={{
-                  padding: '16px',
-                  border: profile?.consent_event_participation ? '2px solid #16845B' : '1px solid #E2E7EF',
-                  borderRadius: '10px',
-                  background: profile?.consent_event_participation ? '#F6FEF9' : 'transparent',
-                  transition: 'all 0.3s ease'
-                }}>
-                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
+                <div className="consent-item">
+                  <label className="consent-label">
                     <input
                       type="checkbox"
                       name="consent_event_participation"
                       checked={profile?.consent_event_participation || false}
                       onChange={handleChange}
-                      style={{ marginTop: '3px', width: '18px', height: '18px', flexShrink: 0 }}
                     />
                     <div>
-                      <strong style={{ color: '#0B1F3A' }}>Согласие на участие в мероприятиях</strong>
-                      <div style={{ fontSize: '12px', color: '#667085', marginTop: '4px', lineHeight: '1.5' }}>
-                        <p style={{ margin: '0 0 6px 0' }}>
-                          Я подтверждаю, что ознакомлен(а) с правилами участия в мероприятиях ДОД «Дипломаты будущего»
-                          и обязуюсь их соблюдать.
-                        </p>
-                        <p style={{ margin: '0', fontSize: '11px', color: '#98A2B3' }}>
-                          📋 <strong>Основные правила:</strong> Соблюдение дисциплины, уважение к другим участникам,
-                          выполнение решений организаторов.
-                          <br />
-                          ⚠️ <strong>Ответственность:</strong> За нарушение правил участник может быть отстранён от мероприятий.
-                        </p>
+                      <strong>Согласие на участие в мероприятиях</strong>
+                      <div className="consent-description">
+                        Я подтверждаю, что ознакомлен с правилами участия в мероприятиях движения.
                       </div>
                     </div>
                   </label>
                 </div>
 
-                <div className="grid-2">
+                <div className="form-grid">
                   <div className="form-group">
                     <label>Дата подписания согласий</label>
                     <input
@@ -566,86 +579,807 @@ export default function Profile() {
                       name="consent_agreement_date"
                       value={profile?.consent_agreement_date || ''}
                       onChange={handleChange}
+                      className="form-input"
                     />
-                    <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                      📅 Дата, когда были подписаны согласия
-                    </div>
                   </div>
                   <div className="form-group">
-                    <label>Дата принятия Устава ДОД</label>
+                    <label>Дата принятия Устава</label>
                     <input
                       type="date"
                       name="charter_acceptance_date"
                       value={profile?.charter_acceptance_date || ''}
                       onChange={handleChange}
+                      className="form-input"
                     />
-                    <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                      📜 Дата присоединения к Уставу движения
-                    </div>
                   </div>
                 </div>
 
-                <div style={{
-                  padding: '12px 16px',
-                  background: '#E8F5EF',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  color: '#16845B',
-                  marginTop: '8px'
-                }}>
+                <div className="consents-footer">
                   ✅ <strong>Все согласия обязательны для участия в деятельности ДОД</strong>
-                  <br />
-                  <span style={{ fontSize: '12px', color: '#0F6B49' }}>
-                    Без подписанных согласий участие в мероприятиях невозможно.
-                  </span>
                 </div>
               </div>
             )}
 
             {/* ===== ВКЛАДКА: ДОПОЛНИТЕЛЬНО ===== */}
             {activeTab === 'extra' && (
-              <div>
-                <div className="form-group">
-                  <label>Дополнительное образование</label>
-                  <textarea
-                    name="education"
-                    rows="3"
-                    value={profile?.education || ''}
-                    onChange={handleChange}
-                    placeholder="Курсы, кружки, секции..."
-                  />
-                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                    📚 Расскажите о своём дополнительном образовании
+              <div className="tab-content">
+                <div className="form-grid single">
+                  <div className="form-group">
+                    <label>Дополнительное образование</label>
+                    <textarea
+                      name="education"
+                      rows="3"
+                      value={profile?.education || ''}
+                      onChange={handleChange}
+                      placeholder="Курсы, кружки, секции..."
+                      className="form-textarea"
+                    />
+                    <div className="form-hint">📚 Расскажите о своём дополнительном образовании</div>
                   </div>
-                </div>
-                <div className="form-group">
-                  <label>Личные достижения</label>
-                  <textarea
-                    name="achievements"
-                    rows="3"
-                    value={profile?.achievements || ''}
-                    onChange={handleChange}
-                    placeholder="Ваши основные достижения..."
-                  />
-                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                    🏆 Достижения, которыми вы гордитесь
+                  <div className="form-group">
+                    <label>Личные достижения</label>
+                    <textarea
+                      name="achievements"
+                      rows="3"
+                      value={profile?.achievements || ''}
+                      onChange={handleChange}
+                      placeholder="Ваши основные достижения..."
+                      className="form-textarea"
+                    />
+                    <div className="form-hint">🏆 Достижения, которыми вы гордитесь</div>
                   </div>
                 </div>
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={saving}
-              className="btn-primary"
-              style={{ width: '100%', marginTop: '16px' }}
-            >
-              {saving ? '⏳ Сохранение...' : '💾 Сохранить изменения'}
-            </button>
+            {/* ===== КНОПКА СОХРАНЕНИЯ (внизу) ===== */}
+            <div className="form-actions-bottom">
+              <button
+                type="submit"
+                className="btn-save-full"
+                disabled={saving}
+              >
+                {saving ? '⏳ Сохранение...' : '💾 Сохранить изменения'}
+              </button>
+            </div>
           </form>
         </div>
       </div>
+
       {profile?.is_president && <PresidentSection profile={profile} />}
+
+      <style>{`
+        /* ============================================================
+           ОСНОВНЫЕ СТИЛИ
+           ============================================================ */
+        .page-background {
+          min-height: 100vh;
+          background: #F0EDE8;
+        }
+
+        .container-page {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 24px 32px 48px;
+        }
+
+        /* ============================================================
+           ЗАГОЛОВОК
+           ============================================================ */
+        .page-header {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin-bottom: 24px;
+          padding: 20px 28px;
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
+        }
+
+        .page-header h1 {
+          font-family: 'Playfair Display', serif;
+          font-size: 24px;
+          font-weight: 700;
+          color: #0A1628;
+          margin: 0;
+        }
+
+        .page-header p {
+          font-size: 14px;
+          color: #8A8480;
+          margin: 4px 0 0 0;
+        }
+
+        /* ============================================================
+           СООБЩЕНИЯ
+           ============================================================ */
+        .message-success {
+          padding: 14px 20px;
+          background: #E8F5EF;
+          color: #1A7A4C;
+          border-radius: 10px;
+          margin-bottom: 20px;
+          border-left: 4px solid #1A7A4C;
+          font-weight: 500;
+        }
+
+        .message-error {
+          padding: 14px 20px;
+          background: #FCEBEC;
+          color: #B3262E;
+          border-radius: 10px;
+          margin-bottom: 20px;
+          border-left: 4px solid #B3262E;
+          font-weight: 500;
+        }
+
+        /* ============================================================
+           КАРТОЧКА ПРОФИЛЯ
+           ============================================================ */
+        .profile-card {
+          background: white;
+          border-radius: 16px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
+          margin-bottom: 24px;
+          overflow: hidden;
+        }
+
+        .profile-card-header {
+          display: flex;
+          align-items: center;
+          gap: 24px;
+          padding: 28px 32px;
+          background: linear-gradient(135deg, #0A1628 0%, #1A3555 100%);
+          color: white;
+        }
+
+        .profile-avatar-section {
+          flex-shrink: 0;
+        }
+
+        .profile-info-section {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .profile-info-section h2 {
+          font-family: 'Playfair Display', serif;
+          font-size: 26px;
+          font-weight: 700;
+          margin: 0 0 8px 0;
+          color: white;
+        }
+
+        .profile-badges {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-bottom: 8px;
+        }
+
+        .badge-role {
+          display: inline-block;
+          padding: 4px 14px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 500;
+          background: rgba(255, 255, 255, 0.15);
+          color: #E8D9A8;
+        }
+
+        .badge-status {
+          display: inline-block;
+          padding: 4px 14px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+
+        .badge-status.active {
+          background: rgba(22, 132, 91, 0.3);
+          color: #7DDFB0;
+        }
+
+        .badge-status.inactive {
+          background: rgba(179, 38, 46, 0.3);
+          color: #FCA5A5;
+        }
+
+        .badge-club {
+          display: inline-block;
+          padding: 4px 14px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 500;
+          background: rgba(23, 74, 126, 0.3);
+          color: #7DB8F0;
+        }
+
+        .profile-contact-info {
+          display: flex;
+          gap: 16px;
+          flex-wrap: wrap;
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.7);
+        }
+
+        .contact-item {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .profile-actions {
+          flex-shrink: 0;
+        }
+
+        .btn-save {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 10px 24px;
+          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
+          color: #0A1628;
+          border: none;
+          border-radius: 10px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 2px 16px rgba(201,162,39,0.25);
+          font-family: 'Inter', sans-serif;
+        }
+
+        .btn-save:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(201,162,39,0.35);
+        }
+
+        .btn-save:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          pointer-events: none;
+        }
+
+        /* ============================================================
+           СТАТУС СОГЛАСИЙ В КАРТОЧКЕ
+           ============================================================ */
+        .profile-consent-status {
+          padding: 12px 32px;
+          background: #F8FAFC;
+          border-top: 1px solid #E4DFD8;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+
+        .consent-status-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          color: #4D4744;
+          font-weight: 500;
+          white-space: nowrap;
+        }
+
+        .consent-count {
+          padding: 2px 10px;
+          background: #E4DFD8;
+          border-radius: 12px;
+          font-size: 11px;
+          color: #4D4744;
+        }
+
+        .consent-progress-bar {
+          flex: 1;
+          min-width: 120px;
+          height: 6px;
+          background: #E4DFD8;
+          border-radius: 3px;
+          overflow: hidden;
+        }
+
+        .consent-progress-fill {
+          height: 100%;
+          border-radius: 3px;
+          transition: width 0.5s ease;
+        }
+
+        /* ============================================================
+           ВКЛАДКИ
+           ============================================================ */
+        .tabs-container {
+          display: flex;
+          gap: 4px;
+          margin-bottom: 24px;
+          border-bottom: 2px solid #E4DFD8;
+          padding-bottom: 4px;
+          flex-wrap: wrap;
+          background: white;
+          padding: 4px 4px 0 4px;
+          border-radius: 12px 12px 0 0;
+          border: 1px solid #E4DFD8;
+          border-bottom: none;
+        }
+
+        .tab-btn {
+          padding: 10px 20px;
+          border: none;
+          background: transparent;
+          font-size: 14px;
+          font-weight: 500;
+          color: #8A8480;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          border-radius: 8px 8px 0 0;
+          font-family: 'Inter', sans-serif;
+        }
+
+        .tab-btn:hover {
+          color: #0A1628;
+          background: #F8F6F2;
+        }
+
+        .tab-btn.active {
+          color: #0A1628;
+          font-weight: 600;
+          background: #FBF4DC;
+          position: relative;
+        }
+
+        .tab-btn.active::after {
+          content: '';
+          position: absolute;
+          bottom: -2px;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: #C9A227;
+        }
+
+        /* ============================================================
+           ФОРМА
+           ============================================================ */
+        .form-container {
+          background: white;
+          border-radius: 0 0 12px 12px;
+          padding: 28px 32px;
+          border: 1px solid #E4DFD8;
+          border-top: none;
+          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
+        }
+
+        .tab-content {
+          animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 18px;
+        }
+
+        .form-grid.single {
+          grid-template-columns: 1fr;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .form-group.full-width {
+          grid-column: 1 / -1;
+        }
+
+        .form-group label {
+          font-size: 13px;
+          font-weight: 600;
+          color: #0A1628;
+        }
+
+        .form-input {
+          width: 100%;
+          padding: 10px 14px;
+          border: 1.5px solid #E4DFD8;
+          border-radius: 10px;
+          font-size: 14px;
+          font-family: 'Inter', sans-serif;
+          color: #0A1628;
+          background: white;
+          transition: all 0.3s ease;
+          outline: none;
+        }
+
+        .form-input:focus {
+          border-color: #C9A227;
+          box-shadow: 0 0 0 3px rgba(201,162,39,0.08);
+        }
+
+        .form-input.disabled {
+          background: #F8F6F2;
+          color: #8A8480;
+          cursor: not-allowed;
+        }
+
+        .form-textarea {
+          width: 100%;
+          padding: 10px 14px;
+          border: 1.5px solid #E4DFD8;
+          border-radius: 10px;
+          font-size: 14px;
+          font-family: 'Inter', sans-serif;
+          color: #0A1628;
+          background: white;
+          transition: all 0.3s ease;
+          outline: none;
+          resize: vertical;
+          min-height: 80px;
+        }
+
+        .form-textarea:focus {
+          border-color: #C9A227;
+          box-shadow: 0 0 0 3px rgba(201,162,39,0.08);
+        }
+
+        .form-hint {
+          font-size: 11px;
+          color: #98A2B3;
+          margin-top: 2px;
+        }
+
+        .info-box {
+          padding: 12px 16px;
+          background: #EAF2FA;
+          border-radius: 8px;
+          font-size: 13px;
+          color: #174A7E;
+          margin-bottom: 18px;
+          line-height: 1.6;
+        }
+
+        .warning-box {
+          padding: 12px 16px;
+          background: #FBF4DC;
+          border-radius: 8px;
+          font-size: 13px;
+          color: #8A6A00;
+          margin-top: 12px;
+          border-left: 3px solid #C9A227;
+        }
+
+        /* ============================================================
+           СОГЛАСИЯ
+           ============================================================ */
+        .consents-info {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 16px 20px;
+          background: #F8FAFC;
+          border-radius: 10px;
+          margin-bottom: 18px;
+          flex-wrap: wrap;
+        }
+
+        .consents-status-large {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .consents-icon {
+          font-size: 28px;
+        }
+
+        .consents-title {
+          font-weight: 600;
+          color: #0A1628;
+          font-size: 14px;
+        }
+
+        .consents-text {
+          font-size: 13px;
+          color: #667085;
+        }
+
+        .consents-progress {
+          flex: 1;
+          min-width: 100px;
+        }
+
+        .consents-progress-bar {
+          height: 6px;
+          background: #E4DFD8;
+          border-radius: 3px;
+          overflow: hidden;
+        }
+
+        .consents-progress-fill {
+          height: 100%;
+          border-radius: 3px;
+          transition: width 0.5s ease;
+        }
+
+        .consent-item {
+          padding: 14px 16px;
+          border: 1.5px solid #E4DFD8;
+          border-radius: 10px;
+          margin-bottom: 12px;
+          transition: all 0.3s ease;
+          background: white;
+        }
+
+        .consent-item:hover {
+          border-color: #C9A227;
+        }
+
+        .consent-item:has(input:checked) {
+          border-color: #16845B;
+          background: #F6FEF9;
+        }
+
+        .consent-label {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          cursor: pointer;
+        }
+
+        .consent-label input[type="checkbox"] {
+          width: 20px;
+          height: 20px;
+          margin-top: 2px;
+          accent-color: #C9A227;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+
+        .consent-label strong {
+          font-size: 14px;
+          color: #0A1628;
+        }
+
+        .consent-description {
+          font-size: 13px;
+          color: #667085;
+          margin-top: 4px;
+          line-height: 1.5;
+        }
+
+        .consents-footer {
+          padding: 12px 16px;
+          background: #E8F5EF;
+          border-radius: 8px;
+          font-size: 13px;
+          color: #16845B;
+          margin-top: 12px;
+          border-left: 3px solid #16845B;
+        }
+
+        /* ============================================================
+           КНОПКА СОХРАНЕНИЯ ВНИЗУ
+           ============================================================ */
+        .form-actions-bottom {
+          margin-top: 24px;
+          padding-top: 20px;
+          border-top: 1px solid #E4DFD8;
+        }
+
+        .btn-save-full {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 14px 40px;
+          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
+          color: #0A1628;
+          border: none;
+          border-radius: 10px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 2px 16px rgba(201,162,39,0.25);
+          font-family: 'Inter', sans-serif;
+          width: 100%;
+        }
+
+        .btn-save-full:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(201,162,39,0.35);
+        }
+
+        .btn-save-full:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          pointer-events: none;
+        }
+
+        /* ============================================================
+           АДАПТИВНОСТЬ
+           ============================================================ */
+        @media (max-width: 1024px) {
+          .profile-card-header {
+            flex-wrap: wrap;
+            justify-content: center;
+            text-align: center;
+          }
+
+          .profile-info-section {
+            text-align: center;
+          }
+
+          .profile-badges {
+            justify-content: center;
+          }
+
+          .profile-contact-info {
+            justify-content: center;
+          }
+
+          .profile-actions {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+          }
+
+          .btn-save {
+            width: 100%;
+            max-width: 300px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .container-page {
+            padding: 16px;
+          }
+
+          .page-header {
+            padding: 16px 20px;
+            flex-wrap: wrap;
+          }
+
+          .page-header h1 {
+            font-size: 20px;
+          }
+
+          .profile-card-header {
+            padding: 20px;
+            flex-direction: column;
+            text-align: center;
+          }
+
+          .profile-info-section h2 {
+            font-size: 22px;
+          }
+
+          .profile-badges {
+            justify-content: center;
+          }
+
+          .profile-contact-info {
+            justify-content: center;
+            gap: 8px;
+          }
+
+          .profile-consent-status {
+            padding: 10px 20px;
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .consent-status-label {
+            justify-content: center;
+          }
+
+          .form-container {
+            padding: 20px;
+          }
+
+          .form-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .form-group.full-width {
+            grid-column: 1;
+          }
+
+          .tabs-container {
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            padding: 4px 4px 0 4px;
+          }
+
+          .tab-btn {
+            white-space: nowrap;
+            padding: 8px 14px;
+            font-size: 13px;
+          }
+
+          .consents-info {
+            flex-direction: column;
+            align-items: stretch;
+            text-align: center;
+          }
+
+          .consents-status-large {
+            justify-content: center;
+          }
+
+          .btn-save-full {
+            padding: 12px 24px;
+            font-size: 14px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .container-page {
+            padding: 12px;
+          }
+
+          .page-header {
+            padding: 12px 16px;
+          }
+
+          .page-header h1 {
+            font-size: 18px;
+          }
+
+          .profile-card-header {
+            padding: 16px;
+          }
+
+          .profile-info-section h2 {
+            font-size: 18px;
+          }
+
+          .profile-avatar-section {
+            width: 80px;
+            height: 80px;
+          }
+
+          .form-container {
+            padding: 16px;
+          }
+
+          .tab-btn {
+            padding: 6px 10px;
+            font-size: 12px;
+          }
+
+          .consent-item {
+            padding: 10px 12px;
+          }
+
+          .consent-label {
+            flex-direction: column;
+          }
+
+          .consent-label input[type="checkbox"] {
+            margin-top: 0;
+          }
+
+          .badge-role,
+          .badge-status,
+          .badge-club {
+            font-size: 10px;
+            padding: 2px 10px;
+          }
+        }
+      `}</style>
     </div>
   );
 }

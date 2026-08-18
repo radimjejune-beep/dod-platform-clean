@@ -55,7 +55,12 @@ export default function Appeals() {
     }
   };
 
-  const canCreate = profile && profile.role === 'club_coordinator';
+  // ============================================================
+  // ✅ ПРОВЕРКА ПРАВ — КООРДИНАТОР КЮДА МОЖЕТ СОЗДАВАТЬ
+  // ============================================================
+  const isClubCoordinator = profile?.role === 'club_coordinator';
+  const canCreate = isClubCoordinator;
+  
   const canReply = profile && ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile.role);
   const canView = profile && ['club_coordinator', 'movement_coordinator', 'admin', 'president', 'vice_president'].includes(profile.role);
   const canDelete = profile && profile.role === 'admin';
@@ -288,6 +293,31 @@ export default function Appeals() {
           </div>
         )}
 
+        {/* ============================================================
+            ✅ КНОПКА "СОЗДАТЬ" — ВИДНА ДЛЯ КООРДИНАТОРА КЮДА
+            ============================================================ */}
+        <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#0B1F3A', margin: 0 }}>
+              📨 Обращения
+            </h1>
+            <p style={{ color: '#667085', margin: '4px 0 0 0' }}>
+              {isClubCoordinator 
+                ? `Ваши обращения к руководству (${appeals.length})` 
+                : `Все обращения от координаторов КЮДов (${appeals.length})`}
+            </p>
+          </div>
+          {canCreate && (
+            <button
+              className="btn-primary"
+              onClick={() => setShowForm(!showForm)}
+              style={{ padding: '10px 24px', fontSize: '14px' }}
+            >
+              {showForm ? '✖ Закрыть' : '➕ Создать обращение'}
+            </button>
+          )}
+        </div>
+
         {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
@@ -345,6 +375,15 @@ export default function Appeals() {
           <div className="empty-state">
             <div className="icon">📭</div>
             <p>Обращений пока нет</p>
+            {canCreate && (
+              <button
+                className="btn-primary"
+                style={{ marginTop: '12px' }}
+                onClick={() => setShowForm(true)}
+              >
+                ➕ Создать обращение
+              </button>
+            )}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

@@ -47,6 +47,35 @@ export default function Events() {
   });
   const navigate = useNavigate();
 
+  // ============================================================
+  // ОПРЕДЕЛЯЕМ РОЛИ
+  // ============================================================
+  const isClubCoordinator = profile?.role === 'club_coordinator';
+  const isMovementCoordinator = profile?.role === 'movement_coordinator';
+  const isAdmin = profile?.role === 'admin';
+  const canCreate = profile && ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(profile.role);
+  const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
+  const canAssignTutor = ['admin', 'movement_coordinator', 'club_coordinator'].includes(profile?.role);
+
+  // Получаем ID клуба координатора
+  const getCoordinatorClubId = () => {
+    if (!isClubCoordinator) return null;
+    let clubId = profile?.club_id;
+    if (!clubId) {
+      const found = clubs.find(c => 
+        c.coordinator_id === profile?.id || 
+        c.leader_id === profile?.id
+      );
+      if (found) clubId = found.id;
+    }
+    return clubId;
+  };
+
+  const coordinatorClubId = getCoordinatorClubId();
+
+  // ============================================================
+  // ЗАГРУЗКА ДАННЫХ
+  // ============================================================
   useEffect(() => {
     const clubId = localStorage.getItem('clubEventTarget');
     if (clubId && clubs.length > 0) {
@@ -78,10 +107,9 @@ export default function Events() {
       }
       setProfile(userData);
 
-      const [clubsData, eventsData, usersData] = await Promise.all([
-        api.getClubs(),
-        api.getEvents(),
-        api.getUsers()
+      const [clubsData, eventsData] = await Promise.all([
+        api.getClubs().catch(() => []),
+        api.getEvents().catch(() => [])
       ]);
 
       setClubs(clubsData || []);
@@ -92,7 +120,6 @@ export default function Events() {
       let filteredEvents = eventsData || [];
       
       if (userData.role === 'club_coordinator') {
-        // Находим клуб координатора
         let coordinatorClubId = userData.club_id;
         
         if (!coordinatorClubId) {
@@ -111,16 +138,14 @@ export default function Events() {
         }
 
         if (coordinatorClubId) {
-          // ✅ Координатор видит:
+          // Координатор видит:
           // 1. Внутренние мероприятия своего клуба
-          // 2. Выездные мероприятия (outgoing)
-          // 3. Глобальные форумы (global_forum)
+          // 2. Выездные (outgoing) — все
+          // 3. Глобальные (global_forum) — все
           filteredEvents = eventsData.filter(e => {
-            // Если мероприятие внутреннее — только для своего клуба
             if (e.type === 'internal' || e.is_club_event) {
               return e.club_id === coordinatorClubId;
             }
-            // Выездные и глобальные — видят все
             return ['outgoing', 'global_forum'].includes(e.type) || e.is_global === true;
           });
           console.log(`🏫 Координатор КЮДа: показано ${filteredEvents.length} мероприятий`);
@@ -133,9 +158,17 @@ export default function Events() {
 
       setAllEvents(filteredEvents);
       
-      // Загружаем тьюторов
-      const tutorList = usersData.filter(u => u.role === 'tutor');
-      setTutors(tutorList || []);
+      // ✅ НЕ ЗАГРУЖАЕМ users — у координатора нет прав!
+      // Загружаем тьюторов только если есть права
+      if (['admin', 'movement_coordinator'].includes(userData.role)) {
+        try {
+          const usersData = await api.getUsers().catch(() => []);
+          const tutorList = usersData.filter(u => u.role === 'tutor');
+          setTutors(tutorList || []);
+        } catch (e) {
+          console.log('Ошибка загрузки тьюторов:', e);
+        }
+      }
       
       const pending = filteredEvents.filter(e => e.moderation_status === 'pending');
       setPendingEvents(pending || []);
@@ -146,6 +179,9 @@ export default function Events() {
     }
   };
 
+  // ============================================================
+  // ФИЛЬТРЫ
+  // ============================================================
   const filterConfig = [
     {
       key: 'type',
@@ -214,41 +250,13 @@ export default function Events() {
   const filteredEvents = getFilteredEvents();
 
   // ============================================================
-  // ПРОВЕРКА ПРАВ
+  // ПРОВЕРКА ПРАВ НА РЕДАКТИРОВАНИЕ/УДАЛЕНИЕ
   // ============================================================
-  const isClubCoordinator = profile?.role === 'club_coordinator';
-  const isMovementCoordinator = profile?.role === 'movement_coordinator';
-  const isAdmin = profile?.role === 'admin';
-  
-  // Координатор КЮДа может создавать мероприятия
-  const canCreate = profile && ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'].includes(profile.role);
-  const canModerate = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
-  const canAssignTutor = ['admin', 'movement_coordinator', 'club_coordinator'].includes(profile?.role);
-  
-  // Получаем клуб координатора
-  const getCoordinatorClubId = () => {
-    if (!isClubCoordinator) return null;
-    let clubId = profile?.club_id;
-    if (!clubId) {
-      // Пытаемся найти через club_coordinators
-      const found = clubs.find(c => 
-        c.coordinator_id === profile?.id || 
-        c.leader_id === profile?.id
-      );
-      if (found) clubId = found.id;
-    }
-    return clubId;
-  };
-
-  const coordinatorClubId = getCoordinatorClubId();
-
   const canEdit = (event) => {
     const role = profile?.role;
-    const userId = profile?.id;
     if (['admin', 'movement_coordinator'].includes(role)) return true;
     if (['president', 'vice_president'].includes(role)) return true;
     if (role === 'club_coordinator') {
-      // Координатор может редактировать только мероприятия своего клуба
       return event.club_id === coordinatorClubId;
     }
     return false;
@@ -261,15 +269,15 @@ export default function Events() {
     return false;
   };
 
+  // ============================================================
+  // СОЗДАНИЕ/ОБНОВЛЕНИЕ МЕРОПРИЯТИЯ
+  // ============================================================
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
     setLoading(true);
 
     try {
-      // ============================================================
-      // ДЛЯ КООРДИНАТОРА КЮДА — ПРИВЯЗКА К СВОЕМУ КЛУБУ
-      // ============================================================
       let eventData = {
         title: form.title,
         description: form.description,
@@ -288,13 +296,11 @@ export default function Events() {
 
       // Для координатора КЮДа — автоматически подставляем его клуб
       if (isClubCoordinator && coordinatorClubId) {
-        // Если мероприятие внутреннее (internal) — привязываем к клубу
         if (form.type === 'internal' || !form.is_global) {
           eventData.club_id = coordinatorClubId;
           eventData.is_club_event = true;
           eventData.is_global = false;
         } else {
-          // Выездное или глобальное — не привязываем к клубу
           eventData.club_id = null;
           eventData.is_club_event = false;
           eventData.is_global = true;
@@ -479,6 +485,40 @@ export default function Events() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
+        
+        {/* ============================================================
+           ШАПКА С КНОПКОЙ СОЗДАНИЯ
+           ============================================================ */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '20px',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div>
+            <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#0B1F3A', margin: 0 }}>
+              📅 Мероприятия
+            </h1>
+            <p style={{ color: '#667085', margin: '4px 0 0 0' }}>
+              Всего: {filteredEvents.length}
+            </p>
+          </div>
+          
+          {canCreate && (
+            <button 
+              className="btn-gold"
+              onClick={() => { 
+                setShowForm(!showForm); 
+              }}
+              style={{ padding: '10px 24px', fontSize: '14px' }}
+            >
+              {showForm ? '✖ Закрыть' : '➕ Создать мероприятие'}
+            </button>
+          )}
+        </div>
+
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
             {message}
@@ -527,7 +567,7 @@ export default function Events() {
 
         {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
-            <h3>{form.id ? '✏️ Редактировать' : '📝 Создать'}</h3>
+            <h3>{form.id ? '✏️ Редактировать' : '📝 Создать мероприятие'}</h3>
             
             {isClubCoordinator && coordinatorClubId && (
               <div style={{ 
@@ -612,59 +652,12 @@ export default function Events() {
                   <label>Лимит мест</label>
                   <input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} min="1" />
                 </div>
-                
-                {!isMovementCoordinator && !isClubCoordinator && (
-                  <div className="form-group">
-                    <label>Клуб</label>
-                    <select value={form.club_id} onChange={(e) => setForm({ ...form, club_id: e.target.value })}>
-                      <option value="">Без клуба (глобальное)</option>
-                      {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                    <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                      {form.club_id ? '🏫 Это мероприятие увидят только участники этого клуба' : '🌍 Это мероприятие увидят все пользователи'}
-                    </div>
-                  </div>
-                )}
-
-                {/* Для координатора КЮДа — показываем информацию о типе мероприятия */}
-                {isClubCoordinator && (
-                  <div className="form-group">
-                    <div style={{ 
-                      padding: '10px 14px', 
-                      background: '#F8FAFC', 
-                      borderRadius: '8px', 
-                      border: '1px solid #E4DFD8',
-                      fontSize: '13px',
-                      color: '#667085'
-                    }}>
-                      {form.type === 'internal' ? (
-                        <>🔒 <strong>Внутреннее мероприятие</strong><br />Увидят только участники вашего КЮДа</>
-                      ) : (
-                        <>🌍 <strong>Выездное или глобальное мероприятие</strong><br />Увидят все участники движения</>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
               
               <div className="form-group">
                 <label>Ссылка на форму</label>
                 <input type="url" value={form.form_url} onChange={(e) => setForm({ ...form, form_url: e.target.value })} />
               </div>
-              
-              {isClubCoordinator && (
-                <div className="form-group">
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input type="checkbox" checked={form.is_global} onChange={(e) => setForm({ ...form, is_global: e.target.checked })} />
-                    🌍 Глобальное мероприятие (увидят все)
-                  </label>
-                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                    {form.is_global 
-                      ? '🌍 Мероприятие увидят все пользователи' 
-                      : '🔒 Мероприятие увидят только участники вашего КЮДа'}
-                  </div>
-                </div>
-              )}
               
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
@@ -688,7 +681,7 @@ export default function Events() {
               {filteredEvents.map((event) => {
                 const userCanEdit = canEdit(event);
                 const userCanDelete = canDelete(event);
-                const canAssignTutor = ['admin', 'movement_coordinator', 'club_coordinator'].includes(profile?.role);
+                const canAssignTutorLocal = ['admin', 'movement_coordinator', 'club_coordinator'].includes(profile?.role);
                 
                 return (
                   <div
@@ -780,7 +773,7 @@ export default function Events() {
                           </button>
                         </>
                       )}
-                      {canAssignTutor && (
+                      {canAssignTutorLocal && (
                         <button
                           className="btn-primary"
                           style={{ padding: '4px 12px', fontSize: '12px', background: '#6B46C1', color: 'white' }}
@@ -931,6 +924,229 @@ export default function Events() {
           </div>
         </div>
       )}
+
+      <style>{`
+        .btn-gold {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 10px 24px;
+          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
+          color: #0A1628;
+          border: none;
+          border-radius: 8px;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          text-decoration: none;
+          box-shadow: 0 2px 16px rgba(201, 162, 39, 0.25);
+          min-height: 44px;
+          min-width: 80px;
+        }
+        .btn-gold:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
+        }
+        
+        .btn-success {
+          background: #1A7A4C;
+          color: white;
+          box-shadow: 0 4px 16px rgba(26,122,76,0.2);
+        }
+        .btn-success:hover {
+          background: #13663E;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(26,122,76,0.3);
+        }
+        
+        .btn-secondary {
+          background: transparent;
+          color: #0A1628;
+          border: 1.5px solid #E4DFD8;
+          box-shadow: none;
+        }
+        .btn-secondary:hover {
+          background: #F8F6F2;
+          border-color: #C9A227;
+          transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+          background: #B3262E;
+          color: white;
+          box-shadow: 0 4px 16px rgba(179,38,46,0.2);
+        }
+        .btn-danger:hover {
+          background: #8A1C22;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(179,38,46,0.3);
+        }
+        
+        .btn-primary {
+          background: #6B46C1;
+          color: white;
+          box-shadow: 0 4px 16px rgba(107,70,193,0.2);
+        }
+        .btn-primary:hover {
+          background: #5A3AAD;
+          transform: translateY(-2px);
+        }
+        
+        .form-group {
+          margin-bottom: 16px;
+        }
+        .form-group label {
+          display: block;
+          font-weight: 500;
+          color: #0B1F3A;
+          margin-bottom: 4px;
+          font-size: 13px;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+          width: 100%;
+          padding: 10px 14px;
+          border: 1.5px solid #D5DCE7;
+          border-radius: 8px;
+          font-size: 14px;
+          outline: none;
+          transition: all 0.3s ease;
+          background: white;
+          font-family: inherit;
+          color: #0B1F3A;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+          border-color: #C9A227;
+          box-shadow: 0 0 0 3px rgba(201,162,39,0.1);
+        }
+        .form-group textarea {
+          resize: vertical;
+          min-height: 80px;
+        }
+        
+        .grid-2 {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        .grid-3 {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 16px;
+        }
+        
+        .card {
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
+          margin-bottom: 20px;
+        }
+        
+        .list-item {
+          padding: 14px 18px;
+          border-left: 3px solid #0B1F3A;
+          background: #F8FAFC;
+          border-radius: 0 8px 8px 0;
+          transition: all 0.2s ease;
+        }
+        .list-item:hover {
+          background: #F0EDE8;
+          transform: translateX(4px);
+        }
+        .list-item .title {
+          font-weight: 600;
+          color: #0B1F3A;
+          font-size: 15px;
+        }
+        .list-item .subtitle {
+          font-size: 13px;
+          color: #667085;
+          margin-top: 2px;
+        }
+        .list-item .meta {
+          font-size: 12px;
+          color: #98A2B3;
+          margin-top: 4px;
+        }
+        
+        .tag {
+          display: inline-block;
+          padding: 2px 10px;
+          border-radius: 12px;
+          font-size: 10px;
+          font-weight: 500;
+        }
+        
+        .message-success {
+          padding: 12px 16px;
+          background: #E8F5EF;
+          color: #16845B;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          border-left: 4px solid #16845B;
+        }
+        .message-error {
+          padding: 12px 16px;
+          background: #FCEBEC;
+          color: #B3262E;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          border-left: 4px solid #B3262E;
+        }
+        
+        .empty-state {
+          text-align: center;
+          padding: 40px 20px;
+        }
+        .empty-state .icon {
+          font-size: 48px;
+          margin-bottom: 12px;
+          opacity: 0.6;
+        }
+        .empty-state p {
+          color: #667085;
+          font-size: 14px;
+        }
+        
+        .page-background {
+          min-height: 100vh;
+          background: #F0EDE8;
+        }
+        .container-page {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 24px 32px 48px;
+        }
+        
+        @media (max-width: 768px) {
+          .container-page {
+            padding: 16px;
+          }
+          .grid-2, .grid-3 {
+            grid-template-columns: 1fr;
+          }
+          .card {
+            padding: 16px;
+          }
+        }
+        @media (max-width: 480px) {
+          .container-page {
+            padding: 12px;
+          }
+          .btn-gold {
+            width: 100%;
+            justify-content: center;
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -229,6 +229,13 @@ export default function Events() {
     setRegistering(true);
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setMessage('❌ Не авторизован');
+        setMessageType('error');
+        setRegistering(false);
+        return;
+      }
+
       const response = await fetch(
         'https://dod-backend.relaxdev.ru/api/event-registrations',
         {
@@ -240,17 +247,25 @@ export default function Events() {
           body: JSON.stringify({ event_id: eventId })
         }
       );
+
       const data = await response.json();
+      console.log('📥 Ответ сервера:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Ошибка регистрации');
+      }
+
       if (data.error) {
         setMessage('❌ ' + data.error);
         setMessageType('error');
       } else {
-        setMessage(data.message || '✅ Вы успешно записались на мероприятие!');
+        setMessage(data.message || '✅ Заявка отправлена!');
         setMessageType('success');
         await loadData();
       }
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
+      console.error('❌ Ошибка:', err);
       setMessage('❌ Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
@@ -921,7 +936,6 @@ export default function Events() {
                     flexWrap: 'wrap',
                     marginBottom: '12px'
                   }}>
-                    {/* КНОПКА "ВСЕ КЛУБЫ" */}
                     <button
                       type="button"
                       className={form.is_global ? 'btn-primary' : 'btn-secondary'}
@@ -946,7 +960,6 @@ export default function Events() {
                       🌍 Все КЮДы
                     </button>
                     
-                    {/* КНОПКА "ВЫБРАТЬ КОНКРЕТНЫЕ" */}
                     <button
                       type="button"
                       className={!form.is_global ? 'btn-primary' : 'btn-secondary'}
@@ -971,7 +984,6 @@ export default function Events() {
                       📌 Выбрать конкретные
                     </button>
                     
-                    {/* СЧЁТЧИК ВЫБРАННЫХ КЛУБОВ */}
                     {!form.is_global && form.target_clubs?.length > 0 && (
                       <span style={{ 
                         padding: '6px 16px',
@@ -985,7 +997,6 @@ export default function Events() {
                       </span>
                     )}
                     
-                    {/* КНОПКА "СБРОСИТЬ ВСЕ" */}
                     {!form.is_global && form.target_clubs?.length > 0 && (
                       <button
                         type="button"
@@ -1005,7 +1016,6 @@ export default function Events() {
                     )}
                   </div>
                   
-                  {/* ПОИСК КЛУБОВ */}
                   {!form.is_global && (
                     <>
                       <div style={{ position: 'relative', marginBottom: '10px' }}>
@@ -1025,7 +1035,6 @@ export default function Events() {
                         />
                       </div>
                       
-                      {/* СЕТКА КЛУБОВ */}
                       <div style={{ 
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
@@ -1091,7 +1100,6 @@ export default function Events() {
                         ))}
                       </div>
                       
-                      {/* БЫСТРЫЙ ВЫБОР ПО ГРУППАМ */}
                       <div style={{ 
                         display: 'flex', 
                         gap: '6px', 
@@ -1214,9 +1222,18 @@ export default function Events() {
                 const isConfirmed = userRegistration?.status === 'confirmed';
                 const isRejected = userRegistration?.status === 'rejected';
                 
-                const isDeadlinePassed = event.registration_deadline 
-                ? new Date().getTime() > new Date(event.registration_deadline).getTime()
-                : false;
+                // ✅ ИСПРАВЛЕНО: безопасный парсинг даты
+                let isDeadlinePassed = false;
+                if (event.registration_deadline) {
+                  try {
+                    const deadlineDate = new Date(event.registration_deadline);
+                    if (!isNaN(deadlineDate.getTime())) {
+                      isDeadlinePassed = new Date().getTime() > deadlineDate.getTime();
+                    }
+                  } catch (e) {
+                    console.warn('Ошибка парсинга даты дедлайна:', e);
+                  }
+                }
                 
                 const isFull = event.max_participants > 0 && (event.registrations_count || 0) >= event.max_participants;
                 const isOutgoingOrGlobal = event.type === 'outgoing' || event.type === 'global_forum' || event.is_global === true;

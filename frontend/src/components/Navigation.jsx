@@ -6,9 +6,8 @@ import { useMenuItems } from '../hooks/useMenuItems';
 import logo from '../assets/Image.png';
 
 export default function Navigation({ profile }) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({});
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -19,10 +18,13 @@ export default function Navigation({ profile }) {
   const location = useLocation();
   const profileRef = useRef(null);
   const notificationRef = useRef(null);
-  const menuRef = useRef(null);
+  const sidebarRef = useRef(null);
 
   const menuItems = useMenuItems(profile);
 
+  // ============================================================
+  // РАСКРЫТИЕ ПОДМЕНЮ
+  // ============================================================
   const toggleMenu = (id) => {
     setExpandedMenus(prev => ({
       ...prev,
@@ -30,6 +32,28 @@ export default function Navigation({ profile }) {
     }));
   };
 
+  // ============================================================
+  // ЗАКРЫТИЕ САЙДБАРА ПРИ КЛИКЕ ВНЕ
+  // ============================================================
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
+        setIsSidebarOpen(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setIsProfileOpen(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // ============================================================
+  // ЗАГРУЗКА УВЕДОМЛЕНИЙ
+  // ============================================================
   const loadNotifications = async () => {
     if (notificationsLoaded) return;
     try {
@@ -55,28 +79,18 @@ export default function Navigation({ profile }) {
     }
   }, [profile, notificationsLoaded]);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (profileRef.current && !profileRef.current.contains(event.target)) {
-        setIsProfileOpen(false);
-      }
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-        setShowNotifications(false);
-      }
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setIsMobileMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
+  // ============================================================
+  // ВЫХОД
+  // ============================================================
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
   };
 
+  // ============================================================
+  // УВЕДОМЛЕНИЯ
+  // ============================================================
   const handleNotificationClick = async (id) => {
     try {
       const token = localStorage.getItem('token');
@@ -107,6 +121,9 @@ export default function Navigation({ profile }) {
     }
   };
 
+  // ============================================================
+  // ВСПОМОГАТЕЛЬНЫЕ
+  // ============================================================
   const getInitials = (name) => {
     if (!name) return '?';
     const parts = name.split(' ');
@@ -125,32 +142,36 @@ export default function Navigation({ profile }) {
     return children.some(child => isActive(child.path));
   };
 
-  const renderMenuItem = (item) => {
+  // ============================================================
+  // РЕНДЕР ПУНКТА МЕНЮ (ДЛЯ САЙДБАРА)
+  // ============================================================
+  const renderSidebarItem = (item) => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedMenus[item.id] || false;
 
     if (hasChildren) {
       const isActiveGroup = isChildActive(item.children);
       return (
-        <div key={item.id} className="nav-group">
+        <div key={item.id} className="sidebar-group">
           <button
-            className={`nav-group-toggle ${isActiveGroup ? 'active' : ''}`}
+            className={`sidebar-group-toggle ${isActiveGroup ? 'active' : ''}`}
             onClick={() => toggleMenu(item.id)}
           >
-            <span className="nav-link-icon">{item.icon}</span>
-            <span>{item.label}</span>
-            <span className="nav-group-arrow">{isExpanded ? '▾' : '▸'}</span>
+            <span className="sidebar-link-icon">{item.icon}</span>
+            <span className="sidebar-link-label">{item.label}</span>
+            <span className="sidebar-group-arrow">{isExpanded ? '▾' : '▸'}</span>
           </button>
           {isExpanded && (
-            <div className="nav-group-children">
+            <div className="sidebar-group-children">
               {item.children.map((child) => (
                 <Link
                   key={child.id}
                   to={child.path}
-                  className={`nav-link nav-child ${isActive(child.path) ? 'active' : ''}`}
+                  className={`sidebar-link sidebar-child ${isActive(child.path) ? 'active' : ''}`}
+                  onClick={() => setIsSidebarOpen(false)}
                 >
-                  <span className="nav-link-icon">{child.icon}</span>
-                  <span>{child.label}</span>
+                  <span className="sidebar-link-icon">{child.icon}</span>
+                  <span className="sidebar-link-label">{child.label}</span>
                 </Link>
               ))}
             </div>
@@ -163,61 +184,18 @@ export default function Navigation({ profile }) {
       <Link
         key={item.id}
         to={item.path}
-        className={`nav-link ${isActive(item.path) ? 'active' : ''}`}
+        className={`sidebar-link ${isActive(item.path) ? 'active' : ''}`}
+        onClick={() => setIsSidebarOpen(false)}
       >
-        <span className="nav-link-icon">{item.icon}</span>
-        <span>{item.label}</span>
+        <span className="sidebar-link-icon">{item.icon}</span>
+        <span className="sidebar-link-label">{item.label}</span>
       </Link>
     );
   };
 
-  const renderMobileMenuItem = (item) => {
-    const hasChildren = item.children && item.children.length > 0;
-    const isExpanded = expandedMenus[item.id] || false;
-
-    if (hasChildren) {
-      return (
-        <div key={item.id} className="nav-mobile-group">
-          <button
-            className={`nav-mobile-group-toggle ${isChildActive(item.children) ? 'active' : ''}`}
-            onClick={() => toggleMenu(item.id)}
-          >
-            <span className="nav-link-icon">{item.icon}</span>
-            <span>{item.label}</span>
-            <span className="nav-group-arrow">{isExpanded ? '▾' : '▸'}</span>
-          </button>
-          {isExpanded && (
-            <div className="nav-mobile-group-children">
-              {item.children.map((child) => (
-                <Link
-                  key={child.id}
-                  to={child.path}
-                  className={`nav-mobile-link ${isActive(child.path) ? 'active' : ''}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <span className="nav-link-icon">{child.icon}</span>
-                  <span>{child.label}</span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <Link
-        key={item.id}
-        to={item.path}
-        className={`nav-mobile-link ${isActive(item.path) ? 'active' : ''}`}
-        onClick={() => setIsMobileMenuOpen(false)}
-      >
-        <span className="nav-link-icon">{item.icon}</span>
-        <span>{item.label}</span>
-      </Link>
-    );
-  };
-
+  // ============================================================
+  // ПУБЛИЧНАЯ ВЕРСИЯ (БЕЗ ПРОФИЛЯ)
+  // ============================================================
   if (!profile) {
     return (
       <nav className="nav">
@@ -290,150 +268,194 @@ export default function Navigation({ profile }) {
     );
   }
 
+  // ============================================================
+  // ОСНОВНАЯ ВЕРСИЯ
+  // ============================================================
   return (
-    <nav className="nav">
-      <div className="nav-container">
+    <>
+      {/* ВЕРХНЯЯ ПАНЕЛЬ */}
+      <nav className="nav">
+        <div className="nav-container">
 
-        <Link to="/" className="nav-logo">
-          <img src={logo} alt="ДОД" />
-          <span className="nav-logo-text">Дипломаты будущего</span>
-        </Link>
-
-        <div className="nav-desktop">
-          {menuItems.map((item) => renderMenuItem(item))}
-        </div>
-
-        <div className="nav-right">
-
-          <div className="nav-notifications" ref={notificationRef}>
+          {/* ЛОГОТИП + БУРГЕР */}
+          <div className="nav-left">
             <button
-              className="nav-notif-btn"
-              onClick={() => setShowNotifications(!showNotifications)}
+              className="nav-burger"
+              onClick={() => setIsSidebarOpen(true)}
+              aria-label="Открыть меню"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
               </svg>
-              {unreadCount > 0 && (
-                <span className="nav-notif-badge">{unreadCount}</span>
-              )}
             </button>
-
-            {showNotifications && (
-              <div className="nav-notif-dropdown">
-                <div className="nav-notif-header">
-                  <span>Уведомления</span>
-                  {unreadCount > 0 && (
-                    <button onClick={markAllRead} className="nav-notif-markall">
-                      Прочитать все
-                    </button>
-                  )}
-                </div>
-                {notifications.length === 0 ? (
-                  <div className="nav-notif-empty">Нет уведомлений</div>
-                ) : (
-                  <div className="nav-notif-list">
-                    {notifications.slice(0, 10).map((n) => (
-                      <div
-                        key={n.id}
-                        className={`nav-notif-item ${!n.read ? 'unread' : ''}`}
-                        onClick={() => handleNotificationClick(n.id)}
-                      >
-                        <div className="nav-notif-title">{n.title}</div>
-                        <div className="nav-notif-message">{n.message}</div>
-                        <div className="nav-notif-time">
-                          {new Date(n.created_at).toLocaleString('ru-RU')}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <Link to="/notification-history" className="nav-notif-all">
-                  Все уведомления →
-                </Link>
-              </div>
-            )}
+            <Link to="/" className="nav-logo">
+              <img src={logo} alt="ДОД" />
+              <span className="nav-logo-text">Дипломаты будущего</span>
+            </Link>
           </div>
 
-          <div className="nav-profile" ref={profileRef}>
-            <button
-              className="nav-profile-btn"
-              onClick={() => setIsProfileOpen(!isProfileOpen)}
-            >
-              <div className="nav-avatar">
-                {profile?.avatar_url ? (
-                  <img src={profile.avatar_url} alt="Аватар" />
-                ) : (
-                  getInitials(profile?.full_name)
-                )}
-              </div>
-              <span className="nav-profile-name">{profile?.full_name}</span>
-              <svg width="12" height="12" viewBox="0 0 12 8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                <path d="M1 1.5L6 6.5L11 1.5" />
-              </svg>
-            </button>
+          {/* ПРАВАЯ ЧАСТЬ */}
+          <div className="nav-right">
 
-            {isProfileOpen && (
-              <div className="nav-profile-dropdown">
-                <div className="nav-profile-header">
-                  <div className="nav-profile-avatar">
-                    {profile?.avatar_url ? (
-                      <img src={profile.avatar_url} alt="Аватар" />
-                    ) : (
-                      getInitials(profile?.full_name)
+            {/* УВЕДОМЛЕНИЯ */}
+            <div className="nav-notifications" ref={notificationRef}>
+              <button
+                className="nav-notif-btn"
+                onClick={() => setShowNotifications(!showNotifications)}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                {unreadCount > 0 && (
+                  <span className="nav-notif-badge">{unreadCount}</span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div className="nav-notif-dropdown">
+                  <div className="nav-notif-header">
+                    <span>Уведомления</span>
+                    {unreadCount > 0 && (
+                      <button onClick={markAllRead} className="nav-notif-markall">
+                        Прочитать все
+                      </button>
                     )}
                   </div>
-                  <div>
-                    <div className="nav-profile-fullname">{profile?.full_name}</div>
-                    <div className="nav-profile-role">{profile?.role}</div>
-                  </div>
+                  {notifications.length === 0 ? (
+                    <div className="nav-notif-empty">Нет уведомлений</div>
+                  ) : (
+                    <div className="nav-notif-list">
+                      {notifications.slice(0, 10).map((n) => (
+                        <div
+                          key={n.id}
+                          className={`nav-notif-item ${!n.read ? 'unread' : ''}`}
+                          onClick={() => handleNotificationClick(n.id)}
+                        >
+                          <div className="nav-notif-title">{n.title}</div>
+                          <div className="nav-notif-message">{n.message}</div>
+                          <div className="nav-notif-time">
+                            {new Date(n.created_at).toLocaleString('ru-RU')}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <Link to="/notification-history" className="nav-notif-all">
+                    Все уведомления →
+                  </Link>
                 </div>
-                <div className="nav-profile-divider" />
-                <Link to="/profile" className="nav-profile-item" onClick={() => setIsProfileOpen(false)}>
-                  Профиль
-                </Link>
-                <Link to="/my-achievements" className="nav-profile-item" onClick={() => setIsProfileOpen(false)}>
-                  Достижения
-                </Link>
-                <Link to="/my-reviews" className="nav-profile-item" onClick={() => setIsProfileOpen(false)}>
-                  Оценки
-                </Link>
-                <div className="nav-profile-divider" />
-                <button className="nav-profile-item nav-profile-logout" onClick={handleLogout}>
-                  Выйти
-                </button>
-              </div>
+              )}
+            </div>
+
+            {/* ПРОФИЛЬ */}
+            <div className="nav-profile" ref={profileRef}>
+              <button
+                className="nav-profile-btn"
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+              >
+                <div className="nav-avatar">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Аватар" />
+                  ) : (
+                    getInitials(profile?.full_name)
+                  )}
+                </div>
+                <span className="nav-profile-name">{profile?.full_name}</span>
+                <svg width="12" height="12" viewBox="0 0 12 8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <path d="M1 1.5L6 6.5L11 1.5" />
+                </svg>
+              </button>
+
+              {isProfileOpen && (
+                <div className="nav-profile-dropdown">
+                  <div className="nav-profile-header">
+                    <div className="nav-profile-avatar">
+                      {profile?.avatar_url ? (
+                        <img src={profile.avatar_url} alt="Аватар" />
+                      ) : (
+                        getInitials(profile?.full_name)
+                      )}
+                    </div>
+                    <div>
+                      <div className="nav-profile-fullname">{profile?.full_name}</div>
+                      <div className="nav-profile-role">{profile?.role}</div>
+                    </div>
+                  </div>
+                  <div className="nav-profile-divider" />
+                  <Link to="/profile" className="nav-profile-item" onClick={() => setIsProfileOpen(false)}>
+                    Профиль
+                  </Link>
+                  <Link to="/my-achievements" className="nav-profile-item" onClick={() => setIsProfileOpen(false)}>
+                    Достижения
+                  </Link>
+                  <Link to="/my-reviews" className="nav-profile-item" onClick={() => setIsProfileOpen(false)}>
+                    Оценки
+                  </Link>
+                  <div className="nav-profile-divider" />
+                  <button className="nav-profile-item nav-profile-logout" onClick={handleLogout}>
+                    Выйти
+                  </button>
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+      </nav>
+
+      {/* ОВЕРЛЕЙ (ЗАТЕМНЕНИЕ) */}
+      {isSidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)} />
+      )}
+
+      {/* БОКОВОЕ МЕНЮ (ВЫЕЗЖАЕТ СЛЕВА) */}
+      <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`} ref={sidebarRef}>
+        {/* ЗАКРЫТИЕ */}
+        <div className="sidebar-header">
+          <button
+            className="sidebar-close"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            ✕
+          </button>
+          <span className="sidebar-title">Меню</span>
+        </div>
+
+        {/* ПРОФИЛЬ В САЙДБАРЕ */}
+        <div className="sidebar-profile">
+          <div className="sidebar-avatar">
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="Аватар" />
+            ) : (
+              getInitials(profile?.full_name)
             )}
           </div>
-
-          <button
-            className="nav-mobile-toggle"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-
+          <div className="sidebar-profile-info">
+            <div className="sidebar-profile-name">{profile?.full_name}</div>
+            <div className="sidebar-profile-role">{profile?.role}</div>
+          </div>
         </div>
-      </div>
 
-      {isMobileMenuOpen && (
-        <div className="nav-mobile" ref={menuRef}>
-          {menuItems.map((item) => renderMobileMenuItem(item))}
-          <div className="nav-mobile-divider" />
-          <Link to="/profile" className="nav-mobile-link" onClick={() => setIsMobileMenuOpen(false)}>
-            Профиль
-          </Link>
-          <button className="nav-mobile-logout" onClick={handleLogout}>
+        {/* МЕНЮ */}
+        <nav className="sidebar-nav">
+          {menuItems.map((item) => renderSidebarItem(item))}
+        </nav>
+
+        {/* ВЫХОД */}
+        <div className="sidebar-footer">
+          <button className="sidebar-logout" onClick={handleLogout}>
             Выйти
           </button>
         </div>
-      )}
+      </aside>
 
       <style>{`
+        /* ============================================================
+           ВЕРХНЯЯ ПАНЕЛЬ
+           ============================================================ */
         .nav {
           background: white;
           border-bottom: 1px solid #E4DFD8;
@@ -454,6 +476,27 @@ export default function Navigation({ profile }) {
           gap: 16px;
         }
 
+        .nav-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .nav-burger {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          border: none;
+          background: transparent;
+          border-radius: 8px;
+          cursor: pointer;
+          color: #0A1628;
+          transition: all 0.25s ease;
+        }
+        .nav-burger:hover { background: #F8F6F2; }
+
         .nav-logo {
           display: flex;
           align-items: center;
@@ -468,95 +511,6 @@ export default function Navigation({ profile }) {
         .nav-logo img { height: 34px; width: auto; }
         .nav-logo-text { letter-spacing: -0.02em; }
 
-        .nav-desktop {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          flex: 1;
-          overflow-x: auto;
-          padding: 0 8px;
-        }
-
-        .nav-link {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 7px 14px;
-          border-radius: 8px;
-          text-decoration: none;
-          color: #6B6561;
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
-          font-weight: 500;
-          transition: all 0.25s ease;
-          white-space: nowrap;
-          letter-spacing: 0.01em;
-        }
-        .nav-link:hover { background: #F8F6F2; color: #0A1628; }
-        .nav-link.active { background: #FBF4DC; color: #C9A227; font-weight: 600; }
-        .nav-link-icon { font-size: 18px; }
-
-        .nav-group { position: relative; }
-
-        .nav-group-toggle {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 7px 14px;
-          border-radius: 8px;
-          border: none;
-          background: none;
-          color: #6B6561;
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.25s ease;
-          white-space: nowrap;
-          pointer-events: auto !important;
-          z-index: 10 !important;
-        }
-        .nav-group-toggle:hover { background: #F8F6F2; color: #0A1628; }
-        .nav-group-toggle.active { background: #FBF4DC; color: #C9A227; }
-        .nav-group-arrow {
-          margin-left: 4px;
-          font-size: 12px;
-          color: #A8A29A;
-          pointer-events: none;
-        }
-
-        .nav-group-children {
-          position: absolute;
-          top: calc(100% + 4px);
-          left: 0;
-          min-width: 240px;
-          background: white;
-          border-radius: 12px;
-          border: 1px solid #E4DFD8;
-          box-shadow: 0 12px 48px rgba(10, 22, 40, 0.15);
-          padding: 6px 0;
-          z-index: 1000;
-          animation: navFadeDown 0.2s ease;
-        }
-        @keyframes navFadeDown {
-          from { opacity: 0; transform: translateY(-8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        .nav-child {
-          padding: 8px 18px;
-          border-radius: 0;
-          white-space: nowrap;
-          font-size: 13px;
-        }
-        .nav-child:hover { background: #F8F6F2; }
-        .nav-child .nav-link-icon { font-size: 16px; }
-        .nav-child {
-          pointer-events: auto !important;
-          cursor: pointer !important;
-          z-index: 20 !important;
-        }
-
         .nav-right {
           display: flex;
           align-items: center;
@@ -564,13 +518,14 @@ export default function Navigation({ profile }) {
           flex-shrink: 0;
         }
 
+        /* ============================================================
+           УВЕДОМЛЕНИЯ
+           ============================================================ */
         .nav-notifications { position: relative; }
         .nav-notif-btn {
           width: 40px; height: 40px; border: none; background: transparent; border-radius: 50%;
           cursor: pointer; color: #6B6561; transition: all 0.25s ease;
           display: flex; align-items: center; justify-content: center; position: relative;
-          pointer-events: auto !important;
-          z-index: 10 !important;
         }
         .nav-notif-btn:hover { background: #F8F6F2; color: #0A1628; }
         .nav-notif-badge {
@@ -617,14 +572,15 @@ export default function Navigation({ profile }) {
         }
         .nav-notif-all:hover { background: #F8F6F2; }
 
+        /* ============================================================
+           ПРОФИЛЬ В ВЕРХНЕЙ ПАНЕЛИ
+           ============================================================ */
         .nav-profile { position: relative; }
         .nav-profile-btn {
           display: flex; align-items: center; gap: 8px;
           padding: 4px 14px 4px 4px; border: none; background: transparent;
           border-radius: 30px; cursor: pointer; transition: all 0.25s ease;
           font-family: 'Inter', sans-serif; font-size: 14px; color: #0A1628;
-          pointer-events: auto !important;
-          z-index: 10 !important;
         }
         .nav-profile-btn:hover { background: #F8F6F2; }
         .nav-avatar {
@@ -667,97 +623,196 @@ export default function Navigation({ profile }) {
           font-size: 14px; transition: all 0.2s ease;
           border: none; background: none; width: 100%; cursor: pointer;
           font-family: 'Inter', sans-serif; text-align: left;
-          pointer-events: auto !important;
-          z-index: 10 !important;
         }
         .nav-profile-item:hover { background: #F8F6F2; }
         .nav-profile-logout { color: #B3262E; }
         .nav-profile-logout:hover { background: #FCEBEC; }
 
-        .nav-mobile-toggle {
-          display: none; background: none; border: none;
-          cursor: pointer; color: #0A1628; padding: 8px 4px;
-          pointer-events: auto !important;
-          z-index: 10 !important;
+        /* ============================================================
+           ОВЕРЛЕЙ
+           ============================================================ */
+        .sidebar-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.4);
+          z-index: 999;
+          animation: overlayFade 0.3s ease;
+        }
+        @keyframes overlayFade {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
-        .nav-mobile {
-          display: none; position: absolute; top: 68px; left: 0; right: 0;
-          background: white; border-bottom: 1px solid #E4DFD8;
-          padding: 12px 16px 20px; flex-direction: column; gap: 4px;
-          box-shadow: 0 8px 32px rgba(10,22,40,0.06);
-          max-height: calc(100vh - 68px); overflow-y: auto; z-index: 999;
+        /* ============================================================
+           БОКОВОЕ МЕНЮ (ВЫЕЗЖАЕТ)
+           ============================================================ */
+        .sidebar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 320px;
+          height: 100vh;
+          background: white;
+          z-index: 1000;
+          transform: translateX(-100%);
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          display: flex;
+          flex-direction: column;
+          box-shadow: 0 0 40px rgba(0, 0, 0, 0.1);
+          overflow-y: auto;
+        }
+        .sidebar.open {
+          transform: translateX(0);
         }
 
-        .nav-mobile-link {
-          display: flex; align-items: center; gap: 10px;
-          padding: 10px 14px; border-radius: 8px; text-decoration: none;
-          color: #0A1628; font-size: 14px; font-weight: 500;
-          transition: all 0.2s ease;
-          pointer-events: auto !important;
-          cursor: pointer !important;
-          z-index: 10 !important;
+        .sidebar-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 16px 20px;
+          border-bottom: 1px solid #F0EDE8;
+          flex-shrink: 0;
         }
-        .nav-mobile-link:hover { background: #F8F6F2; }
-        .nav-mobile-link.active { background: #FBF4DC; color: #C9A227; }
+        .sidebar-close {
+          width: 36px;
+          height: 36px;
+          border: none;
+          background: transparent;
+          border-radius: 50%;
+          font-size: 18px;
+          color: #6B6561;
+          cursor: pointer;
+          transition: all 0.25s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .sidebar-close:hover { background: #F8F6F2; }
+        .sidebar-title {
+          font-family: 'Playfair Display', serif;
+          font-size: 18px;
+          font-weight: 600;
+          color: #0A1628;
+        }
 
-        .nav-mobile-group { margin-bottom: 2px; }
-        .nav-mobile-group-toggle {
-          display: flex; align-items: center; gap: 10px;
-          width: 100%; padding: 10px 14px;
-          border: none; background: none;
-          color: #0A1628; font-size: 14px; font-weight: 500;
-          cursor: pointer; transition: all 0.2s ease;
-          font-family: 'Inter', sans-serif;
+        .sidebar-profile {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px 20px;
+          border-bottom: 1px solid #F0EDE8;
+        }
+        .sidebar-avatar {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #0A1628, #1A3555);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 14px;
+          font-weight: 600;
+          flex-shrink: 0;
+          overflow: hidden;
+        }
+        .sidebar-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .sidebar-profile-name {
+          font-size: 14px;
+          font-weight: 500;
+          color: #0A1628;
+        }
+        .sidebar-profile-role {
+          font-size: 12px;
+          color: #6B6561;
+          text-transform: capitalize;
+        }
+
+        .sidebar-nav {
+          flex: 1;
+          padding: 12px 12px 8px;
+          overflow-y: auto;
+        }
+
+        .sidebar-link {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 14px;
           border-radius: 8px;
-          pointer-events: auto !important;
-          z-index: 10 !important;
+          color: #6B6561;
+          text-decoration: none;
+          font-size: 14px;
+          font-weight: 500;
+          transition: all 0.2s ease;
         }
-        .nav-mobile-group-toggle:hover { background: #F8F6F2; }
-        .nav-mobile-group-toggle.active { background: #FBF4DC; color: #C9A227; }
-        .nav-mobile-group-children {
+        .sidebar-link:hover { background: #F8F6F2; color: #0A1628; }
+        .sidebar-link.active { background: #FBF4DC; color: #C9A227; }
+        .sidebar-link-icon { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+
+        .sidebar-group { margin-bottom: 2px; }
+        .sidebar-group-toggle {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          width: 100%;
+          padding: 10px 14px;
+          border: none;
+          background: none;
+          border-radius: 8px;
+          color: #6B6561;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-family: 'Inter', sans-serif;
+        }
+        .sidebar-group-toggle:hover { background: #F8F6F2; color: #0A1628; }
+        .sidebar-group-toggle.active { background: #FBF4DC; color: #C9A227; }
+        .sidebar-group-arrow { margin-left: auto; font-size: 12px; color: #A8A29A; }
+        .sidebar-group-children {
           padding-left: 16px;
         }
-        .nav-mobile-group-children .nav-mobile-link {
-          padding-left: 40px;
+        .sidebar-child {
+          padding-left: 44px;
           font-size: 13px;
         }
 
-        .nav-mobile-divider { height: 1px; background: #F0EDE8; margin: 8px 0; }
-        .nav-mobile-logout {
-          display: flex; align-items: center; gap: 10px;
-          padding: 10px 14px; border: none; background: none; text-align: left;
-          font-size: 14px; color: #B3262E; cursor: pointer; border-radius: 8px;
-          font-weight: 500; font-family: 'Inter', sans-serif;
+        .sidebar-footer {
+          padding: 12px 20px 20px;
+          border-top: 1px solid #F0EDE8;
+          flex-shrink: 0;
+        }
+        .sidebar-logout {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 14px;
+          border: none;
+          background: none;
+          border-radius: 8px;
+          color: #B3262E;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
           transition: all 0.2s ease;
-          pointer-events: auto !important;
-          z-index: 10 !important;
+          font-family: 'Inter', sans-serif;
+          width: 100%;
         }
-        .nav-mobile-logout:hover { background: #FCEBEC; }
+        .sidebar-logout:hover { background: #FCEBEC; }
 
-        @media (max-width: 1024px) {
-          .nav-desktop { display: none; }
-          .nav-mobile-toggle { display: block; }
-          .nav-mobile { display: flex; }
-          .nav-profile-name { display: none; }
-          .nav-group-children {
-            position: static;
-            box-shadow: none;
-            border: none;
-            padding: 0 0 0 16px;
-            animation: none;
-            min-width: auto;
-          }
-          .nav-child {
-            white-space: normal;
-            padding-left: 40px;
-          }
-        }
-
+        /* ============================================================
+           АДАПТИВНОСТЬ
+           ============================================================ */
         @media (max-width: 768px) {
           .nav { padding: 0 16px; }
           .nav-logo-text { display: none; }
+          .nav-profile-name { display: none; }
           .nav-notif-dropdown { width: 320px; right: -40px; }
+          .sidebar { width: 280px; }
         }
 
         @media (max-width: 480px) {
@@ -766,43 +821,9 @@ export default function Navigation({ profile }) {
           .nav-profile-btn { padding: 4px; }
           .nav-avatar { width: 32px; height: 32px; font-size: 12px; }
           .nav-profile-dropdown { width: 200px; right: -10px; }
-        }
-
-        /* ============================================================
-           ФИКС КНОПОК — ЧТОБЫ КЛИКАЛИСЬ
-           ============================================================ */
-        button,
-        .btn,
-        .nav-group-toggle,
-        .nav-mobile-group-toggle,
-        .nav-profile-btn,
-        .nav-notif-btn,
-        .nav-mobile-logout,
-        .nav-mobile-toggle {
-          pointer-events: auto !important;
-          cursor: pointer !important;
-          user-select: none !important;
-          z-index: 10 !important;
-          position: relative !important;
-        }
-
-        .nav-group-children .nav-link,
-        .nav-mobile-group-children .nav-mobile-link {
-          pointer-events: auto !important;
-          cursor: pointer !important;
-          z-index: 20 !important;
-          position: relative !important;
-        }
-
-        .nav-group-arrow {
-          pointer-events: none !important;
-        }
-
-        .nav-group-toggle:active,
-        .nav-mobile-group-toggle:active {
-          transform: scale(0.97);
+          .sidebar { width: 100%; max-width: 300px; }
         }
       `}</style>
-    </nav>
+    </>
   );
 }

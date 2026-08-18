@@ -14,7 +14,6 @@ export default function Profile() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
   const [activeTab, setActiveTab] = useState('main');
-  const [showConsentModal, setShowConsentModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -44,6 +43,7 @@ export default function Profile() {
     setTimeout(() => setMessage(''), 3000);
   };
 
+  // ✅ ИСПРАВЛЕННАЯ ФУНКЦИЯ СОХРАНЕНИЯ
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -54,9 +54,20 @@ export default function Profile() {
       let phone = profile.phone || '';
       phone = phone.replace(/[^0-9+]/g, '');
 
+      // ✅ Обработка дат — если пусто или некорректно, отправляем null
       let birthDate = profile.birth_date || '';
-      if (birthDate === '' || birthDate === 'Invalid Date') {
+      if (birthDate === '' || birthDate === 'Invalid Date' || isNaN(new Date(birthDate).getTime())) {
         birthDate = null;
+      }
+
+      let consentDate = profile.consent_agreement_date || '';
+      if (consentDate === '' || consentDate === 'Invalid Date' || isNaN(new Date(consentDate).getTime())) {
+        consentDate = null;
+      }
+
+      let charterDate = profile.charter_acceptance_date || '';
+      if (charterDate === '' || charterDate === 'Invalid Date' || isNaN(new Date(charterDate).getTime())) {
+        charterDate = null;
       }
 
       const updateData = {
@@ -80,9 +91,11 @@ export default function Profile() {
         consent_personal_data: profile.consent_personal_data || false,
         consent_photo_publication: profile.consent_photo_publication || false,
         consent_event_participation: profile.consent_event_participation || false,
-        consent_agreement_date: profile.consent_agreement_date || null,
-        charter_acceptance_date: profile.charter_acceptance_date || null
+        consent_agreement_date: consentDate,
+        charter_acceptance_date: charterDate
       };
+
+      console.log('📤 Отправка данных:', updateData);
 
       const result = await api.updateProfile(updateData);
 
@@ -168,9 +181,6 @@ export default function Profile() {
       <Navigation profile={profile} />
       <div className="container-page">
         
-        {/* ============================================================
-           ЗАГОЛОВОК
-           ============================================================ */}
         <div className="page-header">
           <span style={{ fontSize: '32px' }}>👤</span>
           <div>
@@ -185,9 +195,6 @@ export default function Profile() {
           </div>
         )}
 
-        {/* ============================================================
-           КАРТОЧКА ПРОФИЛЯ
-           ============================================================ */}
         <div className="profile-card">
           <div className="profile-card-header">
             <div className="profile-avatar-section">
@@ -232,7 +239,6 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Статус согласий */}
           <div className="profile-consent-status">
             <div className="consent-status-label">
               <span>📝 Согласия</span>
@@ -252,9 +258,6 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* ============================================================
-           ВКЛАДКИ
-           ============================================================ */}
         <div className="tabs-container">
           {tabs.map((tab) => (
             <button
@@ -267,12 +270,8 @@ export default function Profile() {
           ))}
         </div>
 
-        {/* ============================================================
-           ФОРМА
-           ============================================================ */}
         <div className="form-container">
           <form onSubmit={handleSave}>
-            {/* ===== ВКЛАДКА: ОСНОВНОЕ ===== */}
             {activeTab === 'main' && (
               <div className="tab-content">
                 <div className="form-grid">
@@ -344,7 +343,6 @@ export default function Profile() {
               </div>
             )}
 
-            {/* ===== ВКЛАДКА: КОНТАКТЫ ===== */}
             {activeTab === 'contacts' && (
               <div className="tab-content">
                 <div className="form-grid">
@@ -398,7 +396,6 @@ export default function Profile() {
               </div>
             )}
 
-            {/* ===== ВКЛАДКА: ИНТЕРЕСЫ ===== */}
             {activeTab === 'interests' && (
               <div className="tab-content">
                 <div className="form-grid single">
@@ -442,7 +439,6 @@ export default function Profile() {
               </div>
             )}
 
-            {/* ===== ВКЛАДКА: РОДИТЕЛИ ===== */}
             {activeTab === 'parents' && (
               <div className="tab-content">
                 <div className="info-box">
@@ -490,7 +486,6 @@ export default function Profile() {
               </div>
             )}
 
-            {/* ===== ВКЛАДКА: СОГЛАСИЯ ===== */}
             {activeTab === 'consents' && (
               <div className="tab-content">
                 <div className="consents-info">
@@ -600,7 +595,6 @@ export default function Profile() {
               </div>
             )}
 
-            {/* ===== ВКЛАДКА: ДОПОЛНИТЕЛЬНО ===== */}
             {activeTab === 'extra' && (
               <div className="tab-content">
                 <div className="form-grid single">
@@ -632,7 +626,6 @@ export default function Profile() {
               </div>
             )}
 
-            {/* ===== КНОПКА СОХРАНЕНИЯ (внизу) ===== */}
             <div className="form-actions-bottom">
               <button
                 type="submit"
@@ -649,9 +642,6 @@ export default function Profile() {
       {profile?.is_president && <PresidentSection profile={profile} />}
 
       <style>{`
-        /* ============================================================
-           ОСНОВНЫЕ СТИЛИ
-           ============================================================ */
         .page-background {
           min-height: 100vh;
           background: #F0EDE8;
@@ -663,9 +653,6 @@ export default function Profile() {
           padding: 24px 32px 48px;
         }
 
-        /* ============================================================
-           ЗАГОЛОВОК
-           ============================================================ */
         .page-header {
           display: flex;
           align-items: center;
@@ -692,9 +679,6 @@ export default function Profile() {
           margin: 4px 0 0 0;
         }
 
-        /* ============================================================
-           СООБЩЕНИЯ
-           ============================================================ */
         .message-success {
           padding: 14px 20px;
           background: #E8F5EF;
@@ -715,9 +699,6 @@ export default function Profile() {
           font-weight: 500;
         }
 
-        /* ============================================================
-           КАРТОЧКА ПРОФИЛЯ
-           ============================================================ */
         .profile-card {
           background: white;
           border-radius: 16px;
@@ -845,9 +826,6 @@ export default function Profile() {
           pointer-events: none;
         }
 
-        /* ============================================================
-           СТАТУС СОГЛАСИЙ В КАРТОЧКЕ
-           ============================================================ */
         .profile-consent-status {
           padding: 12px 32px;
           background: #F8FAFC;
@@ -891,9 +869,6 @@ export default function Profile() {
           transition: width 0.5s ease;
         }
 
-        /* ============================================================
-           ВКЛАДКИ
-           ============================================================ */
         .tabs-container {
           display: flex;
           gap: 4px;
@@ -943,9 +918,6 @@ export default function Profile() {
           background: #C9A227;
         }
 
-        /* ============================================================
-           ФОРМА
-           ============================================================ */
         .form-container {
           background: white;
           border-radius: 0 0 12px 12px;
@@ -1060,9 +1032,6 @@ export default function Profile() {
           border-left: 3px solid #C9A227;
         }
 
-        /* ============================================================
-           СОГЛАСИЯ
-           ============================================================ */
         .consents-info {
           display: flex;
           align-items: center;
@@ -1169,9 +1138,6 @@ export default function Profile() {
           border-left: 3px solid #16845B;
         }
 
-        /* ============================================================
-           КНОПКА СОХРАНЕНИЯ ВНИЗУ
-           ============================================================ */
         .form-actions-bottom {
           margin-top: 24px;
           padding-top: 20px;
@@ -1208,9 +1174,6 @@ export default function Profile() {
           pointer-events: none;
         }
 
-        /* ============================================================
-           АДАПТИВНОСТЬ
-           ============================================================ */
         @media (max-width: 1024px) {
           .profile-card-header {
             flex-wrap: wrap;

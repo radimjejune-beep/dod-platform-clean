@@ -3416,7 +3416,9 @@ app.get('/api/events/:eventId/registration-status', authenticate, async (req, re
   }
 });
 
-// 2. ЭКСПОРТ УЧАСТНИКОВ В EXCEL
+// ============================================================
+// ЭКСПОРТ УЧАСТНИКОВ В EXCEL (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+// ============================================================
 app.get('/api/events/:eventId/export', authenticate, async (req, res) => {
   try {
     const { eventId } = req.params;
@@ -3506,8 +3508,11 @@ app.get('/api/events/:eventId/export', authenticate, async (req, res) => {
     const bom = '\uFEFF';
     const finalCsv = bom + csv;
 
+    // ✅ ИСПРАВЛЕНО: используем encodeURIComponent для безопасного имени файла
+    const fileName = `Ucastniki_${event.title.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0,10)}.csv`;
+    
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="Участники_${event.title}_${new Date().toISOString().slice(0,10)}.csv"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     res.setHeader('Content-Length', Buffer.byteLength(finalCsv, 'utf8'));
     
     res.send(finalCsv);

@@ -42,7 +42,6 @@ export default function Reports() {
 
       const role = userData.role;
       
-      // Проверка прав доступа
       const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'];
       if (!allowedRoles.includes(role)) {
         navigate('/dashboard');
@@ -58,9 +57,6 @@ export default function Reports() {
 
       let filteredReports = [];
 
-      // ============================================================
-      // КООРДИНАТОР КЮДА - ТОЛЬКО СВОЙ КЛУБ
-      // ============================================================
       if (role === 'club_coordinator') {
         let coordinatorClubId = userData.club_id;
         
@@ -86,22 +82,16 @@ export default function Reports() {
           filteredReports = [];
           console.log('❌ Клуб координатора не найден');
         }
-      } 
-      // ============================================================
-      // АДМИН, КООРДИНАТОР ДВИЖЕНИЯ, ПРЕЗИДЕНТ, ВИЦЕ-ПРЕЗИДЕНТ - ВСЕ ОТЧЁТЫ
-      // ============================================================
-      else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
+      } else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
         filteredReports = reportsData || [];
         console.log(`👑 ${role}: показано ${filteredReports.length} отчётов`);
-      } 
-      else {
+      } else {
         filteredReports = [];
       }
 
       setAllReports(filteredReports);
       setReports(filteredReports);
 
-      // Для координатора КЮДа предзаполняем клуб в форме
       if (role === 'club_coordinator') {
         const coordClubId = userData.club_id || filteredReports[0]?.club_id;
         if (coordClubId) {
@@ -118,7 +108,6 @@ export default function Reports() {
     }
   };
 
-  // Фильтр по клубу (только для админа и координатора движения)
   const canFilterByClub = profile?.role === 'admin' || profile?.role === 'movement_coordinator' || profile?.role === 'president' || profile?.role === 'vice_president';
 
   useEffect(() => {
@@ -386,7 +375,6 @@ export default function Reports() {
     );
   }
 
-  // Получаем клуб координатора для отображения в заголовке
   const coordinatorClubName = isClubCoordinator 
     ? clubs.find(c => c.id === profile?.club_id)?.name || 'вашего клуба'
     : '';
@@ -395,36 +383,7 @@ export default function Reports() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📋</span>
-          <div>
-            <h1>{isClubCoordinator ? `Отчёты ${coordinatorClubName}` : 'Отчёты КЮДов'}</h1>
-            <p>
-              {isClubCoordinator 
-                ? `Ежемесячные отчёты вашего клуба (${reports.length})` 
-                : `Проверка и утверждение отчётов всех КЮДов (${reports.length})`}
-            </p>
-          </div>
-          {canCreate && (
-            <button
-              className="btn-primary"
-              style={{ marginLeft: 'auto' }}
-              onClick={() => {
-                setForm({
-                  id: null,
-                  club_id: profile?.club_id || '',
-                  report_month: new Date().toISOString().slice(0, 7),
-                  report_text: '',
-                  events_count: 0,
-                  participants_count: 0
-                });
-                setShowForm(!showForm);
-              }}
-            >
-              {showForm ? '✖ Закрыть' : '➕ Создать отчёт'}
-            </button>
-          )}
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
@@ -591,8 +550,6 @@ export default function Reports() {
                 const status = getStatusBadge(report.status);
                 const isDraft = report.status === 'draft';
                 const isSubmitted = report.status === 'submitted';
-                const isApproved = report.status === 'approved';
-                const isRejected = report.status === 'rejected';
                 const canEdit = isClubCoordinator || profile?.role === 'admin' || profile?.role === 'movement_coordinator';
                 
                 return (

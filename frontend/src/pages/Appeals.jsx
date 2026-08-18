@@ -280,26 +280,7 @@ export default function Appeals() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📨</span>
-          <div>
-            <h1>Обращения</h1>
-            <p>
-              {profile?.role === 'club_coordinator' 
-                ? `Ваши обращения к руководству (${appeals.length})` 
-                : `Все обращения от координаторов КЮДов (${appeals.length})`}
-            </p>
-          </div>
-          {canCreate && (
-            <button
-              className="btn-primary"
-              style={{ marginLeft: 'auto' }}
-              onClick={() => setShowForm(!showForm)}
-            >
-              {showForm ? '✖ Закрыть' : '➕ Создать'}
-            </button>
-          )}
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>

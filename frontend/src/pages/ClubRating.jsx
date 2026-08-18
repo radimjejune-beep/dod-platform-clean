@@ -74,13 +74,7 @@ export default function ClubRating() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>🏆</span>
-          <div>
-            <h1>Рейтинг участников</h1>
-            <p>{club?.name || 'Клуб'} • {rating.length} участников</p>
-          </div>
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <div className="card">
           <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>

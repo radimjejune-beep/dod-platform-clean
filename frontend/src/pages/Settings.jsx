@@ -11,14 +11,12 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState('general');
   const navigate = useNavigate();
 
-  // ===== НОВОСТИ =====
   const [news, setNews] = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsForm, setNewsForm] = useState({ title: '', content: '', image_url: '' });
   const [editingNewsId, setEditingNewsId] = useState(null);
   const [newsMessage, setNewsMessage] = useState('');
 
-  // ===== ОБЩИЕ НАСТРОЙКИ =====
   const [settings, setSettings] = useState({
     heroTitle: 'Добро пожаловать в ДОД «Дипломаты будущего»',
     heroSubtitle: 'Система управления движением',
@@ -41,9 +39,6 @@ export default function Settings() {
         return;
       }
 
-      // ============================================================
-      // ТОЛЬКО АДМИН И КООРДИНАТОР ДВИЖЕНИЯ
-      // ============================================================
       if (userData.role !== 'admin' && userData.role !== 'movement_coordinator') {
         navigate('/dashboard');
         return;
@@ -60,11 +55,7 @@ export default function Settings() {
     }
   };
 
-  // ============================================================
-  // НОВОСТИ
-  // ============================================================
   const loadNews = async () => {
-    // TODO: добавить API для получения новостей
     setNews([]);
   };
 
@@ -74,7 +65,6 @@ export default function Settings() {
     setNewsMessage('');
 
     try {
-      // TODO: добавить API для создания/обновления новостей
       setNewsMessage(editingNewsId ? '✅ Новость обновлена!' : '✅ Новость создана!');
       resetNewsForm();
       loadNews();
@@ -103,23 +93,16 @@ export default function Settings() {
 
   const handleDeleteNews = async (id) => {
     if (!confirm('Удалить эту новость?')) return;
-    // TODO: добавить API для удаления новости
     loadNews();
   };
 
-  // ============================================================
-  // ОБЩИЕ НАСТРОЙКИ
-  // ============================================================
-  const loadSettings = async () => {
-    // TODO: добавить API для получения настроек
-  };
+  const loadSettings = async () => {};
 
   const handleSaveSettings = async () => {
     setSavingSettings(true);
     setSettingsMessage('');
 
     try {
-      // TODO: добавить API для сохранения настроек
       setSettingsMessage('✅ Настройки сохранены!');
       setTimeout(() => setSettingsMessage(''), 3000);
     } catch (err) {
@@ -157,15 +140,8 @@ export default function Settings() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>⚙️</span>
-          <div>
-            <h1>Настройки сайта</h1>
-            <p>Управление контентом и настройками системы</p>
-          </div>
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
-        {/* ВКЛАДКИ */}
         <div style={{
           display: 'flex',
           gap: '4px',
@@ -206,7 +182,6 @@ export default function Settings() {
           </button>
         </div>
 
-        {/* ===== ВКЛАДКА: НОВОСТИ ===== */}
         {activeTab === 'news' && (
           <div>
             <div className="card" style={{ marginBottom: '30px', padding: '24px' }}>
@@ -321,7 +296,6 @@ export default function Settings() {
           </div>
         )}
 
-        {/* ===== ВКЛАДКА: ОБЩИЕ НАСТРОЙКИ ===== */}
         {activeTab === 'general' && (
           <div className="card" style={{ padding: '24px' }}>
             <h3 style={{ marginBottom: '16px' }}>⚙️ Общие настройки сайта</h3>

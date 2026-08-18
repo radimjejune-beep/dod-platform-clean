@@ -50,7 +50,6 @@ export default function Analytics() {
         totalAchievements: achievements.length
       });
 
-      // Топ клубов по количеству участников
       const clubsWithCount = clubs.map(club => {
         const count = users.filter(u => u.club_id === club.id).length;
         return { ...club, participantsCount: count };
@@ -76,15 +75,8 @@ export default function Analytics() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📊</span>
-          <div>
-            <h1>Аналитика движения</h1>
-            <p>Статистика и показатели ДОД «Дипломаты будущего»</p>
-          </div>
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
-        {/* СТАТИСТИКА В ЦИФРАХ */}
         <div className="grid-4" style={{ marginBottom: '24px' }}>
           <div className="stat-card">
             <div className="number">{stats.totalParticipants}</div>
@@ -104,7 +96,6 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* ТОП-5 КЮДОВ */}
         <div className="card">
           <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
             🏆 Топ-5 КЮДов по количеству участников
@@ -148,7 +139,6 @@ export default function Analytics() {
           )}
         </div>
 
-        {/* БЫСТРЫЕ ДЕЙСТВИЯ */}
         <div className="card" style={{ marginTop: '20px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
             🚀 Быстрые действия

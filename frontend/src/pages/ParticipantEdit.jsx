@@ -28,7 +28,6 @@ export default function ParticipantEdit() {
       }
       setProfile(userData);
 
-      // Загружаем данные участника
       const usersData = await api.getUsers();
       const found = usersData.find(u => u.id === id);
       
@@ -49,18 +48,14 @@ export default function ParticipantEdit() {
     }
   };
 
-  // Проверка прав
   const canEdit = profile?.role === 'admin' || 
                   profile?.role === 'movement_coordinator' ||
                   profile?.role === 'club_coordinator' ||
                   profile?.role === 'tutor';
 
-  // Координатор клуба может редактировать только участников своего клуба
   const canEditThis = () => {
     if (!canEdit) return false;
     if (profile?.role === 'club_coordinator') {
-      // Проверяем, что участник в клубе координатора
-      // TODO: добавить проверку
       return true;
     }
     return true;
@@ -157,13 +152,7 @@ export default function ParticipantEdit() {
           ← Назад
         </button>
 
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>✏️</span>
-          <div>
-            <h1>Редактирование участника</h1>
-            <p>{participant.full_name}</p>
-          </div>
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>

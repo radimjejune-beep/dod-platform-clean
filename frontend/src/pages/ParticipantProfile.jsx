@@ -32,7 +32,6 @@ export default function ParticipantProfile() {
       }
       setProfile(userData);
 
-      // Загружаем данные участника
       const usersData = await api.getUsers();
       const found = usersData.find(u => u.id === id);
       
@@ -43,7 +42,6 @@ export default function ParticipantProfile() {
       }
       setParticipant(found);
 
-      // ===== ЗАГРУЖАЕМ ДОСТИЖЕНИЯ =====
       const token = localStorage.getItem('token');
       
       try {
@@ -67,7 +65,6 @@ export default function ParticipantProfile() {
         console.error('Ошибка получения достижений:', err);
       }
 
-      // ===== ЗАГРУЖАЕМ МЕРОПРИЯТИЯ =====
       try {
         const response = await fetch('https://dod-backend.relaxdev.ru/api/events', {
           headers: {
@@ -207,7 +204,7 @@ export default function ParticipantProfile() {
           ← Назад
         </button>
 
-        {/* ШАПКА ПРОФИЛЯ */}
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
         <div className="card" style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
             <div style={{
@@ -270,7 +267,6 @@ export default function ParticipantProfile() {
             </div>
           </div>
 
-          {/* Информация о клубе */}
           {participant.club_name && (
             <div style={{ 
               marginTop: '16px', 
@@ -287,7 +283,6 @@ export default function ParticipantProfile() {
           )}
         </div>
 
-        {/* ВКЛАДКИ */}
         <div style={{
           display: 'flex',
           gap: '4px',
@@ -373,7 +368,6 @@ export default function ParticipantProfile() {
           </button>
         </div>
 
-        {/* ===== ВКЛАДКА: ИНФОРМАЦИЯ ===== */}
         {activeTab === 'info' && (
           <div className="card">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
@@ -425,7 +419,6 @@ export default function ParticipantProfile() {
           </div>
         )}
 
-        {/* ===== ВКЛАДКА: ИНТЕРЕСЫ И НАВЫКИ ===== */}
         {activeTab === 'interests' && (
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
@@ -471,7 +464,6 @@ export default function ParticipantProfile() {
           </div>
         )}
 
-        {/* ===== ВКЛАДКА: ДОСТИЖЕНИЯ ===== */}
         {activeTab === 'achievements' && (
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
@@ -495,7 +487,6 @@ export default function ParticipantProfile() {
           </div>
         )}
 
-        {/* ===== ВКЛАДКА: МЕРОПРИЯТИЯ ===== */}
         {activeTab === 'events' && (
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
@@ -526,7 +517,6 @@ export default function ParticipantProfile() {
           </div>
         )}
 
-        {/* ===== ВКЛАДКА: О СЕБЕ ===== */}
         {activeTab === 'bio' && (
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
@@ -554,18 +544,17 @@ export default function ParticipantProfile() {
         )}
       </div>
 
-      {/* ===== МОДАЛЬНОЕ ОКНО: ПРИКРЕПЛЕНИЕ К КЛУБУ ===== */}
       <AssignClubModal
         isOpen={showAssignModal}
         onClose={() => {
           setShowAssignModal(false);
-          loadData(); // Обновляем данные после закрытия
+          loadData();
         }}
         userId={participant?.id}
         userFullName={participant?.full_name}
         currentClubId={participant?.club_id}
         onAssigned={() => {
-          loadData(); // Обновляем данные после привязки
+          loadData();
         }}
       />
     </div>

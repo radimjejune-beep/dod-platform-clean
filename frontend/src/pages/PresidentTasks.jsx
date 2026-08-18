@@ -17,7 +17,6 @@ export default function PresidentTasks() {
   const [messageType, setMessageType] = useState('success');
   const [clubs, setClubs] = useState([]);
   
-  // ===== ДЛЯ ПОИСКА УЧАСТНИКОВ =====
   const [allUsers, setAllUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -39,7 +38,6 @@ export default function PresidentTasks() {
 
   const role = profile?.role;
 
-  // ===== ЗАКРЫТИЕ ДРОПДАУНА ПРИ КЛИКЕ СНАРУЖИ =====
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
@@ -76,7 +74,6 @@ export default function PresidentTasks() {
         return;
       }
 
-      // ===== ЗАГРУЗКА ЗАДАНИЙ =====
       try {
         const response = await fetch('https://dod-backend.relaxdev.ru/api/president-tasks', {
           headers: {
@@ -104,7 +101,6 @@ export default function PresidentTasks() {
         setTasks([]);
       }
 
-      // ===== ЗАГРУЗКА КЛУБОВ =====
       try {
         const clubsData = await api.getClubs();
         setClubs(Array.isArray(clubsData) ? clubsData : []);
@@ -113,10 +109,8 @@ export default function PresidentTasks() {
         setClubs([]);
       }
 
-      // ===== ЗАГРУЗКА ВСЕХ ПОЛЬЗОВАТЕЛЕЙ (ДЛЯ ПОИСКА) =====
       try {
         const usersData = await api.getUsers();
-        // Фильтруем только участников (participant) с клубом
         const filteredUsers = Array.isArray(usersData) 
           ? usersData.filter(u => u.role === 'participant' && u.club_id)
           : [];
@@ -137,7 +131,6 @@ export default function PresidentTasks() {
     }
   };
 
-  // ===== ПОИСК УЧАСТНИКОВ =====
   const handleSearchChange = (e) => {
     const query = e.target.value;
     setSearchQuery(query);
@@ -182,9 +175,6 @@ export default function PresidentTasks() {
         return;
       }
 
-      // ============================================================
-      // ПРОВЕРКА: ЕСЛИ НЕ ВЫБРАН ПОЛЬЗОВАТЕЛЬ И НЕ ГЛОБАЛЬНОЕ
-      // ============================================================
       if (!form.assigned_to && !form.is_global) {
         setMessage('❌ Выберите участника для назначения задания');
         setMessageType('error');
@@ -372,31 +362,7 @@ export default function PresidentTasks() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>👑</span>
-          <div>
-            <h1>Задания президента</h1>
-            <p>
-              {isPresident 
-                ? 'Ваши задания и поручения' 
-                : `Управление заданиями для президентов (${tasks.length})`}
-            </p>
-          </div>
-          {canCreate && (
-            <button
-              className="btn-primary"
-              style={{ marginLeft: 'auto' }}
-              onClick={() => {
-                setShowCreateForm(!showCreateForm);
-                if (!showCreateForm) {
-                  setTimeout(() => inputRef.current?.focus(), 100);
-                }
-              }}
-            >
-              {showCreateForm ? '✖ Закрыть' : '➕ Создать задание'}
-            </button>
-          )}
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
@@ -468,7 +434,6 @@ export default function PresidentTasks() {
                 </div>
               </div>
 
-              {/* ===== ПОИСК УЧАСТНИКА ===== */}
               <div className="form-group">
                 <label>Назначить участнику *</label>
                 <div style={{ position: 'relative' }}>
@@ -731,7 +696,6 @@ export default function PresidentTasks() {
         )}
       </div>
 
-      {/* МОДАЛЬНОЕ ОКНО ОТВЕТА */}
       {showResponseModal && selectedTask && (
         <div
           style={{

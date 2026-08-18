@@ -16,7 +16,6 @@ export default function Participants() {
   const [isClubCoordinator, setIsClubCoordinator] = useState(false);
   const [message, setMessage] = useState('');
   
-  // ===== ФИЛЬТРЫ =====
   const [filters, setFilters] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClasses, setSelectedClasses] = useState([]);
@@ -46,12 +45,7 @@ export default function Participants() {
       const role = userData.role;
       let filtered = [];
 
-      // ============================================================
-      // ЧЁТКАЯ ЛОГИКА ПО РОЛЯМ
-      // ============================================================
-
       if (role === 'club_coordinator') {
-        // ===== КООРДИНАТОР КЮДА — ТОЛЬКО СВОЙ КЛУБ =====
         setIsClubCoordinator(true);
         
         let clubId = userData.club_id;
@@ -77,27 +71,22 @@ export default function Participants() {
         }
         
       } else if (role === 'admin') {
-        // ===== АДМИН — ВСЕ УЧАСТНИКИ =====
         filtered = participantsData;
         console.log(`👥 Админ: показано ${filtered.length} участников`);
         
       } else if (role === 'movement_coordinator') {
-        // ===== КООРДИНАТОР ДВИЖЕНИЯ — ВСЕ УЧАСТНИКИ =====
         filtered = participantsData;
         console.log(`👥 Координатор движения: показано ${filtered.length} участников`);
         
       } else if (role === 'tutor') {
-        // ===== ТЬЮТОР — ВСЕ УЧАСТНИКИ =====
         filtered = participantsData;
         console.log(`👥 Тьютор: показано ${filtered.length} участников`);
         
       } else if (role === 'president' || role === 'vice_president') {
-        // ===== ПРЕЗИДЕНТ И ВИЦЕ — ВСЕ УЧАСТНИКИ =====
         filtered = participantsData;
         console.log(`👥 Президент/Вице: показано ${filtered.length} участников`);
         
       } else {
-        // ===== ОСТАЛЬНЫЕ — ПУСТО =====
         filtered = [];
       }
 
@@ -110,7 +99,6 @@ export default function Participants() {
     }
   };
 
-  // Получаем уникальные классы
   const getUniqueClasses = () => {
     const classes = allParticipants
       .map(p => p.class_name)
@@ -120,7 +108,6 @@ export default function Participants() {
 
   const classes = getUniqueClasses();
 
-  // Статистика по классам
   const getClassStats = () => {
     const stats = {};
     classes.forEach(cls => {
@@ -131,7 +118,6 @@ export default function Participants() {
 
   const classStats = getClassStats();
 
-  // ===== ФИЛЬТРАЦИЯ =====
   const filterConfig = [
     {
       key: 'club_id',
@@ -230,95 +216,8 @@ export default function Participants() {
           </div>
         )}
 
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>👥</span>
-          <div>
-            <h1>Участники</h1>
-            <p>
-              {isClubCoordinator 
-                ? `Участники вашего клуба (${filtered.length})` 
-                : `Все участники движения (${filtered.length})`}
-            </p>
-            
-            {/* СТАТИСТИКА ПО КЛАССАМ */}
-            {!isClubCoordinator && classes.length > 0 && (
-              <div style={{ 
-                display: 'flex', 
-                flexWrap: 'wrap', 
-                gap: '6px', 
-                marginTop: '8px'
-              }}>
-                <span style={{ fontSize: '13px', fontWeight: '600', color: '#0B1F3A', marginRight: '4px' }}>
-                  📊 Классы:
-                </span>
-                {Object.entries(classStats).map(([cls, count]) => (
-                  <span 
-                    key={cls} 
-                    style={{
-                      fontSize: '13px',
-                      padding: '2px 12px',
-                      background: selectedClasses.includes(cls) ? '#FBF4DC' : '#F4F6F9',
-                      borderRadius: '20px',
-                      color: selectedClasses.includes(cls) ? '#8A6A00' : '#667085',
-                      cursor: 'pointer',
-                      border: selectedClasses.includes(cls) ? '1.5px solid #C9A227' : '1px solid #E2E7EF',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onClick={() => {
-                      if (selectedClasses.includes(cls)) {
-                        setSelectedClasses(selectedClasses.filter(c => c !== cls));
-                      } else {
-                        setSelectedClasses([...selectedClasses, cls]);
-                      }
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!selectedClasses.includes(cls)) {
-                        e.currentTarget.style.background = '#EAF2FA';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!selectedClasses.includes(cls)) {
-                        e.currentTarget.style.background = '#F4F6F9';
-                      }
-                    }}
-                  >
-                    {cls} <strong style={{ color: selectedClasses.includes(cls) ? '#8A6A00' : '#0B1F3A' }}>{count}</strong>
-                  </span>
-                ))}
-                {selectedClasses.length > 0 && (
-                  <button
-                    onClick={() => setSelectedClasses([])}
-                    style={{
-                      fontSize: '12px',
-                      padding: '2px 12px',
-                      background: '#FCEBEC',
-                      border: 'none',
-                      borderRadius: '20px',
-                      color: '#B3262E',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#FED7D7'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = '#FCEBEC'}
-                  >
-                    ✕ Очистить
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-            <button
-              className="btn-secondary"
-              style={{ padding: '8px 16px', borderRadius: '12px' }}
-              onClick={() => setViewMode(viewMode === 'table' ? 'cards' : 'table')}
-            >
-              {viewMode === 'table' ? '📇 Карточки' : '📋 Таблица'}
-            </button>
-          </div>
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
-        {/* КРАСИВЫЙ ФИЛЬТР */}
         <FilterBar
           filters={filterConfig}
           onFilterChange={setFilters}
@@ -338,7 +237,6 @@ export default function Participants() {
           </div>
         </FilterBar>
 
-        {/* ТАБЛИЦА */}
         {viewMode === 'table' && (
           <div className="table-wrapper">
             <table>
@@ -477,7 +375,6 @@ export default function Participants() {
           </div>
         )}
 
-        {/* КАРТОЧКИ */}
         {viewMode === 'cards' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
             {filtered.map((p) => (

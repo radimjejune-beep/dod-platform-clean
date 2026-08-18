@@ -35,7 +35,6 @@ export default function AdminNews() {
         return;
       }
 
-      // ===== ПРОВЕРКА ПРАВ: АДМИН ИЛИ КООРДИНАТОР ДВИЖЕНИЯ =====
       if (userData.role !== 'admin' && userData.role !== 'movement_coordinator') {
         navigate('/dashboard');
         return;
@@ -248,25 +247,7 @@ export default function AdminNews() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📰</span>
-          <div>
-            <h1>Управление новостями</h1>
-            <p>Всего новостей: {news.length}</p>
-          </div>
-          {canCreate && (
-            <button
-              className="btn-primary"
-              style={{ marginLeft: 'auto' }}
-              onClick={() => {
-                resetForm();
-                setShowForm(!showForm);
-              }}
-            >
-              {showForm ? '✖ Закрыть' : '➕ Создать новость'}
-            </button>
-          )}
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>

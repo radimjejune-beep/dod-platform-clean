@@ -40,7 +40,6 @@ export default function ClubDetail() {
       }
       setProfile(userData);
 
-      // Загружаем клуб
       const clubsData = await api.getClubs();
       const foundClub = clubsData.find(c => c.id === id);
 
@@ -60,7 +59,6 @@ export default function ClubDetail() {
         contact_phone: foundClub.contact_phone || ''
       });
 
-      // Загружаем участников клуба
       const participantsData = await api.getParticipants();
       const clubParticipants = participantsData.filter(p => p.club_id === id);
       setParticipants(clubParticipants || []);
@@ -72,9 +70,6 @@ export default function ClubDetail() {
     }
   };
 
-  // ============================================================
-  // ПРОВЕРКА ПРАВ
-  // ============================================================
   const canEdit = profile?.role === 'admin' || 
                   profile?.role === 'movement_coordinator' || 
                   profile?.role === 'club_coordinator';
@@ -90,7 +85,6 @@ export default function ClubDetail() {
     setLoading(true);
 
     try {
-      // TODO: добавить API для обновления клуба
       setMessage('✅ Информация о КЮДе обновлена!');
       setMessageType('success');
       setShowEditForm(false);
@@ -150,7 +144,7 @@ export default function ClubDetail() {
           </div>
         )}
 
-        {/* ===== ИНФОРМАЦИЯ О КЛУБЕ ===== */}
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
         <div className="card" style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
             <div>
@@ -180,7 +174,6 @@ export default function ClubDetail() {
           </div>
         </div>
 
-        {/* ===== ФОРМА РЕДАКТИРОВАНИЯ ===== */}
         {showEditForm && canEditThis && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
@@ -266,7 +259,6 @@ export default function ClubDetail() {
           </div>
         )}
 
-        {/* ===== ВКЛАДКИ ===== */}
         <div style={{
           display: 'flex',
           gap: '4px',
@@ -296,9 +288,6 @@ export default function ClubDetail() {
           ))}
         </div>
 
-        {/* ============================================================
-            ВКЛАДКА: ИНФОРМАЦИЯ
-            ============================================================ */}
         {activeTab === 'info' && (
           <div className="card">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
@@ -346,18 +335,12 @@ export default function ClubDetail() {
           </div>
         )}
 
-        {/* ============================================================
-            ВКЛАДКА: МЕРОПРИЯТИЯ КЛУБА
-            ============================================================ */}
         {activeTab === 'events' && (
           <div className="card">
             <ClubEvents clubId={id} profile={profile} />
           </div>
         )}
 
-        {/* ============================================================
-            ВКЛАДКА: УЧАСТНИКИ
-            ============================================================ */}
         {activeTab === 'members' && (
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>

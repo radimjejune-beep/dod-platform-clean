@@ -56,24 +56,20 @@ export default function CoordinatorDashboard() {
       const thisMonth = now.getMonth();
       const thisYear = now.getFullYear();
 
-      // Новые участники за месяц
       const newParticipants = participants.filter(p => {
         const date = new Date(p.created_at);
         return date.getMonth() === thisMonth && date.getFullYear() === thisYear;
       });
 
-      // Мероприятия за месяц
       const eventsThisMonth = events.filter(e => {
         const date = new Date(e.event_date);
         return date.getMonth() === thisMonth && date.getFullYear() === thisYear;
       });
 
-      // Участники без согласий
       const consentsPending = participants.filter(p => 
         !p.consent_personal_data || !p.consent_photo_publication || !p.consent_event_participation
       );
 
-      // Топ клубов
       const clubsWithStats = clubs.map(club => ({
         ...club,
         participants: participants.filter(p => p.club_id === club.id).length,
@@ -81,7 +77,6 @@ export default function CoordinatorDashboard() {
       }));
       clubsWithStats.sort((a, b) => b.participants - a.participants);
 
-      // Данные по месяцам (последние 6)
       const monthlyData = [];
       for (let i = 5; i >= 0; i--) {
         const date = new Date();
@@ -96,7 +91,6 @@ export default function CoordinatorDashboard() {
         });
       }
 
-      // Последняя активность
       const activity = [
         ...newParticipants.slice(0, 3).map(p => ({
           type: 'join',
@@ -157,20 +151,8 @@ export default function CoordinatorDashboard() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>⭐</span>
-          <div>
-            <h1>Панель координатора движения</h1>
-            <p>Общая статистика и управление движением</p>
-          </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button className="btn-secondary" onClick={() => loadData()} style={{ padding: '8px 16px' }}>
-              🔄 Обновить
-            </button>
-          </div>
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
-        {/* СТАТИСТИКА */}
         <div className="grid-4" style={{ marginBottom: '24px' }}>
           <div className="stat-card" style={{ borderTop: '3px solid #174A7E' }}>
             <div className="number">{stats.totalParticipants}</div>
@@ -199,7 +181,6 @@ export default function CoordinatorDashboard() {
           </div>
         </div>
 
-        {/* ВНИМАНИЕ */}
         {(stats.pendingAppeals > 0 || stats.consentsPending > 0 || stats.pendingTasks > 0) && (
           <div style={{
             padding: '14px 20px',
@@ -234,7 +215,6 @@ export default function CoordinatorDashboard() {
           </div>
         )}
 
-        {/* ГРАФИК + ТОП КЛУБОВ */}
         <div className="grid-2" style={{ marginBottom: '24px' }}>
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
@@ -322,7 +302,6 @@ export default function CoordinatorDashboard() {
           </div>
         </div>
 
-        {/* ПОСЛЕДНЯЯ АКТИВНОСТЬ + БЫСТРЫЕ ДЕЙСТВИЯ */}
         <div className="grid-2">
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
@@ -371,9 +350,6 @@ export default function CoordinatorDashboard() {
               </button>
               <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', background: '#C9A227', color: '#0B1F3A' }} onClick={() => navigate('/documents-center')}>
                 📁 Центр документов
-              </button>
-              <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/reports-templates')}>
-                📋 Шаблоны отчетов
               </button>
               <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/tasks-planner')}>
                 📅 Планировщик задач

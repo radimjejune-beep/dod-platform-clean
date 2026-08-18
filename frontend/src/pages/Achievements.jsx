@@ -75,7 +75,6 @@ export default function Achievements() {
       ]);
 
       setClubs(clubsData || []);
-      setAllParticipants(participantsData || []);
 
       let filteredParticipants = [];
       let filteredAchievements = [];
@@ -102,7 +101,6 @@ export default function Achievements() {
       }
 
       setAllParticipants(filteredParticipants);
-      setParticipants(filteredParticipants);
       setAllAchievements(filteredAchievements);
       setAchievements(filteredAchievements);
 
@@ -314,31 +312,7 @@ export default function Achievements() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>🏆</span>
-          <div>
-            <h1>Управление достижениями</h1>
-            <p>
-              {profile?.role === 'club_coordinator' 
-                ? `Участники вашего клуба (${filteredAchievements.length})` 
-                : `Все достижения участников (${filteredAchievements.length})`}
-            </p>
-          </div>
-          {canManage && (
-            <button
-              className="btn-primary"
-              style={{ marginLeft: 'auto' }}
-              onClick={() => {
-                setShowForm(!showForm);
-                if (!showForm) {
-                  setTimeout(() => inputRef.current?.focus(), 100);
-                }
-              }}
-            >
-              {showForm ? '✖ Закрыть' : '➕ Добавить достижение'}
-            </button>
-          )}
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
@@ -352,8 +326,16 @@ export default function Achievements() {
           onSearchChange={setFilterSearch}
           searchPlaceholder="🔍 Поиск по названию, описанию, участнику..."
         >
-          <div style={{ fontSize: '14px', color: '#667085', padding: '6px 12px', background: '#F8FAFC', borderRadius: '8px' }}>
-            Найдено: <strong>{filteredAchievements.length}</strong>
+          <div style={{ 
+            fontSize: '14px', 
+            color: '#667085', 
+            padding: '6px 16px', 
+            background: '#F8FAFC', 
+            borderRadius: '20px',
+            border: '1px solid #E2E7EF',
+            whiteSpace: 'nowrap'
+          }}>
+            Найдено: <strong style={{ color: '#0B1F3A' }}>{filteredAchievements.length}</strong>
           </div>
         </FilterBar>
 

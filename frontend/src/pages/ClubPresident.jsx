@@ -26,7 +26,6 @@ export default function ClubPresident() {
     try {
       setLoading(true);
       
-      // 1. Получаем текущего пользователя
       const userData = await api.getMe();
       if (!userData || !userData.id) {
         navigate('/login');
@@ -37,7 +36,6 @@ export default function ClubPresident() {
       console.log('🏫 club_id из профиля:', userData.club_id);
       console.log('🏫 clubId из URL:', clubId);
 
-      // 2. Проверяем роль
       if (userData.role !== 'club_coordinator' && userData.role !== 'admin') {
         navigate('/dashboard');
         return;
@@ -45,17 +43,12 @@ export default function ClubPresident() {
 
       setProfile(userData);
 
-      // ============================================================
-      // ЕСЛИ КООРДИНАТОР И club_id НЕТ В URL — БЕРЁМ ИЗ ПРОФИЛЯ
-      // ============================================================
       let targetClubId = clubId;
 
       if (userData.role === 'club_coordinator' && userData.club_id) {
-        // Если в URL нет clubId или он отличается — используем из профиля
         if (!clubId || clubId !== userData.club_id) {
           console.log('🔄 Используем club_id из профиля:', userData.club_id);
           targetClubId = userData.club_id;
-          // Перенаправляем на правильный URL
           if (clubId && clubId !== userData.club_id) {
             navigate(`/club/${userData.club_id}/president`);
             return;
@@ -63,11 +56,9 @@ export default function ClubPresident() {
         }
       }
 
-      // 3. Получаем все клубы
       const clubsData = await api.getClubs();
       console.log('🏫 Все клубы:', clubsData);
       
-      // 4. Ищем клуб по ID
       const foundClub = clubsData.find(c => c.id === targetClubId);
       console.log('🏫 Найденный клуб:', foundClub);
       
@@ -78,24 +69,19 @@ export default function ClubPresident() {
         return;
       }
 
-      // 5. ПРОВЕРКА ПРАВ
       let hasAccess = false;
 
-      // Админ — имеет доступ ко всем клубам
       if (userData.role === 'admin') {
         hasAccess = true;
         console.log('✅ Админ: доступ есть');
       }
 
-      // Координатор — проверяем привязку
       if (userData.role === 'club_coordinator') {
-        // Проверка 1: club_id в профиле пользователя
         if (userData.club_id === targetClubId) {
           hasAccess = true;
           console.log('✅ Координатор: доступ через club_id в профиле');
         }
         
-        // Проверка 2: через таблицу club_coordinators
         if (!hasAccess) {
           try {
             const token = localStorage.getItem('token');
@@ -132,18 +118,15 @@ export default function ClubPresident() {
 
       setClub(foundClub);
 
-      // 6. ЗАГРУЗКА УЧАСТНИКОВ КЛУБА
       const participantsData = await api.getParticipants();
       console.log('📥 Все участники:', participantsData?.length || 0);
       
-      // Фильтруем по club_id
       const clubParticipants = participantsData.filter(p => p.club_id === targetClubId);
       console.log(`📥 Участники клуба ${targetClubId}:`, clubParticipants?.length || 0);
       console.log('📥 Список участников:', clubParticipants);
       
       setParticipants(clubParticipants);
 
-      // 7. ЗАГРУЗКА ТЕКУЩЕГО ПРЕЗИДЕНТА
       try {
         const token = localStorage.getItem('token');
         const response = await fetch(
@@ -205,7 +188,6 @@ export default function ClubPresident() {
       setMessageType('success');
       setCurrentPresident(result.president);
       
-      // Обновляем список
       await loadData();
       
       setTimeout(() => setMessage(''), 3000);
@@ -239,13 +221,7 @@ export default function ClubPresident() {
           ← Назад
         </button>
 
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>👑</span>
-          <div>
-            <h1>Назначение президента клуба</h1>
-            <p>{club?.name || 'Клуб'}</p>
-          </div>
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
@@ -253,7 +229,6 @@ export default function ClubPresident() {
           </div>
         )}
 
-        {/* ТЕКУЩИЙ ПРЕЗИДЕНТ */}
         <div className="card" style={{ marginBottom: '20px' }}>
           <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
             👑 Текущий президент
@@ -294,7 +269,6 @@ export default function ClubPresident() {
           )}
         </div>
 
-        {/* ВЫБОР НОВОГО ПРЕЗИДЕНТА */}
         <div className="card">
           <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
             👤 Выберите нового президента

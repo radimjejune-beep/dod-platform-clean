@@ -41,7 +41,6 @@ export default function ParticipantDashboard() {
 
       setProfile(userData);
 
-      // Загружаем статистику
       const statsData = await api.getParticipantStats(userData.id);
       
       if (statsData) {
@@ -56,7 +55,6 @@ export default function ParticipantDashboard() {
         setRecentAchievements(statsData.recent_achievements || []);
       }
 
-      // Загружаем предстоящие мероприятия
       const eventsData = await api.getEvents();
       const now = new Date();
       const upcoming = (eventsData || [])
@@ -119,8 +117,8 @@ export default function ParticipantDashboard() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        
-        {/* ===== ШАПКА ПРОФИЛЯ ===== */}
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+
         <div className="card" style={{ 
           marginBottom: '24px',
           background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
@@ -135,7 +133,6 @@ export default function ParticipantDashboard() {
             position: 'relative',
             zIndex: 1
           }}>
-            {/* АВАТАР */}
             <div style={{
               width: '80px',
               height: '80px',
@@ -178,7 +175,6 @@ export default function ParticipantDashboard() {
             </Link>
           </div>
 
-          {/* ПРОГРЕСС-БАР УРОВНЯ */}
           <div style={{ marginTop: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', opacity: 0.8 }}>
               <span>Уровень {stats.level} → {stats.next_level}</span>
@@ -206,7 +202,6 @@ export default function ParticipantDashboard() {
           </div>
         </div>
 
-        {/* ===== ВКЛАДКИ ===== */}
         <div style={{
           display: 'flex',
           gap: '4px',
@@ -281,12 +276,8 @@ export default function ParticipantDashboard() {
           </button>
         </div>
 
-        {/* ============================================================
-            ВКЛАДКА: ОБЗОР
-            ============================================================ */}
         {activeTab === 'overview' && (
           <div>
-            {/* СТАТИСТИКА */}
             <div className="grid-4" style={{ marginBottom: '24px' }}>
               <div className="stat-card" style={{ borderTop: '3px solid #174A7E' }}>
                 <div className="number">{stats.total_events}</div>
@@ -306,7 +297,6 @@ export default function ParticipantDashboard() {
               </div>
             </div>
 
-            {/* ПОСЛЕДНИЕ ДОСТИЖЕНИЯ */}
             {recentAchievements.length > 0 && (
               <div className="card" style={{ marginBottom: '24px' }}>
                 <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
@@ -325,7 +315,6 @@ export default function ParticipantDashboard() {
               </div>
             )}
 
-            {/* ПРЕДСТОЯЩИЕ МЕРОПРИЯТИЯ */}
             {upcomingEvents.length > 0 && (
               <div className="card">
                 <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
@@ -354,9 +343,6 @@ export default function ParticipantDashboard() {
           </div>
         )}
 
-        {/* ============================================================
-            ВКЛАДКА: ДОСТИЖЕНИЯ
-            ============================================================ */}
         {activeTab === 'achievements' && (
           <div className="card">
             {stats.achievements_count === 0 ? (
@@ -390,9 +376,6 @@ export default function ParticipantDashboard() {
           </div>
         )}
 
-        {/* ============================================================
-            ВКЛАДКА: МЕРОПРИЯТИЯ
-            ============================================================ */}
         {activeTab === 'events' && (
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -435,9 +418,6 @@ export default function ParticipantDashboard() {
           </div>
         )}
 
-        {/* ============================================================
-            ВКЛАДКА: ИНТЕРЕСЫ
-            ============================================================ */}
         {activeTab === 'interests' && (
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
@@ -485,9 +465,7 @@ export default function ParticipantDashboard() {
           </div>
         )}
       </div>
-      // И в конце рендера, после всех вкладок, добавь:
-{/* ===== РАЗДЕЛ ПРЕЗИДЕНТА ===== */}
-<PresidentSection profile={profile} />
+      <PresidentSection profile={profile} />
     </div>
   );
 }

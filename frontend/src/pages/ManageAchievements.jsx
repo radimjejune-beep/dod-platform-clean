@@ -251,31 +251,7 @@ export default function ManageAchievements() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>🏆</span>
-          <div>
-            <h1>Управление достижениями</h1>
-            <p>
-              {profile?.role === 'club_coordinator' 
-                ? `Участники вашего клуба (${achievements.length})` 
-                : `Все достижения участников движения (${achievements.length})`}
-            </p>
-          </div>
-          {canManage && (
-            <button
-              className="btn-primary"
-              style={{ marginLeft: 'auto' }}
-              onClick={() => {
-                setShowForm(!showForm);
-                if (!showForm) {
-                  setTimeout(() => inputRef.current?.focus(), 100);
-                }
-              }}
-            >
-              {showForm ? '✖ Закрыть' : '➕ Добавить достижение'}
-            </button>
-          )}
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>

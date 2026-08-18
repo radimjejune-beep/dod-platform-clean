@@ -25,17 +25,14 @@ export default function AdminUsers() {
   const [importedUsersList, setImportedUsersList] = useState([]);
   const [showImportedPasswords, setShowImportedPasswords] = useState(false);
   
-  // ===== ФИЛЬТРЫ =====
   const [filters, setFilters] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   
-  // ===== ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ =====
   const [showParentChildModal, setShowParentChildModal] = useState(false);
   const [parentChildForm, setParentChildForm] = useState({ parent_id: '', child_id: '' });
   const [availableParents, setAvailableParents] = useState([]);
   const [availableChildren, setAvailableChildren] = useState([]);
   
-  // ===== ПРИКРЕПЛЕНИЕ К КЛУБУ (ИНДИВИДУАЛЬНО) =====
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [selectedUserFullName, setSelectedUserFullName] = useState('');
@@ -81,7 +78,6 @@ export default function AdminUsers() {
       setAllUsers(usersData || []);
       setUsers(usersData || []);
       
-      // ===== ДЛЯ ПРИВЯЗКИ РЕБЁНКА =====
       const parents = usersData.filter(u => u.role === 'parent');
       const children = usersData.filter(u => u.role === 'participant');
       setAvailableParents(parents);
@@ -93,7 +89,6 @@ export default function AdminUsers() {
     }
   };
 
-  // ===== ФИЛЬТРАЦИЯ =====
   const filterConfig = [
     {
       key: 'role',
@@ -148,11 +143,9 @@ export default function AdminUsers() {
 
   const filteredUsers = getFilteredUsers();
 
-  // ===== ПРОВЕРКА ПРАВ =====
   const isAdmin = profile?.role === 'admin';
   const canCreate = profile?.role === 'admin' || profile?.role === 'movement_coordinator';
 
-  // ===== ГЕНЕРАЦИЯ =====
   const generatePassword = () => {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
     let password = '';
@@ -190,7 +183,6 @@ export default function AdminUsers() {
 
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  // ===== УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ =====
   const handleDeleteUser = async (userId, fullName) => {
     if (!isAdmin) {
       setMessage('❌ У вас нет прав для удаления пользователей');
@@ -218,7 +210,6 @@ export default function AdminUsers() {
     }
   };
 
-  // ===== СБРОС ПАРОЛЯ =====
   const handleResetPassword = async (userId, fullName) => {
     if (!isAdmin) {
       setMessage('❌ У вас нет прав для сброса пароля');
@@ -241,7 +232,6 @@ export default function AdminUsers() {
     }
   };
 
-  // ===== ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ =====
   const handleAddParentChild = async () => {
     if (!parentChildForm.parent_id || !parentChildForm.child_id) {
       setMessage('❌ Выберите родителя и ребёнка');
@@ -267,7 +257,6 @@ export default function AdminUsers() {
     }
   };
 
-  // ===== СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ =====
   const handleSubmitUser = async (e) => {
     e.preventDefault();
     setMessage('');
@@ -357,7 +346,6 @@ export default function AdminUsers() {
     }
   };
 
-  // ===== КОПИРОВАНИЕ ПАРОЛЕЙ =====
   const copyPasswords = () => {
     const data = createdUsers.length > 0 ? createdUsers : importedUsersList;
     if (data.length === 0) {
@@ -386,7 +374,6 @@ export default function AdminUsers() {
     });
   };
 
-  // ===== ЭКСПОРТ В EXCEL =====
   const exportPasswordsToExcel = () => {
     const data = createdUsers.length > 0 ? createdUsers : importedUsersList;
     if (data.length === 0) {
@@ -414,7 +401,6 @@ export default function AdminUsers() {
     setTimeout(() => setMessage(''), 3000);
   };
 
-  // ===== ИМПОРТ =====
   const handleImportFile = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -572,32 +558,7 @@ export default function AdminUsers() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>👥</span>
-          <div>
-            <h1>Управление пользователями</h1>
-            <p>Всего: {filteredUsers.length}</p>
-          </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button className="btn-secondary" onClick={() => setShowImportModal(!showImportModal)}>📥 Импорт</button>
-            <button
-              className="btn-primary"
-              style={{ background: '#6B46C1' }}
-              onClick={() => setShowParentChildModal(true)}
-            >
-              👨‍👩‍👦 Привязать ребёнка
-            </button>
-            {canCreate && (
-              <button className="btn-primary" onClick={() => { 
-                setShowCreateUser(!showCreateUser); 
-                setShowPasswordList(false); 
-                setCreatedUsers([]);
-              }}>
-                {showCreateUser ? '✖ Закрыть' : '➕ Создать'}
-              </button>
-            )}
-          </div>
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
@@ -616,7 +577,6 @@ export default function AdminUsers() {
           </div>
         </FilterBar>
 
-        {/* ===== ОКНО С ПАРОЛЯМИ ===== */}
         {(showPasswordList && createdUsers.length > 0) || (showImportedPasswords && importedUsersList.length > 0) ? (
           <div className="card" style={{ 
             padding: '24px', 
@@ -716,7 +676,6 @@ export default function AdminUsers() {
           </div>
         ) : null}
 
-        {/* ===== ФОРМА СОЗДАНИЯ ===== */}
         {showCreateUser && canCreate && (
           <div className="card" style={{ padding: '24px', marginBottom: '24px', borderRadius: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>📝 Создать пользователя</h3>
@@ -817,7 +776,6 @@ export default function AdminUsers() {
           </div>
         )}
 
-        {/* ===== ИМПОРТ ===== */}
         {showImportModal && (
           <div className="card" style={{ marginBottom: '24px', borderRadius: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>📥 Массовый импорт</h3>
@@ -862,9 +820,6 @@ export default function AdminUsers() {
           </div>
         )}
 
-        {/* ============================================================
-            МОДАЛЬНОЕ ОКНО: ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ
-            ============================================================ */}
         {showParentChildModal && (
           <div style={{
             position: 'fixed',
@@ -917,7 +872,6 @@ export default function AdminUsers() {
           </div>
         )}
 
-        {/* ===== ТАБЛИЦА ПОЛЬЗОВАТЕЛЕЙ ===== */}
         <div className="table-wrapper">
           <table>
             <thead>
@@ -963,7 +917,6 @@ export default function AdminUsers() {
                         
                         {isAdmin && (
                           <>
-                            {/* СБРОС ПАРОЛЯ */}
                             <button
                               style={{ padding: '4px 10px', background: '#FBF4DC', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}
                               onClick={() => handleResetPassword(u.id, u.full_name)}
@@ -972,7 +925,6 @@ export default function AdminUsers() {
                               🔑
                             </button>
 
-                            {/* ПРИКРЕПЛЕНИЕ К КЛУБУ (ИНДИВИДУАЛЬНО) */}
                             <button
                               style={{ padding: '4px 10px', background: '#6B46C1', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: 'white' }}
                               onClick={() => {
@@ -985,7 +937,6 @@ export default function AdminUsers() {
                               📌
                             </button>
 
-                            {/* УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ */}
                             <button
                               style={{
                                 padding: '4px 10px',
@@ -1016,7 +967,6 @@ export default function AdminUsers() {
         </div>
       </div>
 
-      {/* ===== МОДАЛЬНОЕ ОКНО: ПРИКРЕПЛЕНИЕ К КЛУБУ (ИНДИВИДУАЛЬНО) ===== */}
       <AssignClubModal
         isOpen={showAssignModal}
         onClose={() => {
@@ -1027,7 +977,7 @@ export default function AdminUsers() {
         userId={selectedUserId}
         userFullName={selectedUserFullName}
         onAssigned={() => {
-          loadData(); // Обновляем список пользователей
+          loadData();
         }}
       />
     </div>

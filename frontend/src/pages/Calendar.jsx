@@ -195,22 +195,8 @@ export default function CalendarPage() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📅</span>
-          <div>
-            <h1>Календарь мероприятий</h1>
-            <p>Наглядный календарь событий ДОД «Дипломаты будущего»</p>
-          </div>
-          <button
-            className="btn-secondary"
-            style={{ marginLeft: 'auto' }}
-            onClick={() => navigate('/events')}
-          >
-            📋 Список
-          </button>
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
-        {/* КАЛЕНДАРЬ */}
         <div className="card" style={{ marginBottom: '24px' }}>
           <style>
             {`
@@ -288,7 +274,6 @@ export default function CalendarPage() {
           />
         </div>
 
-        {/* МЕРОПРИЯТИЯ НА ВЫБРАННЫЙ ДЕНЬ */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>

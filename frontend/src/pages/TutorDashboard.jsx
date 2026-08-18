@@ -30,9 +30,6 @@ export default function TutorDashboard() {
         return;
       }
 
-      // ============================================================
-      // ТОЛЬКО ТЬЮТОР
-      // ============================================================
       if (userData.role !== 'tutor') {
         navigate('/dashboard');
         return;
@@ -40,7 +37,6 @@ export default function TutorDashboard() {
 
       setProfile(userData);
 
-      // TODO: добавить API для получения статистики тьютора
       setStats({
         assignments: 0,
         reviews: 0,
@@ -69,29 +65,8 @@ export default function TutorDashboard() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📚</span>
-          <div>
-            <h1>Мой кабинет тьютора</h1>
-            <p>{profile?.full_name} • Тьютор движения «Дипломаты будущего»</p>
-          </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
-            <button
-              className="btn-primary"
-              onClick={() => navigate('/my-journal')}
-            >
-              📋 Мой журнал
-            </button>
-            <button
-              className="btn-secondary"
-              onClick={() => navigate('/staff-calendar')}
-            >
-              📅 Календарь
-            </button>
-          </div>
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
-        {/* СТАТИСТИКА */}
         <div className="grid-4" style={{ marginBottom: '24px' }}>
           <div className="stat-card">
             <div className="number">{stats.events}</div>
@@ -118,9 +93,7 @@ export default function TutorDashboard() {
           </div>
         </div>
 
-        {/* ДВЕ КОЛОНКИ */}
         <div className="grid-2">
-          {/* ОЖИДАЮЩИЕ ПРИГЛАШЕНИЯ */}
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
               📨 Ожидающие приглашения
@@ -140,14 +113,14 @@ export default function TutorDashboard() {
                       <button
                         className="btn-success"
                         style={{ padding: '4px 16px', fontSize: '12px' }}
-                        onClick={() => {}} // TODO: принять приглашение
+                        onClick={() => {}}
                       >
                         ✅ Принять
                       </button>
                       <button
                         className="btn-danger"
                         style={{ padding: '4px 16px', fontSize: '12px' }}
-                        onClick={() => {}} // TODO: отклонить приглашение
+                        onClick={() => {}}
                       >
                         ❌ Отклонить
                       </button>
@@ -165,7 +138,6 @@ export default function TutorDashboard() {
             </button>
           </div>
 
-          {/* ПОСЛЕДНИЕ НАЗНАЧЕНИЯ */}
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
               📋 Мои мероприятия
@@ -210,7 +182,6 @@ export default function TutorDashboard() {
           </div>
         </div>
 
-        {/* БЫСТРЫЕ ДЕЙСТВИЯ */}
         <div className="card" style={{ marginTop: '20px' }}>
           <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
             ⚡ Быстрые действия

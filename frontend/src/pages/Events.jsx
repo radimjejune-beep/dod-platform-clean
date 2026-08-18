@@ -20,7 +20,6 @@ export default function Events() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [moderationComment, setModerationComment] = useState('');
   
-  // ===== ДЛЯ НАЗНАЧЕНИЯ ТЬЮТОРА =====
   const [showTutorModal, setShowTutorModal] = useState(false);
   const [selectedEventForTutor, setSelectedEventForTutor] = useState(null);
   const [selectedTutor, setSelectedTutor] = useState('');
@@ -88,7 +87,6 @@ export default function Events() {
       setClubs(clubsData || []);
       setAllEvents(eventsData || []);
       
-      // Загружаем тьюторов для модалки
       const tutorList = usersData.filter(u => u.role === 'tutor');
       setTutors(tutorList || []);
       
@@ -192,7 +190,6 @@ export default function Events() {
   const isClubCoordinator = profile?.role === 'club_coordinator';
   const isMovementCoordinator = profile?.role === 'movement_coordinator';
 
-  // ===== НАЗНАЧЕНИЕ ТЬЮТОРА =====
   const handleAssignTutor = async () => {
     if (!selectedTutor) {
       setMessage('❌ Выберите тьютора');
@@ -405,24 +402,7 @@ export default function Events() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📅</span>
-          <div>
-            <h1>Мероприятия</h1>
-            <p>Всего: {filteredEvents.length}</p>
-          </div>
-          {canCreate && (
-            <button 
-              className="btn-primary" 
-              style={{ marginLeft: 'auto' }} 
-              onClick={() => { 
-                setShowForm(!showForm); 
-              }}
-            >
-              {showForm ? '✖ Закрыть' : '➕ Создать'}
-            </button>
-          )}
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>

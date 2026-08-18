@@ -75,15 +75,8 @@ export default function MyAchievements() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>🏆</span>
-          <div>
-            <h1>Мои достижения</h1>
-            <p>Все ваши награды и достижения в ДОД «Дипломаты будущего»</p>
-          </div>
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
-        {/* СТАТИСТИКА */}
         <div className="grid-4" style={{ marginBottom: '20px' }}>
           <div className="stat-card">
             <div className="number">{stats.total}</div>
@@ -109,7 +102,6 @@ export default function MyAchievements() {
           )}
         </div>
 
-        {/* СПИСОК ДОСТИЖЕНИЙ */}
         {achievements.length === 0 ? (
           <div className="empty-state">
             <div className="icon">🌟</div>

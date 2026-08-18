@@ -1,310 +1,172 @@
 // frontend/src/pages/Clubs.jsx
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import Navigation from '../components/Navigation';
 
 export default function Clubs() {
-  const [profile, setProfile] = useState(null);
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [participantsCount, setParticipantsCount] = useState({});
+  const [profile, setProfile] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
+    const loadData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        const user = await api.getMe();
+        setProfile(user);
+
+        const data = await api.getClubs();
+        setClubs(data || []);
+      } catch (err) {
+        console.error('Ошибка загрузки клубов:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      const userData = await api.getMe();
-      if (!userData || !userData.id) {
-        navigate('/login');
-        return;
-      }
-      setProfile(userData);
-
-      const clubsData = await api.getClubs();
-      
-      // ============================================================
-      // ФИЛЬТРАЦИЯ: КООРДИНАТОР ВИДИТ ТОЛЬКО СВОЙ КЛУБ
-      // ============================================================
-      let filteredClubs = clubsData || [];
-      
-      if (userData.role === 'club_coordinator') {
-        // Ищем клуб координатора
-        let coordinatorClub = null;
-        
-        // 1. По club_id в профиле
-        if (userData.club_id) {
-          coordinatorClub = filteredClubs.find(c => c.id === userData.club_id);
-        }
-        
-        // 2. По coordinator_id или leader_id
-        if (!coordinatorClub) {
-          coordinatorClub = filteredClubs.find(c => 
-            c.coordinator_id === userData.id || 
-            c.leader_id === userData.id
-          );
-        }
-        
-        // 3. Через club_coordinators
-        if (!coordinatorClub) {
-          try {
-            const coordResponse = await fetch(
-              `https://dod-backend.relaxdev.ru/api/club-coordinators?profile_id=${userData.id}`
-            );
-            const coordData = await coordResponse.json();
-            if (coordData && coordData.length > 0) {
-              const clubId = coordData[0].club_id;
-              coordinatorClub = filteredClubs.find(c => c.id === clubId);
-            }
-          } catch (e) {
-            console.log('Ошибка получения координатора:', e);
-          }
-        }
-        
-        // Показываем только свой клуб (или пустой массив, если не найден)
-        filteredClubs = coordinatorClub ? [coordinatorClub] : [];
-        
-        console.log('🏫 Координатор видит клуб:', coordinatorClub?.name || 'не найден');
-      }
-      
-      setClubs(filteredClubs);
-
-      // Считаем количество участников для каждого клуба
-      const counts = {};
-      const participantsData = await api.getParticipants();
-      const participants = participantsData || [];
-      
-      filteredClubs.forEach(club => {
-        counts[club.id] = participants.filter(p => p.club_id === club.id).length;
-      });
-      setParticipantsCount(counts);
-      
-    } catch (err) {
-      console.error('Ошибка:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [navigate]);
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F5F6F8' }}>
         <div className="spinner" />
       </div>
     );
   }
 
-  const role = profile?.role;
-  const isCoordinator = role === 'club_coordinator';
-  const canEdit = role === 'admin' || role === 'movement_coordinator';
-
-  // ============================================================
-  // ЕСЛИ КООРДИНАТОР И КЛУБ НЕ НАЙДЕН
-  // ============================================================
-  if (isCoordinator && clubs.length === 0) {
-    return (
-      <div className="page-background">
-        <Navigation profile={profile} />
-        <div className="container-page">
-          <div className="page-header">
-            <span style={{ fontSize: '32px' }}>🏫</span>
-            <div>
-              <h1>Мой КЮД</h1>
-              <p>Информация о вашем клубе</p>
-            </div>
-          </div>
-          <div className="empty-state">
-            <div className="icon">🏫</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>
-              Клуб не найден
-            </p>
-            <p style={{ color: '#667085' }}>
-              Вы не привязаны ни к одному КЮДу. Обратитесь к администратору.
-            </p>
-            <button 
-              className="btn-primary" 
-              onClick={() => navigate('/profile')} 
-              style={{ marginTop: '16px' }}
-            >
-              👤 Перейти в профиль
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="page-background">
-      <Navigation profile={profile} />
-      <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>🏫</span>
-          <div>
-            <h1>{isCoordinator ? 'Мой КЮД' : 'Клубы юных дипломатов'}</h1>
-            <p>
-              {isCoordinator 
-                ? 'Информация о вашем клубе' 
-                : `Всего клубов: ${clubs.length}`}
-            </p>
-          </div>
+    <div className="container-page">
+      {clubs.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">🏫</div>
+          <h3>Нет клубов</h3>
+          <p>Клубы юных дипломатов пока не созданы</p>
         </div>
+      ) : (
+        <div className="clubs-grid">
+          {clubs.map((club) => (
+            <Link key={club.id} to={`/club/${club.id}`} className="club-card">
+              <div className="club-card-icon">🏫</div>
+              <h3>{club.name}</h3>
+              <p>{club.city || 'Город не указан'}</p>
+              <div className="club-card-stats">
+                <span>👥 {club.participants_count || 0} участников</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
 
-        {clubs.length === 0 ? (
-          <div className="empty-state">
-            <div className="icon">🏫</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>
-              КЮДов пока нет
-            </p>
-          </div>
-        ) : (
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: isCoordinator ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', 
-            gap: '20px' 
-          }}>
-            {clubs.map((club) => {
-              const isMyClub = isCoordinator && club.id === profile?.club_id;
-              
-              return (
-                <div 
-                  key={club.id} 
-                  className="card"
-                  style={{
-                    cursor: 'pointer',
-                    border: isMyClub ? '2px solid #C9A227' : '1px solid #E2E7EF',
-                    position: 'relative',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onClick={() => navigate(`/club/${club.id}`)}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.boxShadow = '0 8px 30px rgba(11, 31, 58, 0.12)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  {isMyClub && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '-8px',
-                      right: '-8px',
-                      background: '#C9A227',
-                      color: '#0B1F3A',
-                      padding: '4px 14px',
-                      borderRadius: '20px',
-                      fontSize: '11px',
-                      fontWeight: '700',
-                      boxShadow: '0 2px 8px rgba(201, 162, 39, 0.3)'
-                    }}>
-                      ⭐ Ваш КЮД
-                    </div>
-                  )}
-                  
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                    <div style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '12px',
-                      background: isMyClub ? 'linear-gradient(135deg, #C9A227, #E8D9A8)' : 'linear-gradient(135deg, #0B1F3A, #174A7E)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '24px',
-                      flexShrink: 0
-                    }}>
-                      🏛️
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
-                        {club.name}
-                      </h3>
-                      <div style={{ fontSize: '13px', color: '#667085' }}>
-                        👥 {participantsCount[club.id] || 0} участников
-                      </div>
-                    </div>
-                  </div>
+      <style>{`
+        .container-page {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 24px 32px 48px;
+          width: 100%;
+        }
 
-                  {/* ИНФОРМАЦИЯ О КЛУБЕ */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '4px 12px',
-                    fontSize: '13px',
-                    color: '#667085',
-                    marginBottom: '12px'
-                  }}>
-                    {club.city && (
-                      <div>📍 {club.city}</div>
-                    )}
-                    {club.school && (
-                      <div>🏫 {club.school}</div>
-                    )}
-                    {club.leader_name && (
-                      <div style={{ gridColumn: '1 / -1' }}>👤 {club.leader_name}</div>
-                    )}
-                    {club.contact_email && (
-                      <div style={{ gridColumn: '1 / -1' }}>📧 {club.contact_email}</div>
-                    )}
-                    {club.contact_phone && (
-                      <div style={{ gridColumn: '1 / -1' }}>📞 {club.contact_phone}</div>
-                    )}
-                  </div>
+        .clubs-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+          gap: 20px;
+        }
 
-                  {club.description && (
-                    <p style={{ 
-                      color: '#667085', 
-                      fontSize: '14px', 
-                      margin: '8px 0 16px 0',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden'
-                    }}>
-                      {club.description}
-                    </p>
-                  )}
+        .club-card {
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
+          text-decoration: none;
+          color: #0A1628;
+          transition: all 0.3s ease;
+          text-align: center;
+        }
 
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    paddingTop: '16px',
-                    borderTop: '1px solid #F4F6F9'
-                  }}>
-                    <span style={{ fontSize: '13px', color: '#98A2B3' }}>
-                      {club.created_at && `Создан: ${new Date(club.created_at).toLocaleDateString('ru-RU')}`}
-                    </span>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      {canEdit && !isCoordinator && (
-                        <button
-                          className="btn-secondary"
-                          style={{ padding: '4px 12px', fontSize: '12px' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/club/${club.id}/edit`);
-                          }}
-                        >
-                          ✏️ Редактировать
-                        </button>
-                      )}
-                      <span style={{ color: '#C9A227', fontWeight: '600', fontSize: '14px' }}>
-                        Подробнее →
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+        .club-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 32px rgba(10,22,40,0.10);
+          border-color: #C9A227;
+        }
+
+        .club-card-icon {
+          font-size: 40px;
+          margin-bottom: 12px;
+        }
+
+        .club-card h3 {
+          font-family: 'Playfair Display', serif;
+          font-size: 18px;
+          font-weight: 600;
+          margin: 0 0 4px 0;
+        }
+
+        .club-card p {
+          font-size: 14px;
+          color: #8A8480;
+          margin: 0 0 12px 0;
+        }
+
+        .club-card-stats {
+          font-size: 13px;
+          color: #6B6561;
+          padding-top: 12px;
+          border-top: 1px solid #F0EDE8;
+        }
+
+        .empty-state {
+          text-align: center;
+          padding: 60px 20px;
+          background: white;
+          border-radius: 12px;
+          border: 1px dashed #E4DFD8;
+          grid-column: 1 / -1;
+        }
+
+        .empty-state-icon {
+          font-size: 48px;
+          margin-bottom: 12px;
+          opacity: 0.6;
+        }
+
+        .empty-state h3 {
+          font-family: 'Playfair Display', serif;
+          font-size: 18px;
+          color: #4D4744;
+          margin-bottom: 4px;
+        }
+
+        .empty-state p {
+          font-size: 14px;
+          color: #8A8480;
+        }
+
+        @media (max-width: 768px) {
+          .container-page {
+            padding: 16px 16px 32px;
+          }
+          .clubs-grid {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .container-page {
+            padding: 12px 12px 24px;
+          }
+          .clubs-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
     </div>
   );
 }

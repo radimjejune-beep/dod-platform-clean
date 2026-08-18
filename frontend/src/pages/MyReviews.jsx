@@ -40,24 +40,14 @@ export default function MyReviews() {
       const role = userData.role;
       let filteredParticipants = [];
 
-      // ============================================================
-      // ЛОГИКА ПО РОЛЯМ
-      // ============================================================
-
       if (role === 'participant') {
-        // УЧАСТНИК — видит только свои оценки
         filteredParticipants = participantsData.filter(p => p.id === userData.id);
       } 
       else if (role === 'parent') {
-        // РОДИТЕЛЬ — видит оценки своего ребёнка
-        // TODO: нужна связь родитель-ребёнок в БД
-        // Пока показываем всех участников (заглушка)
         filteredParticipants = participantsData;
         setChildInfo({ name: 'Ваш ребёнок' });
       } 
       else if (role === 'club_coordinator') {
-        // КООРДИНАТОР КЮДА — видит только участников своего клуба
-        // Ищем клуб координатора
         const coordinatorClub = clubsData.find(c => 
           c.coordinator_id === userData.id || 
           c.leader_id === userData.id
@@ -73,17 +63,12 @@ export default function MyReviews() {
                role === 'admin' || 
                role === 'president' || 
                role === 'vice_president') {
-        // ТЬЮТОР, КООРДИНАТОР, АДМИН, ПРЕЗИДЕНТ, ВИЦЕ — видят всех
         filteredParticipants = participantsData;
       } 
       else {
-        // Другие роли — пусто
         filteredParticipants = [];
       }
 
-      // ============================================================
-      // ФОРМИРУЕМ ОЦЕНКИ (демо-данные для отображения)
-      // ============================================================
       const mockReviews = [];
       
       filteredParticipants.forEach((p, index) => {
@@ -121,7 +106,6 @@ export default function MyReviews() {
     }
   };
 
-  // Фильтр по клубу (только для тех, кто видит всех)
   const canFilterByClub = profile?.role === 'admin' || 
                           profile?.role === 'movement_coordinator' || 
                           profile?.role === 'tutor' ||
@@ -136,9 +120,6 @@ export default function MyReviews() {
     }
   }, [selectedClubId, allReviews, canFilterByClub]);
 
-  // ============================================================
-  // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-  // ============================================================
   const getStatusBadge = (status) => {
     const badges = {
       'draft': { text: 'Черновик', color: '#8A9AAA', bg: '#F4F6F9' },
@@ -217,27 +198,8 @@ export default function MyReviews() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📊</span>
-          <div>
-            <h1>{getRoleSpecificTitle()}</h1>
-            <p>{getRoleSpecificSubtitle()}</p>
-            {reviews.length > 0 && (
-              <span style={{ fontSize: '13px', color: '#98A2B3' }}>
-                Всего оценок: {reviews.length}
-              </span>
-            )}
-          </div>
-          <button
-            className="btn-secondary"
-            style={{ marginLeft: 'auto' }}
-            onClick={() => setViewMode(viewMode === 'table' ? 'cards' : 'table')}
-          >
-            {viewMode === 'table' ? '📇 Карточки' : '📋 Таблица'}
-          </button>
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
-        {/* ФИЛЬТР ПО КЮДАМ (только для тех, кто видит всех) */}
         {canFilterByClub && clubs.length > 0 && (
           <div style={{
             display: 'flex',

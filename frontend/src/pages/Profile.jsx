@@ -144,13 +144,7 @@ export default function Profile() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        <div className="page-header">
-          <span style={{ fontSize: '32px' }}>👤</span>
-          <div>
-            <h1>Мой профиль</h1>
-            <p>Управление личными данными</p>
-          </div>
-        </div>
+        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
@@ -159,7 +153,6 @@ export default function Profile() {
         )}
 
         <div className="card">
-          {/* АВАТАР */}
           <div style={{ 
             display: 'flex', 
             justifyContent: 'center', 
@@ -174,7 +167,6 @@ export default function Profile() {
             />
           </div>
 
-          {/* ВКЛАДКИ */}
           <div style={{
             display: 'flex',
             gap: '4px',
@@ -467,7 +459,6 @@ export default function Profile() {
                   </div>
                 </div>
 
-                {/* СОГЛАСИЕ 1 */}
                 <div className="form-group" style={{
                   padding: '16px',
                   border: profile?.consent_personal_data ? '2px solid #16845B' : '1px solid #E2E7EF',
@@ -502,7 +493,6 @@ export default function Profile() {
                   </label>
                 </div>
 
-                {/* СОГЛАСИЕ 2 */}
                 <div className="form-group" style={{
                   padding: '16px',
                   border: profile?.consent_photo_publication ? '2px solid #16845B' : '1px solid #E2E7EF',
@@ -535,7 +525,6 @@ export default function Profile() {
                   </label>
                 </div>
 
-                {/* СОГЛАСИЕ 3 */}
                 <div className="form-group" style={{
                   padding: '16px',
                   border: profile?.consent_event_participation ? '2px solid #16845B' : '1px solid #E2E7EF',

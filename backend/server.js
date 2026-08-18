@@ -763,6 +763,7 @@ app.patch('/api/profile', authenticate, async (req, res) => {
       return d.toISOString().split('T')[0];
     };
 
+    // ✅ ИСПРАВЛЕНО: убрана колонка updated_at
     const result = await pool.query(
       `UPDATE users 
        SET full_name = COALESCE($1, full_name),
@@ -786,8 +787,7 @@ app.patch('/api/profile', authenticate, async (req, res) => {
            consent_photo_publication = COALESCE($19, consent_photo_publication),
            consent_event_participation = COALESCE($20, consent_event_participation),
            consent_agreement_date = $21,
-           charter_acceptance_date = $22,
-           updated_at = NOW()
+           charter_acceptance_date = $22
        WHERE id = $23
        RETURNING *`,
       [
@@ -821,6 +821,7 @@ app.patch('/api/profile', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
 
+    console.log(`✅ Профиль обновлён`);
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка обновления профиля:', error);

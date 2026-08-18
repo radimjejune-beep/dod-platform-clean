@@ -41,6 +41,9 @@ export default function Events() {
   // ===== ЭКСПОРТ =====
   const [exporting, setExporting] = useState(false);
   
+  // ===== ПОИСК КЛУБОВ =====
+  const [searchClubQuery, setSearchClubQuery] = useState('');
+  
   const [filters, setFilters] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -95,6 +98,11 @@ export default function Events() {
   };
 
   const coordinatorClubId = getCoordinatorClubId();
+
+  // Фильтр клубов для поиска
+  const filteredClubs = clubs.filter(club =>
+    club.name.toLowerCase().includes((searchClubQuery || '').toLowerCase())
+  );
 
   // ============================================================
   // ЗАГРУЗКА ДАННЫХ
@@ -901,81 +909,262 @@ export default function Events() {
               </div>
 
               {/* ============================================================
-                 ВЫБОР КЛУБОВ (ДЛЯ АДМИНА И КООРДИНАТОРА ДВИЖЕНИЯ)
+                 ВЫБОР КЛУБОВ (УДОБНАЯ ВЕРСИЯ)
                  ============================================================ */}
               {(isAdmin || isMovementCoordinator) && (
                 <div className="form-group">
                   <label>🎯 Отправить мероприятие клубам</label>
                   
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={form.is_global || false}
-                      onChange={(e) => {
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '12px', 
+                    flexWrap: 'wrap',
+                    marginBottom: '12px'
+                  }}>
+                    {/* КНОПКА "ВСЕ КЛУБЫ" */}
+                    <button
+                      type="button"
+                      className={form.is_global ? 'btn-primary' : 'btn-secondary'}
+                      style={{ 
+                        padding: '6px 16px', 
+                        fontSize: '13px',
+                        background: form.is_global ? '#6B46C1' : 'transparent',
+                        color: form.is_global ? 'white' : '#0A1628',
+                        border: form.is_global ? 'none' : '1.5px solid #E4DFD8',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: form.is_global ? '600' : '400'
+                      }}
+                      onClick={() => {
                         setForm({ 
                           ...form, 
-                          is_global: e.target.checked,
-                          target_clubs: e.target.checked ? [] : form.target_clubs
+                          is_global: true,
+                          target_clubs: []
                         });
                       }}
-                    />
-                    <span style={{ fontWeight: '600', color: '#6B46C1' }}>🌍 ВСЕ КЛУБЫ (глобальное мероприятие)</span>
-                  </label>
-                  
-                  {!form.is_global && (
-                    <div style={{ 
-                      display: 'flex', 
-                      flexWrap: 'wrap', 
-                      gap: '8px',
-                      padding: '12px',
-                      border: '1px solid #E2E7EF',
-                      borderRadius: '8px',
-                      background: '#F8FAFC',
-                      maxHeight: '200px',
-                      overflowY: 'auto'
-                    }}>
-                      {clubs.map((club) => (
-                        <label key={club.id} style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '6px',
-                          cursor: 'pointer',
-                          padding: '4px 12px',
-                          background: form.target_clubs?.includes(club.id) ? '#EAF2FA' : 'transparent',
+                    >
+                      🌍 Все КЮДы
+                    </button>
+                    
+                    {/* КНОПКА "ВЫБРАТЬ КОНКРЕТНЫЕ" */}
+                    <button
+                      type="button"
+                      className={!form.is_global ? 'btn-primary' : 'btn-secondary'}
+                      style={{ 
+                        padding: '6px 16px', 
+                        fontSize: '13px',
+                        background: !form.is_global ? '#174A7E' : 'transparent',
+                        color: !form.is_global ? 'white' : '#0A1628',
+                        border: !form.is_global ? 'none' : '1.5px solid #E4DFD8',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: !form.is_global ? '600' : '400'
+                      }}
+                      onClick={() => {
+                        setForm({ 
+                          ...form, 
+                          is_global: false,
+                          target_clubs: form.target_clubs || []
+                        });
+                      }}
+                    >
+                      📌 Выбрать конкретные
+                    </button>
+                    
+                    {/* СЧЁТЧИК ВЫБРАННЫХ КЛУБОВ */}
+                    {!form.is_global && form.target_clubs?.length > 0 && (
+                      <span style={{ 
+                        padding: '6px 16px',
+                        background: '#E8F5EF',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        color: '#16845B',
+                        fontWeight: '500'
+                      }}>
+                        ✅ Выбрано: {form.target_clubs.length} из {clubs.length}
+                      </span>
+                    )}
+                    
+                    {/* КНОПКА "СБРОСИТЬ ВСЕ" */}
+                    {!form.is_global && form.target_clubs?.length > 0 && (
+                      <button
+                        type="button"
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          background: 'transparent',
+                          border: '1px solid #B3262E',
                           borderRadius: '6px',
-                          border: form.target_clubs?.includes(club.id) ? '1px solid #174A7E' : '1px solid transparent'
-                        }}>
-                          <input
-                            type="checkbox"
-                            checked={form.target_clubs?.includes(club.id) || false}
-                            onChange={(e) => {
-                              const targetClubs = form.target_clubs || [];
-                              if (e.target.checked) {
-                                setForm({ ...form, target_clubs: [...targetClubs, club.id] });
-                              } else {
-                                setForm({ ...form, target_clubs: targetClubs.filter(id => id !== club.id) });
-                              }
-                            }}
-                          />
-                          <span style={{ fontSize: '13px' }}>🏫 {club.name}</span>
-                        </label>
-                      ))}
-                    </div>
+                          color: '#B3262E',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => setForm({ ...form, target_clubs: [] })}
+                      >
+                        ✕ Сбросить
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* ПОИСК КЛУБОВ */}
+                  {!form.is_global && (
+                    <>
+                      <div style={{ position: 'relative', marginBottom: '10px' }}>
+                        <input
+                          type="text"
+                          placeholder="🔍 Поиск клуба по названию..."
+                          value={searchClubQuery || ''}
+                          onChange={(e) => setSearchClubQuery(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 14px',
+                            border: '1.5px solid #D5DCE7',
+                            borderRadius: '8px',
+                            fontSize: '13px',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                      
+                      {/* СЕТКА КЛУБОВ */}
+                      <div style={{ 
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                        gap: '6px',
+                        padding: '10px',
+                        border: '1px solid #E2E7EF',
+                        borderRadius: '8px',
+                        background: '#F8FAFC',
+                        maxHeight: '200px',
+                        overflowY: 'auto'
+                      }}>
+                        {filteredClubs.map((club) => (
+                          <label key={club.id} style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px',
+                            cursor: 'pointer',
+                            padding: '6px 10px',
+                            background: form.target_clubs?.includes(club.id) ? '#EAF2FA' : 'transparent',
+                            borderRadius: '6px',
+                            border: form.target_clubs?.includes(club.id) ? '1px solid #174A7E' : '1px solid transparent',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!form.target_clubs?.includes(club.id)) {
+                              e.currentTarget.style.background = '#F4F6F9';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!form.target_clubs?.includes(club.id)) {
+                              e.currentTarget.style.background = 'transparent';
+                            }
+                          }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={form.target_clubs?.includes(club.id) || false}
+                              onChange={(e) => {
+                                const targetClubs = form.target_clubs || [];
+                                if (e.target.checked) {
+                                  setForm({ ...form, target_clubs: [...targetClubs, club.id] });
+                                } else {
+                                  setForm({ ...form, target_clubs: targetClubs.filter(id => id !== club.id) });
+                                }
+                              }}
+                              style={{ 
+                                width: '16px', 
+                                height: '16px',
+                                accentColor: '#174A7E',
+                                cursor: 'pointer',
+                                flexShrink: 0
+                              }}
+                            />
+                            <span style={{ fontSize: '13px' }}>
+                              🏫 {club.name}
+                              {club.participants_count !== undefined && (
+                                <span style={{ fontSize: '11px', color: '#98A2B3', marginLeft: '4px' }}>
+                                  ({club.participants_count || 0})
+                                </span>
+                              )}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                      
+                      {/* БЫСТРЫЙ ВЫБОР ПО ГРУППАМ */}
+                      <div style={{ 
+                        display: 'flex', 
+                        gap: '6px', 
+                        flexWrap: 'wrap',
+                        marginTop: '8px'
+                      }}>
+                        <button
+                          type="button"
+                          style={{
+                            padding: '3px 12px',
+                            fontSize: '11px',
+                            background: '#EAF2FA',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: '#174A7E',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => {
+                            const allIds = clubs.map(c => c.id);
+                            setForm({ ...form, target_clubs: allIds });
+                          }}
+                        >
+                          ✅ Выбрать все
+                        </button>
+                        <button
+                          type="button"
+                          style={{
+                            padding: '3px 12px',
+                            fontSize: '11px',
+                            background: '#FCEBEC',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: '#B3262E',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => setForm({ ...form, target_clubs: [] })}
+                        >
+                          ❌ Снять все
+                        </button>
+                        <button
+                          type="button"
+                          style={{
+                            padding: '3px 12px',
+                            fontSize: '11px',
+                            background: '#FBF4DC',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: '#8A6A00',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => {
+                            const clubsWithParticipants = clubs.filter(c => c.participants_count > 0);
+                            const ids = clubsWithParticipants.map(c => c.id);
+                            setForm({ ...form, target_clubs: ids });
+                          }}
+                        >
+                          🎯 С участниками
+                        </button>
+                      </div>
+                    </>
                   )}
                   
-                  {form.target_clubs?.length > 0 && !form.is_global && (
-                    <div style={{ fontSize: '12px', color: '#16845B', marginTop: '4px' }}>
-                      ✅ Выбрано клубов: {form.target_clubs.length}
-                    </div>
-                  )}
                   {form.is_global && (
-                    <div style={{ fontSize: '12px', color: '#6B46C1', marginTop: '4px' }}>
+                    <div style={{ 
+                      padding: '12px 16px', 
+                      background: '#EDE7F6', 
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      color: '#6B46C1'
+                    }}>
                       🌍 Мероприятие увидят ВСЕ КЮДы
                     </div>
                   )}
-                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                    💡 Если выбрано "Все клубы" — мероприятие увидят все координаторы КЮДов
-                  </div>
                 </div>
               )}
               

@@ -3370,6 +3370,328 @@ app.post('/api/create-test-user', async (req, res) => {
   }
 });
 
+// backend/server.js — ДОБАВИТЬ ЭТИ ЭНДПОИНТЫ
+
+// ============================================================
+// РЕГИСТРАЦИЯ НА МЕРОПРИЯТИЯ (event_registrations)
+// ============================================================
+
+// 1. Записаться на мероприятие
+app.post('/api/event-registrations', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { event_id } = req.body;
+
+    if (!event_id) {
+      return res.status(400).json({ error: 'event_id обязателен' });
+    }
+
+    // Проверяем мероприятие
+    const eventCheck = await pool.query(
+      `SELECT id, title, registration_deadline, max_participants, club_id 
+       FROM events WHERE id = $1`,
+      [event_id]
+    );
+
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    const event = eventCheck.rows[0];
+
+    // Проверяем дедлайн
+    if (event.registration_deadline) {
+      const now = new Date();
+      const deadline = new Date(event.registration_deadline);
+      if (now > deadline) {
+        return res.status(400).json({ error: 'Регистрация на мероприятие закрыта' });
+      }
+    }
+
+    // Проверяем лимит участников
+    if (event.max_participants > 0) {
+      const countResult = await pool.query(
+        'SELECT COUNT(*) FROM event_registrations WHERE event_id = $1 AND status = $2',
+        [event_id, 'confirmed']
+      );
+      const currentCount = parseInt(countResult.rows[0].count);
+      if (currentCount >= event.max_participants) {
+        return res.status(400).json({ error: 'Нет свободных мест' });
+      }
+    }
+
+    // Проверяем, не записан ли уже пользователь
+    const existing = await pool.query(
+      'SELECT id, status FROM event_registrations WHERE event_id = $1 AND user_id = $2',
+      [event_id, userId]
+    );
+
+    if (existing.rows.length > 0) {
+      const status = existing.rows[0].status;
+      if (status === 'pending') {
+        return res.status(400).json({ error: 'Вы уже отправили заявку' });
+      }
+      if (status === 'confirmed') {
+        return res.status(400).json({ error: 'Вы уже зарегистрированы' });
+      }
+      if (status === 'rejected') {
+        return res.status(400).json({ error: 'Ваша заявка была отклонена' });
+      }
+    }
+
+    // Создаём регистрацию
+    const result = await pool.query(
+      `INSERT INTO event_registrations (event_id, user_id, status, registered_at)
+       VALUES ($1, $2, 'pending', NOW())
+       RETURNING *`,
+      [event_id, userId]
+    );
+
+    // Уведомление координатору клуба
+    if (event.club_id) {
+      const coordinators = await pool.query(
+        `SELECT profile_id FROM club_coordinators WHERE club_id = $1`,
+        [event.club_id]
+      );
+      
+      for (const coord of coordinators.rows) {
+        await pool.query(
+          `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
+           VALUES ($1, 'registration', 'Новая заявка на мероприятие', $2, '/events', 'high', NOW())`,
+          [coord.profile_id, `Новая заявка на участие в "${event.title}"`]
+        );
+      }
+    }
+
+    res.status(201).json({
+      message: 'Вы успешно записались на мероприятие',
+      registration: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('❌ Ошибка регистрации:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 2. Отписаться от мероприятия
+app.delete('/api/event-registrations/:id', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+
+    const check = await pool.query(
+      'SELECT id, user_id, status FROM event_registrations WHERE id = $1',
+      [id]
+    );
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Запись не найдена' });
+    }
+
+    const registration = check.rows[0];
+
+    if (registration.user_id !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'У вас нет прав' });
+    }
+
+    if (registration.status === 'confirmed') {
+      return res.status(400).json({ error: 'Вы не можете отписаться после подтверждения' });
+    }
+
+    await pool.query('DELETE FROM event_registrations WHERE id = $1', [id]);
+
+    res.json({ message: 'Вы отписались от мероприятия' });
+  } catch (error) {
+    console.error('❌ Ошибка отписки:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 3. Получить список зарегистрированных на мероприятие
+app.get('/api/events/:eventId/registrations', authenticate, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+
+    // Проверяем права
+    const eventCheck = await pool.query(
+      'SELECT club_id, created_by FROM events WHERE id = $1',
+      [eventId]
+    );
+
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    const event = eventCheck.rows[0];
+    let canView = false;
+
+    if (['admin', 'movement_coordinator'].includes(userRole)) {
+      canView = true;
+    } else if (userRole === 'club_coordinator') {
+      const coordCheck = await pool.query(
+        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
+        [userId, event.club_id]
+      );
+      if (coordCheck.rows.length > 0) canView = true;
+    }
+
+    if (!canView) {
+      return res.status(403).json({ error: 'У вас нет прав' });
+    }
+
+    const result = await pool.query(
+      `SELECT r.*, 
+              u.full_name, u.email, u.phone, u.school, u.class_name,
+              u.avatar_url
+       FROM event_registrations r
+       LEFT JOIN users u ON r.user_id = u.id
+       WHERE r.event_id = $1
+       ORDER BY r.registered_at ASC`,
+      [eventId]
+    );
+
+    const stats = await pool.query(
+      `SELECT status, COUNT(*) as count 
+       FROM event_registrations 
+       WHERE event_id = $1 
+       GROUP BY status`,
+      [eventId]
+    );
+
+    res.json({
+      registrations: result.rows,
+      stats: stats.rows
+    });
+  } catch (error) {
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 4. Изменить статус заявки
+app.patch('/api/event-registrations/:id/status', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, comment } = req.body;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+
+    if (!['pending', 'confirmed', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Некорректный статус' });
+    }
+
+    const regCheck = await pool.query(
+      `SELECT r.*, e.club_id, e.title 
+       FROM event_registrations r
+       LEFT JOIN events e ON r.event_id = e.id
+       WHERE r.id = $1`,
+      [id]
+    );
+
+    if (regCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Заявка не найдена' });
+    }
+
+    const registration = regCheck.rows[0];
+    let canManage = false;
+
+    if (['admin', 'movement_coordinator'].includes(userRole)) {
+      canManage = true;
+    } else if (userRole === 'club_coordinator') {
+      const coordCheck = await pool.query(
+        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
+        [userId, registration.club_id]
+      );
+      if (coordCheck.rows.length > 0) canManage = true;
+    }
+
+    if (!canManage) {
+      return res.status(403).json({ error: 'У вас нет прав' });
+    }
+
+    const result = await pool.query(
+      `UPDATE event_registrations 
+       SET status = $1, 
+           confirmed_at = CASE WHEN $1 = 'confirmed' THEN NOW() ELSE confirmed_at END,
+           coordinator_comment = $2
+       WHERE id = $3
+       RETURNING *`,
+      [status, comment || null, id]
+    );
+
+    // Уведомление участнику
+    await pool.query(
+      `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
+       VALUES ($1, 'registration', 'Статус заявки обновлён', $2, '/my-registrations', 'high', NOW())`,
+      [registration.user_id, `Ваша заявка на "${registration.title}" ${status === 'confirmed' ? 'подтверждена' : 'отклонена'}`]
+    );
+
+    res.json({
+      message: `Заявка ${status === 'confirmed' ? 'подтверждена' : 'отклонена'}`,
+      registration: result.rows[0]
+    });
+  } catch (error) {
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 5. Мои регистрации (для участника)
+app.get('/api/my-registrations', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const result = await pool.query(
+      `SELECT r.*, 
+              e.title, e.event_date, e.location, e.type, e.is_global,
+              c.name as club_name
+       FROM event_registrations r
+       LEFT JOIN events e ON r.event_id = e.id
+       LEFT JOIN clubs c ON e.club_id = c.id
+       WHERE r.user_id = $1
+       ORDER BY e.event_date ASC`,
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 6. Проверить статус регистрации на мероприятие
+app.get('/api/events/:eventId/registration-status', authenticate, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const userId = req.user.userId;
+
+    const result = await pool.query(
+      `SELECT status, registered_at, confirmed_at
+       FROM event_registrations
+       WHERE event_id = $1 AND user_id = $2`,
+      [eventId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({ status: null, isRegistered: false });
+    }
+
+    res.json({
+      status: result.rows[0].status,
+      isRegistered: true,
+      registeredAt: result.rows[0].registered_at,
+      confirmedAt: result.rows[0].confirmed_at
+    });
+  } catch (error) {
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ============================================================
 // ЗАПУСК СЕРВЕРА
 // ============================================================

@@ -3,7 +3,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import api from './lib/api';
-import Navigation from './components/Navigation';
 
 // Страницы
 import Home from './pages/Home';
@@ -92,317 +91,60 @@ function App() {
 
   return (
     <BrowserRouter>
+      {/* ✅ Navigation УБРАН ИЗ App.jsx — он будет внутри страниц */}
       <Routes>
-        {/* ПУБЛИЧНЫЕ СТРАНИЦЫ (БЕЗ НАВИГАЦИИ) */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
-
-        {/* ============================================================
-           ВСЕ СТРАНИЦЫ КАБИНЕТА — С НАВИГАЦИЕЙ
-           ============================================================ */}
-        <Route path="/dashboard" element={
-          <>
-            <Navigation profile={profile} />
-            <Dashboard />
-          </>
-        } />
-        <Route path="/profile" element={
-          <>
-            <Navigation profile={profile} />
-            <Profile />
-          </>
-        } />
-        <Route path="/events" element={
-          <>
-            <Navigation profile={profile} />
-            <Events />
-          </>
-        } />
-        <Route path="/calendar" element={
-          <>
-            <Navigation profile={profile} />
-            <Calendar />
-          </>
-        } />
-        <Route path="/clubs" element={
-          <>
-            <Navigation profile={profile} />
-            <Clubs />
-          </>
-        } />
-        <Route path="/club/:id" element={
-          <>
-            <Navigation profile={profile} />
-            <ClubDetail />
-          </>
-        } />
-        <Route path="/club/:clubId/president" element={
-          <>
-            <Navigation profile={profile} />
-            <ClubPresident />
-          </>
-        } />
-        <Route path="/club-rating" element={
-          <>
-            <Navigation profile={profile} />
-            <ClubRating />
-          </>
-        } />
-        <Route path="/club-analytics" element={
-          <>
-            <Navigation profile={profile} />
-            <ClubAnalytics />
-          </>
-        } />
-        <Route path="/participants" element={
-          <>
-            <Navigation profile={profile} />
-            <Participants />
-          </>
-        } />
-        <Route path="/participant/:id" element={
-          <>
-            <Navigation profile={profile} />
-            <ParticipantProfile />
-          </>
-        } />
-        <Route path="/participant/:id/edit" element={
-          <>
-            <Navigation profile={profile} />
-            <ParticipantEdit />
-          </>
-        } />
-        <Route path="/achievements" element={
-          <>
-            <Navigation profile={profile} />
-            <Achievements />
-          </>
-        } />
-        <Route path="/manage-achievements" element={
-          <>
-            <Navigation profile={profile} />
-            <ManageAchievements />
-          </>
-        } />
-        <Route path="/my-achievements" element={
-          <>
-            <Navigation profile={profile} />
-            <MyAchievements />
-          </>
-        } />
-        <Route path="/reports" element={
-          <>
-            <Navigation profile={profile} />
-            <Reports />
-          </>
-        } />
-        <Route path="/analytics" element={
-          <>
-            <Navigation profile={profile} />
-            <Analytics />
-          </>
-        } />
-        <Route path="/dashboard-analytics" element={
-          <>
-            <Navigation profile={profile} />
-            <DashboardAnalytics />
-          </>
-        } />
-        <Route path="/appeals" element={
-          <>
-            <Navigation profile={profile} />
-            <Appeals />
-          </>
-        } />
-        <Route path="/admin/users" element={
-          <>
-            <Navigation profile={profile} />
-            <AdminUsers />
-          </>
-        } />
-        <Route path="/admin/invite" element={
-          <>
-            <Navigation profile={profile} />
-            <AdminInvite />
-          </>
-        } />
-        <Route path="/admin/news" element={
-          <>
-            <Navigation profile={profile} />
-            <AdminNews />
-          </>
-        } />
-        <Route path="/settings" element={
-          <>
-            <Navigation profile={profile} />
-            <Settings />
-          </>
-        } />
-        <Route path="/import-participants" element={
-          <>
-            <Navigation profile={profile} />
-            <ImportParticipants />
-          </>
-        } />
-        <Route path="/parent-dashboard" element={
-          <>
-            <Navigation profile={profile} />
-            <ParentDashboard />
-          </>
-        } />
-        <Route path="/participant-dashboard" element={
-          <>
-            <Navigation profile={profile} />
-            <ParticipantDashboard />
-          </>
-        } />
-        <Route path="/club-coordinator-dashboard" element={
-          <>
-            <Navigation profile={profile} />
-            <ClubCoordinatorDashboard />
-          </>
-        } />
-        <Route path="/tutor-dashboard" element={
-          <>
-            <Navigation profile={profile} />
-            <TutorDashboard />
-          </>
-        } />
-        <Route path="/tutor-journal/:eventId" element={
-          <>
-            <Navigation profile={profile} />
-            <TutorJournal />
-          </>
-        } />
-        <Route path="/my-reviews" element={
-          <>
-            <Navigation profile={profile} />
-            <MyReviews />
-          </>
-        } />
-        <Route path="/my-journal" element={
-          <>
-            <Navigation profile={profile} />
-            <MyJournal />
-          </>
-        } />
-        <Route path="/tutor-requests" element={
-          <>
-            <Navigation profile={profile} />
-            <TutorRequests />
-          </>
-        } />
-        <Route path="/tutor-invitations" element={
-          <>
-            <Navigation profile={profile} />
-            <TutorInvitations />
-          </>
-        } />
-        <Route path="/tutor-assignments" element={
-          <>
-            <Navigation profile={profile} />
-            <TutorAssignments />
-          </>
-        } />
-        <Route path="/staff" element={
-          <>
-            <Navigation profile={profile} />
-            <StaffManagement />
-          </>
-        } />
-        <Route path="/staff-calendar" element={
-          <>
-            <Navigation profile={profile} />
-            <StaffCalendar />
-          </>
-        } />
-        <Route path="/president-tasks" element={
-          <>
-            <Navigation profile={profile} />
-            <PresidentTasks />
-          </>
-        } />
-        <Route path="/club-calendar" element={
-          <>
-            <Navigation profile={profile} />
-            <ClubCalendar />
-          </>
-        } />
-        <Route path="/my-club-events" element={
-          <>
-            <Navigation profile={profile} />
-            <MyClubEvents />
-          </>
-        } />
-        <Route path="/news/:id" element={
-          <>
-            <Navigation profile={profile} />
-            <NewsDetail />
-          </>
-        } />
-        <Route path="/documents" element={
-          <>
-            <Navigation profile={profile} />
-            <OfficialDocuments />
-          </>
-        } />
-        <Route path="/coordinator-dashboard" element={
-          <>
-            <Navigation profile={profile} />
-            <CoordinatorDashboard />
-          </>
-        } />
-        <Route path="/clubs-management" element={
-          <>
-            <Navigation profile={profile} />
-            <ClubsManagement />
-          </>
-        } />
-        <Route path="/mass-notifications" element={
-          <>
-            <Navigation profile={profile} />
-            <MassNotifications />
-          </>
-        } />
-        <Route path="/consents-management" element={
-          <>
-            <Navigation profile={profile} />
-            <ConsentsManagement />
-          </>
-        } />
-
-        {/* 🔥 ГЛАВНОЕ — ОБЕРНУЛИ В NAVIGATION */}
-        <Route path="/documents-center" element={
-          <>
-            <Navigation profile={profile} />
-            <DocumentsCenter />
-          </>
-        } />
-
-        <Route path="/tasks-planner" element={
-          <>
-            <Navigation profile={profile} />
-            <TasksPlanner />
-          </>
-        } />
-        <Route path="/activity-log" element={
-          <>
-            <Navigation profile={profile} />
-            <ActivityLog />
-          </>
-        } />
-        <Route path="/achievements-categories" element={
-          <>
-            <Navigation profile={profile} />
-            <AchievementsCategories />
-          </>
-        } />
-        <Route path="/notification-history" element={
-          <>
-            <Navigation profile={profile} />
-            <NotificationHistory />
-          </>
-        } />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="/calendar" element={<Calendar />} />
+        <Route path="/clubs" element={<Clubs />} />
+        <Route path="/club/:id" element={<ClubDetail />} />
+        <Route path="/club/:clubId/president" element={<ClubPresident />} />
+        <Route path="/club-rating" element={<ClubRating />} />
+        <Route path="/club-analytics" element={<ClubAnalytics />} />
+        <Route path="/participants" element={<Participants />} />
+        <Route path="/participant/:id" element={<ParticipantProfile />} />
+        <Route path="/participant/:id/edit" element={<ParticipantEdit />} />
+        <Route path="/achievements" element={<Achievements />} />
+        <Route path="/manage-achievements" element={<ManageAchievements />} />
+        <Route path="/my-achievements" element={<MyAchievements />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/dashboard-analytics" element={<DashboardAnalytics />} />
+        <Route path="/appeals" element={<Appeals />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/admin/invite" element={<AdminInvite />} />
+        <Route path="/admin/news" element={<AdminNews />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/import-participants" element={<ImportParticipants />} />
+        <Route path="/parent-dashboard" element={<ParentDashboard />} />
+        <Route path="/participant-dashboard" element={<ParticipantDashboard />} />
+        <Route path="/club-coordinator-dashboard" element={<ClubCoordinatorDashboard />} />
+        <Route path="/tutor-dashboard" element={<TutorDashboard />} />
+        <Route path="/tutor-journal/:eventId" element={<TutorJournal />} />
+        <Route path="/my-reviews" element={<MyReviews />} />
+        <Route path="/my-journal" element={<MyJournal />} />
+        <Route path="/tutor-requests" element={<TutorRequests />} />
+        <Route path="/tutor-invitations" element={<TutorInvitations />} />
+        <Route path="/tutor-assignments" element={<TutorAssignments />} />
+        <Route path="/staff" element={<StaffManagement />} />
+        <Route path="/staff-calendar" element={<StaffCalendar />} />
+        <Route path="/president-tasks" element={<PresidentTasks />} />
+        <Route path="/club-calendar" element={<ClubCalendar />} />
+        <Route path="/my-club-events" element={<MyClubEvents />} />
+        <Route path="/news/:id" element={<NewsDetail />} />
+        <Route path="/documents" element={<OfficialDocuments />} />
+        <Route path="/coordinator-dashboard" element={<CoordinatorDashboard />} />
+        <Route path="/clubs-management" element={<ClubsManagement />} />
+        <Route path="/mass-notifications" element={<MassNotifications />} />
+        <Route path="/consents-management" element={<ConsentsManagement />} />
+        <Route path="/documents-center" element={<DocumentsCenter />} />
+        <Route path="/tasks-planner" element={<TasksPlanner />} />
+        <Route path="/activity-log" element={<ActivityLog />} />
+        <Route path="/achievements-categories" element={<AchievementsCategories />} />
+        <Route path="/notification-history" element={<NotificationHistory />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

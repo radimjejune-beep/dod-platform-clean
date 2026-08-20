@@ -25,7 +25,7 @@ export default function Footer() {
           <h4>Контакты</h4>
           <div className="footer-contact-item">
             <span className="footer-contact-icon">📍</span>
-            <span>119200, Москва, Смоленская-Сенная площадь, дом 32/34 (АРД)</span>
+            <span>119454, Москва, проспект Вернадского, д. 76, корп. Г, эт/пом/ком 1/IV/22</span>
           </div>
           <div className="footer-contact-item">
             <span className="footer-contact-icon">📞</span>
@@ -33,12 +33,12 @@ export default function Footer() {
           </div>
           <div className="footer-contact-item">
             <span className="footer-contact-icon">✉️</span>
-            <a href="mailto:diplomatsothefuture@mail.ru">diplomatsothefuture@mail.ru</a>
+            <a href="mailto:diplomatsofthefuture@mail.ru">diplomatsofthefuture@mail.ru</a>
           </div>
           <div className="footer-contact-item">
             <span className="footer-contact-icon">🌐</span>
-            <a href="https://www.diplomatsothefuture.ru" target="_blank" rel="noopener noreferrer">
-              www.diplomatsothefuture.ru
+            <a href="https://www.diplomatsofthefuture.ru" target="_blank" rel="noopener noreferrer">
+              www.diplomatsofthefuture.ru
             </a>
           </div>
         </div>
@@ -55,14 +55,15 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Нижняя часть — копирайт */}
+      {/* Нижняя часть — копирайт и ссылки */}
       <div className="footer-bottom">
         <p>
-          © {currentYear} ДОД «Дипломаты будущего». Все права защищены.
+          © {currentYear} МДОД «Дипломаты Будущего». Все права защищены.
         </p>
         <div className="footer-links">
-          <Link to="/about">О движении</Link>
-          <Link to="/privacy">Политика конфиденциальности</Link>
+          <Link to="/privacy-policy">Политика конфиденциальности</Link>
+          <span className="footer-link-separator">|</span>
+          <Link to="/terms">Пользовательское соглашение</Link>
         </div>
       </div>
 
@@ -192,7 +193,9 @@ export default function Footer() {
 
         .footer-links {
           display: flex;
-          gap: 20px;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
         }
 
         .footer-links a {
@@ -204,6 +207,11 @@ export default function Footer() {
 
         .footer-links a:hover {
           color: #E8D9A8;
+        }
+
+        .footer-link-separator {
+          color: rgba(255, 255, 255, 0.15);
+          font-size: 12px;
         }
 
         @media (max-width: 992px) {

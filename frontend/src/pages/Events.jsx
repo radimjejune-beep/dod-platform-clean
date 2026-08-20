@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import FilterBar from '../components/FilterBar';
+import Footer from '../components/Footer';
 
 export default function Events() {
   const [profile, setProfile] = useState(null);
@@ -172,7 +173,6 @@ export default function Events() {
             }
             return ['outgoing', 'global_forum'].includes(e.type) || e.is_global === true;
           });
-          console.log(`🏫 Координатор КЮДа: показано ${filteredEvents.length} мероприятий`);
         } else {
           filteredEvents = [];
         }
@@ -202,7 +202,7 @@ export default function Events() {
   };
 
   // ============================================================
-  // ЗАГРУЗКА РЕГИСТРАЦИЙ НА МЕРОПРИЯТИЕ
+  // ЗАГРУЗКА РЕГИСТРАЦИЙ
   // ============================================================
   const loadRegistrations = async (eventId) => {
     try {
@@ -249,7 +249,6 @@ export default function Events() {
       );
 
       const data = await response.json();
-      console.log('📥 Ответ сервера:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Ошибка регистрации');
@@ -274,7 +273,7 @@ export default function Events() {
   };
 
   // ============================================================
-  // ОТПИСКА ОТ МЕРОПРИЯТИЯ
+  // ОТПИСКА
   // ============================================================
   const handleUnregister = async (registrationId) => {
     if (!confirm('Отписаться от мероприятия?')) return;
@@ -304,7 +303,7 @@ export default function Events() {
   };
 
   // ============================================================
-  // ИЗМЕНЕНИЕ СТАТУСА ЗАЯВКИ (ДЛЯ КООРДИНАТОРА)
+  // ИЗМЕНЕНИЕ СТАТУСА
   // ============================================================
   const handleRegistrationStatus = async (registrationId, status) => {
     try {
@@ -338,7 +337,7 @@ export default function Events() {
   };
 
   // ============================================================
-  // ОДОБРЕНИЕ ЗАЯВКИ КЛУБА (ДЛЯ КООРДИНАТОРА ДВИЖЕНИЯ)
+  // ОДОБРЕНИЕ ЗАЯВКИ КЛУБА
   // ============================================================
   const handleApproveClub = async (registrationId, status) => {
     if (!confirm(`Подтвердить ${status === 'approved' ? 'одобрение' : 'отклонение'} заявки клуба?`)) return;
@@ -504,7 +503,7 @@ export default function Events() {
   };
 
   // ============================================================
-  // СОЗДАНИЕ/ОБНОВЛЕНИЕ МЕРОПРИЯТИЯ
+  // СОЗДАНИЕ/ОБНОВЛЕНИЕ
   // ============================================================
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -717,8 +716,28 @@ export default function Events() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div className="page-loading">
         <div className="spinner" />
+        <style>{`
+          .page-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #F0EDE8;
+          }
+          .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #E4DFD8;
+            border-top-color: #C9A227;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
@@ -729,32 +748,17 @@ export default function Events() {
       <div className="container-page">
         
         {/* ============================================================
-           ШАПКА С КНОПКОЙ СОЗДАНИЯ
+           ЗАГОЛОВОК
            ============================================================ */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          marginBottom: '20px',
-          flexWrap: 'wrap',
-          gap: '12px'
-        }}>
-          <div>
-            <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#0B1F3A', margin: 0 }}>
-              📅 Мероприятия
-            </h1>
-            <p style={{ color: '#667085', margin: '4px 0 0 0' }}>
-              Всего: {filteredEvents.length}
-            </p>
+        <div className="page-header">
+          <div className="page-header-left">
+            <h1>📅 Мероприятия</h1>
+            <p>Всего: {filteredEvents.length}</p>
           </div>
-          
           {canCreate && (
             <button 
               className="btn-gold"
-              onClick={() => { 
-                setShowForm(!showForm); 
-              }}
-              style={{ padding: '10px 24px', fontSize: '14px' }}
+              onClick={() => setShowForm(!showForm)}
             >
               {showForm ? '✖ Закрыть' : '➕ Создать мероприятие'}
             </button>
@@ -768,18 +772,16 @@ export default function Events() {
         )}
 
         {canModerate && pendingEvents.length > 0 && (
-          <div className="card" style={{ marginBottom: '20px', background: '#FBF4DC', border: '2px solid #C9A227' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#8A6A00' }}>
-              ⏳ Ожидают модерации ({pendingEvents.length})
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+          <div className="card card-warning">
+            <h3>⏳ Ожидают модерации ({pendingEvents.length})</h3>
+            <div className="pending-list">
               {pendingEvents.map((e) => (
-                <div key={e.id} style={{ padding: '12px 16px', background: 'white', borderRadius: '8px', border: '1px solid #E2E7EF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div key={e.id} className="pending-item">
                   <div>
-                    <div style={{ fontWeight: '600' }}>{e.title}</div>
-                    <div style={{ fontSize: '13px', color: '#667085' }}>🏫 {e.club_name || 'Без клуба'}</div>
+                    <div className="pending-title">{e.title}</div>
+                    <div className="pending-club">🏫 {e.club_name || 'Без клуба'}</div>
                   </div>
-                  <button className="btn-primary" style={{ padding: '6px 16px', fontSize: '12px' }} onClick={() => { setSelectedEvent(e); setShowModerationModal(true); }}>
+                  <button className="btn-primary" onClick={() => { setSelectedEvent(e); setShowModerationModal(true); }}>
                     📋 Рассмотреть
                   </button>
                 </div>
@@ -794,51 +796,26 @@ export default function Events() {
           onSearchChange={setSearchQuery}
           searchPlaceholder="🔍 Поиск по названию, описанию, месту..."
         >
-          <div style={{ 
-            fontSize: '14px', 
-            color: '#667085', 
-            padding: '6px 16px', 
-            background: '#F8FAFC', 
-            borderRadius: '20px',
-            border: '1px solid #E2E7EF',
-            whiteSpace: 'nowrap'
-          }}>
-            Найдено: <strong style={{ color: '#0B1F3A' }}>{filteredEvents.length}</strong>
+          <div className="filter-count">
+            Найдено: <strong>{filteredEvents.length}</strong>
           </div>
         </FilterBar>
 
+        {/* ============================================================
+           ФОРМА СОЗДАНИЯ
+           ============================================================ */}
         {showForm && canCreate && (
-          <div className="card" style={{ marginBottom: '24px' }}>
+          <div className="card form-card">
             <h3>{form.id ? '✏️ Редактировать' : '📝 Создать мероприятие'}</h3>
             
             {isClubCoordinator && coordinatorClubId && (
-              <div style={{ 
-                padding: '10px 16px', 
-                background: '#EAF2FA', 
-                borderRadius: '8px', 
-                marginBottom: '16px',
-                fontSize: '14px',
-                color: '#174A7E',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
+              <div className="form-club-info">
                 🏫 <strong>Мероприятие для вашего клуба:</strong> {clubs.find(c => c.id === coordinatorClubId)?.name || 'КЮД'}
               </div>
             )}
 
             {isMovementCoordinator && (
-              <div style={{ 
-                padding: '12px 16px', 
-                background: '#EAF2FA', 
-                borderRadius: '8px', 
-                marginBottom: '16px',
-                fontSize: '14px',
-                color: '#174A7E',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
+              <div className="form-global-info">
                 🌍 <strong>Глобальное мероприятие</strong> — будет доступно всем участникам движения
               </div>
             )}
@@ -859,7 +836,7 @@ export default function Events() {
                 <input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
               </div>
               
-              <div className="grid-2">
+              <div className="form-row">
                 <div className="form-group">
                   <label>Дата начала *</label>
                   <input type="date" value={form.event_date} onChange={(e) => setForm({ ...form, event_date: e.target.value })} required />
@@ -870,7 +847,7 @@ export default function Events() {
                 </div>
               </div>
               
-              <div className="grid-2">
+              <div className="form-row">
                 <div className="form-group">
                   <label>Время начала</label>
                   <input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} />
@@ -881,7 +858,7 @@ export default function Events() {
                 </div>
               </div>
               
-              <div className="grid-3">
+              <div className="form-row-3">
                 <div className="form-group">
                   <label>Тип</label>
                   <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
@@ -896,7 +873,7 @@ export default function Events() {
                 </div>
               </div>
 
-              <div className="grid-2">
+              <div className="form-row">
                 <div className="form-group">
                   <label>Дедлайн регистрации</label>
                   <input 
@@ -904,9 +881,7 @@ export default function Events() {
                     value={form.registration_deadline} 
                     onChange={(e) => setForm({ ...form, registration_deadline: e.target.value })} 
                   />
-                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                    После этой даты запись будет закрыта
-                  </div>
+                  <div className="form-hint">После этой даты запись будет закрыта</div>
                 </div>
                 <div className="form-group">
                   <label>Максимум участников</label>
@@ -917,38 +892,21 @@ export default function Events() {
                     min="0"
                     placeholder="0 = без ограничений"
                   />
-                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                    0 = без ограничений
-                  </div>
+                  <div className="form-hint">0 = без ограничений</div>
                 </div>
               </div>
 
               {/* ============================================================
-                 ВЫБОР КЛУБОВ (УДОБНАЯ ВЕРСИЯ)
+                 ВЫБОР КЛУБОВ
                  ============================================================ */}
               {(isAdmin || isMovementCoordinator) && (
                 <div className="form-group">
                   <label>🎯 Отправить мероприятие клубам</label>
                   
-                  <div style={{ 
-                    display: 'flex', 
-                    gap: '12px', 
-                    flexWrap: 'wrap',
-                    marginBottom: '12px'
-                  }}>
+                  <div className="club-select-buttons">
                     <button
                       type="button"
                       className={form.is_global ? 'btn-primary' : 'btn-secondary'}
-                      style={{ 
-                        padding: '6px 16px', 
-                        fontSize: '13px',
-                        background: form.is_global ? '#6B46C1' : 'transparent',
-                        color: form.is_global ? 'white' : '#0A1628',
-                        border: form.is_global ? 'none' : '1.5px solid #E4DFD8',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontWeight: form.is_global ? '600' : '400'
-                      }}
                       onClick={() => {
                         setForm({ 
                           ...form, 
@@ -963,16 +921,6 @@ export default function Events() {
                     <button
                       type="button"
                       className={!form.is_global ? 'btn-primary' : 'btn-secondary'}
-                      style={{ 
-                        padding: '6px 16px', 
-                        fontSize: '13px',
-                        background: !form.is_global ? '#174A7E' : 'transparent',
-                        color: !form.is_global ? 'white' : '#0A1628',
-                        border: !form.is_global ? 'none' : '1.5px solid #E4DFD8',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontWeight: !form.is_global ? '600' : '400'
-                      }}
                       onClick={() => {
                         setForm({ 
                           ...form, 
@@ -985,14 +933,7 @@ export default function Events() {
                     </button>
                     
                     {!form.is_global && form.target_clubs?.length > 0 && (
-                      <span style={{ 
-                        padding: '6px 16px',
-                        background: '#E8F5EF',
-                        borderRadius: '8px',
-                        fontSize: '13px',
-                        color: '#16845B',
-                        fontWeight: '500'
-                      }}>
+                      <span className="club-count">
                         ✅ Выбрано: {form.target_clubs.length} из {clubs.length}
                       </span>
                     )}
@@ -1000,15 +941,7 @@ export default function Events() {
                     {!form.is_global && form.target_clubs?.length > 0 && (
                       <button
                         type="button"
-                        style={{
-                          padding: '6px 12px',
-                          fontSize: '12px',
-                          background: 'transparent',
-                          border: '1px solid #B3262E',
-                          borderRadius: '6px',
-                          color: '#B3262E',
-                          cursor: 'pointer'
-                        }}
+                        className="btn-clear"
                         onClick={() => setForm({ ...form, target_clubs: [] })}
                       >
                         ✕ Сбросить
@@ -1018,57 +951,18 @@ export default function Events() {
                   
                   {!form.is_global && (
                     <>
-                      <div style={{ position: 'relative', marginBottom: '10px' }}>
+                      <div className="club-search">
                         <input
                           type="text"
                           placeholder="🔍 Поиск клуба по названию..."
                           value={searchClubQuery || ''}
                           onChange={(e) => setSearchClubQuery(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '8px 14px',
-                            border: '1.5px solid #D5DCE7',
-                            borderRadius: '8px',
-                            fontSize: '13px',
-                            outline: 'none'
-                          }}
                         />
                       </div>
                       
-                      <div style={{ 
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                        gap: '6px',
-                        padding: '10px',
-                        border: '1px solid #E2E7EF',
-                        borderRadius: '8px',
-                        background: '#F8FAFC',
-                        maxHeight: '200px',
-                        overflowY: 'auto'
-                      }}>
+                      <div className="club-grid">
                         {filteredClubs.map((club) => (
-                          <label key={club.id} style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '8px',
-                            cursor: 'pointer',
-                            padding: '6px 10px',
-                            background: form.target_clubs?.includes(club.id) ? '#EAF2FA' : 'transparent',
-                            borderRadius: '6px',
-                            border: form.target_clubs?.includes(club.id) ? '1px solid #174A7E' : '1px solid transparent',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!form.target_clubs?.includes(club.id)) {
-                              e.currentTarget.style.background = '#F4F6F9';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!form.target_clubs?.includes(club.id)) {
-                              e.currentTarget.style.background = 'transparent';
-                            }
-                          }}
-                          >
+                          <label key={club.id} className="club-item">
                             <input
                               type="checkbox"
                               checked={form.target_clubs?.includes(club.id) || false}
@@ -1080,43 +974,15 @@ export default function Events() {
                                   setForm({ ...form, target_clubs: targetClubs.filter(id => id !== club.id) });
                                 }
                               }}
-                              style={{ 
-                                width: '16px', 
-                                height: '16px',
-                                accentColor: '#174A7E',
-                                cursor: 'pointer',
-                                flexShrink: 0
-                              }}
                             />
-                            <span style={{ fontSize: '13px' }}>
-                              🏫 {club.name}
-                              {club.participants_count !== undefined && (
-                                <span style={{ fontSize: '11px', color: '#98A2B3', marginLeft: '4px' }}>
-                                  ({club.participants_count || 0})
-                                </span>
-                              )}
-                            </span>
+                            <span>🏫 {club.name}</span>
                           </label>
                         ))}
                       </div>
                       
-                      <div style={{ 
-                        display: 'flex', 
-                        gap: '6px', 
-                        flexWrap: 'wrap',
-                        marginTop: '8px'
-                      }}>
+                      <div className="club-actions">
                         <button
                           type="button"
-                          style={{
-                            padding: '3px 12px',
-                            fontSize: '11px',
-                            background: '#EAF2FA',
-                            border: 'none',
-                            borderRadius: '4px',
-                            color: '#174A7E',
-                            cursor: 'pointer'
-                          }}
                           onClick={() => {
                             const allIds = clubs.map(c => c.id);
                             setForm({ ...form, target_clubs: allIds });
@@ -1126,30 +992,12 @@ export default function Events() {
                         </button>
                         <button
                           type="button"
-                          style={{
-                            padding: '3px 12px',
-                            fontSize: '11px',
-                            background: '#FCEBEC',
-                            border: 'none',
-                            borderRadius: '4px',
-                            color: '#B3262E',
-                            cursor: 'pointer'
-                          }}
                           onClick={() => setForm({ ...form, target_clubs: [] })}
                         >
                           ❌ Снять все
                         </button>
                         <button
                           type="button"
-                          style={{
-                            padding: '3px 12px',
-                            fontSize: '11px',
-                            background: '#FBF4DC',
-                            border: 'none',
-                            borderRadius: '4px',
-                            color: '#8A6A00',
-                            cursor: 'pointer'
-                          }}
                           onClick={() => {
                             const clubsWithParticipants = clubs.filter(c => c.participants_count > 0);
                             const ids = clubsWithParticipants.map(c => c.id);
@@ -1163,13 +1011,7 @@ export default function Events() {
                   )}
                   
                   {form.is_global && (
-                    <div style={{ 
-                      padding: '12px 16px', 
-                      background: '#EDE7F6', 
-                      borderRadius: '8px',
-                      fontSize: '13px',
-                      color: '#6B46C1'
-                    }}>
+                    <div className="global-info">
                       🌍 Мероприятие увидят ВСЕ КЮДы
                     </div>
                   )}
@@ -1184,12 +1026,10 @@ export default function Events() {
                   onChange={(e) => setForm({ ...form, form_url: e.target.value })} 
                   placeholder="https://example.com/event-form"
                 />
-                <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
-                  📎 Ссылка, которую увидят участники (Google Form, сайт и т.д.)
-                </div>
+                <div className="form-hint">📎 Ссылка, которую увидят участники</div>
               </div>
               
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div className="form-actions">
                 <button type="submit" className="btn-success" disabled={loading}>
                   {loading ? '⏳' : form.id ? '💾 Обновить' : '✅ Создать'}
                 </button>
@@ -1199,15 +1039,18 @@ export default function Events() {
           </div>
         )}
 
+        {/* ============================================================
+           СПИСОК МЕРОПРИЯТИЙ
+           ============================================================ */}
         <div className="card">
-          <h3 style={{ marginBottom: '16px' }}>Все мероприятия</h3>
+          <h3>Все мероприятия</h3>
           {filteredEvents.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">📭</div>
+              <div className="empty-icon">📭</div>
               <p>Мероприятий не найдено</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="events-list">
               {filteredEvents.map((event) => {
                 const userCanEdit = canEdit(event);
                 const userCanDelete = canDelete(event);
@@ -1222,7 +1065,6 @@ export default function Events() {
                 const isConfirmed = userRegistration?.status === 'confirmed';
                 const isRejected = userRegistration?.status === 'rejected';
                 
-                // ✅ ИСПРАВЛЕНО: безопасный парсинг даты
                 let isDeadlinePassed = false;
                 if (event.registration_deadline) {
                   try {
@@ -1250,7 +1092,7 @@ export default function Events() {
                 return (
                   <div
                     key={event.id}
-                    className="list-item"
+                    className="event-item"
                     style={{
                       borderLeftColor: event.moderation_status === 'pending' ? '#C9A227' :
                                     event.is_global ? '#6B46C1' :
@@ -1259,45 +1101,31 @@ export default function Events() {
                                     event.type === 'outgoing' ? '#C9A227' : '#B3262E'
                     }}
                   >
-                    <div className="title">
+                    <div className="event-title">
                       {event.title}
                       {event.is_global && (
-                        <span className="tag" style={{ marginLeft: '8px', background: '#EDE7F6', color: '#6B46C1', fontSize: '10px' }}>
-                          🌍 Глобальное
-                        </span>
+                        <span className="tag tag-global">🌍 Глобальное</span>
                       )}
                       {event.is_club_event && (
-                        <span className="tag" style={{ marginLeft: '8px', background: '#EAF2FA', color: '#174A7E', fontSize: '10px' }}>
-                          🏫 Внутреннее
-                        </span>
+                        <span className="tag tag-club">🏫 Внутреннее</span>
                       )}
                       {event.type === 'outgoing' && (
-                        <span className="tag" style={{ marginLeft: '8px', background: '#FBF4DC', color: '#8A6A00', fontSize: '10px' }}>
-                          🌍 Выездное
-                        </span>
+                        <span className="tag tag-outgoing">🌍 Выездное</span>
                       )}
                       {event.moderation_status === 'pending' && (
-                        <span className="tag" style={{ marginLeft: '8px', background: '#FBF4DC', color: '#8A6A00', fontSize: '10px' }}>
-                          ⏳ На модерации
-                        </span>
+                        <span className="tag tag-pending">⏳ На модерации</span>
                       )}
                       {event.moderation_status === 'rejected' && (
-                        <span className="tag" style={{ marginLeft: '8px', background: '#FCEBEC', color: '#B3262E', fontSize: '10px' }}>
-                          ❌ Отклонено
-                        </span>
+                        <span className="tag tag-rejected">❌ Отклонено</span>
                       )}
                       {isFull && (
-                        <span className="tag" style={{ marginLeft: '8px', background: '#FCEBEC', color: '#B3262E', fontSize: '10px' }}>
-                          ⚠️ Мест нет
-                        </span>
+                        <span className="tag tag-full">⚠️ Мест нет</span>
                       )}
                       {isDeadlinePassed && (
-                        <span className="tag" style={{ marginLeft: '8px', background: '#F4F6F9', color: '#667085', fontSize: '10px' }}>
-                          ⛔ Регистрация закрыта
-                        </span>
+                        <span className="tag tag-closed">⛔ Регистрация закрыта</span>
                       )}
                     </div>
-                    <div className="subtitle">
+                    <div className="event-subtitle">
                       📅 {event.event_date ? new Date(event.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
                       {event.location && ` 📍 ${event.location}`}
                       {event.club_name && ` 🏫 ${event.club_name}`}
@@ -1306,26 +1134,12 @@ export default function Events() {
                         ` ⏰ Дедлайн: ${new Date(event.registration_deadline).toLocaleDateString('ru-RU')}`
                       )}
                     </div>
-                    {event.description && <div className="meta">{event.description}</div>}
+                    {event.description && <div className="event-description">{event.description}</div>}
                     
                     {/* ССЫЛКА НА ФОРМУ */}
                     {event.form_url && (
-                      <div style={{ marginTop: '6px' }}>
-                        <a 
-                          href={event.form_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          style={{ 
-                            color: '#174A7E', 
-                            textDecoration: 'underline',
-                            fontSize: '13px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                          onMouseEnter={(e) => e.target.style.color = '#C9A227'}
-                          onMouseLeave={(e) => e.target.style.color = '#174A7E'}
-                        >
+                      <div className="event-link">
+                        <a href={event.form_url} target="_blank" rel="noopener noreferrer">
                           📎 Ссылка на мероприятие
                         </a>
                       </div>
@@ -1333,23 +1147,17 @@ export default function Events() {
                     
                     {/* БЛОК РЕГИСТРАЦИИ */}
                     {canRegister && event.moderation_status === 'approved' && (
-                      <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <div className="event-registration">
                         {isParticipant && !isOutgoingOrGlobal && (
                           <>
                             {isRejected && (
-                              <span style={{ color: '#B3262E', fontSize: '13px', fontWeight: '500' }}>
-                                ❌ Ваша заявка отклонена
-                              </span>
+                              <span className="reg-status rejected">❌ Ваша заявка отклонена</span>
                             )}
                             {isPending && (
-                              <span style={{ color: '#C9A227', fontSize: '13px', fontWeight: '500' }}>
-                                ⏳ Заявка на рассмотрении
-                              </span>
+                              <span className="reg-status pending">⏳ Заявка на рассмотрении</span>
                             )}
                             {isConfirmed && (
-                              <span style={{ color: '#16845B', fontSize: '13px', fontWeight: '500' }}>
-                                ✅ Вы записаны
-                              </span>
+                              <span className="reg-status confirmed">✅ Вы записаны</span>
                             )}
                             {!isRegistered && !isDeadlinePassed && !isFull && (
                               <button
@@ -1377,14 +1185,10 @@ export default function Events() {
                               </button>
                             )}
                             {isDeadlinePassed && !isRegistered && (
-                              <span style={{ color: '#98A2B3', fontSize: '13px' }}>
-                                ⛔ Регистрация закрыта
-                              </span>
+                              <span className="reg-status closed">⛔ Регистрация закрыта</span>
                             )}
                             {isFull && !isRegistered && (
-                              <span style={{ color: '#B3262E', fontSize: '13px' }}>
-                                ⚠️ Все места заняты
-                              </span>
+                              <span className="reg-status full">⚠️ Все места заняты</span>
                             )}
                           </>
                         )}
@@ -1392,19 +1196,13 @@ export default function Events() {
                         {isClubCoord && isOutgoingOrGlobal && (
                           <>
                             {clubRegistration?.status === 'pending' && (
-                              <span style={{ color: '#C9A227', fontSize: '13px', fontWeight: '500' }}>
-                                ⏳ Заявка клуба на рассмотрении
-                              </span>
+                              <span className="reg-status pending">⏳ Заявка клуба на рассмотрении</span>
                             )}
                             {clubRegistration?.status === 'confirmed' && (
-                              <span style={{ color: '#16845B', fontSize: '13px', fontWeight: '500' }}>
-                                ✅ Заявка клуба одобрена
-                              </span>
+                              <span className="reg-status confirmed">✅ Заявка клуба одобрена</span>
                             )}
                             {clubRegistration?.status === 'rejected' && (
-                              <span style={{ color: '#B3262E', fontSize: '13px', fontWeight: '500' }}>
-                                ❌ Заявка клуба отклонена
-                              </span>
+                              <span className="reg-status rejected">❌ Заявка клуба отклонена</span>
                             )}
                             {!clubRegistration && !isDeadlinePassed && !isFull && (
                               <button
@@ -1424,34 +1222,24 @@ export default function Events() {
                               </button>
                             )}
                             {isDeadlinePassed && !clubRegistration && (
-                              <span style={{ color: '#98A2B3', fontSize: '13px' }}>
-                                ⛔ Регистрация закрыта
-                              </span>
+                              <span className="reg-status closed">⛔ Регистрация закрыта</span>
                             )}
                             {isFull && !clubRegistration && (
-                              <span style={{ color: '#B3262E', fontSize: '13px' }}>
-                                ⚠️ Все места заняты
-                              </span>
+                              <span className="reg-status full">⚠️ Все места заняты</span>
                             )}
                           </>
                         )}
                       </div>
                     )}
                     
-                    <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <div className="event-actions">
                       {userCanEdit && (
-                        <button
-                          className="btn-secondary btn-sm"
-                          onClick={() => handleEdit(event)}
-                        >
+                        <button className="btn-secondary btn-sm" onClick={() => handleEdit(event)}>
                           ✏️ Редактировать
                         </button>
                       )}
                       {userCanDelete && (
-                        <button
-                          className="btn-danger btn-sm"
-                          onClick={() => handleDelete(event.id)}
-                        >
+                        <button className="btn-danger btn-sm" onClick={() => handleDelete(event.id)}>
                           🗑️ Удалить
                         </button>
                       )}
@@ -1459,19 +1247,13 @@ export default function Events() {
                         <>
                           <button
                             className="btn-success btn-sm"
-                            onClick={() => {
-                              setSelectedEvent(event);
-                              setShowModerationModal(true);
-                            }}
+                            onClick={() => { setSelectedEvent(event); setShowModerationModal(true); }}
                           >
                             ✅ Одобрить
                           </button>
                           <button
                             className="btn-danger btn-sm"
-                            onClick={() => {
-                              setSelectedEvent(event);
-                              setShowModerationModal(true);
-                            }}
+                            onClick={() => { setSelectedEvent(event); setShowModerationModal(true); }}
                           >
                             ❌ Отклонить
                           </button>
@@ -1525,37 +1307,30 @@ export default function Events() {
       </div>
 
       {/* ============================================================
-         МОДАЛЬНОЕ ОКНО: СПИСОК УЧАСТНИКОВ
+         МОДАЛЬНОЕ ОКНО: УЧАСТНИКИ
          ============================================================ */}
       {showRegistrationsModal && selectedEventForRegistrations && (
         <div className="modal-overlay" onClick={() => setShowRegistrationsModal(false)}>
           <div className="modal modal-large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">👥 Участники мероприятия</h3>
+              <h3>👥 Участники мероприятия</h3>
               <button className="modal-close" onClick={() => setShowRegistrationsModal(false)}>✕</button>
             </div>
 
-            <p style={{ color: '#667085', marginBottom: '12px' }}>
+            <p className="modal-subtitle">
               <strong>{selectedEventForRegistrations.title}</strong>
               {selectedEventForRegistrations.max_participants > 0 && (
-                <span style={{ marginLeft: '12px' }}>
-                  👥 {selectedEventForRegistrations.registrations_count || 0}/{selectedEventForRegistrations.max_participants}
-                </span>
+                <span> 👥 {selectedEventForRegistrations.registrations_count || 0}/{selectedEventForRegistrations.max_participants}</span>
               )}
             </p>
 
             {loadingRegistrations ? (
-              <div style={{ textAlign: 'center', padding: '40px' }}>
-                <div className="spinner" style={{ margin: '0 auto' }} />
-              </div>
+              <div className="modal-loading"><div className="spinner" /></div>
             ) : registrations.length === 0 ? (
-              <div className="empty-state">
-                <div className="icon">👀</div>
-                <p>Пока нет зарегистрированных участников</p>
-              </div>
+              <div className="empty-state"><div className="empty-icon">👀</div><p>Пока нет зарегистрированных участников</p></div>
             ) : (
               <>
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                <div className="registrations-stats">
                   {registrationsStats.map((stat) => (
                     <span key={stat.status} className="tag" style={{
                       background: stat.status === 'confirmed' ? '#E8F5EF' :
@@ -1572,17 +1347,6 @@ export default function Events() {
                        stat.status === 'rejected' ? '❌ Отклонено' : stat.status}: {stat.count}
                     </span>
                   ))}
-                </div>
-
-                <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'flex-end' }}>
-                  <button
-                    className="btn-primary btn-sm"
-                    style={{ background: '#16845B', color: 'white' }}
-                    onClick={() => handleExport(selectedEventForRegistrations.id, selectedEventForRegistrations.title)}
-                    disabled={exporting}
-                  >
-                    {exporting ? '⏳' : '📊 Выгрузить в Excel'}
-                  </button>
                 </div>
 
                 <div className="table-wrapper">
@@ -1603,23 +1367,15 @@ export default function Events() {
                         return (
                           <tr key={reg.id}>
                             <td>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{
-                                  width: '32px',
-                                  height: '32px',
-                                  borderRadius: '50%',
+                              <div className="participant-cell">
+                                <div className="participant-avatar" style={{
                                   background: isClubRegistration ? 'linear-gradient(135deg, #C9A227, #E8D9A8)' : 'linear-gradient(135deg, #0B1F3A, #174A7E)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: isClubRegistration ? '#0B1F3A' : 'white',
-                                  fontSize: '12px',
-                                  fontWeight: 'bold'
+                                  color: isClubRegistration ? '#0B1F3A' : 'white'
                                 }}>
                                   {isClubRegistration ? '🏫' : (reg.full_name?.charAt(0) || '?')}
                                 </div>
                                 <div>
-                                  <div style={{ fontWeight: '500', fontSize: '14px' }}>
+                                  <div className="participant-name">
                                     {reg.full_name}
                                     {isClubRegistration && (
                                       <span className="tag" style={{ marginLeft: '8px', background: '#FBF4DC', color: '#8A6A00', fontSize: '9px' }}>
@@ -1627,23 +1383,19 @@ export default function Events() {
                                       </span>
                                     )}
                                   </div>
-                                  <div style={{ fontSize: '12px', color: '#98A2B3' }}>
+                                  <div className="participant-info">
                                     {reg.school || 'Школа не указана'} • {reg.class_name || '—'}
                                   </div>
                                 </div>
                               </div>
                             </td>
                             <td>
-                              <div style={{ fontSize: '13px', color: '#667085' }}>
+                              <div className="participant-contact">
                                 {reg.email}
-                                {reg.phone && <div style={{ fontSize: '12px', color: '#98A2B3' }}>📞 {reg.phone}</div>}
+                                {reg.phone && <div>📞 {reg.phone}</div>}
                               </div>
                             </td>
-                            <td>
-                              <span className="tag" style={{ background: '#EAF2FA', color: '#174A7E', fontSize: '11px' }}>
-                                {reg.club_name || '—'}
-                              </span>
-                            </td>
+                            <td><span className="tag tag-blue">{reg.club_name || '—'}</span></td>
                             <td>
                               <span className="tag" style={{
                                 background: reg.status === 'confirmed' ? '#E8F5EF' :
@@ -1652,64 +1404,58 @@ export default function Events() {
                                 color: reg.status === 'confirmed' ? '#16845B' :
                                        reg.status === 'pending' ? '#8A6A00' :
                                        reg.status === 'rejected' ? '#B3262E' : '#667085',
-                                padding: '4px 12px',
-                                fontSize: '12px'
                               }}>
                                 {reg.status === 'confirmed' ? '✅ Подтверждён' :
                                  reg.status === 'pending' ? '⏳ Ожидает' :
                                  reg.status === 'rejected' ? '❌ Отклонён' : reg.status}
                               </span>
                             </td>
-                            <td style={{ fontSize: '13px', color: '#98A2B3' }}>
+                            <td>
                               {new Date(reg.registered_at).toLocaleDateString('ru-RU')}
                               {reg.confirmed_at && (
-                                <div style={{ fontSize: '11px', color: '#16845B' }}>
+                                <div style={{ color: '#16845B', fontSize: '11px' }}>
                                   ✅ {new Date(reg.confirmed_at).toLocaleDateString('ru-RU')}
                                 </div>
                               )}
                             </td>
                             <td>
                               {reg.status === 'pending' && !isClubRegistration && (
-                                <div style={{ display: 'flex', gap: '4px' }}>
+                                <div className="action-buttons">
                                   <button
                                     className="btn-success btn-sm"
                                     onClick={() => handleRegistrationStatus(reg.id, 'confirmed')}
-                                    style={{ padding: '2px 10px', fontSize: '11px' }}
                                   >
                                     ✅
                                   </button>
                                   <button
                                     className="btn-danger btn-sm"
                                     onClick={() => handleRegistrationStatus(reg.id, 'rejected')}
-                                    style={{ padding: '2px 10px', fontSize: '11px' }}
                                   >
                                     ❌
                                   </button>
                                 </div>
                               )}
                               {reg.status === 'pending' && isClubRegistration && (
-                                <div style={{ display: 'flex', gap: '4px' }}>
+                                <div className="action-buttons">
                                   <button
                                     className="btn-success btn-sm"
                                     onClick={() => handleApproveClub(reg.id, 'approved')}
-                                    style={{ padding: '2px 10px', fontSize: '11px' }}
                                   >
                                     ✅ Одобрить клуб
                                   </button>
                                   <button
                                     className="btn-danger btn-sm"
                                     onClick={() => handleApproveClub(reg.id, 'rejected')}
-                                    style={{ padding: '2px 10px', fontSize: '11px' }}
                                   >
                                     ❌ Отклонить
                                   </button>
                                 </div>
                               )}
                               {reg.status === 'confirmed' && (
-                                <span style={{ color: '#16845B', fontSize: '12px' }}>✅ Подтверждён</span>
+                                <span style={{ color: '#16845B' }}>✅ Подтверждён</span>
                               )}
                               {reg.status === 'rejected' && (
-                                <span style={{ color: '#B3262E', fontSize: '12px' }}>❌ Отклонён</span>
+                                <span style={{ color: '#B3262E' }}>❌ Отклонён</span>
                               )}
                             </td>
                           </tr>
@@ -1721,7 +1467,7 @@ export default function Events() {
               </>
             )}
 
-            <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
+            <div className="modal-actions">
               <button className="btn-secondary" onClick={() => setShowRegistrationsModal(false)}>
                 Закрыть
               </button>
@@ -1731,13 +1477,13 @@ export default function Events() {
       )}
 
       {/* ============================================================
-         МОДАЛЬНОЕ ОКНО МОДЕРАЦИИ
+         МОДАЛЬНОЕ ОКНО: МОДЕРАЦИЯ
          ============================================================ */}
       {showModerationModal && selectedEvent && (
         <div className="modal-overlay" onClick={() => setShowModerationModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">📋 Модерация</h3>
+              <h3>📋 Модерация</h3>
               <button className="modal-close" onClick={() => setShowModerationModal(false)}>✕</button>
             </div>
 
@@ -1754,11 +1500,11 @@ export default function Events() {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button className="btn-success" style={{ flex: 1 }} onClick={() => handleModerate(selectedEvent.id, 'approved')}>
+            <div className="modal-actions">
+              <button className="btn-success" onClick={() => handleModerate(selectedEvent.id, 'approved')}>
                 ✅ Одобрить
               </button>
-              <button className="btn-danger" style={{ flex: 1 }} onClick={() => handleModerate(selectedEvent.id, 'rejected')}>
+              <button className="btn-danger" onClick={() => handleModerate(selectedEvent.id, 'rejected')}>
                 ❌ Отклонить
               </button>
             </div>
@@ -1776,11 +1522,11 @@ export default function Events() {
         <div className="modal-overlay" onClick={() => setShowTutorModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">🧑‍🏫 Назначить тьютора</h3>
+              <h3>🧑‍🏫 Назначить тьютора</h3>
               <button className="modal-close" onClick={() => setShowTutorModal(false)}>✕</button>
             </div>
 
-            <p style={{ color: '#667085', marginBottom: '16px' }}>
+            <p className="modal-subtitle">
               Мероприятие: <strong>{selectedEventForTutor.title}</strong>
             </p>
 
@@ -1824,8 +1570,8 @@ export default function Events() {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button className="btn-success" style={{ flex: 1 }} onClick={handleAssignTutor}>
+            <div className="modal-actions">
+              <button className="btn-success" onClick={handleAssignTutor}>
                 ✅ Назначить
               </button>
               <button
@@ -1843,7 +1589,12 @@ export default function Events() {
         </div>
       )}
 
+      <Footer />
+
       <style>{`
+        /* ============================================================
+           ОСНОВНЫЕ СТИЛИ
+           ============================================================ */
         .page-background {
           min-height: 100vh;
           background: #F0EDE8;
@@ -1855,6 +1606,33 @@ export default function Events() {
           padding: 24px 32px 48px;
         }
 
+        /* ============================================================
+           ЗАГОЛОВОК
+           ============================================================ */
+        .page-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .page-header-left h1 {
+          font-size: 24px;
+          font-weight: 700;
+          color: #0B1F3A;
+          margin: 0;
+        }
+
+        .page-header-left p {
+          color: #667085;
+          margin: 4px 0 0 0;
+        }
+
+        /* ============================================================
+           КНОПКИ
+           ============================================================ */
         .btn-gold {
           display: inline-flex;
           align-items: center;
@@ -1935,6 +1713,43 @@ export default function Events() {
           pointer-events: none;
         }
 
+        /* ============================================================
+           КАРТОЧКИ
+           ============================================================ */
+        .card {
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
+          margin-bottom: 20px;
+        }
+
+        .card-warning {
+          background: #FBF4DC;
+          border: 2px solid #C9A227;
+        }
+
+        .card h3 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #0A1628;
+          margin: 0 0 12px 0;
+        }
+
+        /* ============================================================
+           ФОРМА
+           ============================================================ */
+        .form-card {
+          margin-bottom: 24px;
+        }
+
+        .form-card h3 {
+          font-size: 18px;
+          font-weight: 600;
+          margin-bottom: 16px;
+        }
+
         .form-group {
           margin-bottom: 16px;
         }
@@ -1970,53 +1785,262 @@ export default function Events() {
           min-height: 80px;
         }
 
-        .grid-2 {
+        .form-hint {
+          font-size: 11px;
+          color: #98A2B3;
+          margin-top: 4px;
+        }
+
+        .form-row {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 16px;
         }
-        .grid-3 {
+
+        .form-row-3 {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 16px;
         }
 
-        .card {
-          background: white;
-          border-radius: 12px;
-          padding: 24px;
-          border: 1px solid #E4DFD8;
-          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
-          margin-bottom: 20px;
+        .form-actions {
+          display: flex;
+          gap: 12px;
+          margin-top: 8px;
         }
 
-        .list-item {
+        .form-club-info {
+          padding: 10px 16px;
+          background: #EAF2FA;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          font-size: 14px;
+          color: #174A7E;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .form-global-info {
+          padding: 12px 16px;
+          background: #EAF2FA;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          font-size: 14px;
+          color: #174A7E;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        /* ============================================================
+           ВЫБОР КЛУБОВ
+           ============================================================ */
+        .club-select-buttons {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-bottom: 8px;
+        }
+
+        .club-count {
+          padding: 6px 16px;
+          background: #E8F5EF;
+          border-radius: 8px;
+          font-size: 13px;
+          color: #16845B;
+          font-weight: 500;
+          display: inline-flex;
+          align-items: center;
+        }
+
+        .btn-clear {
+          padding: 6px 12px;
+          font-size: 12px;
+          background: transparent;
+          border: 1px solid #B3262E;
+          border-radius: 6px;
+          color: #B3262E;
+          cursor: pointer;
+        }
+        .btn-clear:hover {
+          background: #FCEBEC;
+        }
+
+        .club-search input {
+          width: 100%;
+          padding: 8px 14px;
+          border: 1.5px solid #D5DCE7;
+          border-radius: 8px;
+          font-size: 13px;
+          outline: none;
+          margin-bottom: 10px;
+        }
+        .club-search input:focus {
+          border-color: #C9A227;
+          box-shadow: 0 0 0 3px rgba(201,162,39,0.1);
+        }
+
+        .club-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: 6px;
+          padding: 10px;
+          border: 1px solid #E2E7EF;
+          border-radius: 8px;
+          background: #F8FAFC;
+          max-height: 200px;
+          overflow-y: auto;
+        }
+
+        .club-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          padding: 6px 10px;
+          border-radius: 6px;
+          transition: all 0.2s ease;
+          border: 1px solid transparent;
+        }
+        .club-item:hover {
+          background: #F4F6F9;
+        }
+        .club-item:has(input:checked) {
+          background: #EAF2FA;
+          border-color: #174A7E;
+        }
+        .club-item input[type="checkbox"] {
+          width: 16px;
+          height: 16px;
+          accent-color: #174A7E;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+        .club-item span {
+          font-size: 13px;
+        }
+
+        .club-actions {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+          margin-top: 8px;
+        }
+        .club-actions button {
+          padding: 3px 12px;
+          font-size: 11px;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+        .club-actions button:first-child {
+          background: #EAF2FA;
+          color: #174A7E;
+        }
+        .club-actions button:nth-child(2) {
+          background: #FCEBEC;
+          color: #B3262E;
+        }
+        .club-actions button:last-child {
+          background: #FBF4DC;
+          color: #8A6A00;
+        }
+
+        .global-info {
+          padding: 12px 16px;
+          background: #EDE7F6;
+          border-radius: 8px;
+          font-size: 13px;
+          color: #6B46C1;
+        }
+
+        /* ============================================================
+           СПИСОК МЕРОПРИЯТИЙ
+           ============================================================ */
+        .events-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .event-item {
           padding: 14px 18px;
           border-left: 3px solid #0B1F3A;
           background: #F8FAFC;
           border-radius: 0 8px 8px 0;
           transition: all 0.2s ease;
         }
-        .list-item:hover {
+        .event-item:hover {
           background: #F0EDE8;
           transform: translateX(4px);
         }
-        .list-item .title {
+
+        .event-title {
           font-weight: 600;
           color: #0B1F3A;
           font-size: 15px;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 4px;
         }
-        .list-item .subtitle {
+
+        .event-subtitle {
           font-size: 13px;
           color: #667085;
           margin-top: 2px;
         }
-        .list-item .meta {
+
+        .event-description {
           font-size: 12px;
           color: #98A2B3;
           margin-top: 4px;
         }
 
+        .event-link {
+          margin-top: 6px;
+        }
+        .event-link a {
+          color: #174A7E;
+          text-decoration: underline;
+          font-size: 13px;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .event-link a:hover {
+          color: #C9A227;
+        }
+
+        .event-registration {
+          margin-top: 8px;
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+
+        .event-actions {
+          margin-top: 8px;
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .reg-status {
+          font-size: 13px;
+          font-weight: 500;
+        }
+        .reg-status.pending { color: #C9A227; }
+        .reg-status.confirmed { color: #16845B; }
+        .reg-status.rejected { color: #B3262E; }
+        .reg-status.closed { color: #98A2B3; }
+        .reg-status.full { color: #B3262E; }
+
+        /* ============================================================
+           ТЕГИ
+           ============================================================ */
         .tag {
           display: inline-block;
           padding: 2px 10px;
@@ -2024,7 +2048,57 @@ export default function Events() {
           font-size: 10px;
           font-weight: 500;
         }
+        .tag-global { background: #EDE7F6; color: #6B46C1; }
+        .tag-club { background: #EAF2FA; color: #174A7E; }
+        .tag-outgoing { background: #FBF4DC; color: #8A6A00; }
+        .tag-pending { background: #FBF4DC; color: #8A6A00; }
+        .tag-rejected { background: #FCEBEC; color: #B3262E; }
+        .tag-full { background: #FCEBEC; color: #B3262E; }
+        .tag-closed { background: #F4F6F9; color: #667085; }
+        .tag-blue { background: #EAF2FA; color: #174A7E; }
 
+        /* ============================================================
+           ПЕРЕЧЕНЬ МОДЕРАЦИИ
+           ============================================================ */
+        .pending-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-top: 8px;
+        }
+        .pending-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 16px;
+          background: white;
+          border-radius: 8px;
+          border: 1px solid #E2E7EF;
+        }
+        .pending-title {
+          font-weight: 600;
+        }
+        .pending-club {
+          font-size: 13px;
+          color: #667085;
+        }
+
+        /* ============================================================
+           ФИЛЬТР
+           ============================================================ */
+        .filter-count {
+          font-size: 14px;
+          color: #667085;
+          padding: 6px 16px;
+          background: #F8FAFC;
+          border-radius: 20px;
+          border: 1px solid #E2E7EF;
+          white-space: nowrap;
+        }
+
+        /* ============================================================
+           СООБЩЕНИЯ
+           ============================================================ */
         .message-success {
           padding: 12px 16px;
           background: #E8F5EF;
@@ -2042,11 +2116,14 @@ export default function Events() {
           border-left: 4px solid #B3262E;
         }
 
+        /* ============================================================
+           EMPTY STATE
+           ============================================================ */
         .empty-state {
           text-align: center;
           padding: 40px 20px;
         }
-        .empty-state .icon {
+        .empty-icon {
           font-size: 48px;
           margin-bottom: 12px;
           opacity: 0.6;
@@ -2056,6 +2133,9 @@ export default function Events() {
           font-size: 14px;
         }
 
+        /* ============================================================
+           МОДАЛЬНОЕ ОКНО
+           ============================================================ */
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -2094,7 +2174,7 @@ export default function Events() {
           margin-bottom: 16px;
         }
 
-        .modal-title {
+        .modal-header h3 {
           font-family: 'Playfair Display', serif;
           font-size: 20px;
           font-weight: 600;
@@ -2112,6 +2192,26 @@ export default function Events() {
           padding: 4px 8px;
         }
         .modal-close:hover { color: #0A1628; }
+
+        .modal-subtitle {
+          color: #667085;
+          margin-bottom: 12px;
+          font-size: 14px;
+        }
+
+        .modal-actions {
+          display: flex;
+          gap: 12px;
+          margin-top: 16px;
+        }
+        .modal-actions .btn {
+          flex: 1;
+        }
+
+        .modal-loading {
+          text-align: center;
+          padding: 40px;
+        }
 
         .form-control {
           width: 100%;
@@ -2131,6 +2231,9 @@ export default function Events() {
           box-shadow: 0 0 0 3px rgba(201,162,39,0.08);
         }
 
+        /* ============================================================
+           ТАБЛИЦА
+           ============================================================ */
         .table-wrapper {
           overflow-x: auto;
           background: white;
@@ -2174,6 +2277,54 @@ export default function Events() {
           border-bottom: none;
         }
 
+        .participant-cell {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .participant-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          font-weight: bold;
+          flex-shrink: 0;
+        }
+
+        .participant-name {
+          font-weight: 500;
+          font-size: 14px;
+        }
+
+        .participant-info {
+          font-size: 12px;
+          color: #98A2B3;
+        }
+
+        .participant-contact {
+          font-size: 13px;
+          color: #667085;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 4px;
+        }
+
+        .registrations-stats {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-bottom: 16px;
+        }
+
+        /* ============================================================
+           СПИННЕР
+           ============================================================ */
         .spinner {
           width: 36px;
           height: 36px;
@@ -2188,32 +2339,49 @@ export default function Events() {
           to { transform: rotate(360deg); }
         }
 
+        /* ============================================================
+           АДАПТИВНОСТЬ
+           ============================================================ */
+        @media (max-width: 1024px) {
+          .container-page {
+            padding: 20px 24px 32px;
+          }
+        }
+
         @media (max-width: 768px) {
           .container-page {
             padding: 16px;
           }
-          .grid-2, .grid-3 {
+
+          .page-header {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .page-header .btn-gold {
+            width: 100%;
+            justify-content: center;
+          }
+
+          .form-row,
+          .form-row-3 {
             grid-template-columns: 1fr;
           }
+
           .card {
             padding: 16px;
           }
+
           .modal {
             padding: 20px;
           }
           .modal-large {
             max-width: 100%;
           }
-        }
 
-        @media (max-width: 480px) {
-          .container-page {
-            padding: 12px;
+          .club-grid {
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
           }
-          .btn-gold {
-            width: 100%;
-            justify-content: center;
-          }
+
           .table {
             min-width: 480px;
             font-size: 12px;
@@ -2222,11 +2390,91 @@ export default function Events() {
           .table tbody td {
             padding: 8px 12px;
           }
-          .list-item {
+
+          .event-item {
             padding: 12px 14px;
           }
-          .list-item .title {
+          .event-title {
             font-size: 14px;
+          }
+
+          .participant-cell {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .modal-actions {
+            flex-direction: column;
+          }
+          .modal-actions .btn {
+            width: 100%;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .container-page {
+            padding: 12px;
+          }
+
+          .page-header-left h1 {
+            font-size: 20px;
+          }
+
+          .btn-gold {
+            padding: 8px 16px;
+            font-size: 13px;
+            min-height: 36px;
+          }
+
+          .btn-sm {
+            padding: 4px 10px;
+            font-size: 11px;
+            min-height: 28px;
+            min-width: 40px;
+          }
+
+          .club-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .table {
+            min-width: 360px;
+            font-size: 11px;
+          }
+          .table thead th,
+          .table tbody td {
+            padding: 6px 8px;
+          }
+
+          .event-item {
+            padding: 10px 12px;
+          }
+          .event-title {
+            font-size: 13px;
+          }
+
+          .modal {
+            padding: 16px;
+          }
+          .modal-header h3 {
+            font-size: 18px;
+          }
+
+          .pending-item {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+          }
+          .pending-item .btn-primary {
+            width: 100%;
+          }
+
+          .club-select-buttons {
+            flex-direction: column;
+          }
+          .club-select-buttons .btn {
+            width: 100%;
+            justify-content: center;
           }
         }
       `}</style>

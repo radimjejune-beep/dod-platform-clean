@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Footer from '../components/Footer';
 
 export default function Reports() {
   const [profile, setProfile] = useState(null);
@@ -109,10 +110,8 @@ export default function Reports() {
 
         if (coordinatorClubId) {
           filteredReports = reportsData.filter(r => r.club_id === coordinatorClubId);
-          console.log(`🏫 Координатор КЮДа: показано ${filteredReports.length} отчётов для клуба`);
         } else {
           filteredReports = [];
-          console.log('❌ Клуб координатора не найден');
         }
       } 
       // ============================================================
@@ -120,7 +119,6 @@ export default function Reports() {
       // ============================================================
       else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
         filteredReports = reportsData || [];
-        console.log(`👑 ${role}: показано ${filteredReports.length} отчётов`);
       } 
       else {
         filteredReports = [];
@@ -204,8 +202,6 @@ export default function Reports() {
         events_count: parseInt(form.events_count) || 0,
         participants_count: parseInt(form.participants_count) || 0
       };
-
-      console.log('📤 Отправка отчёта:', data);
 
       let response;
       let result;
@@ -421,8 +417,28 @@ export default function Reports() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div className="page-loading">
         <div className="spinner" />
+        <style>{`
+          .page-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #F0EDE8;
+          }
+          .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #E4DFD8;
+            border-top-color: #C9A227;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
@@ -433,11 +449,12 @@ export default function Reports() {
         <Navigation profile={profile} />
         <div className="container-page">
           <div className="empty-state">
-            <div className="icon">⛔</div>
+            <div className="empty-icon">⛔</div>
             <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Доступ запрещён</p>
             <p style={{ color: '#667085' }}>Только координаторы и администраторы</p>
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -446,22 +463,14 @@ export default function Reports() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
+        
         {/* ============================================================
-           ШАПКА С КНОПКОЙ СОЗДАНИЯ
+           ЗАГОЛОВОК
            ============================================================ */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          marginBottom: '20px',
-          flexWrap: 'wrap',
-          gap: '12px'
-        }}>
-          <div>
-            <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#0B1F3A', margin: 0 }}>
-              📋 Отчёты
-            </h1>
-            <p style={{ color: '#667085', margin: '4px 0 0 0' }}>
+        <div className="page-header">
+          <div className="page-header-left">
+            <h1>📋 Отчёты</h1>
+            <p>
               {isClubCoordinator 
                 ? `Ежемесячные отчёты вашего клуба (${reports.length})` 
                 : `Проверка и утверждение отчётов всех КЮДов (${reports.length})`}
@@ -481,7 +490,6 @@ export default function Reports() {
                 });
                 setShowForm(!showForm);
               }}
-              style={{ padding: '10px 24px', fontSize: '14px' }}
             >
               {showForm ? '✖ Закрыть' : '➕ Создать отчёт'}
             </button>
@@ -495,51 +503,26 @@ export default function Reports() {
         )}
 
         {canFilterByClub && clubs.length > 0 && (
-          <div style={{
-            display: 'flex',
-            gap: '16px',
-            marginBottom: '20px',
-            flexWrap: 'wrap',
-            alignItems: 'center'
-          }}>
-            <div style={{ minWidth: '200px' }}>
-              <select
-                value={selectedClubId}
-                onChange={(e) => setSelectedClubId(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '1.5px solid #D5DCE7',
-                  borderRadius: '10px',
-                  fontSize: '14px',
-                  outline: 'none',
-                  background: 'white'
-                }}
-              >
-                <option value="">Все КЮДы</option>
-                {clubs.map((club) => (
-                  <option key={club.id} value={club.id}>{club.name}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ fontSize: '14px', color: '#667085' }}>
+          <div className="filter-club">
+            <select
+              value={selectedClubId}
+              onChange={(e) => setSelectedClubId(e.target.value)}
+            >
+              <option value="">Все КЮДы</option>
+              {clubs.map((club) => (
+                <option key={club.id} value={club.id}>{club.name}</option>
+              ))}
+            </select>
+            <span className="filter-info">
               {selectedClubId ? (
                 <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
               ) : (
                 <span>📋 Все отчёты</span>
               )}
-            </div>
+            </span>
             {selectedClubId && (
               <button
-                style={{
-                  padding: '4px 12px',
-                  background: '#FCEBEC',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  color: '#B3262E'
-                }}
+                className="filter-clear"
                 onClick={() => setSelectedClubId('')}
               >
                 ✕ Сбросить
@@ -549,23 +532,11 @@ export default function Reports() {
         )}
 
         {showForm && canCreate && (
-          <div className="card" style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-              {form.id ? '✏️ Редактировать отчёт' : '📝 Новый отчёт'}
-            </h3>
+          <div className="card form-card">
+            <h3>{form.id ? '✏️ Редактировать отчёт' : '📝 Новый отчёт'}</h3>
             
             {isClubCoordinator && coordinatorClubId && (
-              <div style={{ 
-                padding: '10px 16px', 
-                background: '#EAF2FA', 
-                borderRadius: '8px', 
-                marginBottom: '16px',
-                fontSize: '14px',
-                color: '#174A7E',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
+              <div className="form-club-info">
                 🏫 <strong>Отчёт для вашего клуба:</strong> {clubs.find(c => c.id === coordinatorClubId)?.name || 'КЮД'}
               </div>
             )}
@@ -585,9 +556,7 @@ export default function Reports() {
                   ))}
                 </select>
                 {isClubCoordinator && (
-                  <div style={{ fontSize: '12px', color: '#98A2B3', marginTop: '4px' }}>
-                    🔒 Вы можете создавать отчёты только для своего клуба
-                  </div>
+                  <div className="form-hint">🔒 Вы можете создавать отчёты только для своего клуба</div>
                 )}
               </div>
 
@@ -611,7 +580,7 @@ export default function Reports() {
                 />
               </div>
 
-              <div className="grid-2">
+              <div className="form-row">
                 <div className="form-group">
                   <label>Количество мероприятий</label>
                   <input
@@ -632,7 +601,7 @@ export default function Reports() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+              <div className="form-actions">
                 <button type="submit" className="btn-success" disabled={loading}>
                   {loading ? '⏳ Сохранение...' : form.id ? '💾 Обновить' : '✅ Создать'}
                 </button>
@@ -644,28 +613,25 @@ export default function Reports() {
           </div>
         )}
 
+        {/* ============================================================
+           СПИСОК ОТЧЁТОВ
+           ============================================================ */}
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
-              {isClubCoordinator ? `Отчёты ${coordinatorClubName}` : 'Все отчёты'}
-            </h3>
-            <span style={{ fontSize: '13px', color: '#667085' }}>
-              Всего: {reports.length}
-            </span>
+          <div className="card-header-simple">
+            <h3>{isClubCoordinator ? `Отчёты ${coordinatorClubName}` : 'Все отчёты'}</h3>
+            <span className="card-count">Всего: {reports.length}</span>
           </div>
 
           {reports.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">📄</div>
+              <div className="empty-icon">📄</div>
               <p>{isClubCoordinator ? 'У вашего клуба пока нет отчётов' : 'Отчётов пока нет'}</p>
               {canCreate && (
-                <p style={{ fontSize: '13px', color: '#98A2B3' }}>
-                  Создайте первый отчёт
-                </p>
+                <p className="empty-hint">Создайте первый отчёт</p>
               )}
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="reports-list">
               {reports.map((report) => {
                 const status = getStatusBadge(report.status);
                 const isDraft = report.status === 'draft';
@@ -674,33 +640,29 @@ export default function Reports() {
                 return (
                   <div
                     key={report.id}
-                    className="list-item"
-                    style={{ 
-                      borderLeftColor: status.color,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
+                    className="report-item"
+                    style={{ borderLeftColor: status.color }}
                     onClick={() => {
                       setSelectedReport(report);
                       setShowModal(true);
                     }}
                   >
-                    <div className="title">
+                    <div className="report-title">
                       {report.title || `Отчёт за ${report.report_month || 'неизвестный месяц'}`}
-                      <span className="tag" style={{ background: status.bg, color: status.color, marginLeft: '8px', fontSize: '10px' }}>
+                      <span className="tag" style={{ background: status.bg, color: status.color }}>
                         {status.label}
                       </span>
                     </div>
-                    <div className="subtitle">
+                    <div className="report-subtitle">
                       🏫 {report.club_name || 'Клуб'} 
                       {report.report_month && ` • 📅 ${report.report_month}`}
                       {report.events_count !== undefined && ` • 📊 ${report.events_count} мероприятий`}
                       {report.participants_count !== undefined && ` • 👥 ${report.participants_count} участников`}
                     </div>
                     {report.created_by_name && (
-                      <div className="meta">👤 Создал: {report.created_by_name}</div>
+                      <div className="report-meta">👤 Создал: {report.created_by_name}</div>
                     )}
-                    <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <div className="report-actions">
                       <button
                         className="btn-primary btn-sm"
                         onClick={(e) => {
@@ -779,50 +741,18 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* МОДАЛЬНОЕ ОКНО ПРОСМОТРА ОТЧЁТА */}
+      {/* ============================================================
+         МОДАЛЬНОЕ ОКНО ПРОСМОТРА ОТЧЁТА
+         ============================================================ */}
       {showModal && selectedReport && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(11, 31, 58, 0.5)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '20px'
-          }}
-          onClick={() => setShowModal(false)}
-        >
-          <div
-            className="card"
-            style={{ 
-              maxWidth: '600px', 
-              width: '100%', 
-              padding: '32px', 
-              maxHeight: '80vh', 
-              overflow: 'auto', 
-              position: 'relative',
-              animation: 'modalSlideIn 0.3s ease'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setShowModal(false)}
-              style={{ position: 'absolute', top: '12px', right: '16px', background: 'none', border: 'none', fontSize: '24px', color: '#98A2B3', cursor: 'pointer' }}
-            >
-              ✕
-            </button>
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>📄 {selectedReport.title || `Отчёт за ${selectedReport.report_month || 'неизвестный месяц'}`}</h3>
+              <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
+            </div>
 
-            <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#0B1F3A', marginBottom: '4px' }}>
-              {selectedReport.title || `Отчёт за ${selectedReport.report_month || 'неизвестный месяц'}`}
-            </h2>
-
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+            <div className="modal-tags">
               <span className="tag" style={{ background: '#F4F6F9', color: '#667085' }}>
                 🏫 {selectedReport.club_name || 'Клуб'}
               </span>
@@ -840,71 +770,87 @@ export default function Reports() {
             </div>
 
             {selectedReport.content && (
-              <div style={{ 
-                padding: '16px', 
-                background: '#F8FAFC', 
-                borderRadius: '8px',
-                border: '1px solid #E2E7EF',
-                marginBottom: '12px',
-                maxHeight: '200px',
-                overflow: 'auto',
-                whiteSpace: 'pre-wrap'
-              }}>
-                <p style={{ fontSize: '14px', color: '#0B1F3A', lineHeight: '1.6', margin: 0 }}>
-                  {selectedReport.content}
-                </p>
+              <div className="modal-content">
+                <p>{selectedReport.content}</p>
               </div>
             )}
 
-            <div className="grid-2" style={{ marginBottom: '12px' }}>
-              <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: '#0B1F3A' }}>
-                  {selectedReport.events_count || 0}
-                </div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Мероприятий</div>
+            <div className="modal-stats">
+              <div className="modal-stat">
+                <span className="stat-number">{selectedReport.events_count || 0}</span>
+                <span className="stat-label">Мероприятий</span>
               </div>
-              <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: '#0B1F3A' }}>
-                  {selectedReport.participants_count || 0}
-                </div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Участников</div>
+              <div className="modal-stat">
+                <span className="stat-number">{selectedReport.participants_count || 0}</span>
+                <span className="stat-label">Участников</span>
               </div>
             </div>
 
             {selectedReport.created_by_name && (
-              <div style={{ fontSize: '13px', color: '#98A2B3', marginBottom: '12px' }}>
+              <div className="modal-meta">
                 👤 Создал: {selectedReport.created_by_name}
                 {selectedReport.created_at && ` • 📅 ${new Date(selectedReport.created_at).toLocaleDateString('ru-RU')}`}
               </div>
             )}
 
             {selectedReport.reviewer_comment && (
-              <div style={{ 
-                padding: '12px', 
-                background: '#FCEBEC', 
-                borderRadius: '8px',
-                marginBottom: '12px',
-                border: '1px solid #FED7D7'
-              }}>
-                <strong style={{ color: '#B3262E' }}>💬 Причина отклонения:</strong>
-                <p style={{ color: '#B3262E', margin: '4px 0 0 0', fontSize: '14px' }}>
-                  {selectedReport.reviewer_comment}
-                </p>
+              <div className="modal-comment">
+                <strong>💬 Причина отклонения:</strong>
+                <p>{selectedReport.reviewer_comment}</p>
               </div>
             )}
 
-            <button
-              className="btn-secondary"
-              style={{ width: '100%', marginTop: '8px' }}
-              onClick={() => setShowModal(false)}
-            >
+            <button className="btn-secondary" style={{ width: '100%', marginTop: '12px' }} onClick={() => setShowModal(false)}>
               Закрыть
             </button>
           </div>
         </div>
       )}
 
+      <Footer />
+
       <style>{`
+        /* ============================================================
+           ОСНОВНЫЕ СТИЛИ
+           ============================================================ */
+        .page-background {
+          min-height: 100vh;
+          background: #F0EDE8;
+        }
+
+        .container-page {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 24px 32px 48px;
+        }
+
+        /* ============================================================
+           ЗАГОЛОВОК
+           ============================================================ */
+        .page-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .page-header-left h1 {
+          font-size: 24px;
+          font-weight: 700;
+          color: #0B1F3A;
+          margin: 0;
+        }
+
+        .page-header-left p {
+          color: #667085;
+          margin: 4px 0 0 0;
+        }
+
+        /* ============================================================
+           КНОПКИ
+           ============================================================ */
         .btn-gold {
           display: inline-flex;
           align-items: center;
@@ -915,21 +861,20 @@ export default function Reports() {
           color: #0A1628;
           border: none;
           border-radius: 8px;
-          font-family: 'Inter', sans-serif;
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.3s ease;
-          text-decoration: none;
-          box-shadow: 0 2px 16px rgba(201, 162, 39, 0.25);
+          box-shadow: 0 2px 16px rgba(201,162,39,0.25);
           min-height: 44px;
           min-width: 80px;
+          font-family: 'Inter', sans-serif;
         }
         .btn-gold:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
+          box-shadow: 0 8px 32px rgba(201,162,39,0.35);
         }
-        
+
         .btn-success {
           background: #1A7A4C;
           color: white;
@@ -940,19 +885,18 @@ export default function Reports() {
           transform: translateY(-2px);
           box-shadow: 0 8px 32px rgba(26,122,76,0.3);
         }
-        
+
         .btn-secondary {
           background: transparent;
           color: #0A1628;
           border: 1.5px solid #E4DFD8;
-          box-shadow: none;
         }
         .btn-secondary:hover {
           background: #F8F6F2;
           border-color: #C9A227;
           transform: translateY(-2px);
         }
-        
+
         .btn-danger {
           background: #B3262E;
           color: white;
@@ -963,25 +907,68 @@ export default function Reports() {
           transform: translateY(-2px);
           box-shadow: 0 8px 32px rgba(179,38,46,0.3);
         }
-        
+
         .btn-primary {
-          background: #0A1628;
+          background: #6B46C1;
           color: white;
-          box-shadow: 0 4px 16px rgba(10,22,40,0.15);
+          box-shadow: 0 4px 16px rgba(107,70,193,0.2);
         }
         .btn-primary:hover {
-          background: #1A3555;
+          background: #5A3AAD;
           transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(10,22,40,0.25);
         }
-        
+
         .btn-sm {
           padding: 6px 14px;
           font-size: 12px;
           min-height: 32px;
           min-width: 60px;
         }
-        
+
+        /* ============================================================
+           КАРТОЧКИ
+           ============================================================ */
+        .card {
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
+          margin-bottom: 20px;
+        }
+
+        .card-header-simple {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+        }
+
+        .card-header-simple h3 {
+          font-size: 18px;
+          font-weight: 600;
+          color: #0B1F3A;
+          margin: 0;
+        }
+
+        .card-count {
+          font-size: 13px;
+          color: #667085;
+        }
+
+        /* ============================================================
+           ФОРМА
+           ============================================================ */
+        .form-card {
+          margin-bottom: 24px;
+        }
+
+        .form-card h3 {
+          font-size: 18px;
+          font-weight: 600;
+          margin-bottom: 16px;
+        }
+
         .form-group {
           margin-bottom: 16px;
         }
@@ -1016,57 +1003,130 @@ export default function Reports() {
           resize: vertical;
           min-height: 80px;
         }
-        
-        .grid-2 {
+
+        .form-hint {
+          font-size: 11px;
+          color: #98A2B3;
+          margin-top: 4px;
+        }
+
+        .form-row {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 16px;
         }
-        
-        .card {
-          background: white;
-          border-radius: 12px;
-          padding: 24px;
-          border: 1px solid #E4DFD8;
-          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
-          margin-bottom: 20px;
+
+        .form-actions {
+          display: flex;
+          gap: 12px;
+          margin-top: 8px;
         }
-        
-        .list-item {
+
+        .form-club-info {
+          padding: 10px 16px;
+          background: #EAF2FA;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          font-size: 14px;
+          color: #174A7E;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        /* ============================================================
+           ФИЛЬТР КЛУБА
+           ============================================================ */
+        .filter-club {
+          display: flex;
+          gap: 16px;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+
+        .filter-club select {
+          min-width: 200px;
+          padding: 10px 14px;
+          border: 1.5px solid #D5DCE7;
+          border-radius: 10px;
+          font-size: 14px;
+          outline: none;
+          background: white;
+        }
+
+        .filter-info {
+          font-size: 14px;
+          color: #667085;
+        }
+
+        .filter-clear {
+          padding: 4px 12px;
+          background: #FCEBEC;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 12px;
+          color: #B3262E;
+        }
+        .filter-clear:hover {
+          background: #FED7D7;
+        }
+
+        /* ============================================================
+           СПИСОК ОТЧЁТОВ
+           ============================================================ */
+        .reports-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .report-item {
           padding: 14px 18px;
           border-left: 3px solid #0B1F3A;
           background: #F8FAFC;
           border-radius: 0 8px 8px 0;
           transition: all 0.2s ease;
+          cursor: pointer;
         }
-        .list-item:hover {
+        .report-item:hover {
           background: #F0EDE8;
           transform: translateX(4px);
         }
-        .list-item .title {
+
+        .report-title {
           font-weight: 600;
           color: #0B1F3A;
           font-size: 15px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
         }
-        .list-item .subtitle {
+
+        .report-subtitle {
           font-size: 13px;
           color: #667085;
           margin-top: 2px;
         }
-        .list-item .meta {
+
+        .report-meta {
           font-size: 12px;
           color: #98A2B3;
           margin-top: 4px;
         }
-        
-        .tag {
-          display: inline-block;
-          padding: 2px 10px;
-          border-radius: 12px;
-          font-size: 10px;
-          font-weight: 500;
+
+        .report-actions {
+          margin-top: 8px;
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
         }
-        
+
+        /* ============================================================
+           СООБЩЕНИЯ
+           ============================================================ */
         .message-success {
           padding: 12px 16px;
           background: #E8F5EF;
@@ -1075,6 +1135,7 @@ export default function Reports() {
           margin-bottom: 16px;
           border-left: 4px solid #16845B;
         }
+
         .message-error {
           padding: 12px 16px;
           background: #FCEBEC;
@@ -1083,12 +1144,26 @@ export default function Reports() {
           margin-bottom: 16px;
           border-left: 4px solid #B3262E;
         }
-        
+
+        /* ============================================================
+           ТЕГИ
+           ============================================================ */
+        .tag {
+          display: inline-block;
+          padding: 2px 10px;
+          border-radius: 12px;
+          font-size: 10px;
+          font-weight: 500;
+        }
+
+        /* ============================================================
+           EMPTY STATE
+           ============================================================ */
         .empty-state {
           text-align: center;
           padding: 40px 20px;
         }
-        .empty-state .icon {
+        .empty-icon {
           font-size: 48px;
           margin-bottom: 12px;
           opacity: 0.6;
@@ -1097,44 +1172,262 @@ export default function Reports() {
           color: #667085;
           font-size: 14px;
         }
-        
-        .page-background {
-          min-height: 100vh;
-          background: #F0EDE8;
+        .empty-hint {
+          font-size: 13px;
+          color: #98A2B3;
         }
-        .container-page {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 24px 32px 48px;
+
+        /* ============================================================
+           МОДАЛЬНОЕ ОКНО
+           ============================================================ */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(10, 22, 40, 0.5);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          padding: 20px;
         }
-        
-        @keyframes modalSlideIn {
-          from {
-            opacity: 0;
-            transform: translateY(30px) scale(0.95);
+
+        .modal {
+          background: white;
+          border-radius: 16px;
+          padding: 32px;
+          max-width: 600px;
+          width: 100%;
+          box-shadow: 0 24px 64px rgba(10,22,40,0.2);
+          border: 1px solid #E4DFD8;
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+
+        .modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 16px;
+        }
+
+        .modal-header h3 {
+          font-family: 'Playfair Display', serif;
+          font-size: 20px;
+          font-weight: 600;
+          color: #0A1628;
+          margin: 0;
+        }
+
+        .modal-close {
+          background: none;
+          border: none;
+          font-size: 24px;
+          color: #A8A29A;
+          cursor: pointer;
+          transition: color 0.2s ease;
+          padding: 4px 8px;
+        }
+        .modal-close:hover { color: #0A1628; }
+
+        .modal-tags {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-bottom: 16px;
+        }
+
+        .modal-content {
+          padding: 16px;
+          background: #F8FAFC;
+          border-radius: 8px;
+          border: 1px solid #E2E7EF;
+          margin-bottom: 16px;
+          max-height: 200px;
+          overflow: auto;
+          white-space: pre-wrap;
+        }
+
+        .modal-content p {
+          font-size: 14px;
+          color: #0B1F3A;
+          line-height: 1.6;
+          margin: 0;
+        }
+
+        .modal-stats {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+
+        .modal-stat {
+          background: #F8FAFC;
+          padding: 12px;
+          border-radius: 8px;
+          text-align: center;
+        }
+
+        .modal-stat .stat-number {
+          font-size: 24px;
+          font-weight: 700;
+          color: #0B1F3A;
+          display: block;
+        }
+
+        .modal-stat .stat-label {
+          font-size: 12px;
+          color: #98A2B3;
+        }
+
+        .modal-meta {
+          font-size: 13px;
+          color: #98A2B3;
+          margin-bottom: 12px;
+        }
+
+        .modal-comment {
+          padding: 12px;
+          background: #FCEBEC;
+          border-radius: 8px;
+          margin-bottom: 12px;
+          border: 1px solid #FED7D7;
+        }
+
+        .modal-comment strong {
+          color: #B3262E;
+        }
+
+        .modal-comment p {
+          color: #B3262E;
+          margin: 4px 0 0 0;
+          font-size: 14px;
+        }
+
+        /* ============================================================
+           СПИННЕР
+           ============================================================ */
+        .spinner {
+          width: 48px;
+          height: 48px;
+          border: 4px solid #E4DFD8;
+          border-top-color: #C9A227;
+          border-radius: 50%;
+          animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        /* ============================================================
+           АДАПТИВНОСТЬ
+           ============================================================ */
+        @media (max-width: 1024px) {
+          .container-page {
+            padding: 20px 24px 32px;
           }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
         }
-        
+
         @media (max-width: 768px) {
           .container-page {
             padding: 16px;
           }
-          .grid-2 {
+
+          .page-header {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .page-header .btn-gold {
+            width: 100%;
+            justify-content: center;
+          }
+
+          .form-row {
             grid-template-columns: 1fr;
           }
+
           .card {
             padding: 16px;
           }
+
+          .filter-club {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .filter-club select {
+            min-width: unset;
+          }
+
+          .modal {
+            padding: 20px;
+          }
+
+          .report-item {
+            padding: 12px 14px;
+          }
+          .report-title {
+            font-size: 14px;
+          }
+
+          .modal-stats {
+            grid-template-columns: 1fr 1fr;
+          }
         }
+
         @media (max-width: 480px) {
           .container-page {
             padding: 12px;
           }
+
+          .page-header-left h1 {
+            font-size: 20px;
+          }
+
           .btn-gold {
+            padding: 8px 16px;
+            font-size: 13px;
+            min-height: 36px;
+          }
+
+          .btn-sm {
+            padding: 4px 10px;
+            font-size: 11px;
+            min-height: 28px;
+            min-width: 40px;
+          }
+
+          .report-actions {
+            flex-direction: column;
+          }
+          .report-actions .btn {
+            width: 100%;
+            justify-content: center;
+          }
+
+          .modal {
+            padding: 16px;
+          }
+          .modal-header h3 {
+            font-size: 18px;
+          }
+          .modal-stats {
+            grid-template-columns: 1fr;
+          }
+
+          .filter-info {
+            font-size: 13px;
+          }
+
+          .form-actions {
+            flex-direction: column;
+          }
+          .form-actions .btn {
             width: 100%;
             justify-content: center;
           }

@@ -40,7 +40,6 @@ export default function Login() {
 
       const data = await response.json();
 
-      // Проверяем, нужно ли сменить пароль
       if (response.status === 403 && data.must_change_password === true) {
         setMustChangePassword(true);
         setResetToken(data.reset_token);
@@ -53,7 +52,6 @@ export default function Login() {
         throw new Error(data.error || 'Ошибка входа');
       }
 
-      // Успешный вход
       if (data.token) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
@@ -79,7 +77,6 @@ export default function Login() {
     setPasswordError('');
     setError('');
 
-    // Проверка сложности пароля
     if (newPassword.length < 8) {
       setPasswordError('Пароль должен содержать минимум 8 символов');
       setLoading(false);
@@ -126,7 +123,6 @@ export default function Login() {
         throw new Error(data.error || 'Ошибка смены пароля');
       }
 
-      // Пароль изменён успешно
       if (data.token) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
@@ -138,7 +134,6 @@ export default function Login() {
         
         redirectByRole(data.user.role);
       } else {
-        // Если токен не пришёл — перенаправляем на логин
         setMustChangePassword(false);
         setError('Пароль изменён! Войдите снова.');
         setNewPassword('');
@@ -229,8 +224,6 @@ export default function Login() {
         </div>
 
         <style>{`
-          * { box-sizing: border-box; margin: 0; padding: 0; }
-          
           .login-page {
             min-height: 100vh;
             display: flex;
@@ -421,10 +414,20 @@ export default function Login() {
           }
 
           @media (max-width: 480px) {
-            .login-card { padding: 32px 24px; margin: 0 10px; }
-            .login-header h1 { font-size: 22px; }
-            .login-logo { width: 60px; height: 60px; }
-            .login-logo img { height: 32px; }
+            .login-card {
+              padding: 32px 24px;
+              margin: 0 10px;
+            }
+            .login-header h1 {
+              font-size: 22px;
+            }
+            .login-logo {
+              width: 60px;
+              height: 60px;
+            }
+            .login-logo img {
+              height: 32px;
+            }
           }
         `}</style>
       </div>
@@ -488,8 +491,6 @@ export default function Login() {
       </div>
 
       <style>{`
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        
         .login-page {
           min-height: 100vh;
           display: flex;
@@ -680,10 +681,28 @@ export default function Login() {
         }
 
         @media (max-width: 480px) {
-          .login-card { padding: 32px 24px; margin: 0 10px; }
-          .login-header h1 { font-size: 22px; }
-          .login-logo { width: 60px; height: 60px; }
-          .login-logo img { height: 32px; }
+          .login-card {
+            padding: 32px 24px;
+            margin: 0 10px;
+          }
+          .login-header h1 {
+            font-size: 22px;
+          }
+          .login-logo {
+            width: 60px;
+            height: 60px;
+          }
+          .login-logo img {
+            height: 32px;
+          }
+          .login-form .form-group input {
+            padding: 12px 14px;
+            font-size: 14px;
+          }
+          .login-btn {
+            padding: 14px;
+            font-size: 15px;
+          }
         }
       `}</style>
     </div>

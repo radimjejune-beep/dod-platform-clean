@@ -9,7 +9,6 @@ const getToken = () => {
   return localStorage.getItem('token');
 };
 
-// ✅ ИСПРАВЛЕНО: добавлена закрывающая скобка
 const headers = () => ({
   'Content-Type': 'application/json',
   ...(getToken() && { Authorization: `Bearer ${getToken()}` })
@@ -94,16 +93,20 @@ export const getUsers = async () => {
   return response.json();
 };
 
-export const getParticipants = async () => {
+export const getParticipants = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  const response = await fetch(`${API_URL}/participants`, {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/participants?${query}` : `${API_URL}/participants`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -162,16 +165,20 @@ export const updateProfile = async (data) => {
 // ============================================================
 // 3. КЛУБЫ
 // ============================================================
-export const getClubs = async () => {
+export const getClubs = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  const response = await fetch(`${API_URL}/clubs`, {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/clubs?${query}` : `${API_URL}/clubs`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -195,16 +202,20 @@ export const getClubPresident = async (clubId) => {
 // ============================================================
 // 4. ДОСТИЖЕНИЯ
 // ============================================================
-export const getAchievements = async () => {
+export const getAchievements = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  const response = await fetch(`${API_URL}/achievements`, {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/achievements?${query}` : `${API_URL}/achievements`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -234,28 +245,31 @@ export const getAchievementCategories = async () => {
 };
 
 // ============================================================
-// 5. СОБЫТИЯ
+// 5. СОБЫТИЯ (С ПАГИНАЦИЕЙ)
 // ============================================================
-export const getEvents = async () => {
+export const getEvents = async (params = {}) => {
   try {
     const token = getToken();
-    if (!token) return [];
+    if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
     
-    const response = await fetch(`${API_URL}/events`, {
+    const query = new URLSearchParams(params).toString();
+    const url = query ? `${API_URL}/events?${query}` : `${API_URL}/events`;
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: headers()
     });
     
     if (!response.ok) {
       console.error('❌ Ошибка получения событий:', response.status);
-      return [];
+      return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
     }
     
     const data = await response.json();
-    return Array.isArray(data) ? data : [];
+    return data;
   } catch (error) {
     console.error('❌ Ошибка getEvents:', error);
-    return [];
+    return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   }
 };
 
@@ -348,18 +362,22 @@ export const getAppealReplies = async (appealId) => {
 };
 
 // ============================================================
-// 8. ОТЧЁТЫ
+// 8. ОТЧЁТЫ (С ПАГИНАЦИЕЙ)
 // ============================================================
-export const getReports = async () => {
+export const getReports = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  const response = await fetch(`${API_URL}/reports`, {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/reports?${query}` : `${API_URL}/reports`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 

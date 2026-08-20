@@ -6,6 +6,7 @@ import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import AvatarUpload from '../components/AvatarUpload';
 import PresidentSection from '../components/PresidentSection';
+import Footer from '../components/Footer';
 
 export default function Profile() {
   const [profile, setProfile] = useState(null);
@@ -54,21 +55,13 @@ export default function Profile() {
       let phone = profile.phone || '';
       phone = phone.replace(/[^0-9+]/g, '');
 
-      // ✅ Обработка дат — если пусто или некорректно, отправляем null
-      let birthDate = profile.birth_date || '';
-      if (birthDate === '' || birthDate === 'Invalid Date' || isNaN(new Date(birthDate).getTime())) {
-        birthDate = null;
-      }
-
-      let consentDate = profile.consent_agreement_date || '';
-      if (consentDate === '' || consentDate === 'Invalid Date' || isNaN(new Date(consentDate).getTime())) {
-        consentDate = null;
-      }
-
-      let charterDate = profile.charter_acceptance_date || '';
-      if (charterDate === '' || charterDate === 'Invalid Date' || isNaN(new Date(charterDate).getTime())) {
-        charterDate = null;
-      }
+      // ✅ Безопасная обработка дат
+      const formatDate = (val) => {
+        if (!val || val === '' || val === 'Invalid Date') return null;
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return null;
+        return d.toISOString().split('T')[0];
+      };
 
       const updateData = {
         full_name: profile.full_name.trim(),
@@ -78,7 +71,7 @@ export default function Profile() {
         interests: profile.interests || '',
         bio: profile.bio || '',
         city: profile.city || '',
-        birth_date: birthDate,
+        birth_date: formatDate(profile.birth_date),
         social_links: profile.social_links || '',
         skills: profile.skills || '',
         education: profile.education || '',
@@ -91,8 +84,8 @@ export default function Profile() {
         consent_personal_data: profile.consent_personal_data || false,
         consent_photo_publication: profile.consent_photo_publication || false,
         consent_event_participation: profile.consent_event_participation || false,
-        consent_agreement_date: consentDate,
-        charter_acceptance_date: charterDate
+        consent_agreement_date: formatDate(profile.consent_agreement_date),
+        charter_acceptance_date: formatDate(profile.charter_acceptance_date)
       };
 
       console.log('📤 Отправка данных:', updateData);
@@ -161,19 +154,39 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div className="page-loading">
         <div className="spinner" />
+        <style>{`
+          .page-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #F0EDE8;
+          }
+          .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #E4DFD8;
+            border-top-color: #C9A227;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
 
   const tabs = [
-    { id: 'main', label: '📋 Основное', icon: '📋' },
-    { id: 'contacts', label: '📞 Контакты', icon: '📞' },
-    { id: 'interests', label: '🎯 Интересы', icon: '🎯' },
-    { id: 'parents', label: '👨‍👩‍👦 Родители', icon: '👨‍👩‍👦' },
-    { id: 'consents', label: '📝 Согласия', icon: '📝' },
-    { id: 'extra', label: '🌟 Дополнительно', icon: '🌟' },
+    { id: 'main', label: '📋 Основное' },
+    { id: 'contacts', label: '📞 Контакты' },
+    { id: 'interests', label: '🎯 Интересы' },
+    { id: 'parents', label: '👨‍👩‍👦 Родители' },
+    { id: 'consents', label: '📝 Согласия' },
+    { id: 'extra', label: '🌟 Дополнительно' },
   ];
 
   return (
@@ -181,12 +194,22 @@ export default function Profile() {
       <Navigation profile={profile} />
       <div className="container-page">
         
+        {/* ============================================================
+           ЗАГОЛОВОК
+           ============================================================ */}
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>👤</span>
-          <div>
-            <h1>Профиль</h1>
+          <div className="page-header-left">
+            <h1>👤 Профиль</h1>
             <p>Управление вашими данными и настройками</p>
           </div>
+          <button
+            type="submit"
+            className="btn-save-header"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? '⏳ Сохранение...' : '💾 Сохранить'}
+          </button>
         </div>
 
         {message && (
@@ -195,6 +218,9 @@ export default function Profile() {
           </div>
         )}
 
+        {/* ============================================================
+           КАРТОЧКА ПРОФИЛЯ
+           ============================================================ */}
         <div className="profile-card">
           <div className="profile-card-header">
             <div className="profile-avatar-section">
@@ -227,18 +253,9 @@ export default function Profile() {
                 )}
               </div>
             </div>
-            <div className="profile-actions">
-              <button
-                type="submit"
-                className="btn-save"
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving ? '⏳ Сохранение...' : '💾 Сохранить'}
-              </button>
-            </div>
           </div>
 
+          {/* Статус согласий */}
           <div className="profile-consent-status">
             <div className="consent-status-label">
               <span>📝 Согласия</span>
@@ -258,6 +275,9 @@ export default function Profile() {
           </div>
         </div>
 
+        {/* ============================================================
+           ВКЛАДКИ
+           ============================================================ */}
         <div className="tabs-container">
           {tabs.map((tab) => (
             <button
@@ -270,8 +290,12 @@ export default function Profile() {
           ))}
         </div>
 
+        {/* ============================================================
+           ФОРМА
+           ============================================================ */}
         <div className="form-container">
           <form onSubmit={handleSave}>
+            {/* ===== ВКЛАДКА: ОСНОВНОЕ ===== */}
             {activeTab === 'main' && (
               <div className="tab-content">
                 <div className="form-grid">
@@ -343,6 +367,7 @@ export default function Profile() {
               </div>
             )}
 
+            {/* ===== ВКЛАДКА: КОНТАКТЫ ===== */}
             {activeTab === 'contacts' && (
               <div className="tab-content">
                 <div className="form-grid">
@@ -396,6 +421,7 @@ export default function Profile() {
               </div>
             )}
 
+            {/* ===== ВКЛАДКА: ИНТЕРЕСЫ ===== */}
             {activeTab === 'interests' && (
               <div className="tab-content">
                 <div className="form-grid single">
@@ -439,6 +465,7 @@ export default function Profile() {
               </div>
             )}
 
+            {/* ===== ВКЛАДКА: РОДИТЕЛИ ===== */}
             {activeTab === 'parents' && (
               <div className="tab-content">
                 <div className="info-box">
@@ -486,6 +513,7 @@ export default function Profile() {
               </div>
             )}
 
+            {/* ===== ВКЛАДКА: СОГЛАСИЯ ===== */}
             {activeTab === 'consents' && (
               <div className="tab-content">
                 <div className="consents-info">
@@ -595,6 +623,7 @@ export default function Profile() {
               </div>
             )}
 
+            {/* ===== ВКЛАДКА: ДОПОЛНИТЕЛЬНО ===== */}
             {activeTab === 'extra' && (
               <div className="tab-content">
                 <div className="form-grid single">
@@ -626,6 +655,7 @@ export default function Profile() {
               </div>
             )}
 
+            {/* ===== КНОПКА СОХРАНЕНИЯ ВНИЗУ ===== */}
             <div className="form-actions-bottom">
               <button
                 type="submit"
@@ -640,8 +670,12 @@ export default function Profile() {
       </div>
 
       {profile?.is_president && <PresidentSection profile={profile} />}
+      <Footer />
 
       <style>{`
+        /* ============================================================
+           ОСНОВНЫЕ СТИЛИ
+           ============================================================ */
         .page-background {
           min-height: 100vh;
           background: #F0EDE8;
@@ -653,32 +687,63 @@ export default function Profile() {
           padding: 24px 32px 48px;
         }
 
+        /* ============================================================
+           ЗАГОЛОВОК
+           ============================================================ */
         .page-header {
           display: flex;
+          justify-content: space-between;
           align-items: center;
-          gap: 16px;
           margin-bottom: 24px;
-          padding: 20px 28px;
-          background: white;
-          border-radius: 12px;
-          border: 1px solid #E4DFD8;
-          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
+          flex-wrap: wrap;
+          gap: 12px;
         }
 
-        .page-header h1 {
-          font-family: 'Playfair Display', serif;
+        .page-header-left h1 {
           font-size: 24px;
           font-weight: 700;
-          color: #0A1628;
+          color: #0B1F3A;
           margin: 0;
         }
 
-        .page-header p {
-          font-size: 14px;
-          color: #8A8480;
+        .page-header-left p {
+          color: #667085;
           margin: 4px 0 0 0;
         }
 
+        .btn-save-header {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 10px 24px;
+          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
+          color: #0A1628;
+          border: none;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 2px 16px rgba(201,162,39,0.25);
+          font-family: 'Inter', sans-serif;
+          min-height: 44px;
+        }
+
+        .btn-save-header:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(201,162,39,0.35);
+        }
+
+        .btn-save-header:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          pointer-events: none;
+        }
+
+        /* ============================================================
+           СООБЩЕНИЯ
+           ============================================================ */
         .message-success {
           padding: 14px 20px;
           background: #E8F5EF;
@@ -699,6 +764,9 @@ export default function Profile() {
           font-weight: 500;
         }
 
+        /* ============================================================
+           КАРТОЧКА ПРОФИЛЯ
+           ============================================================ */
         .profile-card {
           background: white;
           border-radius: 16px;
@@ -793,39 +861,9 @@ export default function Profile() {
           gap: 4px;
         }
 
-        .profile-actions {
-          flex-shrink: 0;
-        }
-
-        .btn-save {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 10px 24px;
-          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
-          color: #0A1628;
-          border: none;
-          border-radius: 10px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          box-shadow: 0 2px 16px rgba(201,162,39,0.25);
-          font-family: 'Inter', sans-serif;
-        }
-
-        .btn-save:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(201,162,39,0.35);
-        }
-
-        .btn-save:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-          pointer-events: none;
-        }
-
+        /* ============================================================
+           СТАТУС СОГЛАСИЙ В КАРТОЧКЕ
+           ============================================================ */
         .profile-consent-status {
           padding: 12px 32px;
           background: #F8FAFC;
@@ -869,12 +907,13 @@ export default function Profile() {
           transition: width 0.5s ease;
         }
 
+        /* ============================================================
+           ВКЛАДКИ
+           ============================================================ */
         .tabs-container {
           display: flex;
           gap: 4px;
           margin-bottom: 24px;
-          border-bottom: 2px solid #E4DFD8;
-          padding-bottom: 4px;
           flex-wrap: wrap;
           background: white;
           padding: 4px 4px 0 4px;
@@ -918,6 +957,9 @@ export default function Profile() {
           background: #C9A227;
         }
 
+        /* ============================================================
+           ФОРМА
+           ============================================================ */
         .form-container {
           background: white;
           border-radius: 0 0 12px 12px;
@@ -1032,6 +1074,9 @@ export default function Profile() {
           border-left: 3px solid #C9A227;
         }
 
+        /* ============================================================
+           СОГЛАСИЯ
+           ============================================================ */
         .consents-info {
           display: flex;
           align-items: center;
@@ -1138,6 +1183,9 @@ export default function Profile() {
           border-left: 3px solid #16845B;
         }
 
+        /* ============================================================
+           КНОПКА СОХРАНЕНИЯ ВНИЗУ
+           ============================================================ */
         .form-actions-bottom {
           margin-top: 24px;
           padding-top: 20px;
@@ -1174,7 +1222,30 @@ export default function Profile() {
           pointer-events: none;
         }
 
+        /* ============================================================
+           СПИННЕР
+           ============================================================ */
+        .spinner {
+          width: 48px;
+          height: 48px;
+          border: 4px solid #E4DFD8;
+          border-top-color: #C9A227;
+          border-radius: 50%;
+          animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        /* ============================================================
+           АДАПТИВНОСТЬ
+           ============================================================ */
         @media (max-width: 1024px) {
+          .container-page {
+            padding: 20px 24px 32px;
+          }
+
           .profile-card-header {
             flex-wrap: wrap;
             justify-content: center;
@@ -1192,17 +1263,6 @@ export default function Profile() {
           .profile-contact-info {
             justify-content: center;
           }
-
-          .profile-actions {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-          }
-
-          .btn-save {
-            width: 100%;
-            max-width: 300px;
-          }
         }
 
         @media (max-width: 768px) {
@@ -1211,12 +1271,13 @@ export default function Profile() {
           }
 
           .page-header {
-            padding: 16px 20px;
-            flex-wrap: wrap;
+            flex-direction: column;
+            align-items: stretch;
           }
 
-          .page-header h1 {
-            font-size: 20px;
+          .btn-save-header {
+            width: 100%;
+            justify-content: center;
           }
 
           .profile-card-header {
@@ -1293,12 +1354,8 @@ export default function Profile() {
             padding: 12px;
           }
 
-          .page-header {
-            padding: 12px 16px;
-          }
-
-          .page-header h1 {
-            font-size: 18px;
+          .page-header-left h1 {
+            font-size: 20px;
           }
 
           .profile-card-header {

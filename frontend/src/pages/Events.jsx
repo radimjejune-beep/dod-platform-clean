@@ -45,6 +45,14 @@ export default function Events() {
   // ===== ПОИСК КЛУБОВ =====
   const [searchClubQuery, setSearchClubQuery] = useState('');
   
+  // ===== ПАГИНАЦИЯ =====
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0
+  });
+  
   const [filters, setFilters] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -129,7 +137,7 @@ export default function Events() {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (page = 1) => {
     try {
       setLoading(true);
       const userData = await api.getMe();
@@ -139,15 +147,25 @@ export default function Events() {
       }
       setProfile(userData);
 
+      // ============================================================
+      // ✅ ЗАГРУЗКА КЛУБОВ И СОБЫТИЙ С ПАГИНАЦИЕЙ
+      // ============================================================
       const [clubsData, eventsData] = await Promise.all([
         api.getClubs().catch(() => []),
-        api.getEvents().catch(() => [])
+        api.getEvents({ page, limit: pagination.limit }).catch(() => ({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } }))
       ]);
 
       setClubs(clubsData || []);
       
-      let filteredEvents = eventsData || [];
+      // ✅ ОБРАБОТКА ДАННЫХ С ПАГИНАЦИЕЙ
+      if (eventsData && eventsData.data) {
+        setAllEvents(eventsData.data);
+        setPagination(eventsData.pagination);
+      } else {
+        setAllEvents(eventsData || []);
+      }
       
+      // Фильтрация для координатора клуба
       if (userData.role === 'club_coordinator') {
         let coordinatorClubId = userData.club_id;
         
@@ -167,20 +185,21 @@ export default function Events() {
         }
 
         if (coordinatorClubId) {
-          filteredEvents = eventsData.filter(e => {
+          const filtered = eventsData.data.filter(e => {
             if (e.type === 'internal' || e.is_club_event) {
               return e.club_id === coordinatorClubId;
             }
             return ['outgoing', 'global_forum'].includes(e.type) || e.is_global === true;
           });
+          setAllEvents(filtered);
+          setPagination(prev => ({ ...prev, total: filtered.length }));
         } else {
-          filteredEvents = [];
+          setAllEvents([]);
+          setPagination(prev => ({ ...prev, total: 0 }));
         }
       } else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userData.role)) {
-        filteredEvents = eventsData;
+        setAllEvents(eventsData.data || []);
       }
-
-      setAllEvents(filteredEvents);
       
       if (['admin', 'movement_coordinator'].includes(userData.role)) {
         try {
@@ -192,7 +211,7 @@ export default function Events() {
         }
       }
       
-      const pending = filteredEvents.filter(e => e.moderation_status === 'pending');
+      const pending = (eventsData.data || []).filter(e => e.moderation_status === 'pending');
       setPendingEvents(pending || []);
     } catch (err) {
       console.error('Ошибка:', err);
@@ -260,7 +279,7 @@ export default function Events() {
       } else {
         setMessage(data.message || '✅ Заявка отправлена!');
         setMessageType('success');
-        await loadData();
+        await loadData(pagination.page);
       }
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
@@ -293,7 +312,7 @@ export default function Events() {
       } else {
         setMessage('✅ Вы отписались от мероприятия');
         setMessageType('success');
-        await loadData();
+        await loadData(pagination.page);
       }
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
@@ -327,7 +346,7 @@ export default function Events() {
         setMessage(`✅ Заявка ${status === 'confirmed' ? 'подтверждена' : 'отклонена'}`);
         setMessageType('success');
         await loadRegistrations(selectedEventForRegistrations?.id);
-        await loadData();
+        await loadData(pagination.page);
       }
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
@@ -362,7 +381,7 @@ export default function Events() {
       setMessage(status === 'approved' ? '✅ Заявка клуба одобрена!' : '❌ Заявка клуба отклонена');
       setMessageType(status === 'approved' ? 'success' : 'error');
       await loadRegistrations(selectedEventForRegistrations?.id);
-      await loadData();
+      await loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
@@ -503,6 +522,57 @@ export default function Events() {
   };
 
   // ============================================================
+  // ПАГИНАЦИЯ
+  // ============================================================
+  const Pagination = ({ pagination, onPageChange }) => {
+    const { page, totalPages, total } = pagination;
+
+    if (totalPages <= 1) return null;
+
+    const pages = [];
+    const start = Math.max(1, page - 2);
+    const end = Math.min(totalPages, page + 2);
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    return (
+      <div className="pagination">
+        <button
+          className="pagination-btn"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          ◀
+        </button>
+        
+        {pages.map((p) => (
+          <button
+            key={p}
+            className={`pagination-btn ${p === page ? 'active' : ''}`}
+            onClick={() => onPageChange(p)}
+          >
+            {p}
+          </button>
+        ))}
+        
+        <button
+          className="pagination-btn"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          ▶
+        </button>
+        
+        <span className="pagination-info">
+          Всего: {total} записей
+        </span>
+      </div>
+    );
+  };
+
+  // ============================================================
   // СОЗДАНИЕ/ОБНОВЛЕНИЕ
   // ============================================================
   const handleSubmit = async (e) => {
@@ -574,7 +644,7 @@ export default function Events() {
       setMessage(successMessage);
       setMessageType('success');
       resetForm();
-      loadData();
+      loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
@@ -636,7 +706,7 @@ export default function Events() {
       if (result.error) throw new Error(result.error);
       setMessage('✅ Мероприятие удалено');
       setMessageType('success');
-      loadData();
+      loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
@@ -665,7 +735,7 @@ export default function Events() {
       setMessageType(status === 'approved' ? 'success' : 'error');
       setShowModerationModal(false);
       setModerationComment('');
-      loadData();
+      loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
@@ -706,7 +776,7 @@ export default function Events() {
       setShowTutorModal(false);
       setSelectedTutor('');
       setTutorNotes('');
-      loadData();
+      loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
@@ -896,9 +966,7 @@ export default function Events() {
                 </div>
               </div>
 
-              {/* ============================================================
-                 ВЫБОР КЛУБОВ
-                 ============================================================ */}
+              {/* ВЫБОР КЛУБОВ */}
               {(isAdmin || isMovementCoordinator) && (
                 <div className="form-group">
                   <label>🎯 Отправить мероприятие клубам</label>
@@ -1303,11 +1371,16 @@ export default function Events() {
               })}
             </div>
           )}
+          
+          {/* ============================================================
+             ПАГИНАЦИЯ
+             ============================================================ */}
+          <Pagination pagination={pagination} onPageChange={loadData} />
         </div>
       </div>
 
       {/* ============================================================
-         МОДАЛЬНОЕ ОКНО: УЧАСТНИКИ
+         МОДАЛЬНЫЕ ОКНА
          ============================================================ */}
       {showRegistrationsModal && selectedEventForRegistrations && (
         <div className="modal-overlay" onClick={() => setShowRegistrationsModal(false)}>
@@ -1476,9 +1549,6 @@ export default function Events() {
         </div>
       )}
 
-      {/* ============================================================
-         МОДАЛЬНОЕ ОКНО: МОДЕРАЦИЯ
-         ============================================================ */}
       {showModerationModal && selectedEvent && (
         <div className="modal-overlay" onClick={() => setShowModerationModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -1515,9 +1585,6 @@ export default function Events() {
         </div>
       )}
 
-      {/* ============================================================
-         МОДАЛЬНОЕ ОКНО: НАЗНАЧЕНИЕ ТЬЮТОРА
-         ============================================================ */}
       {showTutorModal && selectedEventForTutor && (
         <div className="modal-overlay" onClick={() => setShowTutorModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -1643,7 +1710,6 @@ export default function Events() {
           color: #0A1628;
           border: none;
           border-radius: 8px;
-          font-family: 'Inter', sans-serif;
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
@@ -1651,6 +1717,7 @@ export default function Events() {
           box-shadow: 0 2px 16px rgba(201,162,39,0.25);
           min-height: 44px;
           min-width: 80px;
+          font-family: 'Inter', sans-serif;
         }
         .btn-gold:hover {
           transform: translateY(-2px);
@@ -1735,6 +1802,413 @@ export default function Events() {
           font-weight: 600;
           color: #0A1628;
           margin: 0 0 12px 0;
+        }
+
+        /* ============================================================
+           ПАГИНАЦИЯ
+           ============================================================ */
+        .pagination {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 20px;
+          padding-top: 16px;
+          border-top: 1px solid #E4DFD8;
+          flex-wrap: wrap;
+        }
+
+        .pagination-btn {
+          padding: 6px 14px;
+          border: 1px solid #E4DFD8;
+          border-radius: 6px;
+          background: white;
+          color: #0A1628;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-family: 'Inter', sans-serif;
+          min-width: 36px;
+          text-align: center;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+          border-color: #C9A227;
+          background: #FBF4DC;
+        }
+
+        .pagination-btn.active {
+          border-color: #C9A227;
+          background: #C9A227;
+          color: white;
+        }
+
+        .pagination-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        .pagination-info {
+          font-size: 13px;
+          color: #98A2B3;
+          margin-left: 8px;
+        }
+
+        @media (max-width: 768px) {
+          .pagination-btn {
+            padding: 4px 10px;
+            font-size: 12px;
+            min-width: 30px;
+          }
+          .pagination-info {
+            font-size: 12px;
+          }
+        }
+
+        /* ============================================================
+           ОСТАЛЬНЫЕ СТИЛИ
+           ============================================================ */
+        .filter-count {
+          font-size: 14px;
+          color: #667085;
+          padding: 6px 16px;
+          background: #F8FAFC;
+          border-radius: 20px;
+          border: 1px solid #E2E7EF;
+          white-space: nowrap;
+        }
+
+        .events-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .event-item {
+          padding: 14px 18px;
+          border-left: 3px solid #0B1F3A;
+          background: #F8FAFC;
+          border-radius: 0 8px 8px 0;
+          transition: all 0.2s ease;
+        }
+        .event-item:hover {
+          background: #F0EDE8;
+          transform: translateX(4px);
+        }
+
+        .event-title {
+          font-weight: 600;
+          color: #0B1F3A;
+          font-size: 15px;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .event-subtitle {
+          font-size: 13px;
+          color: #667085;
+          margin-top: 2px;
+        }
+
+        .event-description {
+          font-size: 12px;
+          color: #98A2B3;
+          margin-top: 4px;
+        }
+
+        .event-link {
+          margin-top: 6px;
+        }
+        .event-link a {
+          color: #174A7E;
+          text-decoration: underline;
+          font-size: 13px;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .event-link a:hover {
+          color: #C9A227;
+        }
+
+        .event-registration {
+          margin-top: 8px;
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+
+        .event-actions {
+          margin-top: 8px;
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .reg-status {
+          font-size: 13px;
+          font-weight: 500;
+        }
+        .reg-status.pending { color: #C9A227; }
+        .reg-status.confirmed { color: #16845B; }
+        .reg-status.rejected { color: #B3262E; }
+        .reg-status.closed { color: #98A2B3; }
+        .reg-status.full { color: #B3262E; }
+
+        .tag {
+          display: inline-block;
+          padding: 2px 10px;
+          border-radius: 12px;
+          font-size: 10px;
+          font-weight: 500;
+        }
+        .tag-global { background: #EDE7F6; color: #6B46C1; }
+        .tag-club { background: #EAF2FA; color: #174A7E; }
+        .tag-outgoing { background: #FBF4DC; color: #8A6A00; }
+        .tag-pending { background: #FBF4DC; color: #8A6A00; }
+        .tag-rejected { background: #FCEBEC; color: #B3262E; }
+        .tag-full { background: #FCEBEC; color: #B3262E; }
+        .tag-closed { background: #F4F6F9; color: #667085; }
+        .tag-blue { background: #EAF2FA; color: #174A7E; }
+
+        .pending-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-top: 8px;
+        }
+        .pending-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 16px;
+          background: white;
+          border-radius: 8px;
+          border: 1px solid #E2E7EF;
+        }
+        .pending-title { font-weight: 600; }
+        .pending-club { font-size: 13px; color: #667085; }
+
+        .message-success {
+          padding: 12px 16px;
+          background: #E8F5EF;
+          color: #16845B;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          border-left: 4px solid #16845B;
+        }
+        .message-error {
+          padding: 12px 16px;
+          background: #FCEBEC;
+          color: #B3262E;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          border-left: 4px solid #B3262E;
+        }
+
+        .empty-state {
+          text-align: center;
+          padding: 40px 20px;
+        }
+        .empty-icon {
+          font-size: 48px;
+          margin-bottom: 12px;
+          opacity: 0.6;
+        }
+        .empty-state p {
+          color: #667085;
+          font-size: 14px;
+        }
+
+        /* ============================================================
+           МОДАЛЬНЫЕ ОКНА
+           ============================================================ */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(10, 22, 40, 0.5);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          padding: 20px;
+        }
+
+        .modal {
+          background: white;
+          border-radius: 16px;
+          padding: 32px;
+          max-width: 560px;
+          width: 100%;
+          box-shadow: 0 24px 64px rgba(10,22,40,0.2);
+          border: 1px solid #E4DFD8;
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+
+        .modal-large {
+          max-width: 800px;
+        }
+
+        .modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 16px;
+        }
+
+        .modal-header h3 {
+          font-family: 'Playfair Display', serif;
+          font-size: 20px;
+          font-weight: 600;
+          color: #0A1628;
+          margin: 0;
+        }
+
+        .modal-close {
+          background: none;
+          border: none;
+          font-size: 24px;
+          color: #A8A29A;
+          cursor: pointer;
+          transition: color 0.2s ease;
+          padding: 4px 8px;
+        }
+        .modal-close:hover { color: #0A1628; }
+
+        .modal-subtitle {
+          color: #667085;
+          margin-bottom: 12px;
+          font-size: 14px;
+        }
+
+        .modal-actions {
+          display: flex;
+          gap: 12px;
+          margin-top: 16px;
+        }
+        .modal-actions .btn {
+          flex: 1;
+        }
+
+        .modal-loading {
+          text-align: center;
+          padding: 40px;
+        }
+
+        .form-control {
+          width: 100%;
+          padding: 10px 14px;
+          border: 1.5px solid #E4DFD8;
+          border-radius: 8px;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          color: #0A1628;
+          background: white;
+          transition: all 0.3s ease;
+          outline: none;
+          min-height: 44px;
+        }
+        .form-control:focus {
+          border-color: #C9A227;
+          box-shadow: 0 0 0 3px rgba(201,162,39,0.08);
+        }
+
+        /* ============================================================
+           ТАБЛИЦА
+           ============================================================ */
+        .table-wrapper {
+          overflow-x: auto;
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #E4DFD8;
+        }
+
+        .table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 14px;
+          min-width: 600px;
+        }
+
+        .table thead {
+          background: #F8F6F2;
+          border-bottom: 1px solid #E4DFD8;
+        }
+
+        .table thead th {
+          text-align: left;
+          padding: 12px 16px;
+          font-size: 11px;
+          font-weight: 600;
+          color: #8A8480;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+
+        .table tbody td {
+          padding: 12px 16px;
+          border-bottom: 1px solid #F0EDE8;
+          color: #4D4744;
+        }
+
+        .table tbody tr:hover td {
+          background: #F8F6F2;
+        }
+
+        .table tbody tr:last-child td {
+          border-bottom: none;
+        }
+
+        .participant-cell {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .participant-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          font-weight: bold;
+          flex-shrink: 0;
+        }
+
+        .participant-name {
+          font-weight: 500;
+          font-size: 14px;
+        }
+
+        .participant-info {
+          font-size: 12px;
+          color: #98A2B3;
+        }
+
+        .participant-contact {
+          font-size: 13px;
+          color: #667085;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 4px;
+        }
+
+        .registrations-stats {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-bottom: 16px;
         }
 
         /* ============================================================
@@ -1956,373 +2430,6 @@ export default function Events() {
         }
 
         /* ============================================================
-           СПИСОК МЕРОПРИЯТИЙ
-           ============================================================ */
-        .events-list {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .event-item {
-          padding: 14px 18px;
-          border-left: 3px solid #0B1F3A;
-          background: #F8FAFC;
-          border-radius: 0 8px 8px 0;
-          transition: all 0.2s ease;
-        }
-        .event-item:hover {
-          background: #F0EDE8;
-          transform: translateX(4px);
-        }
-
-        .event-title {
-          font-weight: 600;
-          color: #0B1F3A;
-          font-size: 15px;
-          display: flex;
-          flex-wrap: wrap;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .event-subtitle {
-          font-size: 13px;
-          color: #667085;
-          margin-top: 2px;
-        }
-
-        .event-description {
-          font-size: 12px;
-          color: #98A2B3;
-          margin-top: 4px;
-        }
-
-        .event-link {
-          margin-top: 6px;
-        }
-        .event-link a {
-          color: #174A7E;
-          text-decoration: underline;
-          font-size: 13px;
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-        }
-        .event-link a:hover {
-          color: #C9A227;
-        }
-
-        .event-registration {
-          margin-top: 8px;
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-          align-items: center;
-        }
-
-        .event-actions {
-          margin-top: 8px;
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .reg-status {
-          font-size: 13px;
-          font-weight: 500;
-        }
-        .reg-status.pending { color: #C9A227; }
-        .reg-status.confirmed { color: #16845B; }
-        .reg-status.rejected { color: #B3262E; }
-        .reg-status.closed { color: #98A2B3; }
-        .reg-status.full { color: #B3262E; }
-
-        /* ============================================================
-           ТЕГИ
-           ============================================================ */
-        .tag {
-          display: inline-block;
-          padding: 2px 10px;
-          border-radius: 12px;
-          font-size: 10px;
-          font-weight: 500;
-        }
-        .tag-global { background: #EDE7F6; color: #6B46C1; }
-        .tag-club { background: #EAF2FA; color: #174A7E; }
-        .tag-outgoing { background: #FBF4DC; color: #8A6A00; }
-        .tag-pending { background: #FBF4DC; color: #8A6A00; }
-        .tag-rejected { background: #FCEBEC; color: #B3262E; }
-        .tag-full { background: #FCEBEC; color: #B3262E; }
-        .tag-closed { background: #F4F6F9; color: #667085; }
-        .tag-blue { background: #EAF2FA; color: #174A7E; }
-
-        /* ============================================================
-           ПЕРЕЧЕНЬ МОДЕРАЦИИ
-           ============================================================ */
-        .pending-list {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          margin-top: 8px;
-        }
-        .pending-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 12px 16px;
-          background: white;
-          border-radius: 8px;
-          border: 1px solid #E2E7EF;
-        }
-        .pending-title {
-          font-weight: 600;
-        }
-        .pending-club {
-          font-size: 13px;
-          color: #667085;
-        }
-
-        /* ============================================================
-           ФИЛЬТР
-           ============================================================ */
-        .filter-count {
-          font-size: 14px;
-          color: #667085;
-          padding: 6px 16px;
-          background: #F8FAFC;
-          border-radius: 20px;
-          border: 1px solid #E2E7EF;
-          white-space: nowrap;
-        }
-
-        /* ============================================================
-           СООБЩЕНИЯ
-           ============================================================ */
-        .message-success {
-          padding: 12px 16px;
-          background: #E8F5EF;
-          color: #16845B;
-          border-radius: 8px;
-          margin-bottom: 16px;
-          border-left: 4px solid #16845B;
-        }
-        .message-error {
-          padding: 12px 16px;
-          background: #FCEBEC;
-          color: #B3262E;
-          border-radius: 8px;
-          margin-bottom: 16px;
-          border-left: 4px solid #B3262E;
-        }
-
-        /* ============================================================
-           EMPTY STATE
-           ============================================================ */
-        .empty-state {
-          text-align: center;
-          padding: 40px 20px;
-        }
-        .empty-icon {
-          font-size: 48px;
-          margin-bottom: 12px;
-          opacity: 0.6;
-        }
-        .empty-state p {
-          color: #667085;
-          font-size: 14px;
-        }
-
-        /* ============================================================
-           МОДАЛЬНОЕ ОКНО
-           ============================================================ */
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(10, 22, 40, 0.5);
-          backdrop-filter: blur(4px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-          padding: 20px;
-        }
-
-        .modal {
-          background: white;
-          border-radius: 16px;
-          padding: 32px;
-          max-width: 560px;
-          width: 100%;
-          box-shadow: 0 24px 64px rgba(10,22,40,0.2);
-          border: 1px solid #E4DFD8;
-          max-height: 90vh;
-          overflow-y: auto;
-        }
-
-        .modal-large {
-          max-width: 800px;
-        }
-
-        .modal-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 16px;
-        }
-
-        .modal-header h3 {
-          font-family: 'Playfair Display', serif;
-          font-size: 20px;
-          font-weight: 600;
-          color: #0A1628;
-          margin: 0;
-        }
-
-        .modal-close {
-          background: none;
-          border: none;
-          font-size: 24px;
-          color: #A8A29A;
-          cursor: pointer;
-          transition: color 0.2s ease;
-          padding: 4px 8px;
-        }
-        .modal-close:hover { color: #0A1628; }
-
-        .modal-subtitle {
-          color: #667085;
-          margin-bottom: 12px;
-          font-size: 14px;
-        }
-
-        .modal-actions {
-          display: flex;
-          gap: 12px;
-          margin-top: 16px;
-        }
-        .modal-actions .btn {
-          flex: 1;
-        }
-
-        .modal-loading {
-          text-align: center;
-          padding: 40px;
-        }
-
-        .form-control {
-          width: 100%;
-          padding: 10px 14px;
-          border: 1.5px solid #E4DFD8;
-          border-radius: 8px;
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
-          color: #0A1628;
-          background: white;
-          transition: all 0.3s ease;
-          outline: none;
-          min-height: 44px;
-        }
-        .form-control:focus {
-          border-color: #C9A227;
-          box-shadow: 0 0 0 3px rgba(201,162,39,0.08);
-        }
-
-        /* ============================================================
-           ТАБЛИЦА
-           ============================================================ */
-        .table-wrapper {
-          overflow-x: auto;
-          background: white;
-          border-radius: 12px;
-          border: 1px solid #E4DFD8;
-        }
-
-        .table {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 14px;
-          min-width: 600px;
-        }
-
-        .table thead {
-          background: #F8F6F2;
-          border-bottom: 1px solid #E4DFD8;
-        }
-
-        .table thead th {
-          text-align: left;
-          padding: 12px 16px;
-          font-size: 11px;
-          font-weight: 600;
-          color: #8A8480;
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
-        }
-
-        .table tbody td {
-          padding: 12px 16px;
-          border-bottom: 1px solid #F0EDE8;
-          color: #4D4744;
-        }
-
-        .table tbody tr:hover td {
-          background: #F8F6F2;
-        }
-
-        .table tbody tr:last-child td {
-          border-bottom: none;
-        }
-
-        .participant-cell {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .participant-avatar {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 12px;
-          font-weight: bold;
-          flex-shrink: 0;
-        }
-
-        .participant-name {
-          font-weight: 500;
-          font-size: 14px;
-        }
-
-        .participant-info {
-          font-size: 12px;
-          color: #98A2B3;
-        }
-
-        .participant-contact {
-          font-size: 13px;
-          color: #667085;
-        }
-
-        .action-buttons {
-          display: flex;
-          gap: 4px;
-        }
-
-        .registrations-stats {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-          margin-bottom: 16px;
-        }
-
-        /* ============================================================
            СПИННЕР
            ============================================================ */
         .spinner {
@@ -2409,6 +2516,15 @@ export default function Events() {
           .modal-actions .btn {
             width: 100%;
           }
+
+          .pagination-btn {
+            padding: 4px 10px;
+            font-size: 12px;
+            min-width: 30px;
+          }
+          .pagination-info {
+            font-size: 12px;
+          }
         }
 
         @media (max-width: 480px) {
@@ -2475,6 +2591,15 @@ export default function Events() {
           .club-select-buttons .btn {
             width: 100%;
             justify-content: center;
+          }
+
+          .pagination {
+            gap: 4px;
+          }
+          .pagination-btn {
+            padding: 3px 8px;
+            font-size: 11px;
+            min-width: 26px;
           }
         }
       `}</style>

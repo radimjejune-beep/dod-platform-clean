@@ -80,16 +80,20 @@ export const changePassword = async (data) => {
 // ============================================================
 // 2. ПОЛЬЗОВАТЕЛИ
 // ============================================================
-export const getUsers = async () => {
+export const getUsers = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  const response = await fetch(`${API_URL}/users`, {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/users?${query}` : `${API_URL}/users`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -302,11 +306,20 @@ export const deleteEvent = async (id) => {
 // ============================================================
 // 6. РЕГИСТРАЦИИ
 // ============================================================
-export const getRegistrations = async () => {
-  const response = await fetch(`${API_URL}/registrations`, {
+export const getRegistrations = async (params = {}) => {
+  const token = getToken();
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/registrations?${query}` : `${API_URL}/registrations`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
+  
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -322,16 +335,20 @@ export const addRegistration = async (data) => {
 // ============================================================
 // 7. ОБРАЩЕНИЯ
 // ============================================================
-export const getAppeals = async () => {
+export const getAppeals = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  const response = await fetch(`${API_URL}/appeals`, {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/appeals?${query}` : `${API_URL}/appeals`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -435,16 +452,20 @@ export const rejectReport = async (id, comment) => {
 // ============================================================
 // 9. ДОКУМЕНТЫ
 // ============================================================
-export const getDocuments = async () => {
+export const getDocuments = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  const response = await fetch(`${API_URL}/documents`, {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/documents?${query}` : `${API_URL}/documents`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -468,16 +489,20 @@ export const deleteDocument = async (id) => {
 // ============================================================
 // 10. НОВОСТИ
 // ============================================================
-export const getNews = async () => {
+export const getNews = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  const response = await fetch(`${API_URL}/news`, {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/news?${query}` : `${API_URL}/news`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -510,16 +535,20 @@ export const deleteNews = async (id) => {
 // ============================================================
 // 11. УВЕДОМЛЕНИЯ
 // ============================================================
-export const getNotifications = async () => {
+export const getNotifications = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  const response = await fetch(`${API_URL}/notifications`, {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/notifications?${query}` : `${API_URL}/notifications`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -566,16 +595,20 @@ export const getParticipantEvents = async (userId) => {
 // ============================================================
 // 13. ПРЕЗИДЕНТ
 // ============================================================
-export const getPresidentTasks = async () => {
+export const getPresidentTasks = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  const response = await fetch(`${API_URL}/president-tasks`, {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/president-tasks?${query}` : `${API_URL}/president-tasks`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -600,16 +633,20 @@ export const respondToPresidentTask = async (id, response) => {
 // ============================================================
 // 14. ЗАПРОСЫ НА ТЬЮТОРОВ
 // ============================================================
-export const getTutorRequests = async () => {
+export const getTutorRequests = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  const response = await fetch(`${API_URL}/tutor-requests`, {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/tutor-requests?${query}` : `${API_URL}/tutor-requests`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -634,16 +671,20 @@ export const updateTutorRequest = async (id, data) => {
 // ============================================================
 // 15. ТЬЮТОР НАЗНАЧЕНИЯ
 // ============================================================
-export const getTutorAssignments = async () => {
+export const getTutorAssignments = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  const response = await fetch(`${API_URL}/event-tutor-assignments`, {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/event-tutor-assignments?${query}` : `${API_URL}/event-tutor-assignments`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -659,16 +700,20 @@ export const respondToAssignment = async (assignmentId, status) => {
 // ============================================================
 // 16. ТЬЮТОР ИНВАЙТЫ
 // ============================================================
-export const getTutorInvitations = async () => {
+export const getTutorInvitations = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  const response = await fetch(`${API_URL}/tutor-invitations`, {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/tutor-invitations?${query}` : `${API_URL}/tutor-invitations`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -701,16 +746,20 @@ export const cancelTutorInvitation = async (invitationId) => {
 // ============================================================
 // 17. МАССОВЫЕ УВЕДОМЛЕНИЯ
 // ============================================================
-export const getMassNotifications = async () => {
+export const getMassNotifications = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  const response = await fetch(`${API_URL}/mass-notifications`, {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/mass-notifications?${query}` : `${API_URL}/mass-notifications`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -734,16 +783,20 @@ export const deleteMassNotification = async (id) => {
 // ============================================================
 // 18. ЦЕЛИ И KPI
 // ============================================================
-export const getGoals = async () => {
+export const getGoals = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  const response = await fetch(`${API_URL}/goals`, {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/goals?${query}` : `${API_URL}/goals`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -776,16 +829,20 @@ export const deleteGoal = async (id) => {
 // ============================================================
 // 19. ЗАДАЧИ
 // ============================================================
-export const getTasks = async () => {
+export const getTasks = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  const response = await fetch(`${API_URL}/tasks`, {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/tasks?${query}` : `${API_URL}/tasks`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -820,7 +877,7 @@ export const deleteTask = async (id) => {
 // ============================================================
 export const getActivityLog = async (params = {}) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/activity-log?${query}` : `${API_URL}/activity-log`;
@@ -830,7 +887,8 @@ export const getActivityLog = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
@@ -853,7 +911,7 @@ export const getConsentsStats = async (clubId = null) => {
 
 export const getConsentsMissing = async (clubId = null) => {
   const token = getToken();
-  if (!token) return [];
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
   const url = clubId ? `${API_URL}/consents-missing?club_id=${clubId}` : `${API_URL}/consents-missing`;
   const response = await fetch(url, {
@@ -861,18 +919,28 @@ export const getConsentsMissing = async (clubId = null) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 
 // ============================================================
 // 22. ДЕТИ РОДИТЕЛЯ
 // ============================================================
-export const getParentChildren = async () => {
-  const response = await fetch(`${API_URL}/parent-children`, {
+export const getParentChildren = async (params = {}) => {
+  const token = getToken();
+  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${API_URL}/parent-children?${query}` : `${API_URL}/parent-children`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
+  
+  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  
   return response.json();
 };
 

@@ -52,14 +52,28 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh', 
-        background: '#0B1F3A' 
-      }}>
+      <div className="page-loading">
         <div className="spinner" />
+        <style>{`
+          .page-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #0B1F3A;
+          }
+          .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: #C9A227;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
@@ -68,6 +82,9 @@ export default function Home() {
     <div className="home-page">
       <Navigation profile={profile} />
 
+      {/* ============================================================
+         ГЕРОЙ-СЕКЦИЯ
+         ============================================================ */}
       <section className="home-hero">
         <div className="home-hero-bg" />
         <div className="home-hero-content">
@@ -112,6 +129,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============================================================
+         О ДВИЖЕНИИ
+         ============================================================ */}
       <section className="home-about">
         <div className="home-about-container">
           <div className="home-about-grid">
@@ -162,6 +182,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============================================================
+         ЦИФРЫ
+         ============================================================ */}
       <section className="home-numbers">
         <div className="home-numbers-container">
           <div className="home-numbers-item">
@@ -183,8 +206,14 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============================================================
+         НОВОСТИ
+         ============================================================ */}
       <NewsSection limit={3} />
 
+      {/* ============================================================
+         КОНТАКТЫ
+         ============================================================ */}
       <section className="home-contacts-section">
         <div className="home-contacts-container">
           <div className="home-contacts-header">
@@ -196,7 +225,7 @@ export default function Home() {
             <div className="home-contacts-card">
               <div className="home-contacts-card-icon">📍</div>
               <h4>Адрес</h4>
-              <p>119200, Москва,<br />Смоленская-Сенная площадь,<br />дом 32/34 (АРД)</p>
+              <p>119454, Москва,<br />проспект Вернадского, д. 76, корп. Г,<br />эт/пом/ком 1/IV/22</p>
             </div>
             <div className="home-contacts-card">
               <div className="home-contacts-card-icon">📞</div>
@@ -206,12 +235,12 @@ export default function Home() {
             <div className="home-contacts-card">
               <div className="home-contacts-card-icon">✉️</div>
               <h4>Email</h4>
-              <p><a href="mailto:diplomatsothefuture@mail.ru">diplomatsothefuture@mail.ru</a></p>
+              <p><a href="mailto:diplomatsofthefuture@mail.ru">diplomatsofthefuture@mail.ru</a></p>
             </div>
             <div className="home-contacts-card">
               <div className="home-contacts-card-icon">🌐</div>
               <h4>Сайт</h4>
-              <p><a href="https://www.diplomatsothefuture.ru" target="_blank" rel="noopener noreferrer">diplomatsothefuture.ru</a></p>
+              <p><a href="https://www.diplomatsofthefuture.ru" target="_blank" rel="noopener noreferrer">diplomatsofthefuture.ru</a></p>
             </div>
           </div>
         </div>
@@ -220,11 +249,17 @@ export default function Home() {
       <Footer />
 
       <style>{`
+        /* ============================================================
+           ОСНОВНЫЕ СТИЛИ
+           ============================================================ */
         .home-page {
           min-height: 100vh;
           background: #F5F2ED;
         }
 
+        /* ============================================================
+           ГЕРОЙ
+           ============================================================ */
         .home-hero {
           position: relative;
           min-height: 70vh;
@@ -398,6 +433,9 @@ export default function Home() {
           opacity: 0.7;
         }
 
+        /* ============================================================
+           О ДВИЖЕНИИ
+           ============================================================ */
         .home-about {
           padding: 60px 24px;
           background: #FFFFFF;
@@ -514,6 +552,9 @@ export default function Home() {
           background: radial-gradient(circle, rgba(201, 162, 39, 0.05), transparent 70%);
         }
 
+        /* ============================================================
+           ЦИФРЫ
+           ============================================================ */
         .home-numbers {
           padding: 50px 24px;
           background: linear-gradient(135deg, #0B1F3A, #07152B);
@@ -548,6 +589,9 @@ export default function Home() {
           font-weight: 300;
         }
 
+        /* ============================================================
+           КОНТАКТЫ
+           ============================================================ */
         .home-contacts-section {
           padding: 60px 24px;
           background: #FFFFFF;
@@ -639,6 +683,9 @@ export default function Home() {
           color: #C9A227;
         }
 
+        /* ============================================================
+           АДАПТИВНОСТЬ
+           ============================================================ */
         @media (max-width: 992px) {
           .home-hero {
             min-height: 60vh;

@@ -17,6 +17,14 @@ export default function Participants() {
   const [isClubCoordinator, setIsClubCoordinator] = useState(false);
   const [message, setMessage] = useState('');
   
+  // ===== ПАГИНАЦИЯ =====
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0
+  });
+  
   const [filters, setFilters] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClasses, setSelectedClasses] = useState([]);
@@ -27,8 +35,9 @@ export default function Participants() {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (page = 1) => {
     try {
+      setLoading(true);
       const userData = await api.getMe();
       if (!userData || !userData.id) {
         navigate('/login');
@@ -36,8 +45,11 @@ export default function Participants() {
       }
       setProfile(userData);
 
+      // ============================================================
+      // ✅ ЗАГРУЗКА С ПАГИНАЦИЕЙ
+      // ============================================================
       const [participantsData, clubsData] = await Promise.all([
-        api.getParticipants(),
+        api.getParticipants({ page, limit: pagination.limit }),
         api.getClubs()
       ]);
 
@@ -45,6 +57,11 @@ export default function Participants() {
 
       const role = userData.role;
       let filtered = [];
+      let total = 0;
+
+      // ✅ ОБРАБОТКА ДАННЫХ С ПАГИНАЦИЕЙ
+      const data = participantsData.data || [];
+      const meta = participantsData.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
 
       if (role === 'club_coordinator') {
         setIsClubCoordinator(true);
@@ -64,27 +81,86 @@ export default function Participants() {
         }
         
         if (clubId) {
-          filtered = participantsData.filter(p => p.club_id === clubId);
+          filtered = data.filter(p => p.club_id === clubId);
+          total = filtered.length;
           console.log(`👥 Координатор КЮДа: показано ${filtered.length} участников своего клуба`);
         } else {
           filtered = [];
+          total = 0;
           console.log('❌ Координатор КЮДа: клуб не найден');
         }
         
       } else if (['admin', 'movement_coordinator', 'tutor', 'president', 'vice_president'].includes(role)) {
-        filtered = participantsData;
+        filtered = data;
+        total = meta.total || data.length;
         console.log(`👥 ${role}: показано ${filtered.length} участников`);
       } else {
         filtered = [];
+        total = 0;
       }
 
       setAllParticipants(filtered);
       setParticipants(filtered);
+      setPagination({
+        ...meta,
+        total: total
+      });
     } catch (err) {
       console.error('Ошибка:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  // ============================================================
+  // ПАГИНАЦИЯ
+  // ============================================================
+  const Pagination = ({ pagination, onPageChange }) => {
+    const { page, totalPages, total } = pagination;
+
+    if (totalPages <= 1) return null;
+
+    const pages = [];
+    const start = Math.max(1, page - 2);
+    const end = Math.min(totalPages, page + 2);
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    return (
+      <div className="pagination">
+        <button
+          className="pagination-btn"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          ◀
+        </button>
+        
+        {pages.map((p) => (
+          <button
+            key={p}
+            className={`pagination-btn ${p === page ? 'active' : ''}`}
+            onClick={() => onPageChange(p)}
+          >
+            {p}
+          </button>
+        ))}
+        
+        <button
+          className="pagination-btn"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          ▶
+        </button>
+        
+        <span className="pagination-info">
+          Всего: {total} записей
+        </span>
+      </div>
+    );
   };
 
   const getUniqueClasses = () => {
@@ -95,16 +171,6 @@ export default function Participants() {
   };
 
   const classes = getUniqueClasses();
-
-  const getClassStats = () => {
-    const stats = {};
-    classes.forEach(cls => {
-      stats[cls] = allParticipants.filter(p => p.class_name === cls).length;
-    });
-    return stats;
-  };
-
-  const classStats = getClassStats();
 
   const filterConfig = [
     {
@@ -165,7 +231,7 @@ export default function Participants() {
     try {
       await api.deleteUser(id);
       setMessage('✅ Участник удалён');
-      loadData();
+      loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       setMessage('❌ Ошибка: ' + err.message);
@@ -229,7 +295,7 @@ export default function Participants() {
             <p>
               {isClubCoordinator 
                 ? `Участники вашего клуба (${filtered.length})` 
-                : `Все участники движения (${filtered.length})`}
+                : `Все участники движения (${pagination.total || filtered.length})`}
             </p>
           </div>
           <div className="page-header-actions">
@@ -422,6 +488,11 @@ export default function Participants() {
             )}
           </div>
         )}
+
+        {/* ============================================================
+           ПАГИНАЦИЯ
+           ============================================================ */}
+        <Pagination pagination={pagination} onPageChange={loadData} />
       </div>
 
       <Footer />
@@ -517,6 +588,66 @@ export default function Participants() {
           border-radius: 20px;
           border: 1px solid #E2E7EF;
           white-space: nowrap;
+        }
+
+        /* ============================================================
+           ПАГИНАЦИЯ
+           ============================================================ */
+        .pagination {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 20px;
+          padding-top: 16px;
+          border-top: 1px solid #E4DFD8;
+          flex-wrap: wrap;
+        }
+
+        .pagination-btn {
+          padding: 6px 14px;
+          border: 1px solid #E4DFD8;
+          border-radius: 6px;
+          background: white;
+          color: #0A1628;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-family: 'Inter', sans-serif;
+          min-width: 36px;
+          text-align: center;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+          border-color: #C9A227;
+          background: #FBF4DC;
+        }
+
+        .pagination-btn.active {
+          border-color: #C9A227;
+          background: #C9A227;
+          color: white;
+        }
+
+        .pagination-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        .pagination-info {
+          font-size: 13px;
+          color: #98A2B3;
+          margin-left: 8px;
+        }
+
+        @media (max-width: 768px) {
+          .pagination-btn {
+            padding: 4px 10px;
+            font-size: 12px;
+            min-width: 30px;
+          }
+          .pagination-info {
+            font-size: 12px;
+          }
         }
 
         /* ============================================================
@@ -848,6 +979,15 @@ export default function Participants() {
           .participant-card {
             padding: 16px;
           }
+
+          .pagination-btn {
+            padding: 4px 10px;
+            font-size: 12px;
+            min-width: 30px;
+          }
+          .pagination-info {
+            font-size: 12px;
+          }
         }
 
         @media (max-width: 480px) {
@@ -902,6 +1042,15 @@ export default function Participants() {
 
           .card-name {
             font-size: 14px;
+          }
+
+          .pagination {
+            gap: 4px;
+          }
+          .pagination-btn {
+            padding: 3px 8px;
+            font-size: 11px;
+            min-width: 26px;
           }
         }
       `}</style>

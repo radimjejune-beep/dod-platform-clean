@@ -8,7 +8,7 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="footer-diplomatic">
+    <footer className="footer">
       <div className="footer-container">
         {/* Левая колонка — логотип и описание */}
         <div className="footer-brand">
@@ -17,6 +17,10 @@ export default function Footer() {
             Межрегиональное детское общественное Движение<br />
             по формированию дипломатической культуры<br />
             <strong>«Дипломаты Будущего»</strong>
+          </p>
+          <p className="footer-org">
+            МДОД «Дипломаты Будущего»<br />
+            ИНН: 9729292750 | ОГРН: 1197700018306
           </p>
         </div>
 
@@ -57,7 +61,7 @@ export default function Footer() {
 
       {/* Нижняя часть — копирайт и ссылки */}
       <div className="footer-bottom">
-        <p>
+        <p className="footer-copyright">
           © {currentYear} МДОД «Дипломаты Будущего». Все права защищены.
         </p>
         <div className="footer-links">
@@ -68,7 +72,10 @@ export default function Footer() {
       </div>
 
       <style>{`
-        .footer-diplomatic {
+        /* ============================================================
+           ФУТЕР
+           ============================================================ */
+        .footer {
           background: #0B1F3A;
           color: rgba(255, 255, 255, 0.8);
           padding: 48px 24px 24px;
@@ -78,15 +85,16 @@ export default function Footer() {
         }
 
         .footer-container {
-          max-width: 1440px;
+          max-width: 1200px;
           margin: 0 auto;
           display: grid;
           grid-template-columns: 1fr 1.5fr 1fr;
           gap: 40px;
-          padding: 0 24px 32px;
+          padding: 0 0 32px 0;
           border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
 
+        /* ===== ЛЕВАЯ КОЛОНКА ===== */
         .footer-brand {
           display: flex;
           flex-direction: column;
@@ -111,9 +119,17 @@ export default function Footer() {
           color: #E8D9A8;
         }
 
+        .footer-org {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.3);
+          margin: 0;
+          line-height: 1.5;
+        }
+
+        /* ===== ЦЕНТРАЛЬНАЯ КОЛОНКА ===== */
         .footer-contacts h4,
         .footer-partners h4 {
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 600;
           color: #E8D9A8;
           margin: 0 0 12px 0;
@@ -148,6 +164,7 @@ export default function Footer() {
           color: #E8D9A8;
         }
 
+        /* ===== ПРАВАЯ КОЛОНКА ===== */
         .footer-partners {
           display: flex;
           flex-direction: column;
@@ -174,10 +191,11 @@ export default function Footer() {
           margin: 6px 0 0 0;
         }
 
+        /* ===== НИЖНЯЯ ЧАСТЬ ===== */
         .footer-bottom {
-          max-width: 1440px;
+          max-width: 1200px;
           margin: 0 auto;
-          padding: 16px 24px 0;
+          padding: 16px 0 0 0;
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -185,7 +203,7 @@ export default function Footer() {
           gap: 12px;
         }
 
-        .footer-bottom p {
+        .footer-copyright {
           font-size: 12px;
           color: rgba(255, 255, 255, 0.3);
           margin: 0;
@@ -214,72 +232,114 @@ export default function Footer() {
           font-size: 12px;
         }
 
+        /* ============================================================
+           АДАПТИВНОСТЬ
+           ============================================================ */
+
+        /* Планшеты */
         @media (max-width: 992px) {
           .footer-container {
             grid-template-columns: 1fr 1fr;
             gap: 30px;
           }
+
           .footer-partners {
             grid-column: 1 / -1;
             flex-direction: row;
             justify-content: center;
             gap: 16px;
           }
+
           .footer-partners h4 {
             margin: 0;
           }
         }
 
+        /* Телефоны */
         @media (max-width: 768px) {
+          .footer {
+            padding: 32px 16px 16px;
+          }
+
           .footer-container {
             grid-template-columns: 1fr;
             gap: 24px;
-            padding: 0 16px 24px;
+            padding: 0 0 20px 0;
           }
+
           .footer-brand {
             text-align: center;
             align-items: center;
           }
+
           .footer-description {
             text-align: center;
           }
+
+          .footer-org {
+            text-align: center;
+          }
+
           .footer-contacts {
             text-align: center;
           }
+
           .footer-contact-item {
             justify-content: center;
           }
+
           .footer-partners {
             flex-direction: column;
             align-items: center;
           }
+
           .footer-bottom {
             flex-direction: column;
             text-align: center;
+            gap: 8px;
           }
+
           .footer-links {
             justify-content: center;
           }
         }
 
+        /* Маленькие телефоны */
         @media (max-width: 480px) {
-          .footer-diplomatic {
-            padding: 32px 12px 16px;
+          .footer {
+            padding: 24px 12px 12px;
           }
+
           .footer-container {
-            padding: 0 8px 20px;
+            padding: 0 0 16px 0;
           }
+
           .footer-logo {
             height: 36px;
           }
+
           .footer-description {
             font-size: 13px;
           }
+
+          .footer-org {
+            font-size: 11px;
+          }
+
           .footer-contact-item {
             font-size: 12px;
           }
+
           .footer-ard-logo {
             height: 38px;
+          }
+
+          .footer-copyright {
+            font-size: 11px;
+          }
+
+          .footer-links a {
+            font-size: 11px;
           }
         }
       `}</style>

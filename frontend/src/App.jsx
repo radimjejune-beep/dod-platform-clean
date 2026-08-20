@@ -58,6 +58,8 @@ import ActivityLog from './pages/ActivityLog';
 import AchievementsCategories from './pages/AchievementsCategories';
 import NotificationHistory from './pages/NotificationHistory';
 import GoalsAndKPI from './pages/GoalsAndKPI';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import Terms from './pages/Terms';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -146,7 +148,8 @@ function App() {
         <Route path="/activity-log" element={<ActivityLog />} />
         <Route path="/achievements-categories" element={<AchievementsCategories />} />
         <Route path="/notification-history" element={<NotificationHistory />} />
-
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<Terms />} />
         <Route path="*" element={<Navigate to="/" replace />} />
         <Route path="/goals" element={<GoalsAndKPI />} />
       </Routes>

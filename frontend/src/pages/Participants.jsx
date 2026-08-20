@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import FilterBar from '../components/FilterBar';
+import Footer from '../components/Footer';
 
 export default function Participants() {
   const [profile, setProfile] = useState(null);
@@ -70,22 +71,9 @@ export default function Participants() {
           console.log('❌ Координатор КЮДа: клуб не найден');
         }
         
-      } else if (role === 'admin') {
+      } else if (['admin', 'movement_coordinator', 'tutor', 'president', 'vice_president'].includes(role)) {
         filtered = participantsData;
-        console.log(`👥 Админ: показано ${filtered.length} участников`);
-        
-      } else if (role === 'movement_coordinator') {
-        filtered = participantsData;
-        console.log(`👥 Координатор движения: показано ${filtered.length} участников`);
-        
-      } else if (role === 'tutor') {
-        filtered = participantsData;
-        console.log(`👥 Тьютор: показано ${filtered.length} участников`);
-        
-      } else if (role === 'president' || role === 'vice_president') {
-        filtered = participantsData;
-        console.log(`👥 Президент/Вице: показано ${filtered.length} участников`);
-        
+        console.log(`👥 ${role}: показано ${filtered.length} участников`);
       } else {
         filtered = [];
       }
@@ -186,8 +174,28 @@ export default function Participants() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div className="page-loading">
         <div className="spinner" />
+        <style>{`
+          .page-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #F0EDE8;
+          }
+          .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #E4DFD8;
+            border-top-color: #C9A227;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
@@ -198,10 +206,11 @@ export default function Participants() {
         <Navigation profile={profile} />
         <div className="container-page">
           <div className="empty-state">
-            <div className="icon">⛔</div>
+            <div className="empty-icon">⛔</div>
             <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Доступ запрещён</p>
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -210,13 +219,40 @@ export default function Participants() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
+        
+        {/* ============================================================
+           ЗАГОЛОВОК
+           ============================================================ */}
+        <div className="page-header">
+          <div className="page-header-left">
+            <h1>👥 Участники</h1>
+            <p>
+              {isClubCoordinator 
+                ? `Участники вашего клуба (${filtered.length})` 
+                : `Все участники движения (${filtered.length})`}
+            </p>
+          </div>
+          <div className="page-header-actions">
+            <button
+              className={`btn-view ${viewMode === 'table' ? 'active' : ''}`}
+              onClick={() => setViewMode('table')}
+            >
+              📋 Таблица
+            </button>
+            <button
+              className={`btn-view ${viewMode === 'cards' ? 'active' : ''}`}
+              onClick={() => setViewMode('cards')}
+            >
+              🃏 Карточки
+            </button>
+          </div>
+        </div>
+
         {message && (
-          <div className="message-success" style={{ marginBottom: '16px' }}>
+          <div className="message-success">
             {message}
           </div>
         )}
-
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <FilterBar
           filters={filterConfig}
@@ -224,22 +260,17 @@ export default function Participants() {
           onSearchChange={setSearchQuery}
           searchPlaceholder="🔍 Поиск по ФИО, email, школе..."
         >
-          <div style={{ 
-            fontSize: '14px', 
-            color: '#667085', 
-            padding: '6px 16px', 
-            background: '#F8FAFC', 
-            borderRadius: '20px',
-            border: '1px solid #E2E7EF',
-            whiteSpace: 'nowrap'
-          }}>
-            Найдено: <strong style={{ color: '#0B1F3A' }}>{filtered.length}</strong>
+          <div className="filter-count">
+            Найдено: <strong>{filtered.length}</strong>
           </div>
         </FilterBar>
 
+        {/* ============================================================
+           ТАБЛИЦА
+           ============================================================ */}
         {viewMode === 'table' && (
           <div className="table-wrapper">
-            <table>
+            <table className="table">
               <thead>
                 <tr>
                   <th>ФИО</th>
@@ -253,114 +284,57 @@ export default function Participants() {
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#667085' }}>
-                      <div style={{ fontSize: '32px', marginBottom: '8px' }}>👀</div>
-                      {isClubCoordinator ? 'В вашем клубе пока нет участников' : 'Участников не найдено'}
+                    <td colSpan="6" className="empty-table">
+                      <div className="empty-icon">👀</div>
+                      <p>{isClubCoordinator ? 'В вашем клубе пока нет участников' : 'Участников не найдено'}</p>
                     </td>
                   </tr>
                 ) : (
                   filtered.map((p) => (
                     <tr key={p.id}>
-                      <td style={{ fontWeight: '500', color: '#0B1F3A' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <td>
+                        <div className="participant-cell">
                           {p.avatar_url ? (
-                            <img 
-                              src={p.avatar_url} 
-                              alt="Аватар" 
-                              style={{ 
-                                width: '32px', 
-                                height: '32px', 
-                                borderRadius: '50%', 
-                                objectFit: 'cover',
-                                border: '2px solid #E2E7EF'
-                              }} 
-                            />
+                            <img src={p.avatar_url} alt="Аватар" className="participant-avatar-img" />
                           ) : (
-                            <div style={{
-                              width: '32px',
-                              height: '32px',
-                              borderRadius: '50%',
-                              background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
-                              color: 'white',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '14px',
-                              fontWeight: 'bold'
-                            }}>
+                            <div className="participant-avatar">
                               {p.full_name?.charAt(0) || '?'}
                             </div>
                           )}
-                          {p.full_name}
+                          <span className="participant-name">{p.full_name}</span>
                         </div>
                       </td>
-                      <td style={{ color: '#667085' }}>{p.class_name || '—'}</td>
-                      <td style={{ color: '#667085' }}>{p.school || '—'}</td>
-                      <td style={{ color: '#667085' }}>{p.club_name || '—'}</td>
+                      <td>{p.class_name || '—'}</td>
+                      <td>{p.school || '—'}</td>
+                      <td>{p.club_name || '—'}</td>
                       <td>
-                        <span style={{
-                          padding: '2px 12px',
-                          borderRadius: '20px',
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          background: p.status === 'active' ? '#E8F5EF' : '#FCEBEC',
-                          color: p.status === 'active' ? '#16845B' : '#B3262E'
-                        }}>
+                        <span className={`status-badge ${p.status === 'active' ? 'active' : 'inactive'}`}>
                           {p.status === 'active' ? '🟢 Активен' : '🔴 Неактивен'}
                         </span>
                       </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                      <td>
+                        <div className="action-buttons">
                           <button
-                            style={{
-                              padding: '4px 10px',
-                              background: '#F4F6F9',
-                              border: 'none',
-                              borderRadius: '8px',
-                              cursor: 'pointer',
-                              fontSize: '13px',
-                              transition: 'all 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = '#EAF2FA'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = '#F4F6F9'}
+                            className="btn-icon view"
                             onClick={() => navigate(`/participant/${p.id}`)}
+                            title="Просмотр"
                           >
                             👁️
                           </button>
                           {canEdit && (
                             <button
-                              style={{
-                                padding: '4px 10px',
-                                background: '#EAF2FA',
-                                border: 'none',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                fontSize: '13px',
-                                color: '#174A7E',
-                                transition: 'all 0.2s ease'
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.background = '#D5E4F0'}
-                              onMouseLeave={(e) => e.currentTarget.style.background = '#EAF2FA'}
+                              className="btn-icon edit"
                               onClick={() => navigate(`/participant/${p.id}/edit`)}
+                              title="Редактировать"
                             >
                               ✏️
                             </button>
                           )}
                           {canDelete && (
                             <button
-                              style={{
-                                padding: '4px 10px',
-                                background: '#FCEBEC',
-                                border: 'none',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                fontSize: '13px',
-                                color: '#B3262E',
-                                transition: 'all 0.2s ease'
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.background = '#FED7D7'}
-                              onMouseLeave={(e) => e.currentTarget.style.background = '#FCEBEC'}
+                              className="btn-icon delete"
                               onClick={() => handleDelete(p.id, p.full_name)}
+                              title="Удалить"
                             >
                               🗑️
                             </button>
@@ -375,150 +349,562 @@ export default function Participants() {
           </div>
         )}
 
+        {/* ============================================================
+           КАРТОЧКИ
+           ============================================================ */}
         {viewMode === 'cards' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-            {filtered.map((p) => (
-              <div
-                key={p.id}
-                className="card"
-                style={{ 
-                  cursor: 'pointer', 
-                  padding: '20px',
-                  borderRadius: '16px',
-                  transition: 'all 0.3s ease',
-                  position: 'relative'
-                }}
-                onClick={() => navigate(`/participant/${p.id}`)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 8px 30px rgba(11, 31, 58, 0.12)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '12px' }}>
-                  {p.avatar_url ? (
-                    <img 
-                      src={p.avatar_url} 
-                      alt="Аватар" 
-                      style={{ 
-                        width: '48px', 
-                        height: '48px', 
-                        borderRadius: '50%', 
-                        objectFit: 'cover',
-                        border: '2px solid #E2E7EF'
-                      }} 
-                    />
-                  ) : (
-                    <div style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
-                      color: 'white',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '20px',
-                      fontWeight: 'bold'
-                    }}>
-                      {p.full_name?.charAt(0) || '?'}
-                    </div>
-                  )}
-                  <div>
-                    <div style={{ fontWeight: '600', color: '#0B1F3A', fontSize: '16px' }}>{p.full_name}</div>
-                    <div style={{ fontSize: '13px', color: '#667085' }}>
-                      {p.class_name || 'Класс не указан'}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{
-                    padding: '2px 12px',
-                    borderRadius: '20px',
-                    fontSize: '12px',
-                    background: p.status === 'active' ? '#E8F5EF' : '#FCEBEC',
-                    color: p.status === 'active' ? '#16845B' : '#B3262E'
-                  }}>
-                    {p.status === 'active' ? '🟢 Активен' : '🔴 Неактивен'}
-                  </span>
-                  {p.school && (
-                    <span style={{
-                      padding: '2px 12px',
-                      borderRadius: '20px',
-                      fontSize: '12px',
-                      background: '#EAF2FA',
-                      color: '#174A7E'
-                    }}>
-                      🏫 {p.school}
-                    </span>
-                  )}
-                  {p.club_name && (
-                    <span style={{
-                      padding: '2px 12px',
-                      borderRadius: '20px',
-                      fontSize: '12px',
-                      background: '#FBF4DC',
-                      color: '#8A6A00'
-                    }}>
-                      🏛️ {p.club_name}
-                    </span>
-                  )}
-                </div>
-                {(canEdit || canDelete) && (
-                  <div style={{ 
-                    position: 'absolute', 
-                    top: '12px', 
-                    right: '12px', 
-                    display: 'flex', 
-                    gap: '4px' 
-                  }} onClick={(e) => e.stopPropagation()}>
-                    {canEdit && (
-                      <button
-                        style={{
-                          padding: '4px 10px',
-                          background: '#EAF2FA',
-                          border: 'none',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = '#D5E4F0'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = '#EAF2FA'}
-                        onClick={() => navigate(`/participant/${p.id}/edit`)}
-                      >
-                        ✏️
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        style={{
-                          padding: '4px 10px',
-                          background: '#FCEBEC',
-                          border: 'none',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          color: '#B3262E',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = '#FED7D7'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = '#FCEBEC'}
-                        onClick={() => handleDelete(p.id, p.full_name)}
-                      >
-                        🗑️
-                      </button>
-                    )}
-                  </div>
-                )}
+          <div className="cards-grid">
+            {filtered.length === 0 ? (
+              <div className="empty-state full-width">
+                <div className="empty-icon">👀</div>
+                <p>{isClubCoordinator ? 'В вашем клубе пока нет участников' : 'Участников не найдено'}</p>
               </div>
-            ))}
+            ) : (
+              filtered.map((p) => (
+                <div
+                  key={p.id}
+                  className="participant-card"
+                  onClick={() => navigate(`/participant/${p.id}`)}
+                >
+                  <div className="card-header">
+                    {p.avatar_url ? (
+                      <img src={p.avatar_url} alt="Аватар" className="card-avatar-img" />
+                    ) : (
+                      <div className="card-avatar">
+                        {p.full_name?.charAt(0) || '?'}
+                      </div>
+                    )}
+                    <div className="card-name">{p.full_name}</div>
+                  </div>
+                  <div className="card-body">
+                    <div className="card-info">
+                      <span className="card-label">Класс</span>
+                      <span className="card-value">{p.class_name || '—'}</span>
+                    </div>
+                    <div className="card-info">
+                      <span className="card-label">Школа</span>
+                      <span className="card-value">{p.school || '—'}</span>
+                    </div>
+                    <div className="card-info">
+                      <span className="card-label">Клуб</span>
+                      <span className="card-value">{p.club_name || '—'}</span>
+                    </div>
+                  </div>
+                  <div className="card-footer">
+                    <span className={`status-badge ${p.status === 'active' ? 'active' : 'inactive'}`}>
+                      {p.status === 'active' ? '🟢 Активен' : '🔴 Неактивен'}
+                    </span>
+                    {(canEdit || canDelete) && (
+                      <div className="card-actions" onClick={(e) => e.stopPropagation()}>
+                        {canEdit && (
+                          <button
+                            className="btn-icon edit"
+                            onClick={() => navigate(`/participant/${p.id}/edit`)}
+                            title="Редактировать"
+                          >
+                            ✏️
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            className="btn-icon delete"
+                            onClick={() => handleDelete(p.id, p.full_name)}
+                            title="Удалить"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>
+
+      <Footer />
+
+      <style>{`
+        /* ============================================================
+           ОСНОВНЫЕ СТИЛИ
+           ============================================================ */
+        .page-background {
+          min-height: 100vh;
+          background: #F0EDE8;
+        }
+
+        .container-page {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 24px 32px 48px;
+        }
+
+        /* ============================================================
+           ЗАГОЛОВОК
+           ============================================================ */
+        .page-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .page-header-left h1 {
+          font-size: 24px;
+          font-weight: 700;
+          color: #0B1F3A;
+          margin: 0;
+        }
+
+        .page-header-left p {
+          color: #667085;
+          margin: 4px 0 0 0;
+        }
+
+        .page-header-actions {
+          display: flex;
+          gap: 8px;
+        }
+
+        .btn-view {
+          padding: 8px 16px;
+          border: 1.5px solid #E4DFD8;
+          border-radius: 8px;
+          background: transparent;
+          color: #6B6561;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-family: 'Inter', sans-serif;
+        }
+
+        .btn-view:hover {
+          background: #F8F6F2;
+          border-color: #C9A227;
+        }
+
+        .btn-view.active {
+          background: #0A1628;
+          color: white;
+          border-color: #0A1628;
+        }
+
+        /* ============================================================
+           СООБЩЕНИЯ
+           ============================================================ */
+        .message-success {
+          padding: 12px 16px;
+          background: #E8F5EF;
+          color: #16845B;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          border-left: 4px solid #16845B;
+        }
+
+        /* ============================================================
+           ФИЛЬТР
+           ============================================================ */
+        .filter-count {
+          font-size: 14px;
+          color: #667085;
+          padding: 6px 16px;
+          background: #F8FAFC;
+          border-radius: 20px;
+          border: 1px solid #E2E7EF;
+          white-space: nowrap;
+        }
+
+        /* ============================================================
+           ТАБЛИЦА
+           ============================================================ */
+        .table-wrapper {
+          overflow-x: auto;
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
+        }
+
+        .table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 14px;
+          min-width: 700px;
+        }
+
+        .table thead {
+          background: #F8F6F2;
+          border-bottom: 1px solid #E4DFD8;
+        }
+
+        .table thead th {
+          text-align: left;
+          padding: 12px 16px;
+          font-size: 11px;
+          font-weight: 600;
+          color: #8A8480;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+
+        .table tbody td {
+          padding: 12px 16px;
+          border-bottom: 1px solid #F0EDE8;
+          color: #4D4744;
+        }
+
+        .table tbody tr:hover td {
+          background: #F8F6F2;
+        }
+
+        .table tbody tr:last-child td {
+          border-bottom: none;
+        }
+
+        .empty-table {
+          text-align: center;
+          padding: 40px 20px !important;
+          color: #667085;
+        }
+
+        .empty-table .empty-icon {
+          font-size: 48px;
+          margin-bottom: 8px;
+          opacity: 0.6;
+        }
+
+        /* ============================================================
+           УЧАСТНИК В ТАБЛИЦЕ
+           ============================================================ */
+        .participant-cell {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .participant-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #0B1F3A, #174A7E);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+          font-weight: bold;
+          flex-shrink: 0;
+        }
+
+        .participant-avatar-img {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 2px solid #E2E7EF;
+          flex-shrink: 0;
+        }
+
+        .participant-name {
+          font-weight: 500;
+          color: #0B1F3A;
+        }
+
+        /* ============================================================
+           СТАТУС
+           ============================================================ */
+        .status-badge {
+          display: inline-block;
+          padding: 2px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+
+        .status-badge.active {
+          background: #E8F5EF;
+          color: #16845B;
+        }
+
+        .status-badge.inactive {
+          background: #FCEBEC;
+          color: #B3262E;
+        }
+
+        /* ============================================================
+           ДЕЙСТВИЯ
+           ============================================================ */
+        .action-buttons {
+          display: flex;
+          gap: 4px;
+          justify-content: center;
+          flex-wrap: wrap;
+        }
+
+        .btn-icon {
+          padding: 4px 10px;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 13px;
+          transition: all 0.2s ease;
+          background: transparent;
+        }
+
+        .btn-icon.view:hover {
+          background: #EAF2FA;
+        }
+
+        .btn-icon.edit:hover {
+          background: #FBF4DC;
+        }
+
+        .btn-icon.delete:hover {
+          background: #FCEBEC;
+        }
+
+        /* ============================================================
+           КАРТОЧКИ
+           ============================================================ */
+        .cards-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 16px;
+        }
+
+        .full-width {
+          grid-column: 1 / -1;
+        }
+
+        .participant-card {
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
+          padding: 20px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .participant-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 30px rgba(11, 31, 58, 0.12);
+        }
+
+        .card-header {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 12px;
+        }
+
+        .card-avatar {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #0B1F3A, #174A7E);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 20px;
+          font-weight: bold;
+          flex-shrink: 0;
+        }
+
+        .card-avatar-img {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 2px solid #E2E7EF;
+          flex-shrink: 0;
+        }
+
+        .card-name {
+          font-size: 16px;
+          font-weight: 600;
+          color: #0B1F3A;
+        }
+
+        .card-body {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          margin-bottom: 12px;
+        }
+
+        .card-info {
+          display: flex;
+          justify-content: space-between;
+          font-size: 13px;
+          padding: 2px 0;
+        }
+
+        .card-label {
+          color: #98A2B3;
+        }
+
+        .card-value {
+          color: #0B1F3A;
+          font-weight: 500;
+        }
+
+        .card-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-top: 12px;
+          border-top: 1px solid #F0EDE8;
+        }
+
+        .card-actions {
+          display: flex;
+          gap: 4px;
+        }
+
+        /* ============================================================
+           EMPTY STATE
+           ============================================================ */
+        .empty-state {
+          text-align: center;
+          padding: 40px 20px;
+        }
+
+        .empty-state .empty-icon {
+          font-size: 48px;
+          margin-bottom: 12px;
+          opacity: 0.6;
+        }
+
+        .empty-state p {
+          color: #667085;
+          font-size: 14px;
+        }
+
+        /* ============================================================
+           СПИННЕР
+           ============================================================ */
+        .spinner {
+          width: 48px;
+          height: 48px;
+          border: 4px solid #E4DFD8;
+          border-top-color: #C9A227;
+          border-radius: 50%;
+          animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        /* ============================================================
+           АДАПТИВНОСТЬ
+           ============================================================ */
+        @media (max-width: 1024px) {
+          .container-page {
+            padding: 20px 24px 32px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .container-page {
+            padding: 16px;
+          }
+
+          .page-header {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .page-header-actions {
+            justify-content: center;
+          }
+
+          .btn-view {
+            flex: 1;
+            text-align: center;
+          }
+
+          .cards-grid {
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+          }
+
+          .table {
+            min-width: 500px;
+            font-size: 13px;
+          }
+
+          .table thead th,
+          .table tbody td {
+            padding: 10px 12px;
+          }
+
+          .participant-card {
+            padding: 16px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .container-page {
+            padding: 12px;
+          }
+
+          .page-header-left h1 {
+            font-size: 20px;
+          }
+
+          .cards-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .table {
+            min-width: 400px;
+            font-size: 12px;
+          }
+
+          .table thead th,
+          .table tbody td {
+            padding: 8px 10px;
+          }
+
+          .participant-cell {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+          }
+
+          .action-buttons {
+            flex-direction: column;
+            gap: 2px;
+          }
+
+          .btn-icon {
+            padding: 4px 8px;
+            font-size: 12px;
+          }
+
+          .participant-card {
+            padding: 14px;
+          }
+
+          .card-avatar,
+          .card-avatar-img {
+            width: 40px;
+            height: 40px;
+            font-size: 16px;
+          }
+
+          .card-name {
+            font-size: 14px;
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useMenuItems } from '../hooks/useMenuItems';
 import api from '../lib/api';
+import Footer from '../components/Footer';
 
 export default function Dashboard() {
   const [profile, setProfile] = useState(null);
@@ -92,14 +93,34 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="dashboard-loading">
+      <div className="page-loading">
         <div className="spinner" />
+        <style>{`
+          .page-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #F0EDE8;
+          }
+          .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #E4DFD8;
+            border-top-color: #C9A227;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
 
   // ============================================================
-  // БЫСТРЫЕ ДЕЙСТВИЯ ПО РОЛИ (ОТДЕЛЬНЫЙ БЛОК)
+  // БЫСТРЫЕ ДЕЙСТВИЯ ПО РОЛИ
   // ============================================================
   const getQuickActions = () => {
     const role = profile?.role;
@@ -176,29 +197,26 @@ export default function Dashboard() {
   const quickActions = getQuickActions();
 
   // ============================================================
-  // РЕНДЕР КОНТЕНТА ВКЛАДКИ — ПЕРЕХОД НА СТРАНИЦУ
+  // РЕНДЕР КОНТЕНТА ВКЛАДКИ
   // ============================================================
   const renderTabContent = () => {
-    // Находим активную вкладку
     const activeTabData = tabs.find(t => t.id === activeTab);
 
-    // Если вкладка не найдена или это "Обзор" — показываем общий контент
     if (!activeTabData || activeTab === 'dashboard') {
       return renderOverview();
     }
 
-    // Для всех остальных вкладок — показываем ссылку на страницу
     return (
       <div className="dashboard-tab-content">
         <div className="dashboard-tab-page">
-          <div className="flex-between mb-2">
-            <h3 className="dashboard-section-title">{activeTabData.label}</h3>
+          <div className="tab-header">
+            <h3 className="tab-title">{activeTabData.label}</h3>
             <Link to={activeTabData.path} className="btn btn-primary btn-sm">
               Перейти к разделу →
             </Link>
           </div>
-          <div className="card">
-            <p className="text-muted" style={{ marginBottom: '16px' }}>
+          <div className="card tab-card">
+            <p className="tab-hint">
               Перейдите на страницу «{activeTabData.label}» для полного доступа
             </p>
             <Link to={activeTabData.path} className="btn btn-gold" style={{ width: '100%', justifyContent: 'center' }}>
@@ -244,19 +262,19 @@ export default function Dashboard() {
           <h4 className="card-title">Статистика платформы</h4>
           <div className="dashboard-mini-stats">
             <div>
-              <span className="stat-number" style={{ fontSize: '24px' }}>{stats.events}</span>
+              <span className="stat-number">{stats.events}</span>
               <span className="stat-label">Мероприятий</span>
             </div>
             <div>
-              <span className="stat-number" style={{ fontSize: '24px' }}>{stats.participants}</span>
+              <span className="stat-number">{stats.participants}</span>
               <span className="stat-label">Участников</span>
             </div>
             <div>
-              <span className="stat-number" style={{ fontSize: '24px' }}>{stats.achievements}</span>
+              <span className="stat-number">{stats.achievements}</span>
               <span className="stat-label">Достижений</span>
             </div>
             <div>
-              <span className="stat-number" style={{ fontSize: '24px' }}>{stats.clubs}</span>
+              <span className="stat-number">{stats.clubs}</span>
               <span className="stat-label">Клубов</span>
             </div>
           </div>
@@ -264,10 +282,11 @@ export default function Dashboard() {
 
         <div className="card">
           <h4 className="card-title">Быстрые действия</h4>
-          <div className="quick-actions-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+          <div className="quick-actions-grid">
             {quickActions.slice(0, 6).map((action) => (
-              <Link key={action.path} to={action.path} className="quick-action-card" style={{ padding: '12px', minHeight: '50px' }}>
-                <span className="label" style={{ fontSize: '12px' }}>{action.label}</span>
+              <Link key={action.path} to={action.path} className="quick-action-card">
+                <span className="quick-icon">{action.icon}</span>
+                <span className="quick-label">{action.label}</span>
               </Link>
             ))}
           </div>
@@ -276,11 +295,8 @@ export default function Dashboard() {
     </div>
   );
 
-  // ============================================================
-  // ОСНОВНОЙ РЕНДЕР
-  // ============================================================
   return (
-    <div className="dashboard">
+    <div className="dashboard-page">
       {/* ПРИВЕТСТВИЕ */}
       <div className="dashboard-welcome">
         <div className="dashboard-welcome-content">
@@ -328,21 +344,23 @@ export default function Dashboard() {
       {/* КОНТЕНТ ВКЛАДКИ */}
       {renderTabContent()}
 
+      <Footer />
+
       <style>{`
-        .dashboard {
+        /* ============================================================
+           ОСНОВНЫЕ СТИЛИ
+           ============================================================ */
+        .dashboard-page {
           max-width: 1200px;
           margin: 0 auto;
-          padding: 0;
-          width: 100%;
+          padding: 24px 32px 48px;
+          background: #F0EDE8;
+          min-height: 100vh;
         }
 
-        .dashboard-loading {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          height: 100vh;
-        }
-
+        /* ============================================================
+           ПРИВЕТСТВИЕ
+           ============================================================ */
         .dashboard-welcome {
           display: flex;
           align-items: center;
@@ -354,7 +372,6 @@ export default function Dashboard() {
           background: linear-gradient(135deg, #0A1628, #1A3555);
           border-radius: 12px;
           color: white;
-          width: 100%;
         }
 
         .dashboard-welcome-content h1 {
@@ -368,15 +385,15 @@ export default function Dashboard() {
 
         .dashboard-welcome-content p {
           font-size: 14px;
-          color: rgba(255,255,255,0.7);
+          color: rgba(255, 255, 255, 0.7);
           margin: 0;
         }
 
         .dashboard-role-badge {
           display: inline-block;
           padding: 4px 16px;
-          background: rgba(255,255,255,0.12);
-          border: 1px solid rgba(255,255,255,0.15);
+          background: rgba(255, 255, 255, 0.12);
+          border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 20px;
           font-size: 12px;
           font-weight: 500;
@@ -384,12 +401,14 @@ export default function Dashboard() {
           text-transform: capitalize;
         }
 
+        /* ============================================================
+           СТАТИСТИКА
+           ============================================================ */
         .dashboard-stats {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 16px;
           margin-bottom: 28px;
-          width: 100%;
         }
 
         .stat-card {
@@ -442,6 +461,9 @@ export default function Dashboard() {
           text-transform: uppercase;
         }
 
+        /* ============================================================
+           ВКЛАДКИ
+           ============================================================ */
         .dashboard-tabs {
           display: flex;
           gap: 4px;
@@ -449,10 +471,15 @@ export default function Dashboard() {
           border-bottom: 1px solid #E4DFD8;
           padding-bottom: 4px;
           flex-wrap: wrap;
+          background: white;
+          padding: 4px 4px 0 4px;
+          border-radius: 12px 12px 0 0;
+          border: 1px solid #E4DFD8;
+          border-bottom: none;
         }
 
         .dashboard-tab {
-          padding: 8px 20px;
+          padding: 10px 20px;
           border: none;
           background: transparent;
           font-size: 14px;
@@ -473,14 +500,56 @@ export default function Dashboard() {
           color: #0A1628;
           font-weight: 600;
           background: #FBF4DC;
+          position: relative;
         }
 
+        .dashboard-tab.active::after {
+          content: '';
+          position: absolute;
+          bottom: -2px;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: #C9A227;
+        }
+
+        /* ============================================================
+           КОНТЕНТ ВКЛАДКИ
+           ============================================================ */
         .dashboard-tab-content {
           width: 100%;
         }
 
         .dashboard-tab-page {
           width: 100%;
+        }
+
+        .tab-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .tab-title {
+          font-family: 'Playfair Display', serif;
+          font-size: 20px;
+          font-weight: 600;
+          color: #0A1628;
+          margin: 0;
+        }
+
+        .tab-card {
+          padding: 24px;
+          text-align: center;
+        }
+
+        .tab-hint {
+          color: #98A2B3;
+          margin-bottom: 16px;
+          font-size: 14px;
         }
 
         .dashboard-section-title {
@@ -491,13 +560,40 @@ export default function Dashboard() {
           margin-bottom: 16px;
         }
 
+        /* ============================================================
+           КАРТОЧКИ
+           ============================================================ */
+        .card {
+          background: white;
+          border-radius: 12px;
+          padding: 20px 24px;
+          border: 1px solid #E4DFD8;
+          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
+          transition: all 0.3s ease;
+        }
+
+        .card:hover {
+          box-shadow: 0 8px 32px rgba(10,22,40,0.08);
+          transform: translateY(-2px);
+        }
+
+        .card-title {
+          font-family: 'Playfair Display', serif;
+          font-size: 16px;
+          font-weight: 600;
+          color: #0A1628;
+          margin-bottom: 12px;
+        }
+
+        /* ============================================================
+           ПРОФИЛЬ В ДАШБОРДЕ
+           ============================================================ */
         .dashboard-profile-card {
           background: white;
           padding: 24px 28px;
           border-radius: 12px;
           border: 1px solid #E4DFD8;
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
-          width: 100%;
           margin-bottom: 24px;
         }
 
@@ -542,32 +638,13 @@ export default function Dashboard() {
           color: #1A7A4C;
         }
 
+        /* ============================================================
+           СЕТКА
+           ============================================================ */
         .dashboard-grid-2 {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 20px;
-        }
-
-        .card {
-          background: white;
-          border-radius: 12px;
-          padding: 20px 24px;
-          border: 1px solid #E4DFD8;
-          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
-          transition: all 0.3s ease;
-        }
-
-        .card:hover {
-          box-shadow: 0 8px 32px rgba(10,22,40,0.08);
-          transform: translateY(-2px);
-        }
-
-        .card-title {
-          font-family: 'Playfair Display', serif;
-          font-size: 16px;
-          font-weight: 600;
-          color: #0A1628;
-          margin-bottom: 12px;
         }
 
         .dashboard-mini-stats {
@@ -583,6 +660,21 @@ export default function Dashboard() {
           border-radius: 8px;
         }
 
+        .dashboard-mini-stats .stat-number {
+          font-size: 24px;
+          font-weight: 700;
+          color: #0A1628;
+          display: block;
+        }
+
+        .dashboard-mini-stats .stat-label {
+          font-size: 12px;
+          color: #8A8480;
+        }
+
+        /* ============================================================
+           БЫСТРЫЕ ДЕЙСТВИЯ
+           ============================================================ */
         .quick-actions-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -614,34 +706,21 @@ export default function Dashboard() {
           border-color: #C9A227;
         }
 
-        .quick-action-card .icon {
+        .quick-icon {
           font-size: 24px;
           line-height: 1;
         }
 
-        .quick-action-card .label {
+        .quick-label {
           font-size: 13px;
           font-weight: 500;
           color: #6B6561;
           line-height: 1.3;
         }
 
-        .text-muted {
-          color: #A8A29A;
-        }
-
-        .flex-between {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          gap: 12px;
-        }
-
-        .mb-2 {
-          margin-bottom: 16px;
-        }
-
+        /* ============================================================
+           КНОПКИ
+           ============================================================ */
         .btn {
           display: inline-flex;
           align-items: center;
@@ -691,9 +770,28 @@ export default function Dashboard() {
         }
 
         /* ============================================================
+           СПИННЕР
+           ============================================================ */
+        .spinner {
+          width: 48px;
+          height: 48px;
+          border: 4px solid #E4DFD8;
+          border-top-color: #C9A227;
+          border-radius: 50%;
+          animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        /* ============================================================
            АДАПТИВНОСТЬ
            ============================================================ */
         @media (max-width: 1024px) {
+          .dashboard-page {
+            padding: 20px 24px 32px;
+          }
           .dashboard-stats {
             grid-template-columns: repeat(2, 1fr);
           }
@@ -703,6 +801,10 @@ export default function Dashboard() {
         }
 
         @media (max-width: 768px) {
+          .dashboard-page {
+            padding: 16px;
+          }
+
           .dashboard-welcome {
             padding: 18px 20px;
             flex-direction: column;
@@ -724,7 +826,7 @@ export default function Dashboard() {
           }
 
           .dashboard-tab {
-            padding: 6px 14px;
+            padding: 8px 14px;
             font-size: 13px;
           }
 
@@ -750,6 +852,10 @@ export default function Dashboard() {
         }
 
         @media (max-width: 480px) {
+          .dashboard-page {
+            padding: 12px;
+          }
+
           .dashboard-welcome {
             padding: 14px 16px;
           }
@@ -776,7 +882,7 @@ export default function Dashboard() {
           }
 
           .dashboard-tab {
-            padding: 4px 10px;
+            padding: 6px 10px;
             font-size: 12px;
           }
 
@@ -804,10 +910,10 @@ export default function Dashboard() {
             padding: 12px 8px;
             min-height: 60px;
           }
-          .quick-action-card .icon {
+          .quick-icon {
             font-size: 20px;
           }
-          .quick-action-card .label {
+          .quick-label {
             font-size: 11px;
           }
 
@@ -822,6 +928,15 @@ export default function Dashboard() {
             font-size: 11px;
             min-height: 26px;
             min-width: 40px;
+          }
+
+          .tab-header {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .tab-header .btn {
+            width: 100%;
+            justify-content: center;
           }
         }
       `}</style>

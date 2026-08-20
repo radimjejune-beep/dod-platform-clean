@@ -58,6 +58,8 @@ import ActivityLog from './pages/ActivityLog';
 import AchievementsCategories from './pages/AchievementsCategories';
 import NotificationHistory from './pages/NotificationHistory';
 import GoalsAndKPI from './pages/GoalsAndKPI';
+
+// ===== ЮРИДИЧЕСКИЕ СТРАНИЦЫ =====
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Terms from './pages/Terms';
 
@@ -94,64 +96,126 @@ function App() {
 
   return (
     <BrowserRouter>
-      {/* ✅ Navigation УБРАН ИЗ App.jsx — он будет внутри страниц */}
       <Routes>
+        {/* ============================================================
+           ПУБЛИЧНЫЕ СТРАНИЦЫ
+           ============================================================ */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<Terms />} />
+
+        {/* ============================================================
+           ДАШБОРДЫ
+           ============================================================ */}
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/coordinator-dashboard" element={<CoordinatorDashboard />} />
+        <Route path="/club-coordinator-dashboard" element={<ClubCoordinatorDashboard />} />
+        <Route path="/tutor-dashboard" element={<TutorDashboard />} />
+        <Route path="/participant-dashboard" element={<ParticipantDashboard />} />
+        <Route path="/parent-dashboard" element={<ParentDashboard />} />
+
+        {/* ============================================================
+           ПРОФИЛЬ И ПОЛЬЗОВАТЕЛИ
+           ============================================================ */}
         <Route path="/profile" element={<Profile />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/admin/invite" element={<AdminInvite />} />
+        <Route path="/participants" element={<Participants />} />
+        <Route path="/participant/:id" element={<ParticipantProfile />} />
+        <Route path="/participant/:id/edit" element={<ParticipantEdit />} />
+        <Route path="/import-participants" element={<ImportParticipants />} />
+
+        {/* ============================================================
+           МЕРОПРИЯТИЯ
+           ============================================================ */}
         <Route path="/events" element={<Events />} />
         <Route path="/calendar" element={<Calendar />} />
+        <Route path="/club-calendar" element={<ClubCalendar />} />
+        <Route path="/my-club-events" element={<MyClubEvents />} />
+        <Route path="/tutor-journal/:eventId" element={<TutorJournal />} />
+
+        {/* ============================================================
+           КЛУБЫ (КЮДЫ)
+           ============================================================ */}
         <Route path="/clubs" element={<Clubs />} />
         <Route path="/club/:id" element={<ClubDetail />} />
         <Route path="/club/:clubId/president" element={<ClubPresident />} />
         <Route path="/club-rating" element={<ClubRating />} />
         <Route path="/club-analytics" element={<ClubAnalytics />} />
-        <Route path="/participants" element={<Participants />} />
-        <Route path="/participant/:id" element={<ParticipantProfile />} />
-        <Route path="/participant/:id/edit" element={<ParticipantEdit />} />
+        <Route path="/clubs-management" element={<ClubsManagement />} />
+
+        {/* ============================================================
+           ДОСТИЖЕНИЯ
+           ============================================================ */}
         <Route path="/achievements" element={<Achievements />} />
         <Route path="/manage-achievements" element={<ManageAchievements />} />
         <Route path="/my-achievements" element={<MyAchievements />} />
+        <Route path="/achievements-categories" element={<AchievementsCategories />} />
+
+        {/* ============================================================
+           ОТЧЁТЫ И АНАЛИТИКА
+           ============================================================ */}
         <Route path="/reports" element={<Reports />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/dashboard-analytics" element={<DashboardAnalytics />} />
+
+        {/* ============================================================
+           ОБРАЩЕНИЯ
+           ============================================================ */}
         <Route path="/appeals" element={<Appeals />} />
-        <Route path="/admin/users" element={<AdminUsers />} />
-        <Route path="/admin/invite" element={<AdminInvite />} />
+
+        {/* ============================================================
+           НОВОСТИ
+           ============================================================ */}
         <Route path="/admin/news" element={<AdminNews />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/import-participants" element={<ImportParticipants />} />
-        <Route path="/parent-dashboard" element={<ParentDashboard />} />
-        <Route path="/participant-dashboard" element={<ParticipantDashboard />} />
-        <Route path="/club-coordinator-dashboard" element={<ClubCoordinatorDashboard />} />
-        <Route path="/tutor-dashboard" element={<TutorDashboard />} />
-        <Route path="/tutor-journal/:eventId" element={<TutorJournal />} />
-        <Route path="/my-reviews" element={<MyReviews />} />
-        <Route path="/my-journal" element={<MyJournal />} />
+        <Route path="/news/:id" element={<NewsDetail />} />
+
+        {/* ============================================================
+           ДОКУМЕНТЫ
+           ============================================================ */}
+        <Route path="/documents" element={<OfficialDocuments />} />
+        <Route path="/documents-center" element={<DocumentsCenter />} />
+
+        {/* ============================================================
+           ТЬЮТОРЫ
+           ============================================================ */}
         <Route path="/tutor-requests" element={<TutorRequests />} />
         <Route path="/tutor-invitations" element={<TutorInvitations />} />
         <Route path="/tutor-assignments" element={<TutorAssignments />} />
+        <Route path="/my-journal" element={<MyJournal />} />
+
+        {/* ============================================================
+           СОТРУДНИКИ
+           ============================================================ */}
         <Route path="/staff" element={<StaffManagement />} />
         <Route path="/staff-calendar" element={<StaffCalendar />} />
+
+        {/* ============================================================
+           ПРЕЗИДЕНТ
+           ============================================================ */}
         <Route path="/president-tasks" element={<PresidentTasks />} />
-        <Route path="/club-calendar" element={<ClubCalendar />} />
-        <Route path="/my-club-events" element={<MyClubEvents />} />
-        <Route path="/news/:id" element={<NewsDetail />} />
-        <Route path="/documents" element={<OfficialDocuments />} />
-        <Route path="/coordinator-dashboard" element={<CoordinatorDashboard />} />
-        <Route path="/clubs-management" element={<ClubsManagement />} />
+
+        {/* ============================================================
+           ОЦЕНКИ
+           ============================================================ */}
+        <Route path="/my-reviews" element={<MyReviews />} />
+
+        {/* ============================================================
+           УПРАВЛЕНИЕ
+           ============================================================ */}
+        <Route path="/settings" element={<Settings />} />
         <Route path="/mass-notifications" element={<MassNotifications />} />
         <Route path="/consents-management" element={<ConsentsManagement />} />
-        <Route path="/documents-center" element={<DocumentsCenter />} />
         <Route path="/tasks-planner" element={<TasksPlanner />} />
-        <Route path="/activity-log" element={<ActivityLog />} />
-        <Route path="/achievements-categories" element={<AchievementsCategories />} />
-        <Route path="/notification-history" element={<NotificationHistory />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="/terms" element={<Terms />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
         <Route path="/goals" element={<GoalsAndKPI />} />
+        <Route path="/activity-log" element={<ActivityLog />} />
+        <Route path="/notification-history" element={<NotificationHistory />} />
+
+        {/* ============================================================
+           РЕДИРЕКТ
+           ============================================================ */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

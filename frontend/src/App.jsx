@@ -4,7 +4,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import api from './lib/api';
 
-// Страницы
+// ===== КОМПОНЕНТЫ =====
+import CookieBanner from './components/CookieBanner';
+
+// ===== СТРАНИЦЫ =====
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -58,8 +61,6 @@ import ActivityLog from './pages/ActivityLog';
 import AchievementsCategories from './pages/AchievementsCategories';
 import NotificationHistory from './pages/NotificationHistory';
 import GoalsAndKPI from './pages/GoalsAndKPI';
-
-// ===== ЮРИДИЧЕСКИЕ СТРАНИЦЫ =====
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Terms from './pages/Terms';
 
@@ -88,8 +89,28 @@ function App() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div className="app-loading">
         <div className="spinner" />
+        <style>{`
+          .app-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #F0EDE8;
+          }
+          .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #E4DFD8;
+            border-top-color: #C9A227;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
@@ -217,6 +238,11 @@ function App() {
            ============================================================ */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
+      {/* ============================================================
+         БАННЕР COOKIES (ВСЕГДА ВНИЗУ)
+         ============================================================ */}
+      <CookieBanner />
     </BrowserRouter>
   );
 }

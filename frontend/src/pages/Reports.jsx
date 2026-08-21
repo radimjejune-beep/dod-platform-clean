@@ -18,6 +18,15 @@ export default function Reports() {
   const [selectedReport, setSelectedReport] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedClubId, setSelectedClubId] = useState('');
+  
+  // ===== ПАГИНАЦИЯ =====
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0
+  });
+  
   const [form, setForm] = useState({
     id: null,
     club_id: '',
@@ -61,8 +70,9 @@ export default function Reports() {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (page = 1) => {
     try {
+      setLoading(true);
       const userData = await api.getMe();
       if (!userData || !userData.id) {
         navigate('/login');
@@ -78,13 +88,18 @@ export default function Reports() {
         return;
       }
 
+      // ============================================================
+      // ✅ ЗАГРУЗКА С ПАГИНАЦИЕЙ
+      // ============================================================
       const [clubsData, reportsData] = await Promise.all([
         api.getClubs(),
-        api.getReports()
+        api.getReports({ page, limit: pagination.limit })
       ]);
 
       setClubs(clubsData || []);
 
+      const data = reportsData.data || [];
+      const meta = reportsData.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
       let filteredReports = [];
 
       // ============================================================
@@ -109,7 +124,7 @@ export default function Reports() {
         }
 
         if (coordinatorClubId) {
-          filteredReports = reportsData.filter(r => r.club_id === coordinatorClubId);
+          filteredReports = data.filter(r => r.club_id === coordinatorClubId);
         } else {
           filteredReports = [];
         }
@@ -118,7 +133,7 @@ export default function Reports() {
       // АДМИН, КООРДИНАТОР ДВИЖЕНИЯ - ВСЕ ОТЧЁТЫ
       // ============================================================
       else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(role)) {
-        filteredReports = reportsData || [];
+        filteredReports = data;
       } 
       else {
         filteredReports = [];
@@ -126,6 +141,10 @@ export default function Reports() {
 
       setAllReports(filteredReports);
       setReports(filteredReports);
+      setPagination({
+        ...meta,
+        total: filteredReports.length
+      });
 
       // Для координатора КЮДа предзаполняем клуб в форме
       if (role === 'club_coordinator') {
@@ -154,6 +173,57 @@ export default function Reports() {
   }, [selectedClubId, allReports, canFilterByClub]);
 
   // ============================================================
+  // ПАГИНАЦИЯ
+  // ============================================================
+  const Pagination = ({ pagination, onPageChange }) => {
+    const { page, totalPages, total } = pagination;
+
+    if (totalPages <= 1) return null;
+
+    const pages = [];
+    const start = Math.max(1, page - 2);
+    const end = Math.min(totalPages, page + 2);
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    return (
+      <div className="pagination">
+        <button
+          className="pagination-btn"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          ◀
+        </button>
+        
+        {pages.map((p) => (
+          <button
+            key={p}
+            className={`pagination-btn ${p === page ? 'active' : ''}`}
+            onClick={() => onPageChange(p)}
+          >
+            {p}
+          </button>
+        ))}
+        
+        <button
+          className="pagination-btn"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          ▶
+        </button>
+        
+        <span className="pagination-info">
+          Всего: {total} записей
+        </span>
+      </div>
+    );
+  };
+
+  // ============================================================
   // СОЗДАНИЕ/ОБНОВЛЕНИЕ ОТЧЁТА
   // ============================================================
   const handleSubmit = async (e) => {
@@ -164,7 +234,6 @@ export default function Reports() {
     try {
       let clubId = form.club_id;
       
-      // Для координатора КЮДа — автоматически подставляем его клуб
       if (isClubCoordinator) {
         if (coordinatorClubId) {
           clubId = coordinatorClubId;
@@ -243,7 +312,7 @@ export default function Reports() {
         participants_count: 0
       });
       setShowForm(false);
-      loadData();
+      loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка:', err);
@@ -299,7 +368,7 @@ export default function Reports() {
 
       setMessage('✅ Отчёт удалён');
       setMessageType('success');
-      loadData();
+      loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка:', err);
@@ -328,7 +397,7 @@ export default function Reports() {
 
       setMessage('✅ Отчёт отправлен на проверку!');
       setMessageType('success');
-      loadData();
+      loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка:', err);
@@ -357,7 +426,7 @@ export default function Reports() {
 
       setMessage('✅ Отчёт утверждён!');
       setMessageType('success');
-      loadData();
+      loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка:', err);
@@ -389,7 +458,7 @@ export default function Reports() {
 
       setMessage('❌ Отчёт отклонён');
       setMessageType('error');
-      loadData();
+      loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка:', err);
@@ -473,7 +542,7 @@ export default function Reports() {
             <p>
               {isClubCoordinator 
                 ? `Ежемесячные отчёты вашего клуба (${reports.length})` 
-                : `Проверка и утверждение отчётов всех КЮДов (${reports.length})`}
+                : `Проверка и утверждение отчётов всех КЮДов (${pagination.total || reports.length})`}
             </p>
           </div>
           {canCreate && (
@@ -738,6 +807,11 @@ export default function Reports() {
               })}
             </div>
           )}
+          
+          {/* ============================================================
+             ПАГИНАЦИЯ
+             ============================================================ */}
+          <Pagination pagination={pagination} onPageChange={loadData} />
         </div>
       </div>
 
@@ -923,6 +997,66 @@ export default function Reports() {
           font-size: 12px;
           min-height: 32px;
           min-width: 60px;
+        }
+
+        /* ============================================================
+           ПАГИНАЦИЯ
+           ============================================================ */
+        .pagination {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 20px;
+          padding-top: 16px;
+          border-top: 1px solid #E4DFD8;
+          flex-wrap: wrap;
+        }
+
+        .pagination-btn {
+          padding: 6px 14px;
+          border: 1px solid #E4DFD8;
+          border-radius: 6px;
+          background: white;
+          color: #0A1628;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-family: 'Inter', sans-serif;
+          min-width: 36px;
+          text-align: center;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+          border-color: #C9A227;
+          background: #FBF4DC;
+        }
+
+        .pagination-btn.active {
+          border-color: #C9A227;
+          background: #C9A227;
+          color: white;
+        }
+
+        .pagination-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        .pagination-info {
+          font-size: 13px;
+          color: #98A2B3;
+          margin-left: 8px;
+        }
+
+        @media (max-width: 768px) {
+          .pagination-btn {
+            padding: 4px 10px;
+            font-size: 12px;
+            min-width: 30px;
+          }
+          .pagination-info {
+            font-size: 12px;
+          }
         }
 
         /* ============================================================
@@ -1378,6 +1512,15 @@ export default function Reports() {
           .modal-stats {
             grid-template-columns: 1fr 1fr;
           }
+
+          .pagination-btn {
+            padding: 4px 10px;
+            font-size: 12px;
+            min-width: 30px;
+          }
+          .pagination-info {
+            font-size: 12px;
+          }
         }
 
         @media (max-width: 480px) {
@@ -1430,6 +1573,15 @@ export default function Reports() {
           .form-actions .btn {
             width: 100%;
             justify-content: center;
+          }
+
+          .pagination {
+            gap: 4px;
+          }
+          .pagination-btn {
+            padding: 3px 8px;
+            font-size: 11px;
+            min-width: 26px;
           }
         }
       `}</style>

@@ -3916,6 +3916,340 @@ app.get('/api/events/:eventId/export', authenticate, async (req, res) => {
 });
 
 // ============================================================
+// 1. ЗАМЕТКИ ОБ УЧАСТНИКЕ
+// ============================================================
+
+// Получить все заметки участника
+app.get('/api/participant-notes/:participantId', authenticate, async (req, res) => {
+  try {
+    const { participantId } = req.params;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+
+    // Проверяем права: координатор движения, администратор, координатор КЮДа, тьютор
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    let visibilityCondition = '';
+    const params = [participantId];
+
+    // Координатор КЮДа и тьютор видят только свои заметки и общие
+    if (['club_coordinator', 'tutor'].includes(userRole)) {
+      visibilityCondition = ' AND (visibility = $2 OR author_id = $3)';
+      params.push('all_staff', userId);
+    }
+
+    const query = `
+      SELECT n.*, 
+             u.full_name as author_name, u.role as author_role,
+             u.avatar_url as author_avatar
+      FROM participant_notes n
+      LEFT JOIN users u ON n.author_id = u.id
+      WHERE n.participant_id = $1
+      ${visibilityCondition}
+      ORDER BY n.pinned DESC, n.created_at DESC
+    `;
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения заметок:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Создать заметку об участнике
+app.post('/api/participant-notes', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+    const { participant_id, content, visibility = 'coordinator_only', pinned = false } = req.body;
+
+    const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    if (!participant_id || !content) {
+      return res.status(400).json({ error: 'participant_id и content обязательны' });
+    }
+
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `INSERT INTO participant_notes (participant_id, author_id, content, visibility, pinned, created_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       RETURNING *`,
+      [participant_id, userId, content.trim(), visibility, pinned || false]
+    );
+
+    await client.query('COMMIT');
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Ошибка создания заметки:', error);
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Обновить заметку
+app.patch('/api/participant-notes/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.userId;
+    const { content, visibility, pinned } = req.body;
+
+    const check = await pool.query(
+      'SELECT author_id FROM participant_notes WHERE id = $1',
+      [id]
+    );
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Заметка не найдена' });
+    }
+
+    if (check.rows[0].author_id !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Вы можете редактировать только свои заметки' });
+    }
+
+    const result = await pool.query(
+      `UPDATE participant_notes 
+       SET content = COALESCE($1, content),
+           visibility = COALESCE($2, visibility),
+           pinned = COALESCE($3, pinned),
+           updated_at = NOW()
+       WHERE id = $4
+       RETURNING *`,
+      [content, visibility, pinned, id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка обновления заметки:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Удалить заметку
+app.delete('/api/participant-notes/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.userId;
+
+    const check = await pool.query(
+      'SELECT author_id FROM participant_notes WHERE id = $1',
+      [id]
+    );
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Заметка не найдена' });
+    }
+
+    if (check.rows[0].author_id !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Вы можете удалять только свои заметки' });
+    }
+
+    await pool.query('DELETE FROM participant_notes WHERE id = $1', [id]);
+
+    res.json({ message: 'Заметка удалена' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления заметки:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// 2. МАССОВЫЕ ДЕЙСТВИЯ
+// ============================================================
+
+// Создать массовое действие
+app.post('/api/bulk-actions', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+
+    if (!['admin', 'movement_coordinator'].includes(userRole)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    const { action_type, target_ids, data } = req.body;
+
+    if (!action_type || !target_ids || target_ids.length === 0) {
+      return res.status(400).json({ error: 'action_type и target_ids обязательны' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO bulk_actions (action_type, target_ids, created_by, status, created_at)
+       VALUES ($1, $2, $3, 'pending', NOW())
+       RETURNING *`,
+      [action_type, target_ids, userId]
+    );
+
+    // Запускаем обработку асинхронно
+    processBulkAction(result.rows[0].id);
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания массового действия:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Получить статус массового действия
+app.get('/api/bulk-actions/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `SELECT * FROM bulk_actions WHERE id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Действие не найдено' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Асинхронная обработка массового действия
+async function processBulkAction(actionId) {
+  try {
+    const action = await pool.query(
+      'SELECT * FROM bulk_actions WHERE id = $1',
+      [actionId]
+    );
+
+    if (action.rows.length === 0) return;
+
+    const { action_type, target_ids } = action.rows[0];
+
+    await pool.query(
+      'UPDATE bulk_actions SET status = $1 WHERE id = $2',
+      ['processing', actionId]
+    );
+
+    let result = { processed: 0, failed: 0, details: [] };
+
+    for (const targetId of target_ids) {
+      try {
+        if (action_type === 'assign_club') {
+          // Присвоить клуб
+        } else if (action_type === 'send_notification') {
+          // Отправить уведомление
+        } else if (action_type === 'export') {
+          // Экспорт данных
+        }
+        result.processed++;
+      } catch (err) {
+        result.failed++;
+        result.details.push({ id: targetId, error: err.message });
+      }
+    }
+
+    await pool.query(
+      `UPDATE bulk_actions 
+       SET status = $1, result = $2, completed_at = NOW()
+       WHERE id = $3`,
+      ['completed', result, actionId]
+    );
+  } catch (error) {
+    console.error('❌ Ошибка обработки массового действия:', error);
+    await pool.query(
+      `UPDATE bulk_actions SET status = 'failed' WHERE id = $1`,
+      [actionId]
+    );
+  }
+}
+
+// ============================================================
+// 3. НАПОМИНАНИЯ
+// ============================================================
+
+// Создать напоминание
+app.post('/api/reminders', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { event_id, user_id, type, title, message, remind_at } = req.body;
+
+    if (!title || !remind_at) {
+      return res.status(400).json({ error: 'title и remind_at обязательны' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO reminders (event_id, user_id, type, title, message, remind_at, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       RETURNING *`,
+      [event_id || null, user_id || null, type || 'event', title.trim(), message || '', remind_at]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания напоминания:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Получить мои напоминания
+app.get('/api/reminders/my', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const result = await pool.query(
+      `SELECT r.*, 
+              e.title as event_title,
+              e.event_date
+       FROM reminders r
+       LEFT JOIN events e ON r.event_id = e.id
+       WHERE (r.user_id = $1 OR r.user_id IS NULL)
+         AND r.sent = false
+         AND r.remind_at > NOW()
+       ORDER BY r.remind_at ASC`,
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения напоминаний:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Отметить напоминание как отправленное
+app.patch('/api/reminders/:id/sent', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `UPDATE reminders 
+       SET sent = true, sent_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Напоминание не найдено' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
 // ЗАПУСК СЕРВЕРА
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {

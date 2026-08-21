@@ -27,6 +27,7 @@ export function useMenuItems(profile) {
     if (role === 'admin') {
       return [
         ...commonItems,
+        { id: 'crm', path: '/crm', icon: '🏢', label: 'CRM' },
         { id: 'admin-users', path: '/admin/users', icon: '👥', label: 'Пользователи' },
         { id: 'clubs', path: '/clubs', icon: '🏫', label: 'КЮДы' },
         { id: 'participants', path: '/participants', icon: '👤', label: 'Участники' },
@@ -42,6 +43,9 @@ export function useMenuItems(profile) {
         { id: 'import-participants', path: '/import-participants', icon: '📥', label: 'Импорт участников' },
         { id: 'activity-log', path: '/activity-log', icon: '📋', label: 'Журнал действий' },
         { id: 'notification-history', path: '/notification-history', icon: '📨', label: 'История уведомлений' },
+        { id: 'goals', path: '/goals', icon: '🎯', label: 'Цели и KPI' },
+        { id: 'tasks-planner', path: '/tasks-planner', icon: '📅', label: 'Планировщик задач' },
+        { id: 'staff', path: '/staff', icon: '👥', label: 'Сотрудники' },
       ];
     }
 
@@ -51,6 +55,7 @@ export function useMenuItems(profile) {
     if (role === 'movement_coordinator') {
       return [
         ...commonItems,
+        { id: 'crm', path: '/crm', icon: '🏢', label: 'CRM' },
         { id: 'coordinator-dashboard', path: '/coordinator-dashboard', icon: '📊', label: 'Дашборд координатора' },
         { id: 'clubs-management', path: '/clubs-management', icon: '🏫', label: 'Управление КЮДами' },
         { id: 'admin-users', path: '/admin/users', icon: '👥', label: 'Пользователи' },

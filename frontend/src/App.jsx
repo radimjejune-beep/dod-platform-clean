@@ -63,6 +63,7 @@ import NotificationHistory from './pages/NotificationHistory';
 import GoalsAndKPI from './pages/GoalsAndKPI';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Terms from './pages/Terms';
+import CrmDashboard from './pages/CrmDashboard';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -125,6 +126,11 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<Terms />} />
+
+        {/* ============================================================
+           CRM
+           ============================================================ */}
+        <Route path="/crm" element={<CrmDashboard />} />
 
         {/* ============================================================
            ДАШБОРДЫ

@@ -16,6 +16,7 @@ export default function Dashboard() {
     events: 0,
     participants: 0,
     achievements: 0,
+    upcomingEvents: 0
   });
   const [club, setClub] = useState(null);
   const [recentEvents, setRecentEvents] = useState([]);
@@ -28,68 +29,82 @@ export default function Dashboard() {
   // ЕДИНОЕ МЕНЮ (ОБЩЕЕ С НАВИГАЦИЕЙ)
   // ============================================================
   const menuItems = useMenuItems(profile);
-  const tabs = menuItems;
+  const tabs = menuItems || [];
 
   // ============================================================
   // ЗАГРУЗКА ДАННЫХ
   // ============================================================
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
+    loadData();
+  }, []);
 
-        const user = await api.getMe();
-        setProfile(user);
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
 
-        const clubsData = await api.getClubs().catch(() => []);
-        let userClub = null;
-        if (user.club_id) {
-          userClub = clubsData.find(c => c.id === user.club_id);
-        }
-        if (!userClub && user.role === 'club_coordinator') {
-          userClub = clubsData.find(c => c.coordinator_id === user.id || c.leader_id === user.id);
-        }
-        setClub(userClub);
+      const user = await api.getMe();
+      setProfile(user);
 
-        const [users, clubs, events, participants, achievements] = await Promise.all([
-          api.getUsers().catch(() => []),
-          api.getClubs().catch(() => []),
-          api.getEvents().catch(() => []),
-          api.getParticipants().catch(() => []),
-          api.getAchievements().catch(() => []),
-        ]);
+      const clubsData = await api.getClubs().catch(() => []);
+      let userClub = null;
+      if (user.club_id) {
+        userClub = clubsData.find(c => c.id === user.club_id);
+      }
+      if (!userClub && user.role === 'club_coordinator') {
+        userClub = clubsData.find(c => c.coordinator_id === user.id || c.leader_id === user.id);
+      }
+      setClub(userClub);
 
-        setStats({
-          users: users.length || 0,
-          clubs: clubs.length || 0,
-          events: events.length || 0,
-          participants: participants.length || 0,
-          achievements: achievements.length || 0,
-        });
+      const [users, clubs, events, participants, achievements] = await Promise.all([
+        api.getUsers().catch(() => []),
+        api.getClubs().catch(() => []),
+        api.getEvents().catch(() => []),
+        api.getParticipants().catch(() => []),
+        api.getAchievements().catch(() => []),
+      ]);
 
-        setRecentEvents(events.slice(0, 5));
-        setRecentParticipants(participants.slice(0, 5));
-        setRecentAchievements(achievements.slice(0, 5));
+      // ✅ ИСПРАВЛЕНО: фильтруем только участников
+      const participantsList = users.filter(u => u.role === 'participant');
 
-        // Если активная вкладка не существует — сбрасываем на первую
+      // ✅ ИСПРАВЛЕНО: фильтруем ближайшие мероприятия
+      const now = new Date();
+      const upcoming = events
+        .filter(e => new Date(e.event_date) >= now && e.moderation_status === 'approved')
+        .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+        .slice(0, 5);
+
+      setStats({
+        users: users.length || 0,
+        clubs: clubs.length || 0,
+        events: events.length || 0,
+        participants: participantsList.length || 0,
+        achievements: achievements.length || 0,
+        upcomingEvents: upcoming.length || 0
+      });
+
+      setRecentEvents(upcoming);
+      setRecentParticipants(participantsList.slice(0, 5));
+      setRecentAchievements(achievements.slice(0, 5));
+
+      // ✅ ИСПРАВЛЕНО: проверка наличия tabs
+      if (tabs.length > 0) {
         const tabExists = tabs.some(t => t.id === activeTab);
-        if (!tabExists && tabs.length > 0) {
+        if (!tabExists) {
           setActiveTab(tabs[0].id);
         }
-
-      } catch (err) {
-        console.error('Ошибка загрузки:', err);
-      } finally {
-        setLoading(false);
       }
-    };
 
-    loadData();
-  }, [navigate, tabs, activeTab]);
+    } catch (err) {
+      console.error('Ошибка загрузки:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -126,16 +141,18 @@ export default function Dashboard() {
     const role = profile?.role;
     const actions = [];
 
-    if (role === 'admin') {
+    // ✅ ИСПРАВЛЕНО: добавлен CRM для админа и координатора движения
+    if (role === 'admin' || role === 'movement_coordinator') {
       actions.push(
-        { path: '/admin/users', label: 'Пользователи', icon: '👥' },
-        { path: '/clubs', label: 'КЮДы', icon: '🏫' },
-        { path: '/events', label: 'Мероприятия', icon: '📅' },
-        { path: '/participants', label: 'Участники', icon: '👤' },
-        { path: '/achievements', label: 'Достижения', icon: '🏆' },
-        { path: '/reports', label: 'Отчёты', icon: '📋' },
-        { path: '/analytics', label: 'Аналитика', icon: '📊' },
-        { path: '/appeals', label: 'Обращения', icon: '📨' },
+        { path: '/crm', label: '🏢 CRM', icon: '🏢' },
+        { path: '/admin/users', label: '👥 Пользователи', icon: '👥' },
+        { path: '/clubs', label: '🏫 КЮДы', icon: '🏫' },
+        { path: '/events', label: '📅 Мероприятия', icon: '📅' },
+        { path: '/participants', label: '👤 Участники', icon: '👤' },
+        { path: '/achievements', label: '🏆 Достижения', icon: '🏆' },
+        { path: '/reports', label: '📋 Отчёты', icon: '📋' },
+        { path: '/analytics', label: '📊 Аналитика', icon: '📊' },
+        { path: '/appeals', label: '📨 Обращения', icon: '📨' },
       );
     }
 
@@ -238,11 +255,11 @@ export default function Dashboard() {
         <div className="dashboard-profile-info">
           <div className="profile-info-item">
             <span className="profile-info-label">Email</span>
-            <span className="profile-info-value">{profile?.email}</span>
+            <span className="profile-info-value">{profile?.email || '—'}</span>
           </div>
           <div className="profile-info-item">
             <span className="profile-info-label">Роль</span>
-            <span className="profile-info-value">{profile?.role}</span>
+            <span className="profile-info-value">{profile?.role || '—'}</span>
           </div>
           <div className="profile-info-item">
             <span className="profile-info-label">Статус</span>
@@ -262,12 +279,12 @@ export default function Dashboard() {
           <h4 className="card-title">Статистика платформы</h4>
           <div className="dashboard-mini-stats">
             <div>
-              <span className="stat-number">{stats.events}</span>
-              <span className="stat-label">Мероприятий</span>
-            </div>
-            <div>
               <span className="stat-number">{stats.participants}</span>
               <span className="stat-label">Участников</span>
+            </div>
+            <div>
+              <span className="stat-number">{stats.upcomingEvents}</span>
+              <span className="stat-label">Предстоящих</span>
             </div>
             <div>
               <span className="stat-number">{stats.achievements}</span>
@@ -283,7 +300,7 @@ export default function Dashboard() {
         <div className="card">
           <h4 className="card-title">Быстрые действия</h4>
           <div className="quick-actions-grid">
-            {quickActions.slice(0, 6).map((action) => (
+            {quickActions.slice(0, 8).map((action) => (
               <Link key={action.path} to={action.path} className="quick-action-card">
                 <span className="quick-icon">{action.icon}</span>
                 <span className="quick-label">{action.label}</span>
@@ -312,19 +329,19 @@ export default function Dashboard() {
       <div className="dashboard-stats">
         <div className="stat-card">
           <div className="stat-number">{stats.participants}</div>
-          <div className="stat-label">Участников</div>
+          <div className="stat-label">👥 Участников</div>
         </div>
         <div className="stat-card">
           <div className="stat-number">{stats.clubs}</div>
-          <div className="stat-label">Клубов</div>
+          <div className="stat-label">🏫 Клубов</div>
         </div>
         <div className="stat-card">
           <div className="stat-number">{stats.events}</div>
-          <div className="stat-label">Мероприятий</div>
+          <div className="stat-label">📅 Мероприятий</div>
         </div>
         <div className="stat-card">
           <div className="stat-number">{stats.achievements}</div>
-          <div className="stat-label">Достижений</div>
+          <div className="stat-label">🏆 Достижений</div>
         </div>
       </div>
 

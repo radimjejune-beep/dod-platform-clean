@@ -62,7 +62,7 @@ pool.connect((err) => {
 });
 
 // ============================================================
-// CORS
+// CORS (ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // ============================================================
 const allowedOrigins = [
   'https://dod-frontend.relaxdev.ru',
@@ -71,6 +71,7 @@ const allowedOrigins = [
   'http://localhost:3000'
 ];
 
+// Основной CORS
 app.use(cors({
   origin: function(origin, callback) {
     if (!origin) return callback(null, true);
@@ -83,6 +84,26 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 
+// ============================================================
+// ОБРАБОТКА OPTIONS (CORS PREFLIGHT)
+// ============================================================
+app.options('*', (req, res) => {
+  const origin = req.headers.origin || '';
+  
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400');
+  }
+  
+  res.sendStatus(200);
+});
+
+// ============================================================
+// ЛОГИ И JSON
+// ============================================================
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

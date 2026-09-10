@@ -43,7 +43,31 @@ export const IS_PRODUCTION = NODE_ENV === 'production';
 
 // Срок жизни токена. Раньше было 7 дней — слишком долго для системы,
 // где роль пользователя может измениться в любой момент.
-export const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
+//
+// ⚠️ Значение уходит прямо в jwt.sign(), и мусор в переменной ломает ВХОД
+// в систему целиком (jwt.sign бросает исключение, /api/login отдаёт 500).
+// Поэтому проверяем формат и при непонятном значении откатываемся на 24h,
+// громко предупреждая в лог, — сломанная переменная окружения не должна
+// класть авторизацию.
+function parseExpiresIn(raw) {
+  const DEFAULT = '24h';
+  if (!raw || raw.trim() === '') return DEFAULT;
+
+  const value = raw.trim();
+  // Допустимо: число секунд ('3600') или таймспан ('60s', '30m', '24h', '7d')
+  const isValid = /^\d+$/.test(value) || /^\d+(\.\d+)?\s*(ms|s|m|h|d|w|y)$/i.test(value);
+
+  if (!isValid) {
+    console.warn(`⚠️  JWT_EXPIRES_IN содержит недопустимое значение: "${value}"`);
+    console.warn(`   Допустимые примеры: 24h, 12h, 7d, 3600. Использую ${DEFAULT}.`);
+    console.warn(`   Исправьте переменную в панели RelaxDev.`);
+    return DEFAULT;
+  }
+
+  return value;
+}
+
+export const JWT_EXPIRES_IN = parseExpiresIn(process.env.JWT_EXPIRES_IN);
 
 // Сколько прокси стоит перед приложением (RelaxDev — обычно один).
 export const TRUST_PROXY_HOPS = parseInt(process.env.TRUST_PROXY_HOPS, 10) || 1;

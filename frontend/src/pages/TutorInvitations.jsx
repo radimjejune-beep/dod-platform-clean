@@ -50,10 +50,15 @@ export default function TutorInvitations() {
         api.getClubs()
       ]);
 
-      setInvitations(invitationsData || []);
-      setUsers(usersData || []);
-      setEvents(eventsData || []);
-      setClubs(clubsData || []);
+      // Проверяем именно «массив ли это»: часть методов при ошибке
+      // возвращает объект { data, pagination }, и оператор || его пропускал,
+      // после чего .map() на странице падал
+      const asArray = (v) => (Array.isArray(v) ? v : Array.isArray(v?.data) ? v.data : []);
+
+      setInvitations(asArray(invitationsData));
+      setUsers(asArray(usersData));
+      setEvents(asArray(eventsData));
+      setClubs(asArray(clubsData));
     } catch (err) {
       console.error('Ошибка:', err);
     } finally {
@@ -90,7 +95,7 @@ export default function TutorInvitations() {
     try {
       const result = await api.createTutorInvitation(form);
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage('✅ Приглашение отправлено тьютору!');
@@ -123,7 +128,7 @@ export default function TutorInvitations() {
     try {
       const result = await api.respondToTutorInvitation(id, status);
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage(status === 'accepted' ? '✅ Приглашение принято!' : '❌ Приглашение отклонено');

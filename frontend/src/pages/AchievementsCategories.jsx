@@ -17,7 +17,7 @@ export default function AchievementsCategories() {
     name: '',
     description: '',
     icon: '🏆',
-    color: 'var(--color-gold)',
+    color: '#C9A227',
     points: 10,
     is_active: true
   });
@@ -43,7 +43,7 @@ export default function AchievementsCategories() {
       setProfile(userData);
 
       const data = await api.getAchievementCategories();
-      setCategories(data || []);
+      setCategories(Array.isArray(data) ? data : []);
 
     } catch (err) {
       console.error('Ошибка загрузки категорий:', err);
@@ -58,8 +58,20 @@ export default function AchievementsCategories() {
     setLoading(true);
 
     try {
-      // TODO: добавить API для создания/обновления категории
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const payload = {
+        name: form.name.trim(),
+        description: form.description || '',
+        icon: form.icon || '',
+        color: form.color || '#C9A227',
+        points: Number(form.points) || 0,
+        is_active: form.is_active !== false
+      };
+
+      const result = editingCategory
+        ? await api.updateAchievementCategory(editingCategory.id, payload)
+        : await api.createAchievementCategory(payload);
+
+      if (result?.error) throw new Error(api.describeApiError(result));
 
       setMessage(editingCategory ? '✅ Категория обновлена!' : '✅ Категория создана!');
       setMessageType('success');
@@ -79,7 +91,7 @@ export default function AchievementsCategories() {
       name: '',
       description: '',
       icon: '🏆',
-      color: 'var(--color-gold)',
+      color: '#C9A227',
       points: 10,
       is_active: true
     });
@@ -105,8 +117,18 @@ export default function AchievementsCategories() {
     if (!confirm('Удалить категорию?')) return;
 
     try {
-      // TODO: добавить API для удаления
-      await new Promise(resolve => setTimeout(resolve, 300));
+      const result = await api.deleteAchievementCategory(id);
+      if (result?.error) throw new Error(api.describeApiError(result));
+
+      if (result.archived) {
+        // Категорию уже присвоили достижениям — сервер её скрыл, а не удалил
+        setMessage('⚠️ ' + result.message);
+        setMessageType('success');
+        loadData();
+        setTimeout(() => setMessage(''), 6000);
+        return;
+      }
+
       setCategories(categories.filter(c => c.id !== id));
       setMessage('✅ Категория удалена');
       setMessageType('success');
@@ -119,7 +141,10 @@ export default function AchievementsCategories() {
 
   const commonIcons = ['🏆', '🎯', '🌟', '⭐', '🏅', '📚', '🌍', '🎨', '⚽', '❤️', '💪', '🎭', '🎵', '📝', '🔬'];
 
-  const commonColors = ['var(--color-gold)', 'var(--color-primary-light)', 'var(--color-success)', 'var(--color-error)', '#6B46C1', '#E85D04', '#D62828', '#003049'];
+  // Цвет категории хранится в базе и проверяется сервером по формату
+  // #RRGGBB — здесь это данные, а не оформление, поэтому переменные CSS
+  // использовать нельзя. Значения взяты из дипломатической палитры.
+  const commonColors = ['#C9A227', '#174A7E', '#16845B', '#B3262E', '#6B46C1', '#E85D04', '#D62828', '#003049'];
 
   if (loading) {
     return (

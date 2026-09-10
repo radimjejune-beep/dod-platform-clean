@@ -48,10 +48,10 @@ export default function TasksPlanner() {
       setProfile(userData);
 
       const usersData = await api.getUsers();
-      setUsers(usersData || []);
+      setUsers(Array.isArray(usersData) ? usersData : []);
 
-      // TODO: добавить API для задач
-      setTasks([]);
+      const tasksData = await api.getTasks();
+      setTasks(Array.isArray(tasksData) ? tasksData : []);
 
     } catch (err) {
       console.error('Ошибка:', err);
@@ -73,8 +73,23 @@ export default function TasksPlanner() {
         return;
       }
 
-      // TODO: добавить API для создания/обновления задачи
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const payload = {
+        title: form.title.trim(),
+        description: form.description || '',
+        priority: form.priority || 'medium',
+        status: form.status || 'pending',
+        category: form.category || 'general',
+        due_date: form.due_date || '',
+        assigned_to: form.assigned_to || '',
+        recurrence: form.recurrence || 'none',
+        recurrence_end: form.recurrence_end || ''
+      };
+
+      const result = editingTask
+        ? await api.updateTask(editingTask.id, payload)
+        : await api.createTask(payload);
+
+      if (result?.error) throw new Error(api.describeApiError(result));
 
       setMessage(editingTask ? '✅ Задача обновлена!' : '✅ Задача создана!');
       setMessageType('success');
@@ -126,7 +141,9 @@ export default function TasksPlanner() {
     if (!confirm('Удалить задачу?')) return;
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 300));
+      const result = await api.deleteTask(id);
+      if (result?.error) throw new Error(api.describeApiError(result));
+
       setTasks(tasks.filter(t => t.id !== id));
       setMessage('✅ Задача удалена');
       setMessageType('success');
@@ -139,11 +156,26 @@ export default function TasksPlanner() {
 
   const handleStatusChange = async (id, status) => {
     try {
-      // TODO: добавить API для обновления статуса
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setTasks(tasks.map(t => 
-        t.id === id ? { ...t, status } : t
-      ));
+      // Сервер ждёт всю задачу целиком, а не одно поле, — берём текущую
+      // и меняем в ней только статус
+      const current = tasks.find(t => t.id === id);
+      if (!current) return;
+
+      const result = await api.updateTask(id, {
+        title: current.title,
+        description: current.description || '',
+        priority: current.priority || 'medium',
+        status,
+        category: current.category || 'general',
+        due_date: current.due_date || '',
+        assigned_to: current.assigned_to || '',
+        recurrence: current.recurrence || 'none',
+        recurrence_end: current.recurrence_end || ''
+      });
+
+      if (result?.error) throw new Error(api.describeApiError(result));
+
+      setTasks(tasks.map(t => (t.id === id ? { ...t, ...result } : t)));
       setMessage(`✅ Статус изменён на "${status}"`);
       setMessageType('success');
       setTimeout(() => setMessage(''), 3000);

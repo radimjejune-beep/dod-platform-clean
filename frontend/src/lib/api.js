@@ -262,6 +262,33 @@ export const getAchievementCategories = async () => {
     method: 'GET',
     headers: headers()
   });
+  if (!response.ok) return [];
+  return response.json();
+};
+
+export const createAchievementCategory = async (data) => {
+  const response = await fetch(`${API_URL}/achievement-categories`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateAchievementCategory = async (id, data) => {
+  const response = await fetch(`${API_URL}/achievement-categories/${id}`, {
+    method: 'PUT',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteAchievementCategory = async (id) => {
+  const response = await fetch(`${API_URL}/achievement-categories/${id}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
   return response.json();
 };
 
@@ -729,8 +756,8 @@ export const getTutorInvitations = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
-  
+  if (!response.ok) return [];
+
   return response.json();
 };
 
@@ -848,18 +875,21 @@ export const deleteGoal = async (id) => {
 // ============================================================
 export const getTasks = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
-  
+  if (!token) return [];
+
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/tasks?${query}` : `${API_URL}/tasks`;
-  
+
   const response = await fetch(url, {
     method: 'GET',
     headers: headers()
   });
-  
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
-  
+
+  // ⚠️ Раньше при ошибке возвращался объект с полем data, а при успехе —
+  // массив. Страница делала .map() и падала ровно тогда, когда что-то
+  // пошло не так. Сервер отдаёт массив — возвращаем массив всегда.
+  if (!response.ok) return [];
+
   return response.json();
 };
 
@@ -1015,6 +1045,9 @@ const api = {
   addAchievement,
   deleteAchievement,
   getAchievementCategories,
+  createAchievementCategory,
+  updateAchievementCategory,
+  deleteAchievementCategory,
   
   // События
   getEvents,

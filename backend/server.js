@@ -214,6 +214,65 @@ async function createNotification(userId, type, title, message, link = null, pri
   }
 }
 
+// ============================================================
+// ПРОВЕРКИ ДОСТУПА
+// ============================================================
+
+// Роли, которые видят движение целиком
+const MOVEMENT_ROLES = ['admin', 'movement_coordinator', 'president', 'vice_president'];
+
+// Все роли сотрудников (могут работать с участниками в своей зоне)
+const STAFF_ROLES = [...MOVEMENT_ROLES, 'club_coordinator', 'tutor'];
+
+// Клубы, за которые отвечает координатор КЮДа (их может быть несколько)
+async function getCoordinatorClubIds(userId) {
+  const result = await pool.query(
+    'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+    [userId]
+  );
+  return result.rows.map((r) => r.club_id);
+}
+
+// Имеет ли запрашивающий право видеть данные конкретного участника
+async function canViewParticipant(requester, participantId) {
+  const { userId, role } = requester;
+
+  if (!participantId) return false;
+  if (userId === participantId) return true;
+  if (MOVEMENT_ROLES.includes(role)) return true;
+
+  if (role === 'club_coordinator') {
+    const r = await pool.query(
+      `SELECT 1 FROM users u
+       JOIN club_coordinators cc ON cc.club_id = u.club_id
+       WHERE u.id = $1 AND cc.profile_id = $2`,
+      [participantId, userId]
+    );
+    return r.rows.length > 0;
+  }
+
+  if (role === 'tutor') {
+    const r = await pool.query(
+      `SELECT 1 FROM event_participants ep
+       JOIN event_tutor_assignments eta ON eta.event_id = ep.event_id
+       WHERE ep.participant_id = $1 AND eta.tutor_id = $2`,
+      [participantId, userId]
+    );
+    return r.rows.length > 0;
+  }
+
+  if (role === 'parent') {
+    const r = await pool.query(
+      `SELECT 1 FROM child_parent
+       WHERE parent_id = $1 AND child_id = $2 AND status = 'active'`,
+      [userId, participantId]
+    );
+    return r.rows.length > 0;
+  }
+
+  return false;
+}
+
 async function getClubName(clubId) {
   if (!clubId) return 'Все клубы';
   const result = await pool.query('SELECT name FROM clubs WHERE id = $1', [clubId]);
@@ -1016,11 +1075,45 @@ app.get('/api/clubs', authenticate, async (req, res) => {
 // ============================================================
 app.get('/api/achievements', authenticate, async (req, res) => {
   try {
+    const { userId, role } = req.user;
+
+    // ⚠️ Раньше здесь не было никакой фильтрации: любой авторизованный
+    // получал достижения всех участников движения.
+    let where = '';
+    const params = [];
+
+    if (role === 'participant') {
+      where = 'WHERE a.participant_id = $1';
+      params.push(userId);
+    } else if (role === 'parent') {
+      where = `WHERE a.participant_id IN (
+                 SELECT child_id FROM child_parent
+                 WHERE parent_id = $1 AND status = 'active'
+               )`;
+      params.push(userId);
+    } else if (role === 'club_coordinator') {
+      const clubIds = await getCoordinatorClubIds(userId);
+      if (clubIds.length === 0) return res.json([]);
+      where = 'WHERE u.club_id = ANY($1)';
+      params.push(clubIds);
+    } else if (role === 'tutor') {
+      where = `WHERE a.participant_id IN (
+                 SELECT ep.participant_id FROM event_participants ep
+                 JOIN event_tutor_assignments eta ON eta.event_id = ep.event_id
+                 WHERE eta.tutor_id = $1
+               )`;
+      params.push(userId);
+    } else if (!MOVEMENT_ROLES.includes(role)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
     const result = await pool.query(
       `SELECT a.*, u.full_name as participant_name
        FROM achievements a
        LEFT JOIN users u ON a.participant_id = u.id
-       ORDER BY a.created_at DESC`
+       ${where}
+       ORDER BY a.created_at DESC`,
+      params
     );
     res.json(result.rows);
   } catch (error) {
@@ -1033,17 +1126,41 @@ app.post('/api/achievements', authenticate, validateBody(achievementSchema), asy
     const validatedData = req.validatedBody;
     const { participant_id, title, description, achievement_date } = validatedData;
 
+    // ⚠️ Здесь стояла только authenticate: обычный участник мог выдать себе
+    // сколько угодно наград, а они питают уровень и рейтинг клуба.
+    if (!STAFF_ROLES.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Выдавать достижения могут только сотрудники' });
+    }
+
     if (!participant_id || !title) {
       return res.status(400).json({ error: 'participant_id и title обязательны' });
     }
 
+    if (!(await canViewParticipant(req.user, participant_id))) {
+      return res.status(403).json({ error: 'Этот участник вне вашей зоны ответственности' });
+    }
+
     const result = await pool.query(
       `INSERT INTO achievements (participant_id, title, description, achievement_date)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, participant_id, title, description, achievement_date, created_at`,
       [participant_id, title, description || '', achievement_date || new Date().toISOString().split('T')[0]]
     );
 
-    res.json(result.rows[0]);
+    await logActivity(req.user.userId, 'ACHIEVEMENT_CREATED', 'achievement', result.rows[0].id, {
+      participant_id,
+      title
+    });
+
+    await createNotification(
+      participant_id,
+      'achievement',
+      '🏅 Новое достижение',
+      `Вам присвоено достижение: ${title}`,
+      '/my-achievements'
+    );
+
+    res.status(201).json(result.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -1052,7 +1169,34 @@ app.post('/api/achievements', authenticate, validateBody(achievementSchema), asy
 app.delete('/api/achievements/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
+
+    // ⚠️ Раньше любой авторизованный мог удалить достижение любого участника,
+    // и это нигде не фиксировалось.
+    if (!STAFF_ROLES.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    const check = await pool.query(
+      'SELECT id, participant_id, title FROM achievements WHERE id = $1',
+      [id]
+    );
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Достижение не найдено' });
+    }
+
+    const achievement = check.rows[0];
+
+    if (!(await canViewParticipant(req.user, achievement.participant_id))) {
+      return res.status(403).json({ error: 'Этот участник вне вашей зоны ответственности' });
+    }
+
     await pool.query('DELETE FROM achievements WHERE id = $1', [id]);
+
+    await logActivity(req.user.userId, 'ACHIEVEMENT_DELETED', 'achievement', id, {
+      participant_id: achievement.participant_id,
+      title: achievement.title
+    });
+
     res.json({ message: 'Достижение удалено' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1480,12 +1624,43 @@ app.get('/api/my-club-events', authenticate, async (req, res) => {
 // ============================================================
 app.get('/api/registrations', authenticate, async (req, res) => {
   try {
+    const { userId, role } = req.user;
+
+    // ⚠️ Раньше отдавались все регистрации движения любому авторизованному.
+    let where = '';
+    const params = [];
+
+    if (role === 'participant') {
+      where = 'WHERE r.user_id = $1';
+      params.push(userId);
+    } else if (role === 'parent') {
+      where = `WHERE r.user_id IN (
+                 SELECT child_id FROM child_parent
+                 WHERE parent_id = $1 AND status = 'active'
+               )`;
+      params.push(userId);
+    } else if (role === 'club_coordinator') {
+      const clubIds = await getCoordinatorClubIds(userId);
+      if (clubIds.length === 0) return res.json([]);
+      where = 'WHERE u.club_id = ANY($1)';
+      params.push(clubIds);
+    } else if (role === 'tutor') {
+      where = `WHERE r.event_id IN (
+                 SELECT event_id FROM event_tutor_assignments WHERE tutor_id = $1
+               )`;
+      params.push(userId);
+    } else if (!MOVEMENT_ROLES.includes(role)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
     const result = await pool.query(
       `SELECT r.*, u.full_name as user_name, e.title as event_title
        FROM registrations r
        LEFT JOIN users u ON r.user_id = u.id
        LEFT JOIN events e ON r.event_id = e.id
-       ORDER BY r.registered_at DESC`
+       ${where}
+       ORDER BY r.registered_at DESC`,
+      params
     );
     res.json(result.rows);
   } catch (error) {
@@ -1502,13 +1677,29 @@ app.post('/api/registrations', authenticate, validateBody(registrationSchema), a
       return res.status(400).json({ error: 'user_id и event_id обязательны' });
     }
 
+    // ⚠️ Раньше любой авторизованный мог записать любого участника
+    // на любое мероприятие.
+    const isSelf = user_id === req.user.userId;
+    if (!isSelf && !(await canViewParticipant(req.user, user_id))) {
+      return res.status(403).json({ error: 'Нельзя записывать этого участника' });
+    }
+    if (!isSelf && !STAFF_ROLES.includes(req.user.role) && req.user.role !== 'parent') {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
     const result = await pool.query(
       `INSERT INTO registrations (user_id, event_id, status, registered_at)
-       VALUES ($1, $2, 'pending', NOW()) RETURNING *`,
+       VALUES ($1, $2, 'pending', NOW())
+       RETURNING id, user_id, event_id, status, registered_at`,
       [user_id, event_id]
     );
 
-    res.json(result.rows[0]);
+    await logActivity(req.user.userId, 'REGISTRATION_CREATED', 'registration', result.rows[0].id, {
+      user_id,
+      event_id
+    });
+
+    res.status(201).json(result.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -1712,6 +1903,20 @@ app.post('/api/appeals/:id/reply', authenticate, async (req, res) => {
 app.get('/api/appeals/:id/replies', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
+    const { userId, role } = req.user;
+
+    // ⚠️ Раньше проверки не было вообще: любой авторизованный читал
+    // переписку по обращению любого КЮДа. Сверяем доступ так же, как это
+    // уже делает GET /api/appeals.
+    const appeal = await pool.query('SELECT coordinator_id FROM appeals WHERE id = $1', [id]);
+    if (appeal.rows.length === 0) {
+      return res.status(404).json({ error: 'Обращение не найдено' });
+    }
+
+    const isAuthor = appeal.rows[0].coordinator_id === userId;
+    if (!MOVEMENT_ROLES.includes(role) && !isAuthor) {
+      return res.status(403).json({ error: 'Нет доступа к этому обращению' });
+    }
 
     const result = await pool.query(
       `SELECT r.*, u.full_name as author_name, u.role as author_role

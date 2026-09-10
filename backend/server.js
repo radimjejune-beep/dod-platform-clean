@@ -2,8 +2,9 @@
 
 // config.js импортируется ПЕРВЫМ: он вызывает dotenv.config() до того,
 // как любой другой модуль обратится к process.env.
-import { JWT_SECRET, DATABASE_URL, PORT, IS_PRODUCTION, JWT_EXPIRES_IN, TRUST_PROXY_HOPS, DB_SSL } from './lib/config.js';
+import { JWT_SECRET, DATABASE_URL, PORT, IS_PRODUCTION, JWT_EXPIRES_IN, TRUST_PROXY_HOPS, DB_SSL, BCRYPT_ROUNDS } from './lib/config.js';
 
+import crypto from 'crypto';
 import express from 'express';
 import cors from 'cors';
 import { Pool } from 'pg';
@@ -178,12 +179,28 @@ const changePasswordLimiter = rateLimit({
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================================
 
-function generatePassword() {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-  let password = '';
-  for (let i = 0; i < 12; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
+// ⚠️ Раньше здесь был Math.random(): он не криптостойкий, и по нескольким
+// выданным паролям восстанавливается состояние генератора, а значит и
+// следующие пароли. Для временных паролей администраторов это критично.
+//
+// Из алфавита убраны l, I, 1, O, 0 — временные пароли диктуют по телефону,
+// и путаница в них стоит звонка в поддержку. Спецсимволы тоже убраны по
+// той же причине; длина компенсирует.
+function generatePassword(length = 16) {
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghijkmnopqrstuvwxyz';
+  const digits = '23456789';
+  const all = upper + lower + digits;
+
+  const bytes = crypto.randomBytes(length);
+
+  // Первые три символа гарантируют выполнение требований isPasswordStrong
+  let password =
+    upper[bytes[0] % upper.length] +
+    lower[bytes[1] % lower.length] +
+    digits[bytes[2] % digits.length];
+
+  for (let i = 3; i < length; i++) password += all[bytes[i] % all.length];
   return password;
 }
 
@@ -435,7 +452,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
 
   } catch (error) {
     console.error('❌ Ошибка входа:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -544,7 +561,7 @@ app.post('/api/change-password', changePasswordLimiter, async (req, res) => {
       return res.status(400).json({ error: strength.message, code: 'WEAK_PASSWORD' });
     }
     
-    const hashedPassword = await bcrypt.hash(new_password, 10);
+    const hashedPassword = await bcrypt.hash(new_password, BCRYPT_ROUNDS);
     
     await pool.query(
       `UPDATE users SET password_hash = $1, must_change_password = false, 
@@ -596,7 +613,7 @@ app.post('/api/change-password', changePasswordLimiter, async (req, res) => {
     
   } catch (error) {
     console.error('❌ Ошибка смены пароля:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -637,7 +654,7 @@ app.get('/api/me', authenticate, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка /api/me:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -682,7 +699,7 @@ app.post('/api/users', authenticate, requireAdmin, validateBody(userSchema), asy
     }
 
     const tempPassword = password || generatePassword();
-    const password_hash = await bcrypt.hash(tempPassword, 10);
+    const password_hash = await bcrypt.hash(tempPassword, BCRYPT_ROUNDS);
 
     let finalClubId = null;
     let clubName = null;
@@ -773,7 +790,7 @@ app.post('/api/users', authenticate, requireAdmin, validateBody(userSchema), asy
 
   } catch (error) {
     console.error('❌ ОШИБКА создания пользователя:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -839,7 +856,7 @@ app.patch('/api/users/:id/assign-club', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Ошибка прикрепления к клубу:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -858,7 +875,7 @@ app.post('/api/users/:id/reset-password', authenticate, requireAdmin, async (req
     const user = userCheck.rows[0];
     
     const newPassword = generatePassword();
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     
     await pool.query(
       `UPDATE users SET password_hash = $1, must_change_password = true,
@@ -884,7 +901,7 @@ app.post('/api/users/:id/reset-password', authenticate, requireAdmin, async (req
 
   } catch (error) {
     console.error('❌ Ошибка сброса пароля:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -911,7 +928,8 @@ app.get('/api/users', authenticate, async (req, res) => {
     );
     res.json(result.rows);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -959,7 +977,8 @@ app.get('/api/participants', authenticate, async (req, res) => {
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -1074,7 +1093,7 @@ app.patch('/api/profile', authenticate, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка обновления профиля:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -1120,7 +1139,7 @@ app.delete('/api/users/:id', authenticate, requireAdmin, async (req, res) => {
     res.json({ message: 'Пользователь удалён' });
   } catch (error) {
     console.error('❌ Ошибка удаления пользователя:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -1139,7 +1158,8 @@ app.get('/api/clubs', authenticate, async (req, res) => {
     );
     res.json(result.rows);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -1190,7 +1210,8 @@ app.get('/api/achievements', authenticate, async (req, res) => {
     );
     res.json(result.rows);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -1235,7 +1256,8 @@ app.post('/api/achievements', authenticate, validateBody(achievementSchema), asy
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -1272,7 +1294,8 @@ app.delete('/api/achievements/:id', authenticate, async (req, res) => {
 
     res.json({ message: 'Достижение удалено' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -1406,7 +1429,7 @@ app.get('/api/events', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения событий:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -1502,7 +1525,7 @@ app.post('/api/events', authenticate, validateBody(eventSchema), async (req, res
     res.status(201).json(event);
   } catch (error) {
     console.error('❌ Ошибка создания события:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -1583,7 +1606,7 @@ app.patch('/api/events/:id', authenticate, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка обновления события:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -1636,7 +1659,7 @@ app.delete('/api/events/:id', authenticate, async (req, res) => {
     res.json({ message: 'Мероприятие удалено', deleted_event: event.title });
   } catch (error) {
     console.error('❌ Ошибка удаления мероприятия:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -1688,7 +1711,7 @@ app.get('/api/my-club-events', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения мероприятий клуба:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -1737,7 +1760,8 @@ app.get('/api/registrations', authenticate, async (req, res) => {
     );
     res.json(result.rows);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -1774,7 +1798,8 @@ app.post('/api/registrations', authenticate, validateBody(registrationSchema), a
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -1815,7 +1840,7 @@ app.get('/api/appeals', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения обращений:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -1900,7 +1925,7 @@ app.post('/api/appeals', authenticate, validateBody(appealSchema), async (req, r
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка создания обращения:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -1969,7 +1994,7 @@ app.post('/api/appeals/:id/reply', authenticate, async (req, res) => {
     res.json({ message: 'Ответ отправлен', appeal: result.rows[0] });
   } catch (error) {
     console.error('❌ Ошибка ответа на обращение:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2003,7 +2028,7 @@ app.get('/api/appeals/:id/replies', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения ответов:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2040,7 +2065,7 @@ app.delete('/api/appeals/:id', authenticate, async (req, res) => {
     res.json({ message: 'Обращение удалено' });
   } catch (error) {
     console.error('❌ Ошибка удаления обращения:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2074,7 +2099,7 @@ app.get('/api/tutor-requests', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Ошибка получения запросов:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2114,7 +2139,7 @@ app.post('/api/tutor-requests', authenticate, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Ошибка создания запроса:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2142,7 +2167,7 @@ app.patch('/api/tutor-requests/:id', authenticate, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Ошибка обновления запроса:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2179,7 +2204,7 @@ app.post('/api/upload-avatar', authenticate, async (req, res) => {
     res.json({ message: 'Аватар обновлён', avatar_url: result.rows[0].avatar_url });
   } catch (error) {
     console.error('Ошибка загрузки аватара:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2198,7 +2223,7 @@ app.post('/api/upload-news-image', authenticate, requireAdminOrCoordinator, asyn
     res.json({ message: 'Изображение загружено', image_url: image_base64 });
   } catch (error) {
     console.error('Ошибка загрузки изображения:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2232,7 +2257,7 @@ app.get('/api/participant-events/:userId', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Ошибка получения истории:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2284,7 +2309,7 @@ app.get('/api/participant-stats/:userId', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('Ошибка получения статистики:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2311,7 +2336,7 @@ app.get('/api/parent-children', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения детей:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2411,7 +2436,7 @@ app.post('/api/parent-link-child', authenticate, linkChildLimiter, async (req, r
 
   } catch (error) {
     console.error('❌ Ошибка привязки ребёнка:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2479,7 +2504,7 @@ app.patch('/api/clubs/:clubId/president', authenticate, async (req, res) => {
     res.json({ message: 'Президент назначен', club: result.rows[0], president: president.rows[0] });
   } catch (error) {
     console.error('❌ Ошибка назначения президента:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2496,7 +2521,7 @@ app.get('/api/clubs/:clubId/president', authenticate, async (req, res) => {
     res.json(result.rows[0] || null);
   } catch (error) {
     console.error('❌ Ошибка получения президента:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2531,7 +2556,7 @@ app.get('/api/club-rating/:clubId', authenticate, async (req, res) => {
     res.json(rating);
   } catch (error) {
     console.error('Ошибка получения рейтинга:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2544,7 +2569,7 @@ app.get('/api/news', async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Ошибка получения новостей:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2566,7 +2591,7 @@ app.post('/api/news', authenticate, requireAdminOrCoordinator, validateBody(news
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка создания новости:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2594,7 +2619,7 @@ app.put('/api/news/:id', authenticate, requireAdminOrCoordinator, validateBody(n
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка обновления новости:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2613,7 +2638,7 @@ app.delete('/api/news/:id', authenticate, requireAdminOrCoordinator, async (req,
     res.json({ message: 'Новость удалена' });
   } catch (error) {
     console.error('❌ Ошибка удаления новости:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2635,7 +2660,7 @@ app.get('/api/notifications', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Ошибка получения уведомлений:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2656,7 +2681,7 @@ app.patch('/api/notifications/:id/read', authenticate, async (req, res) => {
     res.json({ message: 'Уведомление отмечено как прочитанное' });
   } catch (error) {
     console.error('Ошибка:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2668,7 +2693,7 @@ app.patch('/api/notifications/read-all', authenticate, async (req, res) => {
     res.json({ message: 'Все уведомления отмечены как прочитанные' });
   } catch (error) {
     console.error('Ошибка:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2723,7 +2748,7 @@ app.get('/api/president-tasks', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения заданий:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2763,7 +2788,7 @@ app.post('/api/president-tasks', authenticate, validateBody(presidentTaskSchema)
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка создания задания:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2804,7 +2829,7 @@ app.patch('/api/president-tasks/:id/status', authenticate, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка изменения статуса:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2842,7 +2867,7 @@ app.post('/api/president-tasks/:id/respond', authenticate, async (req, res) => {
     res.status(201).json({ success: true, message: 'Ответ отправлен' });
   } catch (error) {
     console.error('❌ Ошибка отправки ответа:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2873,7 +2898,7 @@ app.delete('/api/president-tasks/:id', authenticate, async (req, res) => {
     res.json({ success: true, message: 'Задание удалено' });
   } catch (error) {
     console.error('❌ Ошибка удаления задания:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2915,7 +2940,7 @@ app.post('/api/events/:eventId/tutors', authenticate, async (req, res) => {
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка назначения тьютора:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2946,7 +2971,7 @@ app.get('/api/event-tutor-assignments', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения назначений:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -2978,7 +3003,7 @@ app.patch('/api/event-tutor-assignments/:id', authenticate, async (req, res) => 
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка обновления статуса:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3018,7 +3043,7 @@ app.get('/api/reports', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения отчётов:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3057,7 +3082,7 @@ app.post('/api/reports', authenticate, validateBody(reportSchema), async (req, r
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка создания отчёта:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3111,7 +3136,7 @@ app.patch('/api/reports/:id/submit', authenticate, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка отправки отчёта:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3173,7 +3198,7 @@ app.patch('/api/reports/:id/approve', authenticate, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка утверждения отчёта:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3219,7 +3244,7 @@ app.patch('/api/reports/:id/reject', authenticate, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка отклонения отчёта:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3236,7 +3261,7 @@ app.delete('/api/reports/:id', authenticate, async (req, res) => {
     res.json({ message: 'Отчёт удалён' });
   } catch (error) {
     console.error('❌ Ошибка удаления отчёта:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3273,7 +3298,7 @@ app.get('/api/documents', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения документов:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3306,7 +3331,7 @@ app.post('/api/documents', authenticate, validateBody(documentSchema), async (re
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка создания документа:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3323,7 +3348,7 @@ app.delete('/api/documents/:id', authenticate, async (req, res) => {
     res.json({ message: 'Документ удалён' });
   } catch (error) {
     console.error('❌ Ошибка удаления документа:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3347,7 +3372,7 @@ app.get('/api/mass-notifications', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения уведомлений:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3415,7 +3440,7 @@ app.post('/api/mass-notifications', authenticate, validateBody(massNotificationS
     res.status(201).json({ ...massNotification, sent_count: sentCount });
   } catch (error) {
     console.error('❌ Ошибка создания уведомления:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3432,7 +3457,7 @@ app.delete('/api/mass-notifications/:id', authenticate, async (req, res) => {
     res.json({ message: 'Уведомление удалено' });
   } catch (error) {
     console.error('❌ Ошибка удаления уведомления:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3458,7 +3483,7 @@ app.get('/api/goals', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения целей:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3483,7 +3508,7 @@ app.post('/api/goals', authenticate, validateBody(goalSchema), async (req, res) 
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка создания цели:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3513,7 +3538,7 @@ app.put('/api/goals/:id', authenticate, validateBody(goalSchema), async (req, re
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка обновления цели:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3530,7 +3555,7 @@ app.delete('/api/goals/:id', authenticate, async (req, res) => {
     res.json({ message: 'Цель удалена' });
   } catch (error) {
     console.error('❌ Ошибка удаления цели:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3583,7 +3608,7 @@ app.get('/api/events/:eventId/participants', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения участников:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3635,7 +3660,7 @@ app.post('/api/events/:eventId/participants', authenticate, async (req, res) => 
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка добавления участника:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3668,7 +3693,7 @@ app.delete('/api/events/:eventId/participants/:participantId', authenticate, asy
     res.json({ message: 'Участник удалён с мероприятия' });
   } catch (error) {
     console.error('❌ Ошибка удаления участника:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3708,7 +3733,7 @@ app.get('/api/events/:eventId/available-participants', authenticate, async (req,
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения списка участников:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3741,7 +3766,7 @@ app.get('/api/my-club-events', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения мероприятий клуба:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3786,7 +3811,7 @@ app.get('/api/activity-log', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения журнала:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -3937,7 +3962,7 @@ app.delete('/api/event-registrations/:id', authenticate, async (req, res) => {
     res.json({ message: 'Вы отписались от мероприятия' });
   } catch (error) {
     console.error('❌ Ошибка отписки:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -4005,7 +4030,7 @@ app.get('/api/events/:eventId/registrations', authenticate, async (req, res) => 
 
   } catch (error) {
     console.error('❌ Ошибка получения регистраций:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -4043,7 +4068,7 @@ app.get('/api/events/:eventId/registration-status', authenticate, async (req, re
 
   } catch (error) {
     console.error('❌ Ошибка проверки статуса:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -4107,7 +4132,7 @@ app.patch('/api/event-registrations/:id/status', authenticate, async (req, res) 
     });
   } catch (error) {
     console.error('❌ Ошибка изменения статуса:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -4131,7 +4156,7 @@ app.get('/api/my-registrations', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения регистраций:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -4227,7 +4252,7 @@ app.patch('/api/event-registrations/:id/approve-club', authenticate, async (req,
 
   } catch (error) {
     console.error('❌ Ошибка одобрения заявки:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -4320,7 +4345,7 @@ app.get('/api/events/:eventId/export', authenticate, async (req, res) => {
 
   } catch (error) {
     console.error('❌ Ошибка экспорта:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -4371,7 +4396,7 @@ app.get('/api/participant-notes/:participantId', authenticate, async (req, res) 
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения заметок:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -4412,7 +4437,7 @@ app.post('/api/participant-notes', authenticate, async (req, res) => {
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('❌ Ошибка создания заметки:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   } finally {
     client.release();
   }
@@ -4452,7 +4477,7 @@ app.patch('/api/participant-notes/:id', authenticate, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка обновления заметки:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -4480,7 +4505,7 @@ app.delete('/api/participant-notes/:id', authenticate, async (req, res) => {
     res.json({ message: 'Заметка удалена' });
   } catch (error) {
     console.error('❌ Ошибка удаления заметки:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -4517,7 +4542,7 @@ app.post('/api/bulk-actions', authenticate, async (req, res) => {
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка создания массового действия:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -4538,7 +4563,7 @@ app.get('/api/bulk-actions/:id', authenticate, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -4616,7 +4641,7 @@ app.post('/api/reminders', authenticate, async (req, res) => {
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка создания напоминания:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -4641,7 +4666,7 @@ app.get('/api/reminders/my', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения напоминаний:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -4665,7 +4690,7 @@ app.patch('/api/reminders/:id/sent', authenticate, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 

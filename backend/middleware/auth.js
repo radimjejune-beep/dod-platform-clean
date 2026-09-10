@@ -2,7 +2,12 @@
 
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dod-platform-2024';
+// ⚠️ Раньше здесь был fallback на захардкоженный ключ. Хуже того, этот
+// модуль читал process.env ДО того, как server.js вызывал dotenv.config(),
+// поэтому значение из backend/.env сюда вообще не доходило и всегда
+// использовался ключ из исходников. Теперь ключ приходит из lib/config.js,
+// который сам загружает окружение и падает, если ключа нет.
+import { JWT_SECRET } from '../lib/config.js';
 
 // ============================================================
 // ПРОВЕРКА АВТОРИЗАЦИИ

@@ -1,9 +1,12 @@
 // backend/server.js
 
+// config.js импортируется ПЕРВЫМ: он вызывает dotenv.config() до того,
+// как любой другой модуль обратится к process.env.
+import { JWT_SECRET, DATABASE_URL, PORT, IS_PRODUCTION, JWT_EXPIRES_IN } from './lib/config.js';
+
 import express from 'express';
 import cors from 'cors';
 import { Pool } from 'pg';
-import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
@@ -29,11 +32,7 @@ import {
   massNotificationSchema
 } from './lib/validation.js';
 
-dotenv.config();
-
 const app = express();
-const PORT = process.env.PORT || 8080;
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dod-platform-2024';
 
 console.log('🚀 ЗАПУСК БЭКЕНДА');
 
@@ -47,8 +46,8 @@ console.log('✅ Trust proxy enabled');
 // БАЗА ДАННЫХ
 // ============================================================
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  connectionString: DATABASE_URL,
+  ssl: IS_PRODUCTION ? { rejectUnauthorized: false } : false
 });
 
 initLogger(pool);
@@ -285,7 +284,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
         is_president: user.is_president || false
       },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: JWT_EXPIRES_IN }
     );
 
     await logActivity(user.id, 'LOGIN', 'user', user.id, {
@@ -380,7 +379,7 @@ app.post('/api/change-password', async (req, res) => {
           is_president: userData.is_president || false
         },
         JWT_SECRET,
-        { expiresIn: '7d' }
+        { expiresIn: JWT_EXPIRES_IN }
       );
       
       return res.json({
@@ -4223,6 +4222,6 @@ app.patch('/api/reminders/:id/sent', authenticate, async (req, res) => {
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Сервер запущен на порту ${PORT}`);
-  console.log(`🔐 JWT_SECRET: ${JWT_SECRET ? 'установлен' : '❌ НЕ УСТАНОВЛЕН!'}`);
+  console.log(`🔐 JWT_SECRET: задан (${JWT_SECRET.length} символов), токен живёт ${JWT_EXPIRES_IN}`);
   console.log(`✅ ВСЕ API ЗАГРУЖЕНЫ!`);
 });

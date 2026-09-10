@@ -41,11 +41,11 @@ export default function CookieBanner() {
           bottom: 0;
           left: 0;
           right: 0;
-          background: #0A1628;
+          background: var(--color-primary-dark);
           color: rgba(255, 255, 255, 0.9);
           padding: 16px 24px;
           z-index: 9999;
-          border-top: 2px solid #C9A227;
+          border-top: 2px solid var(--color-gold);
           box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
         }
 
@@ -69,12 +69,12 @@ export default function CookieBanner() {
         }
 
         .cookie-banner-content p a {
-          color: #E8D9A8;
+          color: var(--color-gold-light);
           text-decoration: underline;
         }
 
         .cookie-banner-content p a:hover {
-          color: #C9A227;
+          color: var(--color-gold);
         }
 
         .cookie-banner-actions {
@@ -85,8 +85,8 @@ export default function CookieBanner() {
 
         .cookie-accept {
           padding: 8px 28px;
-          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
-          color: #0A1628;
+          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
+          color: var(--color-primary-dark);
           border: none;
           border-radius: 8px;
           font-size: 14px;

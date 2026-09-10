@@ -116,13 +116,13 @@ export default function Dashboard() {
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: #F0EDE8;
+            background: var(--color-gray-100);
           }
           .spinner {
             width: 48px;
             height: 48px;
-            border: 4px solid #E4DFD8;
-            border-top-color: #C9A227;
+            border: 4px solid var(--color-gray-200);
+            border-top-color: var(--color-gold);
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
           }
@@ -371,7 +371,7 @@ export default function Dashboard() {
           max-width: 1200px;
           margin: 0 auto;
           padding: 24px 32px 48px;
-          background: #F0EDE8;
+          background: var(--color-gray-100);
           min-height: 100vh;
         }
 
@@ -386,7 +386,7 @@ export default function Dashboard() {
           gap: 16px;
           margin-bottom: 28px;
           padding: 24px 28px;
-          background: linear-gradient(135deg, #0A1628, #1A3555);
+          background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary-light));
           border-radius: 12px;
           color: white;
         }
@@ -414,7 +414,7 @@ export default function Dashboard() {
           border-radius: 20px;
           font-size: 12px;
           font-weight: 500;
-          color: #E8D9A8;
+          color: var(--color-gold-light);
           text-transform: capitalize;
         }
 
@@ -432,7 +432,7 @@ export default function Dashboard() {
           background: white;
           padding: 22px 24px;
           border-radius: 12px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           text-align: center;
           transition: all 0.3s ease;
@@ -447,7 +447,7 @@ export default function Dashboard() {
           left: 0;
           right: 0;
           height: 3px;
-          background: linear-gradient(135deg, #C9A227, #E8D9A8);
+          background: linear-gradient(135deg, var(--color-gold), var(--color-gold-light));
           opacity: 0.4;
           transition: opacity 0.3s ease;
         }
@@ -464,14 +464,14 @@ export default function Dashboard() {
           font-family: 'Playfair Display', serif;
           font-size: 34px;
           font-weight: 700;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           line-height: 1.2;
           letter-spacing: -0.02em;
         }
 
         .stat-label {
           font-size: 13px;
-          color: #8A8480;
+          color: var(--color-gray-500);
           margin-top: 4px;
           font-weight: 400;
           letter-spacing: 0.03em;
@@ -485,13 +485,13 @@ export default function Dashboard() {
           display: flex;
           gap: 4px;
           margin-bottom: 24px;
-          border-bottom: 1px solid #E4DFD8;
+          border-bottom: 1px solid var(--color-gray-200);
           padding-bottom: 4px;
           flex-wrap: wrap;
           background: white;
           padding: 4px 4px 0 4px;
           border-radius: 12px 12px 0 0;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           border-bottom: none;
         }
 
@@ -501,7 +501,7 @@ export default function Dashboard() {
           background: transparent;
           font-size: 14px;
           font-weight: 500;
-          color: #8A8480;
+          color: var(--color-gray-500);
           cursor: pointer;
           transition: all 0.3s ease;
           border-radius: 8px 8px 0 0;
@@ -509,14 +509,14 @@ export default function Dashboard() {
         }
 
         .dashboard-tab:hover {
-          color: #0A1628;
-          background: #F8F6F2;
+          color: var(--color-primary-dark);
+          background: var(--color-gray-50);
         }
 
         .dashboard-tab.active {
-          color: #0A1628;
+          color: var(--color-primary-dark);
           font-weight: 600;
-          background: #FBF4DC;
+          background: var(--color-gold-pale);
           position: relative;
         }
 
@@ -527,7 +527,7 @@ export default function Dashboard() {
           left: 0;
           right: 0;
           height: 2px;
-          background: #C9A227;
+          background: var(--color-gold);
         }
 
         /* ============================================================
@@ -554,7 +554,7 @@ export default function Dashboard() {
           font-family: 'Playfair Display', serif;
           font-size: 20px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0;
         }
 
@@ -564,7 +564,7 @@ export default function Dashboard() {
         }
 
         .tab-hint {
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-bottom: 16px;
           font-size: 14px;
         }
@@ -573,7 +573,7 @@ export default function Dashboard() {
           font-family: 'Playfair Display', serif;
           font-size: 20px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin-bottom: 16px;
         }
 
@@ -584,7 +584,7 @@ export default function Dashboard() {
           background: white;
           border-radius: 12px;
           padding: 20px 24px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           transition: all 0.3s ease;
         }
@@ -598,7 +598,7 @@ export default function Dashboard() {
           font-family: 'Playfair Display', serif;
           font-size: 16px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin-bottom: 12px;
         }
 
@@ -609,7 +609,7 @@ export default function Dashboard() {
           background: white;
           padding: 24px 28px;
           border-radius: 12px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           margin-bottom: 24px;
         }
@@ -630,7 +630,7 @@ export default function Dashboard() {
         .profile-info-label {
           font-size: 12px;
           font-weight: 500;
-          color: #A8A29A;
+          color: var(--color-gray-400);
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
@@ -638,7 +638,7 @@ export default function Dashboard() {
         .profile-info-value {
           font-size: 14px;
           font-weight: 500;
-          color: #0A1628;
+          color: var(--color-primary-dark);
         }
 
         .badge {
@@ -651,8 +651,8 @@ export default function Dashboard() {
           text-transform: uppercase;
         }
         .badge-active {
-          background: #E8F5EF;
-          color: #1A7A4C;
+          background: var(--color-success-bg);
+          color: var(--color-success);
         }
 
         /* ============================================================
@@ -673,20 +673,20 @@ export default function Dashboard() {
         .dashboard-mini-stats div {
           text-align: center;
           padding: 12px;
-          background: #F8F6F2;
+          background: var(--color-gray-50);
           border-radius: 8px;
         }
 
         .dashboard-mini-stats .stat-number {
           font-size: 24px;
           font-weight: 700;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           display: block;
         }
 
         .dashboard-mini-stats .stat-label {
           font-size: 12px;
-          color: #8A8480;
+          color: var(--color-gray-500);
         }
 
         /* ============================================================
@@ -707,10 +707,10 @@ export default function Dashboard() {
           padding: 16px 12px;
           background: white;
           border-radius: 12px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           text-decoration: none;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           transition: all 0.3s ease;
           min-height: 80px;
           text-align: center;
@@ -720,7 +720,7 @@ export default function Dashboard() {
         .quick-action-card:hover {
           transform: translateY(-4px);
           box-shadow: 0 8px 32px rgba(10,22,40,0.10);
-          border-color: #C9A227;
+          border-color: var(--color-gold);
         }
 
         .quick-icon {
@@ -731,7 +731,7 @@ export default function Dashboard() {
         .quick-label {
           font-size: 13px;
           font-weight: 500;
-          color: #6B6561;
+          color: var(--color-gray-600);
           line-height: 1.3;
         }
 
@@ -759,19 +759,19 @@ export default function Dashboard() {
         }
 
         .btn-primary {
-          background: #0A1628;
+          background: var(--color-primary-dark);
           color: white;
           box-shadow: 0 4px 16px rgba(10,22,40,0.15);
         }
         .btn-primary:hover {
-          background: #1A3555;
+          background: var(--color-primary-light);
           transform: translateY(-2px);
           box-shadow: 0 8px 32px rgba(10,22,40,0.25);
         }
 
         .btn-gold {
-          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
-          color: #0A1628;
+          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
+          color: var(--color-primary-dark);
           box-shadow: 0 2px 16px rgba(201, 162, 39, 0.25);
         }
         .btn-gold:hover {
@@ -792,8 +792,8 @@ export default function Dashboard() {
         .spinner {
           width: 48px;
           height: 48px;
-          border: 4px solid #E4DFD8;
-          border-top-color: #C9A227;
+          border: 4px solid var(--color-gray-200);
+          border-top-color: var(--color-gold);
           border-radius: 50%;
           animation: spin 0.7s linear infinite;
         }

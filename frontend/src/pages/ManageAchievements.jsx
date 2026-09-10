@@ -241,7 +241,7 @@ export default function ManageAchievements() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -274,7 +274,7 @@ export default function ManageAchievements() {
                 style={{
                   width: '100%',
                   padding: '10px 14px',
-                  border: '1.5px solid #D5DCE7',
+                  border: '1.5px solid var(--color-gray-200)',
                   borderRadius: '10px',
                   fontSize: '14px',
                   outline: 'none',
@@ -287,7 +287,7 @@ export default function ManageAchievements() {
                 ))}
               </select>
             </div>
-            <div style={{ fontSize: '14px', color: '#667085' }}>
+            <div style={{ fontSize: '14px', color: 'var(--color-gray-500)' }}>
               {selectedClubId ? (
                 <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
               ) : (
@@ -298,12 +298,12 @@ export default function ManageAchievements() {
               <button
                 style={{
                   padding: '4px 12px',
-                  background: '#FCEBEC',
+                  background: 'var(--color-error-bg)',
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',
                   fontSize: '12px',
-                  color: '#B3262E'
+                  color: 'var(--color-error)'
                 }}
                 onClick={() => setSelectedClubId('')}
               >
@@ -315,7 +315,7 @@ export default function ManageAchievements() {
 
         {showForm && canManage && (
           <div className="card" style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
               {editingAchievement ? '✏️ Редактировать достижение' : '📝 Добавить достижение'}
             </h3>
             <form onSubmit={handleSubmit}>
@@ -339,7 +339,7 @@ export default function ManageAchievements() {
                         left: 0,
                         right: 0,
                         background: 'white',
-                        border: '1px solid #E2E7EF',
+                        border: '1px solid var(--color-gray-200)',
                         borderRadius: '10px',
                         boxShadow: '0 8px 30px rgba(11, 31, 58, 0.12)',
                         maxHeight: '200px',
@@ -353,16 +353,16 @@ export default function ManageAchievements() {
                           style={{
                             padding: '10px 14px',
                             cursor: 'pointer',
-                            borderBottom: '1px solid #F4F6F9'
+                            borderBottom: '1px solid var(--color-gray-100)'
                           }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = '#F4F6F9'}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-gray-100)'}
                           onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
                           onClick={() => handleSelectParticipant(p)}
                         >
-                          <div style={{ fontWeight: '500', fontSize: '14px', color: '#0B1F3A' }}>
+                          <div style={{ fontWeight: '500', fontSize: '14px', color: 'var(--color-primary)' }}>
                             {p.full_name}
                           </div>
-                          <div style={{ fontSize: '12px', color: '#667085' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--color-gray-500)' }}>
                             {p.school || 'Школа не указана'} • {p.class_name || 'Класс не указан'}
                           </div>
                         </div>
@@ -374,10 +374,10 @@ export default function ManageAchievements() {
                   <div style={{
                     marginTop: '6px',
                     padding: '6px 12px',
-                    background: '#E8F5EF',
+                    background: 'var(--color-success-bg)',
                     borderRadius: '6px',
                     fontSize: '13px',
-                    color: '#16845B',
+                    color: 'var(--color-success)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px'
@@ -385,7 +385,7 @@ export default function ManageAchievements() {
                     ✅ Выбран: <strong>{selectedParticipant.full_name}</strong>
                     <button
                       type="button"
-                      style={{ background: 'none', border: 'none', color: '#B3262E', cursor: 'pointer', marginLeft: 'auto' }}
+                      style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', marginLeft: 'auto' }}
                       onClick={() => {
                         setSelectedParticipant(null);
                         setSearchQuery('');
@@ -442,10 +442,10 @@ export default function ManageAchievements() {
 
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
               Все достижения
             </h3>
-            <span style={{ fontSize: '13px', color: '#667085' }}>
+            <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               {achievements.length} достижений
             </span>
           </div>
@@ -462,8 +462,8 @@ export default function ManageAchievements() {
                   key={a.id}
                   className="list-item"
                   style={{
-                    borderLeftColor: a.is_club_award ? '#C9A227' : 
-                                   a.is_tutor_award ? '#174A7E' : '#0B1F3A'
+                    borderLeftColor: a.is_club_award ? 'var(--color-gold)' : 
+                                   a.is_tutor_award ? 'var(--color-primary-light)' : 'var(--color-primary)'
                   }}
                 >
                   <div className="title">

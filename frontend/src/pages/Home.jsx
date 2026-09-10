@@ -60,13 +60,13 @@ export default function Home() {
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: #0B1F3A;
+            background: var(--color-primary);
           }
           .spinner {
             width: 48px;
             height: 48px;
             border: 4px solid rgba(255,255,255,0.1);
-            border-top-color: #C9A227;
+            border-top-color: var(--color-gold);
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
           }
@@ -269,7 +269,7 @@ export default function Home() {
           text-align: center;
           padding: 60px 24px 40px;
           overflow: hidden;
-          background: linear-gradient(160deg, #0B1F3A 0%, #051224 100%);
+          background: linear-gradient(160deg, var(--color-primary) 0%, #051224 100%);
         }
 
         .home-hero-bg {
@@ -301,7 +301,7 @@ export default function Home() {
           padding: 4px 16px;
           border-radius: 20px;
           background: rgba(201, 162, 39, 0.15);
-          color: #E8D9A8;
+          color: var(--color-gold-light);
           font-size: 11px;
           font-weight: 600;
           letter-spacing: 1px;
@@ -340,7 +340,7 @@ export default function Home() {
         }
 
         .home-hero h1 span {
-          background: linear-gradient(135deg, #C9A227, #F5E6A8);
+          background: linear-gradient(135deg, var(--color-gold), #F5E6A8);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -363,8 +363,8 @@ export default function Home() {
 
         .home-hero-btn-primary {
           padding: 14px 36px;
-          background: linear-gradient(135deg, #C9A227, #B8921F);
-          color: #0B1F3A;
+          background: linear-gradient(135deg, var(--color-gold), var(--color-warning));
+          color: var(--color-primary);
           border: none;
           border-radius: 10px;
           font-size: 15px;
@@ -457,8 +457,8 @@ export default function Home() {
           display: inline-block;
           padding: 4px 16px;
           border-radius: 12px;
-          background: #FBF4DC;
-          color: #8A6A00;
+          background: var(--color-gold-pale);
+          color: var(--color-gold-dark);
           font-size: 11px;
           font-weight: 600;
           letter-spacing: 1px;
@@ -470,20 +470,20 @@ export default function Home() {
           font-family: 'Playfair Display', serif;
           font-size: 34px;
           font-weight: 700;
-          color: #0B1F3A;
+          color: var(--color-primary);
           line-height: 1.2;
           margin-bottom: 14px;
         }
 
         .home-about-text p {
           font-size: 15px;
-          color: #667085;
+          color: var(--color-gray-500);
           line-height: 1.8;
           margin-bottom: 24px;
         }
 
         .home-about-text p strong {
-          color: #0B1F3A;
+          color: var(--color-primary);
         }
 
         .home-about-values {
@@ -497,16 +497,16 @@ export default function Home() {
           align-items: flex-start;
           gap: 12px;
           padding: 14px 16px;
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           border-radius: 12px;
-          border: 1px solid #F4F6F9;
+          border: 1px solid var(--color-gray-100);
           transition: all 0.3s ease;
         }
 
         .home-about-value:hover {
           transform: translateY(-2px);
           box-shadow: 0 8px 30px rgba(11, 31, 58, 0.06);
-          border-color: #C9A227;
+          border-color: var(--color-gold);
         }
 
         .home-about-value-icon {
@@ -517,13 +517,13 @@ export default function Home() {
         .home-about-value h4 {
           font-size: 14px;
           font-weight: 600;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin: 0 0 2px 0;
         }
 
         .home-about-value p {
           font-size: 12px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin: 0;
           line-height: 1.4;
         }
@@ -537,7 +537,7 @@ export default function Home() {
           align-items: center;
           justify-content: center;
           font-size: 72px;
-          border: 1px solid #E2E7EF;
+          border: 1px solid var(--color-gray-200);
           position: relative;
           overflow: hidden;
         }
@@ -557,7 +557,7 @@ export default function Home() {
            ============================================================ */
         .home-numbers {
           padding: 50px 24px;
-          background: linear-gradient(135deg, #0B1F3A, #07152B);
+          background: linear-gradient(135deg, var(--color-primary), #07152B);
         }
 
         .home-numbers-container {
@@ -577,7 +577,7 @@ export default function Home() {
           font-family: 'Playfair Display', serif;
           font-size: 36px;
           font-weight: 700;
-          color: #E8D9A8;
+          color: var(--color-gold-light);
           line-height: 1.2;
         }
 
@@ -611,8 +611,8 @@ export default function Home() {
           display: inline-block;
           padding: 4px 16px;
           border-radius: 12px;
-          background: #EAF2FA;
-          color: #174A7E;
+          background: var(--color-info-bg);
+          color: var(--color-primary-light);
           font-size: 11px;
           font-weight: 600;
           letter-spacing: 1px;
@@ -624,13 +624,13 @@ export default function Home() {
           font-family: 'Playfair Display', serif;
           font-size: 32px;
           font-weight: 700;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin-bottom: 6px;
         }
 
         .home-contacts-header p {
           font-size: 15px;
-          color: #667085;
+          color: var(--color-gray-500);
         }
 
         .home-contacts-grid {
@@ -642,16 +642,16 @@ export default function Home() {
         .home-contacts-card {
           text-align: center;
           padding: 24px 16px;
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           border-radius: 14px;
-          border: 1px solid #F4F6F9;
+          border: 1px solid var(--color-gray-100);
           transition: all 0.3s ease;
         }
 
         .home-contacts-card:hover {
           transform: translateY(-4px);
           box-shadow: 0 12px 40px rgba(11, 31, 58, 0.06);
-          border-color: #C9A227;
+          border-color: var(--color-gold);
         }
 
         .home-contacts-card-icon {
@@ -662,25 +662,25 @@ export default function Home() {
         .home-contacts-card h4 {
           font-size: 14px;
           font-weight: 600;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin: 0 0 6px 0;
         }
 
         .home-contacts-card p {
           font-size: 13px;
-          color: #667085;
+          color: var(--color-gray-500);
           margin: 0;
           line-height: 1.5;
         }
 
         .home-contacts-card p a {
-          color: #174A7E;
+          color: var(--color-primary-light);
           text-decoration: none;
           transition: color 0.2s ease;
         }
 
         .home-contacts-card p a:hover {
-          color: #C9A227;
+          color: var(--color-gold);
         }
 
         /* ============================================================

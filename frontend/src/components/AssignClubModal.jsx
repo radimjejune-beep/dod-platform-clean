@@ -94,10 +94,10 @@ export default function AssignClubModal({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0B1F3A', marginBottom: '4px' }}>
+        <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '4px' }}>
           📌 Прикрепить к КЮДу
         </h3>
-        <p style={{ color: '#667085', marginBottom: '16px', fontSize: '14px' }}>
+        <p style={{ color: 'var(--color-gray-500)', marginBottom: '16px', fontSize: '14px' }}>
           Пользователь: <strong>{userFullName}</strong>
         </p>
 
@@ -118,7 +118,7 @@ export default function AssignClubModal({
             style={{
               width: '100%',
               padding: '10px 14px',
-              border: '1.5px solid #D5DCE7',
+              border: '1.5px solid var(--color-gray-200)',
               borderRadius: '10px',
               fontSize: '14px',
               outline: 'none',
@@ -146,14 +146,14 @@ export default function AssignClubModal({
           <button
             className="btn-secondary"
             onClick={onClose}
-            style={{ background: '#F4F6F9', color: '#0B1F3A', border: '1px solid #D5DCE7' }}
+            style={{ background: 'var(--color-gray-100)', color: 'var(--color-primary)', border: '1px solid var(--color-gray-200)' }}
           >
             ❌ Отмена
           </button>
         </div>
 
         {currentClubId && (
-          <div style={{ marginTop: '12px', padding: '8px 12px', background: '#FBF4DC', borderRadius: '8px', fontSize: '13px', color: '#8A6A00' }}>
+          <div style={{ marginTop: '12px', padding: '8px 12px', background: 'var(--color-gold-pale)', borderRadius: '8px', fontSize: '13px', color: 'var(--color-gold-dark)' }}>
             📌 Текущий КЮД: {clubs.find(c => c.id === currentClubId)?.name || 'Не указан'}
           </div>
         )}

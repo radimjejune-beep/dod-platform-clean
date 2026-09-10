@@ -332,10 +332,10 @@ export default function PresidentTasks() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { label: '⏳ Ожидает', color: '#C9A227', bg: '#FBF4DC' },
-      'in_progress': { label: '🔄 В работе', color: '#174A7E', bg: '#EAF2FA' },
-      'completed': { label: '✅ Выполнено', color: '#16845B', bg: '#E8F5EF' },
-      'rejected': { label: '❌ Отклонено', color: '#B3262E', bg: '#FCEBEC' }
+      'pending': { label: '⏳ Ожидает', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'in_progress': { label: '🔄 В работе', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
+      'completed': { label: '✅ Выполнено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'rejected': { label: '❌ Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
     };
     return badges[status] || badges['pending'];
   };
@@ -352,7 +352,7 @@ export default function PresidentTasks() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -454,7 +454,7 @@ export default function PresidentTasks() {
                         left: 0,
                         right: 0,
                         background: 'white',
-                        border: '1px solid #E2E7EF',
+                        border: '1px solid var(--color-gray-200)',
                         borderRadius: '10px',
                         boxShadow: '0 8px 30px rgba(11, 31, 58, 0.12)',
                         maxHeight: '200px',
@@ -468,17 +468,17 @@ export default function PresidentTasks() {
                           style={{
                             padding: '10px 14px',
                             cursor: 'pointer',
-                            borderBottom: '1px solid #F4F6F9',
+                            borderBottom: '1px solid var(--color-gray-100)',
                             transition: 'background 0.15s ease'
                           }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = '#F4F6F9'}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-gray-100)'}
                           onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
                           onClick={() => handleSelectUser(u)}
                         >
-                          <div style={{ fontWeight: '500', fontSize: '14px', color: '#0B1F3A' }}>
+                          <div style={{ fontWeight: '500', fontSize: '14px', color: 'var(--color-primary)' }}>
                             {u.full_name}
                           </div>
-                          <div style={{ fontSize: '12px', color: '#667085' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--color-gray-500)' }}>
                             {u.school || 'Школа не указана'} • {u.class_name || 'Класс не указан'}
                             {u.club_name && ` • 🏫 ${u.club_name}`}
                           </div>
@@ -491,19 +491,19 @@ export default function PresidentTasks() {
                   <div style={{
                     marginTop: '6px',
                     padding: '6px 12px',
-                    background: '#E8F5EF',
+                    background: 'var(--color-success-bg)',
                     borderRadius: '6px',
                     fontSize: '13px',
-                    color: '#16845B',
+                    color: 'var(--color-success)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px'
                   }}>
                     ✅ Выбран: <strong>{selectedUser.full_name}</strong>
-                    {selectedUser.club_name && <span style={{ color: '#98A2B3' }}>• 🏫 {selectedUser.club_name}</span>}
+                    {selectedUser.club_name && <span style={{ color: 'var(--color-gray-400)' }}>• 🏫 {selectedUser.club_name}</span>}
                     <button
                       type="button"
-                      style={{ background: 'none', border: 'none', color: '#B3262E', cursor: 'pointer', marginLeft: 'auto' }}
+                      style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', marginLeft: 'auto' }}
                       onClick={() => {
                         setSelectedUser(null);
                         setSearchQuery('');
@@ -514,7 +514,7 @@ export default function PresidentTasks() {
                     </button>
                   </div>
                 )}
-                <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
                   💡 Начните вводить фамилию участника — система покажет подходящих
                 </div>
               </div>
@@ -527,7 +527,7 @@ export default function PresidentTasks() {
                     onChange={(e) => setForm({ ...form, is_global: e.target.checked })}
                     style={{ width: '18px', height: '18px' }}
                   />
-                  <span style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                  <span style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                     🌍 Глобальное задание (для всех президентов)
                   </span>
                 </label>
@@ -548,10 +548,10 @@ export default function PresidentTasks() {
         {tasks.length === 0 ? (
           <div className="empty-state">
             <div className="icon">📋</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>
               {isPresident ? 'У вас пока нет заданий' : 'Заданий пока нет'}
             </p>
-            {canCreate && <p style={{ color: '#667085' }}>Создайте первое задание для президентов</p>}
+            {canCreate && <p style={{ color: 'var(--color-gray-500)' }}>Создайте первое задание для президентов</p>}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -566,19 +566,19 @@ export default function PresidentTasks() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                        <h3 style={{ fontSize: '17px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
+                        <h3 style={{ fontSize: '17px', fontWeight: '600', color: 'var(--color-primary)', margin: 0 }}>
                           {task.title}
                         </h3>
                         <span className="tag" style={{ background: status.bg, color: status.color }}>
                           {status.label}
                         </span>
                         <span className="tag" style={{
-                          background: task.priority === 'urgent' ? '#FCEBEC' :
-                                    task.priority === 'high' ? '#FCEBEC' :
-                                    task.priority === 'medium' ? '#FBF4DC' : '#F4F6F9',
-                          color: task.priority === 'urgent' ? '#B3262E' :
-                                 task.priority === 'high' ? '#B3262E' :
-                                 task.priority === 'medium' ? '#8A6A00' : '#667085'
+                          background: task.priority === 'urgent' ? 'var(--color-error-bg)' :
+                                    task.priority === 'high' ? 'var(--color-error-bg)' :
+                                    task.priority === 'medium' ? 'var(--color-gold-pale)' : 'var(--color-gray-100)',
+                          color: task.priority === 'urgent' ? 'var(--color-error)' :
+                                 task.priority === 'high' ? 'var(--color-error)' :
+                                 task.priority === 'medium' ? 'var(--color-gold-dark)' : 'var(--color-gray-500)'
                         }}>
                           {getPriorityLabel(task.priority)}
                         </span>
@@ -598,7 +598,7 @@ export default function PresidentTasks() {
                         </p>
                       )}
 
-                      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13px', color: '#667085', marginTop: '4px' }}>
+                      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
                         {task.assigned_to_name && (
                           <span>👤 Назначено: {task.assigned_to_name}</span>
                         )}
@@ -640,7 +640,7 @@ export default function PresidentTasks() {
                           </button>
                           <button
                             className="btn-success"
-                            style={{ padding: '6px 12px', fontSize: '12px', background: '#16845B' }}
+                            style={{ padding: '6px 12px', fontSize: '12px', background: 'var(--color-success)' }}
                             onClick={() => handleUpdateStatus(task.id, 'completed')}
                           >
                             ✅ Завершить
@@ -719,10 +719,10 @@ export default function PresidentTasks() {
             style={{ maxWidth: '600px', width: '100%', padding: '32px' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0B1F3A', marginBottom: '4px' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '4px' }}>
               📝 Ответ на задание
             </h3>
-            <p style={{ color: '#667085', marginBottom: '16px' }}>
+            <p style={{ color: 'var(--color-gray-500)', marginBottom: '16px' }}>
               Задание: <strong>{selectedTask.title}</strong>
             </p>
 
@@ -735,7 +735,7 @@ export default function PresidentTasks() {
                   onChange={(e) => setResponseText(e.target.value)}
                   required
                   placeholder="Напишите ваш ответ..."
-                  style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #D5DCE7', borderRadius: '10px', fontSize: '14px', resize: 'vertical' }}
+                  style={{ width: '100%', padding: '10px 14px', border: '1.5px solid var(--color-gray-200)', borderRadius: '10px', fontSize: '14px', resize: 'vertical' }}
                 />
               </div>
 

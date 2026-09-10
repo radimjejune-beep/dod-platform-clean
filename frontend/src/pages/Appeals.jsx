@@ -215,22 +215,22 @@ export default function Appeals() {
 
   const getPriorityColor = (priority) => {
     const colors = {
-      'low': '#16845B',
-      'medium': '#C9A227',
-      'high': '#B3262E',
-      'urgent': '#B3262E'
+      'low': 'var(--color-success)',
+      'medium': 'var(--color-gold)',
+      'high': 'var(--color-error)',
+      'urgent': 'var(--color-error)'
     };
-    return colors[priority] || '#667085';
+    return colors[priority] || 'var(--color-gray-500)';
   };
 
   const getPriorityBg = (priority) => {
     const colors = {
-      'low': '#E8F5EF',
-      'medium': '#FBF4DC',
-      'high': '#FCEBEC',
-      'urgent': '#FCEBEC'
+      'low': 'var(--color-success-bg)',
+      'medium': 'var(--color-gold-pale)',
+      'high': 'var(--color-error-bg)',
+      'urgent': 'var(--color-error-bg)'
     };
-    return colors[priority] || '#F4F6F9';
+    return colors[priority] || 'var(--color-gray-100)';
   };
 
   const getStatusLabel = (status) => {
@@ -245,27 +245,27 @@ export default function Appeals() {
 
   const getStatusColor = (status) => {
     const colors = {
-      'pending': '#8A6A00',
-      'in_progress': '#174A7E',
-      'resolved': '#16845B',
-      'rejected': '#B3262E'
+      'pending': 'var(--color-gold-dark)',
+      'in_progress': 'var(--color-primary-light)',
+      'resolved': 'var(--color-success)',
+      'rejected': 'var(--color-error)'
     };
-    return colors[status] || '#667085';
+    return colors[status] || 'var(--color-gray-500)';
   };
 
   const getStatusBg = (status) => {
     const colors = {
-      'pending': '#FBF4DC',
-      'in_progress': '#EAF2FA',
-      'resolved': '#E8F5EF',
-      'rejected': '#FCEBEC'
+      'pending': 'var(--color-gold-pale)',
+      'in_progress': 'var(--color-info-bg)',
+      'resolved': 'var(--color-success-bg)',
+      'rejected': 'var(--color-error-bg)'
     };
-    return colors[status] || '#F4F6F9';
+    return colors[status] || 'var(--color-gray-100)';
   };
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -278,8 +278,8 @@ export default function Appeals() {
         <div className="container-page">
           <div className="empty-state">
             <div className="icon">⛔</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Доступ запрещён</p>
-            <p style={{ color: '#667085' }}>Только координаторы и администраторы</p>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
+            <p style={{ color: 'var(--color-gray-500)' }}>Только координаторы и администраторы</p>
           </div>
         </div>
       </div>
@@ -585,7 +585,7 @@ export default function Appeals() {
           padding: 20px 28px;
           background: white;
           border-radius: 12px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
         }
 
@@ -593,13 +593,13 @@ export default function Appeals() {
           font-family: 'Playfair Display', serif;
           font-size: 24px;
           font-weight: 700;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0;
         }
 
         .appeals-header-left p {
           font-size: 14px;
-          color: #8A8480;
+          color: var(--color-gray-500);
           margin: 4px 0 0 0;
         }
 
@@ -625,8 +625,8 @@ export default function Appeals() {
         }
 
         .btn-gold {
-          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
-          color: #0A1628;
+          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
+          color: var(--color-primary-dark);
           box-shadow: 0 2px 16px rgba(201,162,39,0.25);
         }
         .btn-gold:hover {
@@ -635,18 +635,18 @@ export default function Appeals() {
         }
 
         .btn-primary {
-          background: #0A1628;
+          background: var(--color-primary-dark);
           color: white;
           box-shadow: 0 4px 16px rgba(10,22,40,0.15);
         }
         .btn-primary:hover {
-          background: #1A3555;
+          background: var(--color-primary-light);
           transform: translateY(-2px);
           box-shadow: 0 8px 32px rgba(10,22,40,0.25);
         }
 
         .btn-success {
-          background: #1A7A4C;
+          background: var(--color-success);
           color: white;
           box-shadow: 0 4px 16px rgba(26,122,76,0.2);
         }
@@ -657,7 +657,7 @@ export default function Appeals() {
         }
 
         .btn-danger {
-          background: #B3262E;
+          background: var(--color-error);
           color: white;
           box-shadow: 0 4px 16px rgba(179,38,46,0.2);
         }
@@ -669,22 +669,22 @@ export default function Appeals() {
 
         .btn-outline {
           background: transparent;
-          color: #0A1628;
-          border: 1.5px solid #E4DFD8;
+          color: var(--color-primary-dark);
+          border: 1.5px solid var(--color-gray-200);
           box-shadow: none;
         }
         .btn-outline:hover {
-          background: #F8F6F2;
-          border-color: #C9A227;
+          background: var(--color-gray-50);
+          border-color: var(--color-gold);
           transform: translateY(-2px);
         }
 
         .btn-secondary {
-          background: #F4F6F9;
-          color: #0A1628;
+          background: var(--color-gray-100);
+          color: var(--color-primary-dark);
         }
         .btn-secondary:hover {
-          background: #E4DFD8;
+          background: var(--color-gray-200);
         }
 
         .btn-sm {
@@ -701,7 +701,7 @@ export default function Appeals() {
           background: white;
           border-radius: 12px;
           padding: 28px 32px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           margin-bottom: 24px;
         }
@@ -710,7 +710,7 @@ export default function Appeals() {
           font-family: 'Playfair Display', serif;
           font-size: 20px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0 0 20px 0;
         }
 
@@ -722,12 +722,12 @@ export default function Appeals() {
           display: block;
           font-size: 13px;
           font-weight: 500;
-          color: #6B6561;
+          color: var(--color-gray-600);
           margin-bottom: 4px;
         }
 
         .required {
-          color: #B3262E;
+          color: var(--color-error);
         }
 
         .form-group input,
@@ -735,11 +735,11 @@ export default function Appeals() {
         .form-control {
           width: 100%;
           padding: 10px 14px;
-          border: 1.5px solid #E4DFD8;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 8px;
           font-family: 'Inter', sans-serif;
           font-size: 14px;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           background: white;
           transition: all 0.3s ease;
           outline: none;
@@ -749,7 +749,7 @@ export default function Appeals() {
         .form-group input:focus,
         .form-group textarea:focus,
         .form-control:focus {
-          border-color: #C9A227;
+          border-color: var(--color-gold);
           box-shadow: 0 0 0 3px rgba(201,162,39,0.08);
         }
 
@@ -774,7 +774,7 @@ export default function Appeals() {
         .priority-option input[type="radio"] {
           width: 16px;
           height: 16px;
-          accent-color: #C9A227;
+          accent-color: var(--color-gold);
           cursor: pointer;
         }
 
@@ -804,7 +804,7 @@ export default function Appeals() {
           background: white;
           border-radius: 12px;
           padding: 20px 24px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           border-left: 4px solid;
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           transition: all 0.3s ease;
@@ -832,7 +832,7 @@ export default function Appeals() {
           font-family: 'Playfair Display', serif;
           font-size: 17px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0 0 8px 0;
         }
 
@@ -852,13 +852,13 @@ export default function Appeals() {
         }
 
         .badge-blue {
-          background: #EAF2FA;
-          color: #174A7E;
+          background: var(--color-info-bg);
+          color: var(--color-primary-light);
         }
 
         .badge-gray {
-          background: #F4F6F9;
-          color: #667085;
+          background: var(--color-gray-100);
+          color: var(--color-gray-500);
         }
 
         .appeal-card-actions {
@@ -879,10 +879,10 @@ export default function Appeals() {
           display: flex;
           gap: 16px;
           font-size: 12px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           flex-wrap: wrap;
           padding-top: 12px;
-          border-top: 1px solid #F0EDE8;
+          border-top: 1px solid var(--color-gray-100);
         }
 
         /* ============================================================
@@ -891,13 +891,13 @@ export default function Appeals() {
         .appeal-replies {
           margin-top: 16px;
           padding-top: 16px;
-          border-top: 1px solid #E4DFD8;
+          border-top: 1px solid var(--color-gray-200);
         }
 
         .appeal-replies h4 {
           font-size: 14px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0 0 12px 0;
         }
 
@@ -909,8 +909,8 @@ export default function Appeals() {
         .spinner-small {
           width: 24px;
           height: 24px;
-          border: 3px solid #E4DFD8;
-          border-top-color: #C9A227;
+          border: 3px solid var(--color-gray-200);
+          border-top-color: var(--color-gold);
           border-radius: 50%;
           animation: spin 0.7s linear infinite;
           margin: 0 auto;
@@ -921,16 +921,16 @@ export default function Appeals() {
         }
 
         .no-replies {
-          color: #98A2B3;
+          color: var(--color-gray-400);
           font-size: 13px;
           padding: 8px 0;
         }
 
         .appeal-reply {
           padding: 12px 16px;
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           border-radius: 8px;
-          border-left: 3px solid #174A7E;
+          border-left: 3px solid var(--color-primary-light);
           margin-bottom: 10px;
         }
 
@@ -940,12 +940,12 @@ export default function Appeals() {
 
         .appeal-reply-message {
           font-size: 14px;
-          color: #0A1628;
+          color: var(--color-primary-dark);
         }
 
         .appeal-reply-meta {
           font-size: 12px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-top: 4px;
         }
 
@@ -957,7 +957,7 @@ export default function Appeals() {
           padding: 60px 20px;
           background: white;
           border-radius: 12px;
-          border: 1px dashed #E4DFD8;
+          border: 1px dashed var(--color-gray-200);
         }
 
         .empty-state-icon {
@@ -969,13 +969,13 @@ export default function Appeals() {
         .empty-state h3 {
           font-family: 'Playfair Display', serif;
           font-size: 18px;
-          color: #4D4744;
+          color: var(--color-gray-700);
           margin-bottom: 4px;
         }
 
         .empty-state p {
           font-size: 14px;
-          color: #8A8480;
+          color: var(--color-gray-500);
         }
 
         /* ============================================================
@@ -1003,7 +1003,7 @@ export default function Appeals() {
           max-width: 560px;
           width: 100%;
           box-shadow: 0 24px 64px rgba(10,22,40,0.2);
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           max-height: 90vh;
           overflow-y: auto;
         }
@@ -1019,22 +1019,22 @@ export default function Appeals() {
           font-family: 'Playfair Display', serif;
           font-size: 20px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
         }
 
         .modal-close {
           background: none;
           border: none;
           font-size: 24px;
-          color: #A8A29A;
+          color: var(--color-gray-400);
           cursor: pointer;
           transition: color 0.2s ease;
         }
-        .modal-close:hover { color: #0A1628; }
+        .modal-close:hover { color: var(--color-primary-dark); }
 
         .modal-subtitle {
           font-size: 14px;
-          color: #667085;
+          color: var(--color-gray-500);
           margin: 0 0 20px 0;
         }
 

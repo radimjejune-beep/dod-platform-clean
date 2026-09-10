@@ -122,9 +122,9 @@ export default function MyReviews() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'draft': { text: 'Черновик', color: '#8A9AAA', bg: '#F4F6F9' },
-      'submitted': { text: 'На проверке', color: '#C9A227', bg: '#FBF4DC' },
-      'approved': { text: 'Утверждено', color: '#16845B', bg: '#E8F5EF' }
+      'draft': { text: 'Черновик', color: '#8A9AAA', bg: 'var(--color-gray-100)' },
+      'submitted': { text: 'На проверке', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'approved': { text: 'Утверждено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' }
     };
     return badges[status] || badges['draft'];
   };
@@ -188,7 +188,7 @@ export default function MyReviews() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -215,7 +215,7 @@ export default function MyReviews() {
                 style={{
                   width: '100%',
                   padding: '10px 14px',
-                  border: '1.5px solid #D5DCE7',
+                  border: '1.5px solid var(--color-gray-200)',
                   borderRadius: '10px',
                   fontSize: '14px',
                   outline: 'none',
@@ -229,7 +229,7 @@ export default function MyReviews() {
                 ))}
               </select>
             </div>
-            <div style={{ fontSize: '14px', color: '#667085' }}>
+            <div style={{ fontSize: '14px', color: 'var(--color-gray-500)' }}>
               {selectedClubId ? (
                 <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
               ) : (
@@ -240,12 +240,12 @@ export default function MyReviews() {
               <button
                 style={{
                   padding: '4px 12px',
-                  background: '#FCEBEC',
+                  background: 'var(--color-error-bg)',
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',
                   fontSize: '12px',
-                  color: '#B3262E'
+                  color: 'var(--color-error)'
                 }}
                 onClick={() => setSelectedClubId('')}
               >
@@ -258,7 +258,7 @@ export default function MyReviews() {
         {reviews.length === 0 ? (
           <div className="empty-state">
             <div className="icon">📝</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>
               {profile?.role === 'participant' && 'У вас пока нет оценок'}
               {profile?.role === 'parent' && 'У вашего ребёнка пока нет оценок'}
               {profile?.role === 'club_coordinator' && 'У участников вашего клуба пока нет оценок'}
@@ -268,7 +268,7 @@ export default function MyReviews() {
                 profile?.role === 'president' || 
                 profile?.role === 'vice_president') && 'Оценок пока нет'}
             </p>
-            <p style={{ color: '#667085' }}>Оценки появляются после мероприятий с участием тьюторов</p>
+            <p style={{ color: 'var(--color-gray-500)' }}>Оценки появляются после мероприятий с участием тьюторов</p>
           </div>
         ) : (
           <>
@@ -292,10 +292,10 @@ export default function MyReviews() {
                       return (
                         <tr key={review.id}>
                           <td>
-                            <div style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                            <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                               {review.participant_name || 'Неизвестно'}
                             </div>
-                            <div style={{ fontSize: '12px', color: '#98A2B3' }}>
+                            <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
                               {review.participant_school} {review.participant_class}
                             </div>
                           </td>
@@ -303,20 +303,20 @@ export default function MyReviews() {
                             <span className="tag tag-blue">{review.club_name || '—'}</span>
                           </td>
                           <td>
-                            <div style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                            <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                               {review.event_title || 'Мероприятие'}
                             </div>
-                            <div style={{ fontSize: '12px', color: '#98A2B3' }}>
+                            <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
                               📅 {review.event_date ? new Date(review.event_date).toLocaleDateString('ru-RU') : ''}
                             </div>
                           </td>
                           <td style={{ textAlign: 'center' }}>
                             {review.engagement ? (
                               <span className="tag" style={{
-                                background: review.engagement === 'active' ? '#E8F5EF' :
-                                           review.engagement === 'moderate' ? '#FBF4DC' : '#FCEBEC',
-                                color: review.engagement === 'active' ? '#16845B' :
-                                       review.engagement === 'moderate' ? '#8A6A00' : '#B3262E'
+                                background: review.engagement === 'active' ? 'var(--color-success-bg)' :
+                                           review.engagement === 'moderate' ? 'var(--color-gold-pale)' : 'var(--color-error-bg)',
+                                color: review.engagement === 'active' ? 'var(--color-success)' :
+                                       review.engagement === 'moderate' ? 'var(--color-gold-dark)' : 'var(--color-error)'
                               }}>
                                 {getEngagementLabel(review.engagement)}
                               </span>
@@ -325,10 +325,10 @@ export default function MyReviews() {
                           <td style={{ textAlign: 'center' }}>
                             {review.teamwork ? (
                               <span className="tag" style={{
-                                background: review.teamwork === 'excellent' ? '#E8F5EF' :
-                                           review.teamwork === 'good' ? '#FBF4DC' : '#FCEBEC',
-                                color: review.teamwork === 'excellent' ? '#16845B' :
-                                       review.teamwork === 'good' ? '#8A6A00' : '#B3262E'
+                                background: review.teamwork === 'excellent' ? 'var(--color-success-bg)' :
+                                           review.teamwork === 'good' ? 'var(--color-gold-pale)' : 'var(--color-error-bg)',
+                                color: review.teamwork === 'excellent' ? 'var(--color-success)' :
+                                       review.teamwork === 'good' ? 'var(--color-gold-dark)' : 'var(--color-error)'
                               }}>
                                 {getTeamworkLabel(review.teamwork)}
                               </span>
@@ -337,10 +337,10 @@ export default function MyReviews() {
                           <td style={{ textAlign: 'center' }}>
                             {review.initiative ? (
                               <span className="tag" style={{
-                                background: review.initiative === 'high' ? '#E8F5EF' :
-                                           review.initiative === 'average' ? '#FBF4DC' : '#FCEBEC',
-                                color: review.initiative === 'high' ? '#16845B' :
-                                       review.initiative === 'average' ? '#8A6A00' : '#B3262E'
+                                background: review.initiative === 'high' ? 'var(--color-success-bg)' :
+                                           review.initiative === 'average' ? 'var(--color-gold-pale)' : 'var(--color-error-bg)',
+                                color: review.initiative === 'high' ? 'var(--color-success)' :
+                                       review.initiative === 'average' ? 'var(--color-gold-dark)' : 'var(--color-error)'
                               }}>
                                 {getInitiativeLabel(review.initiative)}
                               </span>
@@ -371,18 +371,18 @@ export default function MyReviews() {
                       key={review.id}
                       className="card"
                       style={{
-                        borderLeft: `4px solid ${review.is_final ? '#C9A227' : '#174A7E'}`
+                        borderLeft: `4px solid ${review.is_final ? 'var(--color-gold)' : 'var(--color-primary-light)'}`
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                         <div>
-                          <div style={{ fontWeight: '600', color: '#0B1F3A' }}>
+                          <div style={{ fontWeight: '600', color: 'var(--color-primary)' }}>
                             {review.participant_name || 'Неизвестно'}
                           </div>
-                          <div style={{ fontSize: '12px', color: '#98A2B3' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
                             🏫 {review.club_name || 'Без клуба'}
                           </div>
-                          <div style={{ fontSize: '12px', color: '#98A2B3' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
                             📅 {review.event_date ? new Date(review.event_date).toLocaleDateString('ru-RU') : ''}
                           </div>
                         </div>
@@ -393,25 +393,25 @@ export default function MyReviews() {
 
                       <div className="grid-3" style={{ fontSize: '12px', marginTop: '8px' }}>
                         {review.engagement && (
-                          <div style={{ padding: '4px 8px', background: '#F8FAFC', borderRadius: '4px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '9px', color: '#98A2B3' }}>Активность</div>
-                            <div style={{ fontSize: '13px', fontWeight: '600', color: '#0B1F3A' }}>
+                          <div style={{ padding: '4px 8px', background: 'var(--color-gray-50)', borderRadius: '4px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '9px', color: 'var(--color-gray-400)' }}>Активность</div>
+                            <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-primary)' }}>
                               {getEngagementLabel(review.engagement)}
                             </div>
                           </div>
                         )}
                         {review.teamwork && (
-                          <div style={{ padding: '4px 8px', background: '#F8FAFC', borderRadius: '4px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '9px', color: '#98A2B3' }}>Команда</div>
-                            <div style={{ fontSize: '13px', fontWeight: '600', color: '#0B1F3A' }}>
+                          <div style={{ padding: '4px 8px', background: 'var(--color-gray-50)', borderRadius: '4px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '9px', color: 'var(--color-gray-400)' }}>Команда</div>
+                            <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-primary)' }}>
                               {getTeamworkLabel(review.teamwork)}
                             </div>
                           </div>
                         )}
                         {review.initiative && (
-                          <div style={{ padding: '4px 8px', background: '#F8FAFC', borderRadius: '4px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '9px', color: '#98A2B3' }}>Инициатива</div>
-                            <div style={{ fontSize: '13px', fontWeight: '600', color: '#0B1F3A' }}>
+                          <div style={{ padding: '4px 8px', background: 'var(--color-gray-50)', borderRadius: '4px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '9px', color: 'var(--color-gray-400)' }}>Инициатива</div>
+                            <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-primary)' }}>
                               {getInitiativeLabel(review.initiative)}
                             </div>
                           </div>
@@ -419,12 +419,12 @@ export default function MyReviews() {
                       </div>
 
                       {review.comment && (
-                        <div style={{ fontSize: '12px', color: '#667085', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #F4F6F9' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--color-gray-500)', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--color-gray-100)' }}>
                           💬 {review.comment}
                         </div>
                       )}
                       {review.reviewer_name && (
-                        <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
                           👤 {review.reviewer_name}
                         </div>
                       )}

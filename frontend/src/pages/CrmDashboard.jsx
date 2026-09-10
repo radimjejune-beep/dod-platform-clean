@@ -97,21 +97,21 @@ export default function CrmDashboard() {
           message: `${p.full_name} присоединился к движению`,
           date: p.created_at,
           icon: '👤',
-          color: '#16845B'
+          color: 'var(--color-success)'
         })),
         ...upcoming.slice(0, 3).map(e => ({
           type: 'event',
           message: `Мероприятие "${e.title}" скоро начнётся`,
           date: e.event_date,
           icon: '📅',
-          color: '#174A7E'
+          color: 'var(--color-primary-light)'
         })),
         ...achievements.slice(0, 2).map(a => ({
           type: 'achievement',
           message: `Новое достижение: ${a.title}`,
           date: a.created_at,
           icon: '🏆',
-          color: '#C9A227'
+          color: 'var(--color-gold)'
         }))
       ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8);
 
@@ -133,13 +133,13 @@ export default function CrmDashboard() {
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: #F0EDE8;
+            background: var(--color-gray-100);
           }
           .spinner {
             width: 48px;
             height: 48px;
-            border: 4px solid #E4DFD8;
-            border-top-color: #C9A227;
+            border: 4px solid var(--color-gray-200);
+            border-top-color: var(--color-gold);
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
           }
@@ -175,17 +175,17 @@ export default function CrmDashboard() {
            МЕТРИКИ
            ============================================================ */}
         <div className="crm-stats">
-          <div className="stat-card" style={{ borderTop: '3px solid #174A7E' }}>
+          <div className="stat-card" style={{ borderTop: '3px solid var(--color-primary-light)' }}>
             <div className="stat-number">{stats.totalParticipants}</div>
             <div className="stat-label">👥 Всего участников</div>
             <div className="stat-change">+{stats.newThisMonth} за месяц</div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid #16845B' }}>
+          <div className="stat-card" style={{ borderTop: '3px solid var(--color-success)' }}>
             <div className="stat-number">{stats.activeParticipants}</div>
             <div className="stat-label">🟢 Активных</div>
             <div className="stat-change">{Math.round((stats.activeParticipants / stats.totalParticipants) * 100) || 0}% от всех</div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid #C9A227' }}>
+          <div className="stat-card" style={{ borderTop: '3px solid var(--color-gold)' }}>
             <div className="stat-number">{stats.totalEvents}</div>
             <div className="stat-label">📅 Мероприятий</div>
             <div className="stat-change">{stats.upcomingEvents} предстоящих</div>
@@ -270,10 +270,10 @@ export default function CrmDashboard() {
                   {topParticipants.map((p, index) => (
                     <div key={p.id} className="top-item">
                       <div className="top-rank" style={{
-                        background: index === 0 ? '#C9A227' : 
+                        background: index === 0 ? 'var(--color-gold)' : 
                                    index === 1 ? '#A0A0A0' : 
-                                   index === 2 ? '#CD7F32' : '#F4F6F9',
-                        color: index < 3 ? '#0A1628' : '#667085'
+                                   index === 2 ? '#CD7F32' : 'var(--color-gray-100)',
+                        color: index < 3 ? 'var(--color-primary-dark)' : 'var(--color-gray-500)'
                       }}>
                         {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
                       </div>
@@ -331,7 +331,7 @@ export default function CrmDashboard() {
       <style>{`
         .crm-page {
           min-height: 100vh;
-          background: #F0EDE8;
+          background: var(--color-gray-100);
         }
 
         .crm-container {
@@ -351,7 +351,7 @@ export default function CrmDashboard() {
           padding: 20px 28px;
           background: white;
           border-radius: 12px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
         }
 
@@ -359,13 +359,13 @@ export default function CrmDashboard() {
           font-family: 'Playfair Display', serif;
           font-size: 24px;
           font-weight: 700;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0;
         }
 
         .crm-header-left p {
           font-size: 14px;
-          color: #8A8480;
+          color: var(--color-gray-500);
           margin: 4px 0 0 0;
         }
 
@@ -382,7 +382,7 @@ export default function CrmDashboard() {
           justify-content: center;
           gap: 8px;
           padding: 10px 24px;
-          background: #0A1628;
+          background: var(--color-primary-dark);
           color: white;
           border: none;
           border-radius: 8px;
@@ -394,7 +394,7 @@ export default function CrmDashboard() {
           min-height: 44px;
         }
         .btn-primary:hover {
-          background: #1A3555;
+          background: var(--color-primary-light);
           transform: translateY(-2px);
           box-shadow: 0 8px 32px rgba(10,22,40,0.25);
         }
@@ -405,8 +405,8 @@ export default function CrmDashboard() {
           justify-content: center;
           gap: 8px;
           padding: 10px 24px;
-          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
-          color: #0A1628;
+          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
+          color: var(--color-primary-dark);
           border: none;
           border-radius: 8px;
           font-size: 14px;
@@ -434,7 +434,7 @@ export default function CrmDashboard() {
           background: white;
           padding: 20px 24px;
           border-radius: 12px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           text-align: center;
           transition: all 0.3s ease;
@@ -449,19 +449,19 @@ export default function CrmDashboard() {
           font-family: 'Playfair Display', serif;
           font-size: 32px;
           font-weight: 700;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           line-height: 1.2;
         }
 
         .stat-label {
           font-size: 13px;
-          color: #8A8480;
+          color: var(--color-gray-500);
           margin-top: 4px;
         }
 
         .stat-change {
           font-size: 12px;
-          color: #16845B;
+          color: var(--color-success);
           margin-top: 4px;
         }
 
@@ -489,7 +489,7 @@ export default function CrmDashboard() {
           background: white;
           border-radius: 12px;
           padding: 20px 24px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
         }
 
@@ -503,22 +503,22 @@ export default function CrmDashboard() {
         .card-header h3 {
           font-size: 16px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0;
         }
 
         .card-link {
           font-size: 13px;
-          color: #174A7E;
+          color: var(--color-primary-light);
           text-decoration: none;
         }
 
         .card-link:hover {
-          color: #C9A227;
+          color: var(--color-gold);
         }
 
         .empty-text {
-          color: #98A2B3;
+          color: var(--color-gray-400);
           font-size: 14px;
           text-align: center;
           padding: 16px 0;
@@ -536,19 +536,19 @@ export default function CrmDashboard() {
           align-items: center;
           gap: 14px;
           padding: 10px 14px;
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           border-radius: 8px;
           transition: all 0.2s ease;
         }
 
         .event-item:hover {
-          background: #F4F6F9;
+          background: var(--color-gray-100);
         }
 
         .event-date {
           font-size: 12px;
           font-weight: 600;
-          color: #174A7E;
+          color: var(--color-primary-light);
           min-width: 50px;
         }
 
@@ -560,23 +560,23 @@ export default function CrmDashboard() {
         .event-title {
           font-size: 14px;
           font-weight: 500;
-          color: #0A1628;
+          color: var(--color-primary-dark);
         }
 
         .event-meta {
           font-size: 12px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
         }
 
         .event-link {
           font-size: 18px;
-          color: #A8A29A;
+          color: var(--color-gray-400);
           text-decoration: none;
           transition: color 0.2s ease;
         }
 
         .event-link:hover {
-          color: #C9A227;
+          color: var(--color-gold);
         }
 
         /* ===== АКТИВНОСТЬ ===== */
@@ -591,7 +591,7 @@ export default function CrmDashboard() {
           align-items: flex-start;
           gap: 12px;
           padding: 8px 0;
-          border-bottom: 1px solid #F4F6F9;
+          border-bottom: 1px solid var(--color-gray-100);
         }
 
         .activity-item:last-child {
@@ -616,12 +616,12 @@ export default function CrmDashboard() {
 
         .activity-message {
           font-size: 13px;
-          color: #0A1628;
+          color: var(--color-primary-dark);
         }
 
         .activity-date {
           font-size: 11px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-top: 2px;
         }
 
@@ -637,13 +637,13 @@ export default function CrmDashboard() {
           align-items: center;
           gap: 12px;
           padding: 8px 12px;
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           border-radius: 8px;
           transition: all 0.2s ease;
         }
 
         .top-item:hover {
-          background: #F4F6F9;
+          background: var(--color-gray-100);
         }
 
         .top-rank {
@@ -666,18 +666,18 @@ export default function CrmDashboard() {
         .top-name {
           font-size: 14px;
           font-weight: 500;
-          color: #0A1628;
+          color: var(--color-primary-dark);
         }
 
         .top-meta {
           font-size: 12px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
         }
 
         .top-score {
           font-size: 13px;
           font-weight: 600;
-          color: #C9A227;
+          color: var(--color-gold);
         }
 
         /* ===== БЫСТРЫЕ ДЕЙСТВИЯ ===== */
@@ -692,17 +692,17 @@ export default function CrmDashboard() {
           align-items: center;
           gap: 10px;
           padding: 12px 16px;
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           border-radius: 8px;
           text-decoration: none;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           transition: all 0.2s ease;
           border: 1px solid transparent;
         }
 
         .quick-action:hover {
-          background: #F4F6F9;
-          border-color: #C9A227;
+          background: var(--color-gray-100);
+          border-color: var(--color-gold);
           transform: translateY(-2px);
           box-shadow: 0 4px 16px rgba(10,22,40,0.06);
         }

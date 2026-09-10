@@ -59,12 +59,12 @@ export default function StaffCalendar() {
 
   const getRoleColor = (role) => {
     const colors = {
-      'tutor': '#174A7E',
-      'club_coordinator': '#C9A227',
+      'tutor': 'var(--color-primary-light)',
+      'club_coordinator': 'var(--color-gold)',
       'movement_coordinator': '#6B46C1',
-      'admin': '#B3262E'
+      'admin': 'var(--color-error)'
     };
-    return colors[role] || '#667085';
+    return colors[role] || 'var(--color-gray-500)';
   };
 
   const tileContent = ({ date, view }) => {
@@ -92,7 +92,7 @@ export default function StaffCalendar() {
               />
             ))}
             {dayAssignments.length > 3 && (
-              <span style={{ fontSize: '7px', color: '#667085' }}>
+              <span style={{ fontSize: '7px', color: 'var(--color-gray-500)' }}>
                 +{dayAssignments.length - 3}
               </span>
             )}
@@ -124,7 +124,7 @@ export default function StaffCalendar() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -162,10 +162,10 @@ export default function StaffCalendar() {
                 font-size: 14px !important;
               }
               .react-calendar__tile:hover {
-                background: #F4F6F9 !important;
+                background: var(--color-gray-100) !important;
               }
               .react-calendar__tile--active {
-                background: #0B1F3A !important;
+                background: var(--color-primary) !important;
                 color: white !important;
               }
               .react-calendar__tile--now {
@@ -174,7 +174,7 @@ export default function StaffCalendar() {
               .react-calendar__month-view__weekdays {
                 font-size: 11px !important;
                 font-weight: 600 !important;
-                color: #667085 !important;
+                color: var(--color-gray-500) !important;
                 text-transform: uppercase !important;
                 letter-spacing: 0.5px !important;
               }
@@ -190,13 +190,13 @@ export default function StaffCalendar() {
               .react-calendar__navigation button {
                 font-size: 16px !important;
                 font-weight: 600 !important;
-                color: #0B1F3A !important;
+                color: var(--color-primary) !important;
                 padding: 8px 16px !important;
                 border-radius: 8px !important;
                 transition: all 0.2s ease !important;
               }
               .react-calendar__navigation button:hover {
-                background: #F4F6F9 !important;
+                background: var(--color-gray-100) !important;
               }
               .staff-event-day {
                 background: #F0F7FF !important;
@@ -206,7 +206,7 @@ export default function StaffCalendar() {
                 background: #E2E8F0 !important;
               }
               .react-calendar__month-view__days__day--weekend {
-                color: #B3262E !important;
+                color: var(--color-error) !important;
               }
             `}
           </style>
@@ -223,10 +223,10 @@ export default function StaffCalendar() {
         {/* СПИСОК НАЗНАЧЕНИЙ */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
               📋 {selectedDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
             </h3>
-            <span style={{ fontSize: '13px', color: '#667085' }}>
+            <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               {getAssignmentsForDate(selectedDate).length} назначений
             </span>
           </div>
@@ -289,30 +289,30 @@ export default function StaffCalendar() {
           >
             <button
               onClick={() => setShowModal(false)}
-              style={{ position: 'absolute', top: '12px', right: '16px', background: 'none', border: 'none', fontSize: '24px', color: '#98A2B3', cursor: 'pointer' }}
-              onMouseEnter={(e) => e.target.style.color = '#0B1F3A'}
-              onMouseLeave={(e) => e.target.style.color = '#98A2B3'}
+              style={{ position: 'absolute', top: '12px', right: '16px', background: 'none', border: 'none', fontSize: '24px', color: 'var(--color-gray-400)', cursor: 'pointer' }}
+              onMouseEnter={(e) => e.target.style.color = 'var(--color-primary)'}
+              onMouseLeave={(e) => e.target.style.color = 'var(--color-gray-400)'}
             >
               ✕
             </button>
 
-            <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#0B1F3A', marginBottom: '4px' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '4px' }}>
               {selectedAssignment.event_title || 'Назначение'}
             </h2>
 
             <div style={{ marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontWeight: '500', color: '#0B1F3A' }}>Сотрудник:</span>
-                <span style={{ color: '#667085' }}>{getStaffName(selectedAssignment.staff_id)}</span>
+                <span style={{ fontWeight: '500', color: 'var(--color-primary)' }}>Сотрудник:</span>
+                <span style={{ color: 'var(--color-gray-500)' }}>{getStaffName(selectedAssignment.staff_id)}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontWeight: '500', color: '#0B1F3A' }}>Роль:</span>
+                <span style={{ fontWeight: '500', color: 'var(--color-primary)' }}>Роль:</span>
                 <span className="tag tag-blue">{selectedAssignment.role}</span>
               </div>
               {selectedAssignment.start_date && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <span style={{ fontWeight: '500', color: '#0B1F3A' }}>Даты:</span>
-                  <span style={{ color: '#667085' }}>
+                  <span style={{ fontWeight: '500', color: 'var(--color-primary)' }}>Даты:</span>
+                  <span style={{ color: 'var(--color-gray-500)' }}>
                     {new Date(selectedAssignment.start_date).toLocaleDateString('ru-RU')}
                     {selectedAssignment.end_date && selectedAssignment.end_date !== selectedAssignment.start_date && (
                       <> — {new Date(selectedAssignment.end_date).toLocaleDateString('ru-RU')}</>
@@ -321,9 +321,9 @@ export default function StaffCalendar() {
                 </div>
               )}
               {selectedAssignment.notes && (
-                <div style={{ marginTop: '8px', padding: '12px', background: '#F4F6F9', borderRadius: '8px' }}>
-                  <span style={{ fontWeight: '500', color: '#0B1F3A' }}>📝 Примечание:</span>
-                  <span style={{ color: '#667085', marginLeft: '4px' }}>{selectedAssignment.notes}</span>
+                <div style={{ marginTop: '8px', padding: '12px', background: 'var(--color-gray-100)', borderRadius: '8px' }}>
+                  <span style={{ fontWeight: '500', color: 'var(--color-primary)' }}>📝 Примечание:</span>
+                  <span style={{ color: 'var(--color-gray-500)', marginLeft: '4px' }}>{selectedAssignment.notes}</span>
                 </div>
               )}
             </div>

@@ -79,13 +79,13 @@ export default function ActivityLog() {
 
   const getActionColor = (action) => {
     const colors = {
-      'CREATE': '#16845B',
-      'UPDATE': '#174A7E',
-      'DELETE': '#B3262E',
-      'LOGIN': '#C9A227',
-      'LOGOUT': '#667085'
+      'CREATE': 'var(--color-success)',
+      'UPDATE': 'var(--color-primary-light)',
+      'DELETE': 'var(--color-error)',
+      'LOGIN': 'var(--color-gold)',
+      'LOGOUT': 'var(--color-gray-500)'
     };
-    return colors[action] || '#667085';
+    return colors[action] || 'var(--color-gray-500)';
   };
 
   const formatDate = (date) => {
@@ -100,7 +100,7 @@ export default function ActivityLog() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -147,7 +147,7 @@ export default function ActivityLog() {
                 style={{
                   width: '100%',
                   padding: '8px 14px',
-                  border: '1.5px solid #D5DCE7',
+                  border: '1.5px solid var(--color-gray-200)',
                   borderRadius: '10px',
                   fontSize: '13px',
                   outline: 'none',
@@ -166,7 +166,7 @@ export default function ActivityLog() {
                 style={{
                   width: '100%',
                   padding: '8px 14px',
-                  border: '1.5px solid #D5DCE7',
+                  border: '1.5px solid var(--color-gray-200)',
                   borderRadius: '10px',
                   fontSize: '13px',
                   outline: 'none',
@@ -179,7 +179,7 @@ export default function ActivityLog() {
                 <option value={500}>500 записей</option>
               </select>
             </div>
-            <span style={{ fontSize: '13px', color: '#667085' }}>
+            <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               Найдено: <strong>{totalCount}</strong> записей
             </span>
           </div>
@@ -207,15 +207,15 @@ export default function ActivityLog() {
                 <tbody>
                   {logs.map((log) => (
                     <tr key={log.id}>
-                      <td style={{ fontSize: '12px', color: '#667085', whiteSpace: 'nowrap' }}>
+                      <td style={{ fontSize: '12px', color: 'var(--color-gray-500)', whiteSpace: 'nowrap' }}>
                         {formatDate(log.created_at)}
                       </td>
                       <td>
-                        <div style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                        <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                           {log.user_name || 'Система'}
                         </div>
                         {log.user_role && (
-                          <div style={{ fontSize: '11px', color: '#98A2B3' }}>
+                          <div style={{ fontSize: '11px', color: 'var(--color-gray-400)' }}>
                             {log.user_role}
                           </div>
                         )}
@@ -232,15 +232,15 @@ export default function ActivityLog() {
                           {getActionLabel(log.action)}
                         </span>
                       </td>
-                      <td style={{ fontSize: '13px', color: '#667085' }}>
+                      <td style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
                         {getEntityLabel(log.entity_type)}
                         {log.entity_id && (
-                          <span style={{ fontSize: '11px', color: '#98A2B3', display: 'block' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--color-gray-400)', display: 'block' }}>
                             ID: {log.entity_id.slice(0, 8)}...
                           </span>
                         )}
                       </td>
-                      <td style={{ fontSize: '12px', color: '#667085', maxWidth: '200px' }}>
+                      <td style={{ fontSize: '12px', color: 'var(--color-gray-500)', maxWidth: '200px' }}>
                         {log.details && (
                           <div>
                             {log.details.title && (
@@ -259,7 +259,7 @@ export default function ActivityLog() {
                               <div><strong>Прогресс:</strong> {log.details.progress}</div>
                             )}
                             {!log.details.title && !log.details.status && !log.details.recipients && (
-                              <span style={{ color: '#98A2B3' }}>Нет деталей</span>
+                              <span style={{ color: 'var(--color-gray-400)' }}>Нет деталей</span>
                             )}
                           </div>
                         )}

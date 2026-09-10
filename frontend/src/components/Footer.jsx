@@ -76,10 +76,10 @@ export default function Footer() {
            ФУТЕР
            ============================================================ */
         .footer {
-          background: #0B1F3A;
+          background: var(--color-primary);
           color: rgba(255, 255, 255, 0.8);
           padding: 48px 24px 24px;
-          border-top: 3px solid #C9A227;
+          border-top: 3px solid var(--color-gold);
           margin-top: 60px;
           width: 100%;
         }
@@ -116,7 +116,7 @@ export default function Footer() {
         }
 
         .footer-description strong {
-          color: #E8D9A8;
+          color: var(--color-gold-light);
         }
 
         .footer-org {
@@ -131,7 +131,7 @@ export default function Footer() {
         .footer-partners h4 {
           font-size: 13px;
           font-weight: 600;
-          color: #E8D9A8;
+          color: var(--color-gold-light);
           margin: 0 0 12px 0;
           letter-spacing: 0.5px;
           text-transform: uppercase;
@@ -161,7 +161,7 @@ export default function Footer() {
         }
 
         .footer-contact-item a:hover {
-          color: #E8D9A8;
+          color: var(--color-gold-light);
         }
 
         /* ===== ПРАВАЯ КОЛОНКА ===== */
@@ -224,7 +224,7 @@ export default function Footer() {
         }
 
         .footer-links a:hover {
-          color: #E8D9A8;
+          color: var(--color-gold-light);
         }
 
         .footer-link-separator {

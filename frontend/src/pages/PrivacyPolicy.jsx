@@ -27,7 +27,7 @@ export default function PrivacyPolicy() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -373,7 +373,7 @@ export default function PrivacyPolicy() {
       <style>{`
         .page-background {
           min-height: 100vh;
-          background: #F0EDE8;
+          background: var(--color-gray-100);
         }
 
         .container-page {
@@ -386,7 +386,7 @@ export default function PrivacyPolicy() {
           background: white;
           padding: 40px 48px;
           border-radius: 12px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
         }
 
@@ -394,13 +394,13 @@ export default function PrivacyPolicy() {
           font-family: 'Playfair Display', serif;
           font-size: 28px;
           font-weight: 700;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0 0 4px 0;
         }
 
         .legal-document .version {
           font-size: 14px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin: 0 0 32px 0;
         }
 
@@ -412,21 +412,21 @@ export default function PrivacyPolicy() {
           font-family: 'Playfair Display', serif;
           font-size: 20px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0 0 12px 0;
         }
 
         .legal-content h3 {
           font-size: 16px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 16px 0 8px 0;
         }
 
         .legal-content p {
           font-size: 14px;
           line-height: 1.7;
-          color: #4D4744;
+          color: var(--color-gray-700);
           margin: 0 0 12px 0;
         }
 
@@ -438,29 +438,29 @@ export default function PrivacyPolicy() {
         .legal-content ul li {
           font-size: 14px;
           line-height: 1.7;
-          color: #4D4744;
+          color: var(--color-gray-700);
           margin-bottom: 4px;
         }
 
         .legal-content strong {
-          color: #0A1628;
+          color: var(--color-primary-dark);
         }
 
         .legal-content a {
-          color: #174A7E;
+          color: var(--color-primary-light);
           text-decoration: underline;
         }
 
         .legal-content a:hover {
-          color: #C9A227;
+          color: var(--color-gold);
         }
 
         .legal-footer {
           margin-top: 32px;
           padding-top: 20px;
-          border-top: 1px solid #E4DFD8;
+          border-top: 1px solid var(--color-gray-200);
           font-size: 13px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
         }
 
         .legal-footer p {

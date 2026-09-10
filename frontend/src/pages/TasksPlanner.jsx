@@ -155,20 +155,20 @@ export default function TasksPlanner() {
 
   const getPriorityBadge = (priority) => {
     const badges = {
-      'low': { label: '🟢 Низкий', color: '#16845B', bg: '#E8F5EF' },
-      'medium': { label: '🟡 Средний', color: '#C9A227', bg: '#FBF4DC' },
-      'high': { label: '🔴 Высокий', color: '#B3262E', bg: '#FCEBEC' },
-      'urgent': { label: '🔥 Срочный', color: '#B3262E', bg: '#FCEBEC' }
+      'low': { label: '🟢 Низкий', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'medium': { label: '🟡 Средний', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'high': { label: '🔴 Высокий', color: 'var(--color-error)', bg: 'var(--color-error-bg)' },
+      'urgent': { label: '🔥 Срочный', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
     };
     return badges[priority] || badges['medium'];
   };
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { label: '⏳ Ожидает', color: '#C9A227', bg: '#FBF4DC' },
-      'in_progress': { label: '🔄 В работе', color: '#174A7E', bg: '#EAF2FA' },
-      'completed': { label: '✅ Выполнено', color: '#16845B', bg: '#E8F5EF' },
-      'cancelled': { label: '❌ Отменено', color: '#B3262E', bg: '#FCEBEC' }
+      'pending': { label: '⏳ Ожидает', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'in_progress': { label: '🔄 В работе', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
+      'completed': { label: '✅ Выполнено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'cancelled': { label: '❌ Отменено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
     };
     return badges[status] || badges['pending'];
   };
@@ -188,7 +188,7 @@ export default function TasksPlanner() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -404,10 +404,10 @@ export default function TasksPlanner() {
 
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
               📋 Задачи
             </h3>
-            <span style={{ fontSize: '13px', color: '#667085' }}>
+            <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               {filteredTasks.length} задач
             </span>
           </div>
@@ -427,7 +427,7 @@ export default function TasksPlanner() {
                     key={task.id}
                     className="list-item"
                     style={{
-                      borderLeftColor: task.status === 'completed' ? '#16845B' : priority.color,
+                      borderLeftColor: task.status === 'completed' ? 'var(--color-success)' : priority.color,
                       opacity: task.status === 'completed' ? 0.7 : 1
                     }}
                   >
@@ -466,7 +466,7 @@ export default function TasksPlanner() {
                       {task.status === 'pending' && (
                         <button
                           className="btn-primary"
-                          style={{ padding: '4px 12px', fontSize: '12px', background: '#174A7E' }}
+                          style={{ padding: '4px 12px', fontSize: '12px', background: 'var(--color-primary-light)' }}
                           onClick={() => handleStatusChange(task.id, 'in_progress')}
                         >
                           🔄 Взять в работу

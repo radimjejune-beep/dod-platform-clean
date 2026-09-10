@@ -152,7 +152,7 @@ ${window.location.origin}/login
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -177,7 +177,7 @@ ${window.location.origin}/login
         )}
 
         <div className="card">
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
             📝 Создать приглашение
           </h3>
           <form onSubmit={handleSubmit}>

@@ -197,25 +197,25 @@ export default function ClubEvents({ clubId, profile }) {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { label: '⏳ На модерации', color: '#C9A227', bg: '#FBF4DC' },
-      'approved': { label: '✅ Одобрено', color: '#16845B', bg: '#E8F5EF' },
-      'rejected': { label: '❌ Отклонено', color: '#B3262E', bg: '#FCEBEC' },
-      'completed': { label: '📌 Завершено', color: '#667085', bg: '#F4F6F9' }
+      'pending': { label: '⏳ На модерации', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'approved': { label: '✅ Одобрено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'rejected': { label: '❌ Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' },
+      'completed': { label: '📌 Завершено', color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)' }
     };
     return badges[status] || badges['pending'];
   };
 
   if (loading) {
-    return <div style={{ padding: '20px', textAlign: 'center', color: '#667085' }}>⏳ Загрузка...</div>;
+    return <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-gray-500)' }}>⏳ Загрузка...</div>;
   }
 
   return (
     <div className="club-events">
       {/* ШАПКА */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
           📅 Внутренние мероприятия клуба
-          <span style={{ fontSize: '12px', color: '#98A2B3', marginLeft: '8px' }}>
+          <span style={{ fontSize: '12px', color: 'var(--color-gray-400)', marginLeft: '8px' }}>
             ({events.length})
           </span>
         </h3>
@@ -236,7 +236,7 @@ export default function ClubEvents({ clubId, profile }) {
       {showForm && canCreate && (
         <div className="card" style={{ marginBottom: '20px' }}>
           <h4 style={{ marginBottom: '12px' }}>📝 Создать внутреннее мероприятие</h4>
-          <div style={{ padding: '8px 12px', background: '#EAF2FA', borderRadius: '8px', fontSize: '13px', color: '#174A7E', marginBottom: '12px' }}>
+          <div style={{ padding: '8px 12px', background: 'var(--color-info-bg)', borderRadius: '8px', fontSize: '13px', color: 'var(--color-primary-light)', marginBottom: '12px' }}>
             💡 Это мероприятие увидят только участники вашего клуба
           </div>
           <form onSubmit={handleSubmit}>
@@ -336,7 +336,7 @@ export default function ClubEvents({ clubId, profile }) {
         <div className="empty-state">
           <div className="icon">📭</div>
           <p>В клубе пока нет внутренних мероприятий</p>
-          {canCreate && <p style={{ color: '#98A2B3', fontSize: '13px' }}>Создайте первое мероприятие для участников клуба!</p>}
+          {canCreate && <p style={{ color: 'var(--color-gray-400)', fontSize: '13px' }}>Создайте первое мероприятие для участников клуба!</p>}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -358,20 +358,20 @@ export default function ClubEvents({ clubId, profile }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <h4 style={{ margin: 0, fontSize: '16px', color: '#0B1F3A' }}>{event.title}</h4>
+                      <h4 style={{ margin: 0, fontSize: '16px', color: 'var(--color-primary)' }}>{event.title}</h4>
                       <span className="tag" style={{ background: status.bg, color: status.color }}>
                         {status.label}
                       </span>
                       {event.proposed_by_name && (
-                        <span className="tag" style={{ background: '#F4F6F9', color: '#667085', fontSize: '10px' }}>
+                        <span className="tag" style={{ background: 'var(--color-gray-100)', color: 'var(--color-gray-500)', fontSize: '10px' }}>
                           👤 {event.proposed_by_name}
                         </span>
                       )}
                     </div>
                     {event.description && (
-                      <p style={{ margin: '4px 0', fontSize: '13px', color: '#667085' }}>{event.description}</p>
+                      <p style={{ margin: '4px 0', fontSize: '13px', color: 'var(--color-gray-500)' }}>{event.description}</p>
                     )}
-                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', fontSize: '12px', color: '#98A2B3', marginTop: '4px' }}>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
                       <span>📅 {new Date(event.event_date).toLocaleDateString('ru-RU')}</span>
                       {event.location && <span>📍 {event.location}</span>}
                       <span>👥 {event.current_participants || 0}/{event.max_participants || '∞'}</span>

@@ -183,7 +183,7 @@ export default function Login() {
             )}
 
             {passwordError && (
-              <div className="login-error" style={{ borderLeftColor: '#C9A227', background: '#FBF4DC', color: '#8A6A00' }}>
+              <div className="login-error" style={{ borderLeftColor: 'var(--color-gold)', background: 'var(--color-gold-pale)', color: 'var(--color-gold-dark)' }}>
                 {passwordError}
               </div>
             )}
@@ -229,7 +229,7 @@ export default function Login() {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(160deg, #0B1F3A 0%, #051224 100%);
+            background: linear-gradient(160deg, var(--color-primary) 0%, #051224 100%);
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             padding: 20px;
             position: relative;
@@ -285,7 +285,7 @@ export default function Login() {
             width: 72px;
             height: 72px;
             margin: 0 auto 16px;
-            background: linear-gradient(135deg, #0B1F3A, #174A7E);
+            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -304,14 +304,14 @@ export default function Login() {
             font-family: 'Playfair Display', serif;
             font-size: 26px;
             font-weight: 700;
-            color: #0B1F3A;
+            color: var(--color-primary);
             letter-spacing: -0.5px;
             margin: 0 0 4px;
           }
 
           .login-subtitle {
             font-size: 12px;
-            color: #98A2B3;
+            color: var(--color-gray-400);
             letter-spacing: 2px;
             text-transform: uppercase;
             margin: 0 0 12px;
@@ -320,26 +320,26 @@ export default function Login() {
           .login-divider {
             width: 60px;
             height: 3px;
-            background: linear-gradient(90deg, #C9A227, #E8D9A8);
+            background: linear-gradient(90deg, var(--color-gold), var(--color-gold-light));
             margin: 0 auto 16px;
             border-radius: 2px;
           }
 
           .login-warning {
             font-size: 14px;
-            color: #B3262E;
+            color: var(--color-error);
             font-weight: 500;
           }
 
           .login-error {
             padding: 14px 18px;
-            background: #FCEBEC;
-            color: #B3262E;
+            background: var(--color-error-bg);
+            color: var(--color-error);
             border-radius: 12px;
             margin-bottom: 20px;
             font-size: 14px;
             text-align: center;
-            border-left: 4px solid #B3262E;
+            border-left: 4px solid var(--color-error);
             font-weight: 500;
           }
 
@@ -351,7 +351,7 @@ export default function Login() {
             display: block;
             font-size: 13px;
             font-weight: 600;
-            color: #0B1F3A;
+            color: var(--color-primary);
             margin-bottom: 6px;
             letter-spacing: 0.3px;
           }
@@ -359,35 +359,35 @@ export default function Login() {
           .login-form .form-group input {
             width: 100%;
             padding: 14px 16px;
-            border: 1.5px solid #D5DCE7;
+            border: 1.5px solid var(--color-gray-200);
             border-radius: 12px;
             font-size: 15px;
             outline: none;
             transition: all 0.3s ease;
-            background: #F8FAFC;
-            color: #0B1F3A;
+            background: var(--color-gray-50);
+            color: var(--color-primary);
             font-family: inherit;
           }
 
           .login-form .form-group input:focus {
-            border-color: #C9A227;
+            border-color: var(--color-gold);
             background: white;
             box-shadow: 0 0 0 4px rgba(201, 162, 39, 0.08);
           }
 
           .login-form .form-group input::placeholder {
-            color: #98A2B3;
+            color: var(--color-gray-400);
           }
 
           .login-btn {
             width: 100%;
             padding: 16px;
-            background: linear-gradient(135deg, #C9A227, #B8921F);
+            background: linear-gradient(135deg, var(--color-gold), var(--color-warning));
             border: none;
             border-radius: 12px;
             font-size: 16px;
             font-weight: 700;
-            color: #0B1F3A;
+            color: var(--color-primary);
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 4px 20px rgba(201, 162, 39, 0.25);
@@ -409,7 +409,7 @@ export default function Login() {
           .login-hint {
             text-align: center;
             font-size: 12px;
-            color: #98A2B3;
+            color: var(--color-gray-400);
             margin-top: 16px;
           }
 
@@ -496,7 +496,7 @@ export default function Login() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(160deg, #0B1F3A 0%, #051224 100%);
+          background: linear-gradient(160deg, var(--color-primary) 0%, #051224 100%);
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           padding: 20px;
           position: relative;
@@ -552,7 +552,7 @@ export default function Login() {
           width: 72px;
           height: 72px;
           margin: 0 auto 16px;
-          background: linear-gradient(135deg, #0B1F3A, #174A7E);
+          background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -571,14 +571,14 @@ export default function Login() {
           font-family: 'Playfair Display', serif;
           font-size: 26px;
           font-weight: 700;
-          color: #0B1F3A;
+          color: var(--color-primary);
           letter-spacing: -0.5px;
           margin: 0 0 4px;
         }
 
         .login-subtitle {
           font-size: 12px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           letter-spacing: 2px;
           text-transform: uppercase;
           margin: 0 0 12px;
@@ -587,26 +587,26 @@ export default function Login() {
         .login-divider {
           width: 60px;
           height: 3px;
-          background: linear-gradient(90deg, #C9A227, #E8D9A8);
+          background: linear-gradient(90deg, var(--color-gold), var(--color-gold-light));
           margin: 0 auto 16px;
           border-radius: 2px;
         }
 
         .login-welcome {
           font-size: 15px;
-          color: #667085;
+          color: var(--color-gray-500);
           font-weight: 400;
         }
 
         .login-error {
           padding: 14px 18px;
-          background: #FCEBEC;
-          color: #B3262E;
+          background: var(--color-error-bg);
+          color: var(--color-error);
           border-radius: 12px;
           margin-bottom: 20px;
           font-size: 14px;
           text-align: center;
-          border-left: 4px solid #B3262E;
+          border-left: 4px solid var(--color-error);
           font-weight: 500;
         }
 
@@ -618,7 +618,7 @@ export default function Login() {
           display: block;
           font-size: 13px;
           font-weight: 600;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin-bottom: 6px;
           letter-spacing: 0.3px;
         }
@@ -626,35 +626,35 @@ export default function Login() {
         .login-form .form-group input {
           width: 100%;
           padding: 14px 16px;
-          border: 1.5px solid #D5DCE7;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 12px;
           font-size: 15px;
           outline: none;
           transition: all 0.3s ease;
-          background: #F8FAFC;
-          color: #0B1F3A;
+          background: var(--color-gray-50);
+          color: var(--color-primary);
           font-family: inherit;
         }
 
         .login-form .form-group input:focus {
-          border-color: #C9A227;
+          border-color: var(--color-gold);
           background: white;
           box-shadow: 0 0 0 4px rgba(201, 162, 39, 0.08);
         }
 
         .login-form .form-group input::placeholder {
-          color: #98A2B3;
+          color: var(--color-gray-400);
         }
 
         .login-btn {
           width: 100%;
           padding: 16px;
-          background: linear-gradient(135deg, #C9A227, #B8921F);
+          background: linear-gradient(135deg, var(--color-gold), var(--color-warning));
           border: none;
           border-radius: 12px;
           font-size: 16px;
           font-weight: 700;
-          color: #0B1F3A;
+          color: var(--color-primary);
           cursor: pointer;
           transition: all 0.3s ease;
           box-shadow: 0 4px 20px rgba(201, 162, 39, 0.25);
@@ -676,7 +676,7 @@ export default function Login() {
         .login-hint {
           text-align: center;
           font-size: 12px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-top: 16px;
         }
 

@@ -51,10 +51,10 @@ export default function MyClubEvents() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { label: '⏳ На модерации', color: '#C9A227', bg: '#FBF4DC' },
-      'approved': { label: '✅ Одобрено', color: '#16845B', bg: '#E8F5EF' },
-      'rejected': { label: '❌ Отклонено', color: '#B3262E', bg: '#FCEBEC' },
-      'completed': { label: '📌 Завершено', color: '#667085', bg: '#F4F6F9' }
+      'pending': { label: '⏳ На модерации', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'approved': { label: '✅ Одобрено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'rejected': { label: '❌ Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' },
+      'completed': { label: '📌 Завершено', color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)' }
     };
     return badges[status] || badges['pending'];
   };
@@ -69,7 +69,7 @@ export default function MyClubEvents() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -111,11 +111,11 @@ export default function MyClubEvents() {
         {events.length === 0 ? (
           <div className="empty-state">
             <div className="icon">📭</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>
               В вашем клубе пока нет внутренних мероприятий
             </p>
             {isCoordinator && (
-              <p style={{ color: '#667085' }}>
+              <p style={{ color: 'var(--color-gray-500)' }}>
                 Создайте первое мероприятие для участников вашего клуба
               </p>
             )}
@@ -145,7 +145,7 @@ export default function MyClubEvents() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
+                        <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', margin: 0 }}>
                           {event.title}
                         </h3>
                         <span className="tag" style={{ background: status.bg, color: status.color }}>
@@ -157,12 +157,12 @@ export default function MyClubEvents() {
                       </div>
 
                       {event.description && (
-                        <p style={{ color: '#667085', marginTop: '8px', fontSize: '14px' }}>
+                        <p style={{ color: 'var(--color-gray-500)', marginTop: '8px', fontSize: '14px' }}>
                           {event.description}
                         </p>
                       )}
 
-                      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13px', color: '#98A2B3', marginTop: '8px' }}>
+                      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13px', color: 'var(--color-gray-400)', marginTop: '8px' }}>
                         <span>📅 {formatDate(event.event_date)}</span>
                         {event.end_date && event.end_date !== event.event_date && (
                           <span>— {formatDate(event.end_date)}</span>
@@ -177,7 +177,7 @@ export default function MyClubEvents() {
                       </div>
 
                       {event.proposed_by_name && (
-                        <div style={{ fontSize: '12px', color: '#98A2B3', marginTop: '4px' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
                           👤 Предложил: {event.proposed_by_name}
                         </div>
                       )}

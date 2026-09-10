@@ -141,10 +141,10 @@ export default function TutorRequests() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { color: '#8A6A00', bg: '#FBF4DC', label: '⏳ Ожидает' },
-      'approved': { color: '#16845B', bg: '#E8F5EF', label: '✅ Одобрено' },
-      'rejected': { color: '#B3262E', bg: '#FCEBEC', label: '❌ Отклонено' },
-      'cancelled': { color: '#667085', bg: '#F4F6F9', label: '✖ Отменено' }
+      'pending': { color: 'var(--color-gold-dark)', bg: 'var(--color-gold-pale)', label: '⏳ Ожидает' },
+      'approved': { color: 'var(--color-success)', bg: 'var(--color-success-bg)', label: '✅ Одобрено' },
+      'rejected': { color: 'var(--color-error)', bg: 'var(--color-error-bg)', label: '❌ Отклонено' },
+      'cancelled': { color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)', label: '✖ Отменено' }
     };
     return badges[status] || badges['pending'];
   };
@@ -155,7 +155,7 @@ export default function TutorRequests() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -168,8 +168,8 @@ export default function TutorRequests() {
         <div className="container-page">
           <div className="empty-state">
             <div className="icon">⛔</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Доступ запрещён</p>
-            <p style={{ color: '#667085' }}>Только координаторы КЮДа и администраторы</p>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
+            <p style={{ color: 'var(--color-gray-500)' }}>Только координаторы КЮДа и администраторы</p>
           </div>
         </div>
       </div>
@@ -241,7 +241,7 @@ export default function TutorRequests() {
                     onChange={(e) => setForm({ ...form, tutor_phone: e.target.value })}
                     placeholder="+7 999 123 45 67"
                   />
-                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
                     Введите номер без скобок, например: +7 999 123 45 67
                   </div>
                 </div>
@@ -342,7 +342,7 @@ export default function TutorRequests() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                        <h3 style={{ fontSize: '17px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
+                        <h3 style={{ fontSize: '17px', fontWeight: '600', color: 'var(--color-primary)', margin: 0 }}>
                           {req.tutor_name}
                         </h3>
                         <span className="tag" style={{ background: status.bg, color: status.color }}>
@@ -358,26 +358,26 @@ export default function TutorRequests() {
                         📋 {req.event_name}
                       </div>
                       {req.event_description && (
-                        <div style={{ fontSize: '13px', color: '#667085', marginTop: '4px' }}>
+                        <div style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
                           {req.event_description}
                         </div>
                       )}
                       {req.role && (
-                        <div style={{ fontSize: '13px', color: '#667085', marginTop: '4px' }}>
+                        <div style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
                           🎯 {req.role}
                         </div>
                       )}
                       {req.responsibilities && req.responsibilities.length > 0 && (
-                        <div style={{ fontSize: '13px', color: '#667085', marginTop: '4px' }}>
+                        <div style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
                           📋 Обязанности: {req.responsibilities.join(', ')}
                         </div>
                       )}
                       {req.notes && (
-                        <div style={{ fontSize: '13px', color: '#98A2B3', marginTop: '4px' }}>
+                        <div style={{ fontSize: '13px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
                           📝 {req.notes}
                         </div>
                       )}
-                      <div style={{ fontSize: '12px', color: '#98A2B3', marginTop: '4px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
                         👤 {req.requested_by_name || 'Координатор'}
                         {' • '}
                         📅 {new Date(req.created_at).toLocaleString('ru-RU')}
@@ -386,17 +386,17 @@ export default function TutorRequests() {
                         <div style={{
                           marginTop: '8px',
                           padding: '8px 12px',
-                          background: '#F8FAFC',
+                          background: 'var(--color-gray-50)',
                           borderRadius: '6px',
                           fontSize: '13px',
                           color: '#475467',
-                          border: '1px solid #E2E7EF'
+                          border: '1px solid var(--color-gray-200)'
                         }}>
                           💬 {req.comment}
                         </div>
                       )}
                       {req.reviewed_by_name && req.status !== 'pending' && (
-                        <div style={{ fontSize: '12px', color: '#98A2B3', marginTop: '4px' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
                           {req.status === 'approved' ? '✅' : '❌'} Рассмотрел: {req.reviewed_by_name}
                           {req.reviewed_at && ` • ${new Date(req.reviewed_at).toLocaleString('ru-RU')}`}
                         </div>

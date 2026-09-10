@@ -237,7 +237,7 @@ export default function AdminNews() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -286,29 +286,29 @@ export default function AdminNews() {
               <div className="form-group">
                 <label>Изображение</label>
                 <div style={{
-                  border: '2px dashed #D5DCE7',
+                  border: '2px dashed var(--color-gray-200)',
                   borderRadius: '12px',
                   padding: '20px',
                   textAlign: 'center',
-                  background: '#F8FAFC',
+                  background: 'var(--color-gray-50)',
                   cursor: 'pointer',
                   transition: 'all 0.3s ease'
                 }}
                 onClick={() => document.getElementById('newsImageInput').click()}
                 onDragOver={(e) => {
                   e.preventDefault();
-                  e.currentTarget.style.borderColor = '#C9A227';
-                  e.currentTarget.style.background = '#FBF4DC';
+                  e.currentTarget.style.borderColor = 'var(--color-gold)';
+                  e.currentTarget.style.background = 'var(--color-gold-pale)';
                 }}
                 onDragLeave={(e) => {
                   e.preventDefault();
-                  e.currentTarget.style.borderColor = '#D5DCE7';
-                  e.currentTarget.style.background = '#F8FAFC';
+                  e.currentTarget.style.borderColor = 'var(--color-gray-200)';
+                  e.currentTarget.style.background = 'var(--color-gray-50)';
                 }}
                 onDrop={(e) => {
                   e.preventDefault();
-                  e.currentTarget.style.borderColor = '#D5DCE7';
-                  e.currentTarget.style.background = '#F8FAFC';
+                  e.currentTarget.style.borderColor = 'var(--color-gray-200)';
+                  e.currentTarget.style.background = 'var(--color-gray-50)';
                   const file = e.dataTransfer.files[0];
                   if (file) {
                     const input = document.getElementById('newsImageInput');
@@ -339,10 +339,10 @@ export default function AdminNews() {
                   ) : (
                     <div>
                       <span style={{ fontSize: '40px', display: 'block' }}>🖼️</span>
-                      <p style={{ color: '#98A2B3' }}>
+                      <p style={{ color: 'var(--color-gray-400)' }}>
                         Нажмите или перетащите фото для новости
                       </p>
-                      <p style={{ fontSize: '12px', color: '#98A2B3' }}>
+                      <p style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
                         Поддерживаются JPG, PNG, WEBP (макс. 5MB)
                       </p>
                     </div>
@@ -386,7 +386,7 @@ export default function AdminNews() {
                   key={item.id}
                   className="list-item"
                   style={{
-                    borderLeftColor: '#C9A227',
+                    borderLeftColor: 'var(--color-gold)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '16px'

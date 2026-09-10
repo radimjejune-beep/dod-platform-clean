@@ -17,7 +17,7 @@ export default function AchievementsCategories() {
     name: '',
     description: '',
     icon: '🏆',
-    color: '#C9A227',
+    color: 'var(--color-gold)',
     points: 10,
     is_active: true
   });
@@ -79,7 +79,7 @@ export default function AchievementsCategories() {
       name: '',
       description: '',
       icon: '🏆',
-      color: '#C9A227',
+      color: 'var(--color-gold)',
       points: 10,
       is_active: true
     });
@@ -93,7 +93,7 @@ export default function AchievementsCategories() {
       name: category.name || '',
       description: category.description || '',
       icon: category.icon || '🏆',
-      color: category.color || '#C9A227',
+      color: category.color || 'var(--color-gold)',
       points: category.points || 10,
       is_active: category.is_active !== undefined ? category.is_active : true
     });
@@ -119,11 +119,11 @@ export default function AchievementsCategories() {
 
   const commonIcons = ['🏆', '🎯', '🌟', '⭐', '🏅', '📚', '🌍', '🎨', '⚽', '❤️', '💪', '🎭', '🎵', '📝', '🔬'];
 
-  const commonColors = ['#C9A227', '#174A7E', '#16845B', '#B3262E', '#6B46C1', '#E85D04', '#D62828', '#003049'];
+  const commonColors = ['var(--color-gold)', 'var(--color-primary-light)', 'var(--color-success)', 'var(--color-error)', '#6B46C1', '#E85D04', '#D62828', '#003049'];
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -191,9 +191,9 @@ export default function AchievementsCategories() {
                           type="button"
                           style={{
                             padding: '4px 8px',
-                            border: form.icon === icon ? '2px solid #C9A227' : '1px solid #E2E7EF',
+                            border: form.icon === icon ? '2px solid var(--color-gold)' : '1px solid var(--color-gray-200)',
                             borderRadius: '6px',
-                            background: form.icon === icon ? '#FBF4DC' : 'transparent',
+                            background: form.icon === icon ? 'var(--color-gold-pale)' : 'transparent',
                             cursor: 'pointer',
                             fontSize: '18px'
                           }}
@@ -223,7 +223,7 @@ export default function AchievementsCategories() {
                             width: '28px',
                             height: '28px',
                             borderRadius: '50%',
-                            border: form.color === color ? '3px solid #0B1F3A' : '2px solid #E2E7EF',
+                            border: form.color === color ? '3px solid var(--color-primary)' : '2px solid var(--color-gray-200)',
                             background: color,
                             cursor: 'pointer'
                           }}
@@ -261,7 +261,7 @@ export default function AchievementsCategories() {
                       onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
                       style={{ width: '18px', height: '18px' }}
                     />
-                    <span style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                    <span style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                       ✅ Активна
                     </span>
                   </label>
@@ -282,10 +282,10 @@ export default function AchievementsCategories() {
 
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
               📋 Все категории
             </h3>
-            <span style={{ fontSize: '13px', color: '#667085' }}>
+            <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               {categories.length} категорий
             </span>
           </div>
@@ -303,18 +303,18 @@ export default function AchievementsCategories() {
                   className="card"
                   style={{
                     padding: '16px',
-                    borderTop: `4px solid ${category.color || '#C9A227'}`,
+                    borderTop: `4px solid ${category.color || 'var(--color-gold)'}`,
                     opacity: category.is_active === false ? 0.6 : 1
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                     <span style={{ fontSize: '32px' }}>{category.icon || '🏆'}</span>
                     <div>
-                      <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
+                      <h4 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-primary)', margin: 0 }}>
                         {category.name}
                       </h4>
                       {category.description && (
-                        <p style={{ fontSize: '12px', color: '#667085', margin: '2px 0 0 0' }}>
+                        <p style={{ fontSize: '12px', color: 'var(--color-gray-500)', margin: '2px 0 0 0' }}>
                           {category.description}
                         </p>
                       )}
@@ -325,13 +325,13 @@ export default function AchievementsCategories() {
                       padding: '2px 12px',
                       borderRadius: '12px',
                       fontSize: '12px',
-                      background: '#F4F6F9',
-                      color: '#667085'
+                      background: 'var(--color-gray-100)',
+                      color: 'var(--color-gray-500)'
                     }}>
                       ⭐ {category.points || 0} баллов
                     </span>
                     {category.is_active === false && (
-                      <span className="tag" style={{ background: '#FCEBEC', color: '#B3262E', fontSize: '10px' }}>
+                      <span className="tag" style={{ background: 'var(--color-error-bg)', color: 'var(--color-error)', fontSize: '10px' }}>
                         Неактивна
                       </span>
                     )}

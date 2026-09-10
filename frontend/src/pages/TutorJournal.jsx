@@ -162,16 +162,16 @@ export default function TutorJournal() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'draft': { label: '📝 Черновик', color: '#8A9AAA', bg: '#F4F6F9' },
-      'submitted': { label: '⏳ На проверке', color: '#C9A227', bg: '#FBF4DC' },
-      'approved': { label: '✅ Утверждено', color: '#16845B', bg: '#E8F5EF' }
+      'draft': { label: '📝 Черновик', color: '#8A9AAA', bg: 'var(--color-gray-100)' },
+      'submitted': { label: '⏳ На проверке', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'approved': { label: '✅ Утверждено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' }
     };
     return badges[status] || badges['draft'];
   };
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -201,7 +201,7 @@ export default function TutorJournal() {
           <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
             <button
               className="btn-primary"
-              style={{ background: '#C9A227', color: '#0B1F3A' }}
+              style={{ background: 'var(--color-gold)', color: 'var(--color-primary)' }}
               onClick={handleSubmitAll}
             >
               📤 Отправить все оценки
@@ -217,7 +217,7 @@ export default function TutorJournal() {
 
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
               👥 Участники ({participants.length})
             </h3>
           </div>
@@ -238,13 +238,13 @@ export default function TutorJournal() {
                     key={p.id}
                     className="list-item"
                     style={{ 
-                      borderLeftColor: hasScore ? '#16845B' : '#8A9AAA',
+                      borderLeftColor: hasScore ? 'var(--color-success)' : '#8A9AAA',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease'
                     }}
                     onClick={() => openScoreModal(p)}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#F8FAFC';
+                      e.currentTarget.style.background = 'var(--color-gray-50)';
                       e.currentTarget.style.transform = 'translateX(4px)';
                     }}
                     onMouseLeave={(e) => {
@@ -257,12 +257,12 @@ export default function TutorJournal() {
                         <div className="title">
                           {p.full_name}
                           {p.score_status === 'submitted' && (
-                            <span className="tag" style={{ background: '#FBF4DC', color: '#C9A227', marginLeft: '8px', fontSize: '10px' }}>
+                            <span className="tag" style={{ background: 'var(--color-gold-pale)', color: 'var(--color-gold)', marginLeft: '8px', fontSize: '10px' }}>
                               ⏳ На проверке
                             </span>
                           )}
                           {p.score_status === 'approved' && (
-                            <span className="tag" style={{ background: '#E8F5EF', color: '#16845B', marginLeft: '8px', fontSize: '10px' }}>
+                            <span className="tag" style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)', marginLeft: '8px', fontSize: '10px' }}>
                               ✅ Утверждено
                             </span>
                           )}
@@ -273,7 +273,7 @@ export default function TutorJournal() {
                       </div>
                       <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                         {hasScore && (
-                          <span style={{ fontSize: '12px', color: '#667085' }}>
+                          <span style={{ fontSize: '12px', color: 'var(--color-gray-500)' }}>
                             ⭐ {Math.round((p.engagement_score + p.teamwork_score + p.initiative_score + p.communication_score + p.responsibility_score) / 5 * 10) / 10}
                           </span>
                         )}
@@ -337,17 +337,17 @@ export default function TutorJournal() {
                 background: 'none',
                 border: 'none',
                 fontSize: '24px',
-                color: '#98A2B3',
+                color: 'var(--color-gray-400)',
                 cursor: 'pointer'
               }}
             >
               ✕
             </button>
 
-            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0B1F3A', marginBottom: '4px' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '4px' }}>
               📝 Оценка участника
             </h3>
-            <p style={{ color: '#667085', marginBottom: '16px' }}>
+            <p style={{ color: 'var(--color-gray-500)', marginBottom: '16px' }}>
               <strong>{selectedParticipant.full_name}</strong>
               {selectedParticipant.school && ` • ${selectedParticipant.school}`}
             </p>

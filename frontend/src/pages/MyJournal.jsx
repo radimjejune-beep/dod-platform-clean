@@ -44,7 +44,7 @@ export default function MyJournal() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -65,8 +65,8 @@ export default function MyJournal() {
         {assignments.length === 0 ? (
           <div className="empty-state">
             <div className="icon">📋</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>У вас пока нет мероприятий для оценки</p>
-            <p style={{ color: '#667085' }}>Когда вас назначат на мероприятие, оно появится здесь</p>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>У вас пока нет мероприятий для оценки</p>
+            <p style={{ color: 'var(--color-gray-500)' }}>Когда вас назначат на мероприятие, оно появится здесь</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -74,7 +74,7 @@ export default function MyJournal() {
               <div
                 key={a.id}
                 className="list-item"
-                style={{ borderLeftColor: a.is_lead_tutor ? '#C9A227' : '#174A7E' }}
+                style={{ borderLeftColor: a.is_lead_tutor ? 'var(--color-gold)' : 'var(--color-primary-light)' }}
                 onClick={() => navigate(`/tutor-journal/${a.event_id}`)}
               >
                 <div className="title">

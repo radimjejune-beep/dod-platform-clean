@@ -175,9 +175,9 @@ export default function GoalsAndKPI() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'active': { label: '🟢 Активна', color: '#16845B', bg: '#E8F5EF' },
-      'completed': { label: '✅ Выполнена', color: '#174A7E', bg: '#EAF2FA' },
-      'archived': { label: '📦 Архивирована', color: '#667085', bg: '#F4F6F9' }
+      'active': { label: '🟢 Активна', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'completed': { label: '✅ Выполнена', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
+      'archived': { label: '📦 Архивирована', color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)' }
     };
     return badges[status] || badges['active'];
   };
@@ -205,7 +205,7 @@ export default function GoalsAndKPI() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -377,10 +377,10 @@ export default function GoalsAndKPI() {
 
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
               📋 Все цели
             </h3>
-            <span style={{ fontSize: '13px', color: '#667085' }}>
+            <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               {goals.length} целей
             </span>
           </div>
@@ -423,14 +423,14 @@ export default function GoalsAndKPI() {
                     {goal.description && <div className="meta">{goal.description}</div>}
                     
                     <div style={{ marginTop: '8px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#98A2B3' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--color-gray-400)' }}>
                         <span>Прогресс</span>
                         <span>{progress}%</span>
                       </div>
                       <div style={{
                         width: '100%',
                         height: '6px',
-                        background: '#F4F6F9',
+                        background: 'var(--color-gray-100)',
                         borderRadius: '3px',
                         overflow: 'hidden',
                         marginTop: '2px'
@@ -438,7 +438,7 @@ export default function GoalsAndKPI() {
                         <div style={{
                           width: `${progress}%`,
                           height: '100%',
-                          background: progress >= 100 ? '#16845B' : '#C9A227',
+                          background: progress >= 100 ? 'var(--color-success)' : 'var(--color-gold)',
                           borderRadius: '3px',
                           transition: 'width 0.5s ease'
                         }} />

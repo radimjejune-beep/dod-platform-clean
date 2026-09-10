@@ -20,8 +20,8 @@ export default function Settings() {
   const [settings, setSettings] = useState({
     heroTitle: 'Добро пожаловать в ДОД «Дипломаты будущего»',
     heroSubtitle: 'Система управления движением',
-    primaryColor: '#0B1F3A',
-    accentColor: '#C9A227',
+    primaryColor: 'var(--color-primary)',
+    accentColor: 'var(--color-gold)',
     siteName: 'Дипломаты будущего',
   });
   const [settingsMessage, setSettingsMessage] = useState('');
@@ -115,7 +115,7 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -128,8 +128,8 @@ export default function Settings() {
         <div className="container-page">
           <div className="empty-state">
             <div className="icon">⛔</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Доступ запрещён</p>
-            <p style={{ color: '#667085' }}>Только администратор или координатор движения</p>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
+            <p style={{ color: 'var(--color-gray-500)' }}>Только администратор или координатор движения</p>
           </div>
         </div>
       </div>
@@ -146,7 +146,7 @@ export default function Settings() {
           display: 'flex',
           gap: '4px',
           marginBottom: '24px',
-          borderBottom: '2px solid #E2E7EF',
+          borderBottom: '2px solid var(--color-gray-200)',
           paddingBottom: '4px',
           flexWrap: 'wrap'
         }}>
@@ -155,8 +155,8 @@ export default function Settings() {
             style={{
               padding: '10px 20px',
               border: 'none',
-              background: activeTab === 'news' ? '#0B1F3A' : 'transparent',
-              color: activeTab === 'news' ? 'white' : '#667085',
+              background: activeTab === 'news' ? 'var(--color-primary)' : 'transparent',
+              color: activeTab === 'news' ? 'white' : 'var(--color-gray-500)',
               borderRadius: '8px 8px 0 0',
               cursor: 'pointer',
               fontWeight: activeTab === 'news' ? '600' : '500',
@@ -170,8 +170,8 @@ export default function Settings() {
             style={{
               padding: '10px 20px',
               border: 'none',
-              background: activeTab === 'general' ? '#0B1F3A' : 'transparent',
-              color: activeTab === 'general' ? 'white' : '#667085',
+              background: activeTab === 'general' ? 'var(--color-primary)' : 'transparent',
+              color: activeTab === 'general' ? 'white' : 'var(--color-gray-500)',
               borderRadius: '8px 8px 0 0',
               cursor: 'pointer',
               fontWeight: activeTab === 'general' ? '600' : '500',
@@ -269,7 +269,7 @@ export default function Settings() {
                     )}
                     <div style={{ flex: 1 }}>
                       <h4 style={{ fontSize: '15px', marginBottom: '2px' }}>{item.title}</h4>
-                      <p style={{ fontSize: '12px', color: '#667085' }}>
+                      <p style={{ fontSize: '12px', color: 'var(--color-gray-500)' }}>
                         📅 {new Date(item.created_at).toLocaleDateString('ru-RU')}
                       </p>
                     </div>

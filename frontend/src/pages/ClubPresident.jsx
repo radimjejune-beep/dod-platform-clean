@@ -201,7 +201,7 @@ export default function ClubPresident() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -230,7 +230,7 @@ export default function ClubPresident() {
         )}
 
         <div className="card" style={{ marginBottom: '20px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '12px' }}>
             👑 Текущий президент
           </h3>
           {currentPresident ? (
@@ -239,15 +239,15 @@ export default function ClubPresident() {
               alignItems: 'center',
               gap: '16px',
               padding: '12px 16px',
-              background: '#FBF4DC',
+              background: 'var(--color-gold-pale)',
               borderRadius: '10px',
-              border: '1.5px solid #C9A227'
+              border: '1.5px solid var(--color-gold)'
             }}>
               <div style={{
                 width: '48px',
                 height: '48px',
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #C9A227, #E8D9A8)',
+                background: 'linear-gradient(135deg, var(--color-gold), var(--color-gold-light))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -256,31 +256,31 @@ export default function ClubPresident() {
                 👑
               </div>
               <div>
-                <div style={{ fontWeight: '600', color: '#0B1F3A' }}>
+                <div style={{ fontWeight: '600', color: 'var(--color-primary)' }}>
                   {currentPresident.full_name}
                 </div>
-                <div style={{ fontSize: '13px', color: '#667085' }}>
+                <div style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
                   {currentPresident.email}
                 </div>
               </div>
             </div>
           ) : (
-            <p style={{ color: '#667085' }}>Президент не назначен</p>
+            <p style={{ color: 'var(--color-gray-500)' }}>Президент не назначен</p>
           )}
         </div>
 
         <div className="card">
-          <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '12px' }}>
             👤 Выберите нового президента
           </h3>
 
           {!hasParticipants ? (
             <div className="empty-state">
               <div className="icon">👀</div>
-              <p style={{ fontSize: '16px', color: '#0B1F3A' }}>
+              <p style={{ fontSize: '16px', color: 'var(--color-primary)' }}>
                 В вашем клубе пока нет участников
               </p>
-              <p style={{ color: '#667085', fontSize: '13px' }}>
+              <p style={{ color: 'var(--color-gray-500)', fontSize: '13px' }}>
                 Добавьте участников в клуб, чтобы назначить президента
               </p>
             </div>
@@ -296,9 +296,9 @@ export default function ClubPresident() {
                       alignItems: 'center',
                       gap: '12px',
                       padding: '10px 14px',
-                      background: selectedParticipant === p.id ? '#FBF4DC' : '#F8FAFC',
+                      background: selectedParticipant === p.id ? 'var(--color-gold-pale)' : 'var(--color-gray-50)',
                       borderRadius: '8px',
-                      border: selectedParticipant === p.id ? '2px solid #C9A227' : '1px solid #E2E7EF',
+                      border: selectedParticipant === p.id ? '2px solid var(--color-gold)' : '1px solid var(--color-gray-200)',
                       cursor: isCurrentPresident ? 'default' : 'pointer',
                       transition: 'all 0.2s ease',
                       opacity: isCurrentPresident ? 0.6 : 1
@@ -313,7 +313,7 @@ export default function ClubPresident() {
                       width: '36px',
                       height: '36px',
                       borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
+                      background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-light))',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -324,23 +324,23 @@ export default function ClubPresident() {
                       {p.full_name?.charAt(0) || '?'}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                      <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                         {p.full_name}
                         {isCurrentPresident && (
-                          <span style={{ marginLeft: '8px', fontSize: '12px', color: '#C9A227' }}>
+                          <span style={{ marginLeft: '8px', fontSize: '12px', color: 'var(--color-gold)' }}>
                             👑 Текущий президент
                           </span>
                         )}
                       </div>
-                      <div style={{ fontSize: '12px', color: '#98A2B3' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
                         {p.school || 'Школа не указана'} • {p.class_name || 'Класс не указан'}
                       </div>
                     </div>
                     {selectedParticipant === p.id && !isCurrentPresident && (
-                      <span style={{ color: '#C9A227', fontSize: '20px' }}>✓</span>
+                      <span style={{ color: 'var(--color-gold)', fontSize: '20px' }}>✓</span>
                     )}
                     {isCurrentPresident && (
-                      <span style={{ color: '#C9A227', fontSize: '20px' }}>👑</span>
+                      <span style={{ color: 'var(--color-gold)', fontSize: '20px' }}>👑</span>
                     )}
                   </div>
                 );

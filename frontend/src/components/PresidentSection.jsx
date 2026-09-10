@@ -39,10 +39,10 @@ export default function PresidentSection({ profile }) {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { label: 'Ожидает', color: '#C9A227', bg: '#FBF4DC' },
-      'in_progress': { label: 'В работе', color: '#174A7E', bg: '#EAF2FA' },
-      'completed': { label: 'Выполнено ✅', color: '#16845B', bg: '#E8F5EF' },
-      'rejected': { label: 'Отклонено ❌', color: '#B3262E', bg: '#FCEBEC' }
+      'pending': { label: 'Ожидает', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'in_progress': { label: 'В работе', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
+      'completed': { label: 'Выполнено ✅', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'rejected': { label: 'Отклонено ❌', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
     };
     return badges[status] || badges['pending'];
   };
@@ -144,7 +144,7 @@ export default function PresidentSection({ profile }) {
           background: #FFFFFF;
           border-radius: 16px;
           padding: 24px 28px;
-          border: 1px solid #E2E7EF;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 4px 16px rgba(11, 31, 58, 0.04);
           margin-top: 20px;
           transition: all 0.3s ease;
@@ -152,7 +152,7 @@ export default function PresidentSection({ profile }) {
 
         .president-section:hover {
           box-shadow: 0 8px 32px rgba(11, 31, 58, 0.08);
-          border-color: #C9A227;
+          border-color: var(--color-gold);
         }
 
         .president-section-header {
@@ -161,7 +161,7 @@ export default function PresidentSection({ profile }) {
           align-items: center;
           margin-bottom: 20px;
           padding-bottom: 16px;
-          border-bottom: 1px solid #F4F6F9;
+          border-bottom: 1px solid var(--color-gray-100);
         }
 
         .president-section-title {
@@ -177,21 +177,21 @@ export default function PresidentSection({ profile }) {
         .president-section-title h3 {
           font-size: 18px;
           font-weight: 600;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin: 0 0 2px 0;
         }
 
         .president-section-title p {
           font-size: 13px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin: 0;
         }
 
         .president-section-btn {
           padding: 8px 20px;
           background: transparent;
-          color: #174A7E;
-          border: 1.5px solid #E2E7EF;
+          color: var(--color-primary-light);
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 10px;
           font-size: 13px;
           font-weight: 500;
@@ -201,8 +201,8 @@ export default function PresidentSection({ profile }) {
         }
 
         .president-section-btn:hover {
-          background: #EAF2FA;
-          border-color: #174A7E;
+          background: var(--color-info-bg);
+          border-color: var(--color-primary-light);
           transform: translateY(-2px);
         }
 
@@ -226,13 +226,13 @@ export default function PresidentSection({ profile }) {
         .president-section-empty h4 {
           font-size: 18px;
           font-weight: 600;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin: 0 0 6px 0;
         }
 
         .president-section-empty p {
           font-size: 14px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin: 0;
         }
 
@@ -247,7 +247,7 @@ export default function PresidentSection({ profile }) {
           justify-content: space-between;
           align-items: center;
           padding: 14px 18px;
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           border-radius: 12px;
           border: 1px solid transparent;
           cursor: pointer;
@@ -256,7 +256,7 @@ export default function PresidentSection({ profile }) {
 
         .president-section-task:hover {
           background: #F0F4FF;
-          border-color: #C9A227;
+          border-color: var(--color-gold);
           transform: translateX(4px);
         }
 
@@ -282,7 +282,7 @@ export default function PresidentSection({ profile }) {
         .president-section-task-title {
           font-size: 15px;
           font-weight: 500;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin-top: 4px;
         }
 
@@ -295,22 +295,22 @@ export default function PresidentSection({ profile }) {
 
         .president-section-task-priority {
           font-size: 12px;
-          color: #667085;
+          color: var(--color-gray-500);
         }
 
         .president-section-task-deadline {
           font-size: 12px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
         }
 
         .president-section-task-club {
           font-size: 12px;
-          color: #174A7E;
+          color: var(--color-primary-light);
         }
 
         .president-section-task-arrow {
           font-size: 20px;
-          color: #C9A227;
+          color: var(--color-gold);
           flex-shrink: 0;
           margin-left: 12px;
         }
@@ -324,7 +324,7 @@ export default function PresidentSection({ profile }) {
         .president-section-more {
           text-align: center;
           font-size: 13px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           padding: 8px 0 4px;
         }
 

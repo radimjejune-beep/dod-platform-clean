@@ -140,7 +140,7 @@ export default function ParentDashboard() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -210,9 +210,9 @@ export default function ParentDashboard() {
                   {child.full_name}
                   {child.class_name && ` (${child.class_name})`}
                   {allConsents ? (
-                    <span style={{ color: '#16845B', fontSize: '14px' }}>✅</span>
+                    <span style={{ color: 'var(--color-success)', fontSize: '14px' }}>✅</span>
                   ) : (
-                    <span style={{ color: '#C9A227', fontSize: '14px' }}>⚠️</span>
+                    <span style={{ color: 'var(--color-gold)', fontSize: '14px' }}>⚠️</span>
                   )}
                 </button>
               );
@@ -223,11 +223,11 @@ export default function ParentDashboard() {
         {children.length === 0 ? (
           <div className="empty-state">
             <div className="icon">👨‍👩‍👦</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>У вас пока нет привязанных детей</p>
-            <p style={{ color: '#667085', marginBottom: '16px' }}>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>У вас пока нет привязанных детей</p>
+            <p style={{ color: 'var(--color-gray-500)', marginBottom: '16px' }}>
               Нажмите кнопку <strong>"Привязать ребёнка"</strong> и введите логин и пароль ребёнка.
               <br />
-              <span style={{ fontSize: '13px', color: '#98A2B3' }}>
+              <span style={{ fontSize: '13px', color: 'var(--color-gray-400)' }}>
                 Для привязки нужны email и пароль, которые ребёнок использует для входа в систему.
               </span>
             </p>
@@ -244,10 +244,10 @@ export default function ParentDashboard() {
             <div className="card" style={{ marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#0B1F3A' }}>
+                  <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--color-primary)' }}>
                     {selectedChild.full_name}
                   </h2>
-                  <p style={{ color: '#667085' }}>
+                  <p style={{ color: 'var(--color-gray-500)' }}>
                     {selectedChild.school || 'Школа не указана'} • {selectedChild.class_name || 'Класс не указан'}
                     {selectedChild.club_name && ` • 🏫 ${selectedChild.club_name}`}
                   </p>
@@ -274,22 +274,22 @@ export default function ParentDashboard() {
                 <div className="label">📅 Мероприятий</div>
               </div>
               <div className="stat-card">
-                <div className="number" style={{ color: '#C9A227' }}>{childStats.achievements}</div>
+                <div className="number" style={{ color: 'var(--color-gold)' }}>{childStats.achievements}</div>
                 <div className="label">🏆 Достижений</div>
               </div>
-              <div className="stat-card" style={{ borderTop: '3px solid #C9A227' }}>
+              <div className="stat-card" style={{ borderTop: '3px solid var(--color-gold)' }}>
                 <div className="number">{childStats.level}</div>
                 <div className="label">📊 Уровень</div>
               </div>
               <div className="stat-card">
-                <div className="number" style={{ fontSize: '14px', color: '#667085' }}>
+                <div className="number" style={{ fontSize: '14px', color: 'var(--color-gray-500)' }}>
                   {getConsentStatus(selectedChild).percentage}%
                 </div>
                 <div className="label">📝 Согласия</div>
                 <div style={{
                   width: '100%',
                   height: '4px',
-                  background: '#F4F6F9',
+                  background: 'var(--color-gray-100)',
                   borderRadius: '2px',
                   marginTop: '4px',
                   overflow: 'hidden'
@@ -297,7 +297,7 @@ export default function ParentDashboard() {
                   <div style={{
                     width: `${getConsentStatus(selectedChild).percentage}%`,
                     height: '100%',
-                    background: getConsentStatus(selectedChild).percentage === 100 ? '#16845B' : '#C9A227',
+                    background: getConsentStatus(selectedChild).percentage === 100 ? 'var(--color-success)' : 'var(--color-gold)',
                     borderRadius: '2px'
                   }} />
                 </div>
@@ -307,7 +307,7 @@ export default function ParentDashboard() {
             {/* ИНФОРМАЦИЯ О СОГЛАСИЯХ */}
             <div className="card" style={{ marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-primary)' }}>
                   📝 Статус согласий
                 </h3>
                 <button
@@ -321,41 +321,41 @@ export default function ParentDashboard() {
 
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ color: selectedChild.consent_personal_data ? '#16845B' : '#B3262E' }}>
+                  <span style={{ color: selectedChild.consent_personal_data ? 'var(--color-success)' : 'var(--color-error)' }}>
                     {selectedChild.consent_personal_data ? '✅' : '❌'}
                   </span>
-                  <span style={{ fontSize: '13px', color: '#667085' }}>Персональные данные</span>
+                  <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>Персональные данные</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ color: selectedChild.consent_photo_publication ? '#16845B' : '#B3262E' }}>
+                  <span style={{ color: selectedChild.consent_photo_publication ? 'var(--color-success)' : 'var(--color-error)' }}>
                     {selectedChild.consent_photo_publication ? '✅' : '❌'}
                   </span>
-                  <span style={{ fontSize: '13px', color: '#667085' }}>Публикация фото</span>
+                  <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>Публикация фото</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ color: selectedChild.consent_event_participation ? '#16845B' : '#B3262E' }}>
+                  <span style={{ color: selectedChild.consent_event_participation ? 'var(--color-success)' : 'var(--color-error)' }}>
                     {selectedChild.consent_event_participation ? '✅' : '❌'}
                   </span>
-                  <span style={{ fontSize: '13px', color: '#667085' }}>Участие в мероприятиях</span>
+                  <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>Участие в мероприятиях</span>
                 </div>
                 {selectedChild.consent_agreement_date && (
-                  <span style={{ fontSize: '12px', color: '#98A2B3' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
                     📅 Подписаны: {new Date(selectedChild.consent_agreement_date).toLocaleDateString('ru-RU')}
                   </span>
                 )}
               </div>
 
               {showConsentStatus && (
-                <div style={{ marginTop: '12px', padding: '12px 16px', background: '#F8FAFC', borderRadius: '8px', fontSize: '13px', color: '#667085' }}>
+                <div style={{ marginTop: '12px', padding: '12px 16px', background: 'var(--color-gray-50)', borderRadius: '8px', fontSize: '13px', color: 'var(--color-gray-500)' }}>
                   <p style={{ margin: 0 }}>
                     <strong>Для участия в мероприятиях необходимы все три согласия.</strong>
                     {getConsentStatus(selectedChild).percentage < 100 && (
-                      <span style={{ color: '#B3262E' }}>
+                      <span style={{ color: 'var(--color-error)' }}>
                         {' '}Недостающие согласия можно оформить в профиле участника.
                       </span>
                     )}
                     {getConsentStatus(selectedChild).percentage === 100 && (
-                      <span style={{ color: '#16845B' }}>
+                      <span style={{ color: 'var(--color-success)' }}>
                         {' '}Все согласия оформлены. Ребёнок может участвовать в мероприятиях.
                       </span>
                     )}
@@ -397,13 +397,13 @@ export default function ParentDashboard() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0B1F3A', marginBottom: '4px' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '4px' }}>
               👨‍👩‍👦 Привязать ребёнка
             </h3>
-            <p style={{ color: '#667085', marginBottom: '20px', fontSize: '14px' }}>
+            <p style={{ color: 'var(--color-gray-500)', marginBottom: '20px', fontSize: '14px' }}>
               Введите email и пароль ребёнка для привязки.
               <br />
-              <span style={{ fontSize: '12px', color: '#98A2B3' }}>
+              <span style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
                 Данные ребёнка должны соответствовать его учётной записи в системе.
               </span>
             </p>
@@ -453,10 +453,10 @@ export default function ParentDashboard() {
             <div style={{
               marginTop: '16px',
               padding: '12px 16px',
-              background: '#FBF4DC',
+              background: 'var(--color-gold-pale)',
               borderRadius: '8px',
               fontSize: '12px',
-              color: '#8A6A00'
+              color: 'var(--color-gold-dark)'
             }}>
               💡 Если ребёнок забыл пароль — обратитесь к администратору для сброса.
             </div>

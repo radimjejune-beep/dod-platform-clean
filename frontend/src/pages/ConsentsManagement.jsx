@@ -150,16 +150,16 @@ export default function ConsentsManagement() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'full': { label: '✅ Все согласия', color: '#16845B', bg: '#E8F5EF' },
-      'partial': { label: '⚠️ Частично', color: '#C9A227', bg: '#FBF4DC' },
-      'none': { label: '❌ Нет согласий', color: '#B3262E', bg: '#FCEBEC' }
+      'full': { label: '✅ Все согласия', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'partial': { label: '⚠️ Частично', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'none': { label: '❌ Нет согласий', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
     };
     return badges[status] || badges['none'];
   };
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -176,7 +176,7 @@ export default function ConsentsManagement() {
             <p>Статус согласий участников движения</p>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button className="btn-primary" onClick={handleRemindAll} style={{ background: '#C9A227', color: '#0B1F3A' }}>
+            <button className="btn-primary" onClick={handleRemindAll} style={{ background: 'var(--color-gold)', color: 'var(--color-primary)' }}>
               📨 Напомнить всем
             </button>
             <button className="btn-secondary" onClick={handleExport}>
@@ -193,19 +193,19 @@ export default function ConsentsManagement() {
 
         {/* СТАТИСТИКА */}
         <div className="grid-4" style={{ marginBottom: '24px' }}>
-          <div className="stat-card" style={{ borderTop: '3px solid #174A7E' }}>
+          <div className="stat-card" style={{ borderTop: '3px solid var(--color-primary-light)' }}>
             <div className="number">{stats.total}</div>
             <div className="label">👥 Всего участников</div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid #16845B' }}>
+          <div className="stat-card" style={{ borderTop: '3px solid var(--color-success)' }}>
             <div className="number">{stats.allConsents}</div>
             <div className="label">✅ Полные согласия</div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid #C9A227' }}>
+          <div className="stat-card" style={{ borderTop: '3px solid var(--color-gold)' }}>
             <div className="number">{stats.partialConsents}</div>
             <div className="label">⚠️ Частичные согласия</div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid #B3262E' }}>
+          <div className="stat-card" style={{ borderTop: '3px solid var(--color-error)' }}>
             <div className="number">{stats.noConsents}</div>
             <div className="label">❌ Нет согласий</div>
           </div>
@@ -257,7 +257,7 @@ export default function ConsentsManagement() {
               style={{
                 width: '100%',
                 padding: '8px 14px',
-                border: '1.5px solid #D5DCE7',
+                border: '1.5px solid var(--color-gray-200)',
                 borderRadius: '10px',
                 fontSize: '13px',
                 outline: 'none',
@@ -275,10 +275,10 @@ export default function ConsentsManagement() {
         {/* ТАБЛИЦА */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
               📋 Участники
             </h3>
-            <span style={{ fontSize: '13px', color: '#667085' }}>
+            <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               {filteredParticipants.length} участников
             </span>
           </div>
@@ -307,11 +307,11 @@ export default function ConsentsManagement() {
                     const status = getStatusBadge(p.consentStatus);
                     return (
                       <tr key={p.id}>
-                        <td style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                        <td style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                           {p.full_name}
                         </td>
-                        <td style={{ color: '#667085' }}>{p.club_name || '—'}</td>
-                        <td style={{ color: '#667085' }}>{p.class_name || '—'}</td>
+                        <td style={{ color: 'var(--color-gray-500)' }}>{p.club_name || '—'}</td>
+                        <td style={{ color: 'var(--color-gray-500)' }}>{p.class_name || '—'}</td>
                         <td style={{ textAlign: 'center' }}>
                           {p.consent_personal_data ? '✅' : '❌'}
                         </td>

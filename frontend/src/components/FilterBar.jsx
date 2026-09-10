@@ -54,7 +54,7 @@ export default function FilterBar({
       padding: '16px 20px',
       background: 'white',
       borderRadius: '16px',
-      border: '1px solid #E2E7EF',
+      border: '1px solid var(--color-gray-200)',
       boxShadow: '0 2px 8px rgba(11, 31, 58, 0.04)',
       transition: 'all 0.3s ease'
     }}>
@@ -74,7 +74,7 @@ export default function FilterBar({
               top: '50%',
               transform: 'translateY(-50%)',
               fontSize: '16px',
-              color: '#98A2B3'
+              color: 'var(--color-gray-400)'
             }}>🔍</span>
             <input
               type="text"
@@ -84,22 +84,22 @@ export default function FilterBar({
               style={{
                 width: '100%',
                 padding: '10px 14px 10px 40px',
-                border: '1.5px solid #E2E7EF',
+                border: '1.5px solid var(--color-gray-200)',
                 borderRadius: '12px',
                 fontSize: '14px',
                 outline: 'none',
                 transition: 'all 0.3s ease',
-                background: '#F8FAFC',
-                color: '#0B1F3A'
+                background: 'var(--color-gray-50)',
+                color: 'var(--color-primary)'
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = '#0B1F3A';
+                e.target.style.borderColor = 'var(--color-primary)';
                 e.target.style.background = 'white';
                 e.target.style.boxShadow = '0 0 0 3px rgba(11, 31, 58, 0.06)';
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = '#E2E7EF';
-                e.target.style.background = '#F8FAFC';
+                e.target.style.borderColor = 'var(--color-gray-200)';
+                e.target.style.background = 'var(--color-gray-50)';
                 e.target.style.boxShadow = 'none';
               }}
             />
@@ -114,7 +114,7 @@ export default function FilterBar({
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  color: '#98A2B3',
+                  color: 'var(--color-gray-400)',
                   fontSize: '16px',
                   padding: '4px'
                 }}
@@ -136,23 +136,23 @@ export default function FilterBar({
                   style={{
                     width: '100%',
                     padding: '10px 36px 10px 14px',
-                    border: '1.5px solid #E2E7EF',
+                    border: '1.5px solid var(--color-gray-200)',
                     borderRadius: '12px',
                     fontSize: '14px',
                     outline: 'none',
-                    background: activeFilters[filter.key] ? '#FBF4DC' : '#F8FAFC',
+                    background: activeFilters[filter.key] ? 'var(--color-gold-pale)' : 'var(--color-gray-50)',
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
-                    color: activeFilters[filter.key] ? '#8A6A00' : '#667085',
+                    color: activeFilters[filter.key] ? 'var(--color-gold-dark)' : 'var(--color-gray-500)',
                     appearance: 'none',
                     WebkitAppearance: 'none'
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = '#0B1F3A';
+                    e.target.style.borderColor = 'var(--color-primary)';
                     e.target.style.boxShadow = '0 0 0 3px rgba(11, 31, 58, 0.06)';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = '#E2E7EF';
+                    e.target.style.borderColor = 'var(--color-gray-200)';
                     e.target.style.boxShadow = 'none';
                   }}
                 >
@@ -169,7 +169,7 @@ export default function FilterBar({
                   top: '50%',
                   transform: 'translateY(-50%)',
                   fontSize: '12px',
-                  color: '#98A2B3',
+                  color: 'var(--color-gray-400)',
                   pointerEvents: 'none'
                 }}>▼</span>
               </div>
@@ -180,11 +180,11 @@ export default function FilterBar({
                 gap: '8px',
                 cursor: 'pointer',
                 padding: '8px 14px',
-                background: activeFilters[filter.key] ? '#FBF4DC' : '#F8FAFC',
+                background: activeFilters[filter.key] ? 'var(--color-gold-pale)' : 'var(--color-gray-50)',
                 borderRadius: '12px',
-                border: activeFilters[filter.key] ? '1.5px solid #C9A227' : '1.5px solid #E2E7EF',
+                border: activeFilters[filter.key] ? '1.5px solid var(--color-gold)' : '1.5px solid var(--color-gray-200)',
                 fontSize: '14px',
-                color: activeFilters[filter.key] ? '#8A6A00' : '#667085',
+                color: activeFilters[filter.key] ? 'var(--color-gold-dark)' : 'var(--color-gray-500)',
                 transition: 'all 0.3s ease',
                 whiteSpace: 'nowrap'
               }}>
@@ -196,7 +196,7 @@ export default function FilterBar({
                     width: '18px',
                     height: '18px',
                     cursor: 'pointer',
-                    accentColor: '#C9A227'
+                    accentColor: 'var(--color-gold)'
                   }}
                 />
                 {filter.label}
@@ -211,12 +211,12 @@ export default function FilterBar({
             onClick={() => setIsExpanded(!isExpanded)}
             style={{
               padding: '8px 16px',
-              background: isExpanded ? '#FBF4DC' : '#F8FAFC',
-              border: '1.5px solid #E2E7EF',
+              background: isExpanded ? 'var(--color-gold-pale)' : 'var(--color-gray-50)',
+              border: '1.5px solid var(--color-gray-200)',
               borderRadius: '12px',
               cursor: 'pointer',
               fontSize: '13px',
-              color: isExpanded ? '#8A6A00' : '#667085',
+              color: isExpanded ? 'var(--color-gold-dark)' : 'var(--color-gray-500)',
               transition: 'all 0.3s ease',
               whiteSpace: 'nowrap',
               display: 'flex',
@@ -234,12 +234,12 @@ export default function FilterBar({
             onClick={handleReset}
             style={{
               padding: '8px 16px',
-              background: '#FCEBEC',
+              background: 'var(--color-error-bg)',
               border: 'none',
               borderRadius: '12px',
               cursor: 'pointer',
               fontSize: '13px',
-              color: '#B3262E',
+              color: 'var(--color-error)',
               transition: 'all 0.3s ease',
               whiteSpace: 'nowrap',
               display: 'flex',
@@ -250,7 +250,7 @@ export default function FilterBar({
               e.target.style.background = '#FED7D7';
             }}
             onMouseLeave={(e) => {
-              e.target.style.background = '#FCEBEC';
+              e.target.style.background = 'var(--color-error-bg)';
             }}
           >
             ✕ Сбросить
@@ -268,7 +268,7 @@ export default function FilterBar({
           gap: '12px',
           flexWrap: 'wrap',
           paddingTop: '12px',
-          borderTop: '1px solid #F4F6F9'
+          borderTop: '1px solid var(--color-gray-100)'
         }}>
           {hiddenFilters.map((filter) => (
             <div key={filter.key} style={{ minWidth: filter.minWidth || '150px' }}>
@@ -280,14 +280,14 @@ export default function FilterBar({
                     style={{
                       width: '100%',
                       padding: '10px 36px 10px 14px',
-                      border: '1.5px solid #E2E7EF',
+                      border: '1.5px solid var(--color-gray-200)',
                       borderRadius: '12px',
                       fontSize: '14px',
                       outline: 'none',
-                      background: activeFilters[filter.key] ? '#FBF4DC' : '#F8FAFC',
+                      background: activeFilters[filter.key] ? 'var(--color-gold-pale)' : 'var(--color-gray-50)',
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
-                      color: activeFilters[filter.key] ? '#8A6A00' : '#667085',
+                      color: activeFilters[filter.key] ? 'var(--color-gold-dark)' : 'var(--color-gray-500)',
                       appearance: 'none',
                       WebkitAppearance: 'none'
                     }}
@@ -305,7 +305,7 @@ export default function FilterBar({
                     top: '50%',
                     transform: 'translateY(-50%)',
                     fontSize: '12px',
-                    color: '#98A2B3',
+                    color: 'var(--color-gray-400)',
                     pointerEvents: 'none'
                   }}>▼</span>
                 </div>
@@ -316,11 +316,11 @@ export default function FilterBar({
                   gap: '8px',
                   cursor: 'pointer',
                   padding: '8px 14px',
-                  background: activeFilters[filter.key] ? '#FBF4DC' : '#F8FAFC',
+                  background: activeFilters[filter.key] ? 'var(--color-gold-pale)' : 'var(--color-gray-50)',
                   borderRadius: '12px',
-                  border: activeFilters[filter.key] ? '1.5px solid #C9A227' : '1.5px solid #E2E7EF',
+                  border: activeFilters[filter.key] ? '1.5px solid var(--color-gold)' : '1.5px solid var(--color-gray-200)',
                   fontSize: '14px',
-                  color: activeFilters[filter.key] ? '#8A6A00' : '#667085',
+                  color: activeFilters[filter.key] ? 'var(--color-gold-dark)' : 'var(--color-gray-500)',
                   transition: 'all 0.3s ease',
                   whiteSpace: 'nowrap'
                 }}>
@@ -332,7 +332,7 @@ export default function FilterBar({
                       width: '18px',
                       height: '18px',
                       cursor: 'pointer',
-                      accentColor: '#C9A227'
+                      accentColor: 'var(--color-gold)'
                     }}
                   />
                   {filter.label}
@@ -350,15 +350,15 @@ export default function FilterBar({
           flexWrap: 'wrap',
           gap: '6px',
           paddingTop: '8px',
-          borderTop: '1px solid #F4F6F9'
+          borderTop: '1px solid var(--color-gray-100)'
         }}>
           {search && (
             <span style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              background: '#EAF2FA',
-              color: '#174A7E',
+              background: 'var(--color-info-bg)',
+              color: 'var(--color-primary-light)',
               fontSize: '12px',
               padding: '4px 12px',
               borderRadius: '20px',
@@ -371,7 +371,7 @@ export default function FilterBar({
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  color: '#174A7E',
+                  color: 'var(--color-primary-light)',
                   fontSize: '12px',
                   padding: '0 2px'
                 }}
@@ -389,12 +389,12 @@ export default function FilterBar({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: '#FBF4DC',
-                color: '#8A6A00',
+                background: 'var(--color-gold-pale)',
+                color: 'var(--color-gold-dark)',
                 fontSize: '12px',
                 padding: '4px 12px',
                 borderRadius: '20px',
-                border: '1px solid #E8D9A8'
+                border: '1px solid var(--color-gold-light)'
               }}>
                 {filter?.label || key}: {label}
                 <button
@@ -403,7 +403,7 @@ export default function FilterBar({
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: '#8A6A00',
+                    color: 'var(--color-gold-dark)',
                     fontSize: '12px',
                     padding: '0 2px'
                   }}

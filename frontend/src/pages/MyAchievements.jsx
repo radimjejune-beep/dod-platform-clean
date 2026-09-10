@@ -65,7 +65,7 @@ export default function MyAchievements() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -88,7 +88,7 @@ export default function MyAchievements() {
           </div>
           {Object.keys(stats.categories).length > 0 && (
             <div className="stat-card" style={{ gridColumn: 'span 2' }}>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#0B1F3A', marginBottom: '8px' }}>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '8px' }}>
                 По категориям:
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
@@ -105,8 +105,8 @@ export default function MyAchievements() {
         {achievements.length === 0 ? (
           <div className="empty-state">
             <div className="icon">🌟</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>У вас пока нет достижений</p>
-            <p style={{ color: '#667085' }}>Участвуйте в мероприятиях и получайте награды! 🏆</p>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>У вас пока нет достижений</p>
+            <p style={{ color: 'var(--color-gray-500)' }}>Участвуйте в мероприятиях и получайте награды! 🏆</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -115,7 +115,7 @@ export default function MyAchievements() {
                 key={item.id}
                 className="card"
                 style={{
-                  borderLeft: `4px solid ${item.color || '#C9A227'}`,
+                  borderLeft: `4px solid ${item.color || 'var(--color-gold)'}`,
                   transition: 'transform 0.2s ease'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.transform = 'translateX(4px)'}
@@ -129,7 +129,7 @@ export default function MyAchievements() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: '#F4F6F9',
+                    background: 'var(--color-gray-100)',
                     borderRadius: '12px',
                     flexShrink: 0
                   }}>
@@ -137,7 +137,7 @@ export default function MyAchievements() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
-                      <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+                      <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
                         {item.title || 'Достижение'}
                       </h3>
                       <span className="tag tag-gold">
@@ -145,11 +145,11 @@ export default function MyAchievements() {
                       </span>
                     </div>
                     {item.description && (
-                      <p style={{ margin: '4px 0 8px 0', fontSize: '14px', color: '#667085' }}>
+                      <p style={{ margin: '4px 0 8px 0', fontSize: '14px', color: 'var(--color-gray-500)' }}>
                         {item.description}
                       </p>
                     )}
-                    <div style={{ display: 'flex', gap: '12px', fontSize: '13px', color: '#98A2B3', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '12px', fontSize: '13px', color: 'var(--color-gray-400)', flexWrap: 'wrap' }}>
                       <span>📅 {new Date(item.achievement_date || item.created_at).toLocaleDateString('ru-RU', {
                         day: 'numeric',
                         month: 'long',

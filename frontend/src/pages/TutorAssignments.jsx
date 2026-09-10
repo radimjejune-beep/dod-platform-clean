@@ -67,16 +67,16 @@ export default function TutorAssignments() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { label: '⏳ Ожидает', color: '#C9A227', bg: '#FBF4DC' },
-      'accepted': { label: '✅ Принято', color: '#16845B', bg: '#E8F5EF' },
-      'declined': { label: '❌ Отклонено', color: '#B3262E', bg: '#FCEBEC' }
+      'pending': { label: '⏳ Ожидает', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'accepted': { label: '✅ Принято', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'declined': { label: '❌ Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
     };
     return badges[status] || badges['pending'];
   };
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -103,10 +103,10 @@ export default function TutorAssignments() {
         {assignments.length === 0 ? (
           <div className="empty-state">
             <div className="icon">📭</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>
               У вас пока нет назначений на мероприятия
             </p>
-            <p style={{ color: '#667085' }}>
+            <p style={{ color: 'var(--color-gray-500)' }}>
               Когда координатор назначит вас на мероприятие, оно появится здесь
             </p>
           </div>
@@ -118,10 +118,10 @@ export default function TutorAssignments() {
                 <div key={assignment.id} className="card" style={{ borderLeft: `4px solid ${status.color}` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
                     <div>
-                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
                         {assignment.event_title || 'Мероприятие'}
                       </h3>
-                      <div style={{ color: '#667085', fontSize: '14px', marginTop: '4px' }}>
+                      <div style={{ color: 'var(--color-gray-500)', fontSize: '14px', marginTop: '4px' }}>
                         📅 {assignment.event_date ? new Date(assignment.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
                         {assignment.location && ` • 📍 ${assignment.location}`}
                       </div>
@@ -136,12 +136,12 @@ export default function TutorAssignments() {
                           </span>
                         )}
                         {assignment.notes && (
-                          <span style={{ fontSize: '12px', color: '#98A2B3' }}>
+                          <span style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
                             📝 {assignment.notes}
                           </span>
                         )}
                       </div>
-                      <div style={{ fontSize: '12px', color: '#98A2B3', marginTop: '4px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
                         👤 Назначил: {assignment.assigned_by_name || 'Неизвестно'}
                       </div>
                     </div>

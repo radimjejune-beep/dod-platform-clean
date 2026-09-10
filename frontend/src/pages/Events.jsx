@@ -794,13 +794,13 @@ export default function Events() {
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: #F0EDE8;
+            background: var(--color-gray-100);
           }
           .spinner {
             width: 48px;
             height: 48px;
-            border: 4px solid #E4DFD8;
-            border-top-color: #C9A227;
+            border: 4px solid var(--color-gray-200);
+            border-top-color: var(--color-gold);
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
           }
@@ -1162,11 +1162,11 @@ export default function Events() {
                     key={event.id}
                     className="event-item"
                     style={{
-                      borderLeftColor: event.moderation_status === 'pending' ? '#C9A227' :
+                      borderLeftColor: event.moderation_status === 'pending' ? 'var(--color-gold)' :
                                     event.is_global ? '#6B46C1' :
-                                    event.is_club_event ? '#174A7E' :
-                                    event.type === 'internal' ? '#174A7E' :
-                                    event.type === 'outgoing' ? '#C9A227' : '#B3262E'
+                                    event.is_club_event ? 'var(--color-primary-light)' :
+                                    event.type === 'internal' ? 'var(--color-primary-light)' :
+                                    event.type === 'outgoing' ? 'var(--color-gold)' : 'var(--color-error)'
                     }}
                   >
                     <div className="event-title">
@@ -1342,7 +1342,7 @@ export default function Events() {
                           </button>
                           <button
                             className="btn-primary btn-sm"
-                            style={{ background: '#16845B', color: 'white' }}
+                            style={{ background: 'var(--color-success)', color: 'white' }}
                             onClick={() => handleExport(event.id, event.title)}
                             disabled={exporting}
                           >
@@ -1406,12 +1406,12 @@ export default function Events() {
                 <div className="registrations-stats">
                   {registrationsStats.map((stat) => (
                     <span key={stat.status} className="tag" style={{
-                      background: stat.status === 'confirmed' ? '#E8F5EF' :
-                                stat.status === 'pending' ? '#FBF4DC' :
-                                stat.status === 'rejected' ? '#FCEBEC' : '#F4F6F9',
-                      color: stat.status === 'confirmed' ? '#16845B' :
-                             stat.status === 'pending' ? '#8A6A00' :
-                             stat.status === 'rejected' ? '#B3262E' : '#667085',
+                      background: stat.status === 'confirmed' ? 'var(--color-success-bg)' :
+                                stat.status === 'pending' ? 'var(--color-gold-pale)' :
+                                stat.status === 'rejected' ? 'var(--color-error-bg)' : 'var(--color-gray-100)',
+                      color: stat.status === 'confirmed' ? 'var(--color-success)' :
+                             stat.status === 'pending' ? 'var(--color-gold-dark)' :
+                             stat.status === 'rejected' ? 'var(--color-error)' : 'var(--color-gray-500)',
                       padding: '4px 14px',
                       fontSize: '13px'
                     }}>
@@ -1442,8 +1442,8 @@ export default function Events() {
                             <td>
                               <div className="participant-cell">
                                 <div className="participant-avatar" style={{
-                                  background: isClubRegistration ? 'linear-gradient(135deg, #C9A227, #E8D9A8)' : 'linear-gradient(135deg, #0B1F3A, #174A7E)',
-                                  color: isClubRegistration ? '#0B1F3A' : 'white'
+                                  background: isClubRegistration ? 'linear-gradient(135deg, var(--color-gold), var(--color-gold-light))' : 'linear-gradient(135deg, var(--color-primary), var(--color-primary-light))',
+                                  color: isClubRegistration ? 'var(--color-primary)' : 'white'
                                 }}>
                                   {isClubRegistration ? '🏫' : (reg.full_name?.charAt(0) || '?')}
                                 </div>
@@ -1451,7 +1451,7 @@ export default function Events() {
                                   <div className="participant-name">
                                     {reg.full_name}
                                     {isClubRegistration && (
-                                      <span className="tag" style={{ marginLeft: '8px', background: '#FBF4DC', color: '#8A6A00', fontSize: '9px' }}>
+                                      <span className="tag" style={{ marginLeft: '8px', background: 'var(--color-gold-pale)', color: 'var(--color-gold-dark)', fontSize: '9px' }}>
                                         🏫 Заявка от клуба
                                       </span>
                                     )}
@@ -1471,12 +1471,12 @@ export default function Events() {
                             <td><span className="tag tag-blue">{reg.club_name || '—'}</span></td>
                             <td>
                               <span className="tag" style={{
-                                background: reg.status === 'confirmed' ? '#E8F5EF' :
-                                          reg.status === 'pending' ? '#FBF4DC' :
-                                          reg.status === 'rejected' ? '#FCEBEC' : '#F4F6F9',
-                                color: reg.status === 'confirmed' ? '#16845B' :
-                                       reg.status === 'pending' ? '#8A6A00' :
-                                       reg.status === 'rejected' ? '#B3262E' : '#667085',
+                                background: reg.status === 'confirmed' ? 'var(--color-success-bg)' :
+                                          reg.status === 'pending' ? 'var(--color-gold-pale)' :
+                                          reg.status === 'rejected' ? 'var(--color-error-bg)' : 'var(--color-gray-100)',
+                                color: reg.status === 'confirmed' ? 'var(--color-success)' :
+                                       reg.status === 'pending' ? 'var(--color-gold-dark)' :
+                                       reg.status === 'rejected' ? 'var(--color-error)' : 'var(--color-gray-500)',
                               }}>
                                 {reg.status === 'confirmed' ? '✅ Подтверждён' :
                                  reg.status === 'pending' ? '⏳ Ожидает' :
@@ -1486,7 +1486,7 @@ export default function Events() {
                             <td>
                               {new Date(reg.registered_at).toLocaleDateString('ru-RU')}
                               {reg.confirmed_at && (
-                                <div style={{ color: '#16845B', fontSize: '11px' }}>
+                                <div style={{ color: 'var(--color-success)', fontSize: '11px' }}>
                                   ✅ {new Date(reg.confirmed_at).toLocaleDateString('ru-RU')}
                                 </div>
                               )}
@@ -1525,10 +1525,10 @@ export default function Events() {
                                 </div>
                               )}
                               {reg.status === 'confirmed' && (
-                                <span style={{ color: '#16845B' }}>✅ Подтверждён</span>
+                                <span style={{ color: 'var(--color-success)' }}>✅ Подтверждён</span>
                               )}
                               {reg.status === 'rejected' && (
-                                <span style={{ color: '#B3262E' }}>❌ Отклонён</span>
+                                <span style={{ color: 'var(--color-error)' }}>❌ Отклонён</span>
                               )}
                             </td>
                           </tr>
@@ -1664,7 +1664,7 @@ export default function Events() {
            ============================================================ */
         .page-background {
           min-height: 100vh;
-          background: #F0EDE8;
+          background: var(--color-gray-100);
         }
 
         .container-page {
@@ -1688,12 +1688,12 @@ export default function Events() {
         .page-header-left h1 {
           font-size: 24px;
           font-weight: 700;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin: 0;
         }
 
         .page-header-left p {
-          color: #667085;
+          color: var(--color-gray-500);
           margin: 4px 0 0 0;
         }
 
@@ -1706,8 +1706,8 @@ export default function Events() {
           justify-content: center;
           gap: 8px;
           padding: 10px 24px;
-          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
-          color: #0A1628;
+          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
+          color: var(--color-primary-dark);
           border: none;
           border-radius: 8px;
           font-size: 14px;
@@ -1725,7 +1725,7 @@ export default function Events() {
         }
 
         .btn-success {
-          background: #1A7A4C;
+          background: var(--color-success);
           color: white;
           box-shadow: 0 4px 16px rgba(26,122,76,0.2);
         }
@@ -1737,17 +1737,17 @@ export default function Events() {
 
         .btn-secondary {
           background: transparent;
-          color: #0A1628;
-          border: 1.5px solid #E4DFD8;
+          color: var(--color-primary-dark);
+          border: 1.5px solid var(--color-gray-200);
         }
         .btn-secondary:hover {
-          background: #F8F6F2;
-          border-color: #C9A227;
+          background: var(--color-gray-50);
+          border-color: var(--color-gold);
           transform: translateY(-2px);
         }
 
         .btn-danger {
-          background: #B3262E;
+          background: var(--color-error);
           color: white;
           box-shadow: 0 4px 16px rgba(179,38,46,0.2);
         }
@@ -1787,20 +1787,20 @@ export default function Events() {
           background: white;
           border-radius: 12px;
           padding: 24px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           margin-bottom: 20px;
         }
 
         .card-warning {
-          background: #FBF4DC;
-          border: 2px solid #C9A227;
+          background: var(--color-gold-pale);
+          border: 2px solid var(--color-gold);
         }
 
         .card h3 {
           font-size: 16px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0 0 12px 0;
         }
 
@@ -1813,16 +1813,16 @@ export default function Events() {
           gap: 6px;
           margin-top: 20px;
           padding-top: 16px;
-          border-top: 1px solid #E4DFD8;
+          border-top: 1px solid var(--color-gray-200);
           flex-wrap: wrap;
         }
 
         .pagination-btn {
           padding: 6px 14px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           border-radius: 6px;
           background: white;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           font-size: 14px;
           cursor: pointer;
           transition: all 0.2s ease;
@@ -1832,13 +1832,13 @@ export default function Events() {
         }
 
         .pagination-btn:hover:not(:disabled) {
-          border-color: #C9A227;
-          background: #FBF4DC;
+          border-color: var(--color-gold);
+          background: var(--color-gold-pale);
         }
 
         .pagination-btn.active {
-          border-color: #C9A227;
-          background: #C9A227;
+          border-color: var(--color-gold);
+          background: var(--color-gold);
           color: white;
         }
 
@@ -1849,7 +1849,7 @@ export default function Events() {
 
         .pagination-info {
           font-size: 13px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-left: 8px;
         }
 
@@ -1869,11 +1869,11 @@ export default function Events() {
            ============================================================ */
         .filter-count {
           font-size: 14px;
-          color: #667085;
+          color: var(--color-gray-500);
           padding: 6px 16px;
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           border-radius: 20px;
-          border: 1px solid #E2E7EF;
+          border: 1px solid var(--color-gray-200);
           white-space: nowrap;
         }
 
@@ -1885,19 +1885,19 @@ export default function Events() {
 
         .event-item {
           padding: 14px 18px;
-          border-left: 3px solid #0B1F3A;
-          background: #F8FAFC;
+          border-left: 3px solid var(--color-primary);
+          background: var(--color-gray-50);
           border-radius: 0 8px 8px 0;
           transition: all 0.2s ease;
         }
         .event-item:hover {
-          background: #F0EDE8;
+          background: var(--color-gray-100);
           transform: translateX(4px);
         }
 
         .event-title {
           font-weight: 600;
-          color: #0B1F3A;
+          color: var(--color-primary);
           font-size: 15px;
           display: flex;
           flex-wrap: wrap;
@@ -1907,13 +1907,13 @@ export default function Events() {
 
         .event-subtitle {
           font-size: 13px;
-          color: #667085;
+          color: var(--color-gray-500);
           margin-top: 2px;
         }
 
         .event-description {
           font-size: 12px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-top: 4px;
         }
 
@@ -1921,7 +1921,7 @@ export default function Events() {
           margin-top: 6px;
         }
         .event-link a {
-          color: #174A7E;
+          color: var(--color-primary-light);
           text-decoration: underline;
           font-size: 13px;
           display: inline-flex;
@@ -1929,7 +1929,7 @@ export default function Events() {
           gap: 4px;
         }
         .event-link a:hover {
-          color: #C9A227;
+          color: var(--color-gold);
         }
 
         .event-registration {
@@ -1951,11 +1951,11 @@ export default function Events() {
           font-size: 13px;
           font-weight: 500;
         }
-        .reg-status.pending { color: #C9A227; }
-        .reg-status.confirmed { color: #16845B; }
-        .reg-status.rejected { color: #B3262E; }
-        .reg-status.closed { color: #98A2B3; }
-        .reg-status.full { color: #B3262E; }
+        .reg-status.pending { color: var(--color-gold); }
+        .reg-status.confirmed { color: var(--color-success); }
+        .reg-status.rejected { color: var(--color-error); }
+        .reg-status.closed { color: var(--color-gray-400); }
+        .reg-status.full { color: var(--color-error); }
 
         .tag {
           display: inline-block;
@@ -1965,13 +1965,13 @@ export default function Events() {
           font-weight: 500;
         }
         .tag-global { background: #EDE7F6; color: #6B46C1; }
-        .tag-club { background: #EAF2FA; color: #174A7E; }
-        .tag-outgoing { background: #FBF4DC; color: #8A6A00; }
-        .tag-pending { background: #FBF4DC; color: #8A6A00; }
-        .tag-rejected { background: #FCEBEC; color: #B3262E; }
-        .tag-full { background: #FCEBEC; color: #B3262E; }
-        .tag-closed { background: #F4F6F9; color: #667085; }
-        .tag-blue { background: #EAF2FA; color: #174A7E; }
+        .tag-club { background: var(--color-info-bg); color: var(--color-primary-light); }
+        .tag-outgoing { background: var(--color-gold-pale); color: var(--color-gold-dark); }
+        .tag-pending { background: var(--color-gold-pale); color: var(--color-gold-dark); }
+        .tag-rejected { background: var(--color-error-bg); color: var(--color-error); }
+        .tag-full { background: var(--color-error-bg); color: var(--color-error); }
+        .tag-closed { background: var(--color-gray-100); color: var(--color-gray-500); }
+        .tag-blue { background: var(--color-info-bg); color: var(--color-primary-light); }
 
         .pending-list {
           display: flex;
@@ -1986,26 +1986,26 @@ export default function Events() {
           padding: 12px 16px;
           background: white;
           border-radius: 8px;
-          border: 1px solid #E2E7EF;
+          border: 1px solid var(--color-gray-200);
         }
         .pending-title { font-weight: 600; }
-        .pending-club { font-size: 13px; color: #667085; }
+        .pending-club { font-size: 13px; color: var(--color-gray-500); }
 
         .message-success {
           padding: 12px 16px;
-          background: #E8F5EF;
-          color: #16845B;
+          background: var(--color-success-bg);
+          color: var(--color-success);
           border-radius: 8px;
           margin-bottom: 16px;
-          border-left: 4px solid #16845B;
+          border-left: 4px solid var(--color-success);
         }
         .message-error {
           padding: 12px 16px;
-          background: #FCEBEC;
-          color: #B3262E;
+          background: var(--color-error-bg);
+          color: var(--color-error);
           border-radius: 8px;
           margin-bottom: 16px;
-          border-left: 4px solid #B3262E;
+          border-left: 4px solid var(--color-error);
         }
 
         .empty-state {
@@ -2018,7 +2018,7 @@ export default function Events() {
           opacity: 0.6;
         }
         .empty-state p {
-          color: #667085;
+          color: var(--color-gray-500);
           font-size: 14px;
         }
 
@@ -2047,7 +2047,7 @@ export default function Events() {
           max-width: 560px;
           width: 100%;
           box-shadow: 0 24px 64px rgba(10,22,40,0.2);
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           max-height: 90vh;
           overflow-y: auto;
         }
@@ -2067,7 +2067,7 @@ export default function Events() {
           font-family: 'Playfair Display', serif;
           font-size: 20px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0;
         }
 
@@ -2075,15 +2075,15 @@ export default function Events() {
           background: none;
           border: none;
           font-size: 24px;
-          color: #A8A29A;
+          color: var(--color-gray-400);
           cursor: pointer;
           transition: color 0.2s ease;
           padding: 4px 8px;
         }
-        .modal-close:hover { color: #0A1628; }
+        .modal-close:hover { color: var(--color-primary-dark); }
 
         .modal-subtitle {
-          color: #667085;
+          color: var(--color-gray-500);
           margin-bottom: 12px;
           font-size: 14px;
         }
@@ -2105,18 +2105,18 @@ export default function Events() {
         .form-control {
           width: 100%;
           padding: 10px 14px;
-          border: 1.5px solid #E4DFD8;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 8px;
           font-family: 'Inter', sans-serif;
           font-size: 14px;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           background: white;
           transition: all 0.3s ease;
           outline: none;
           min-height: 44px;
         }
         .form-control:focus {
-          border-color: #C9A227;
+          border-color: var(--color-gold);
           box-shadow: 0 0 0 3px rgba(201,162,39,0.08);
         }
 
@@ -2127,7 +2127,7 @@ export default function Events() {
           overflow-x: auto;
           background: white;
           border-radius: 12px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
         }
 
         .table {
@@ -2138,8 +2138,8 @@ export default function Events() {
         }
 
         .table thead {
-          background: #F8F6F2;
-          border-bottom: 1px solid #E4DFD8;
+          background: var(--color-gray-50);
+          border-bottom: 1px solid var(--color-gray-200);
         }
 
         .table thead th {
@@ -2147,19 +2147,19 @@ export default function Events() {
           padding: 12px 16px;
           font-size: 11px;
           font-weight: 600;
-          color: #8A8480;
+          color: var(--color-gray-500);
           text-transform: uppercase;
           letter-spacing: 0.06em;
         }
 
         .table tbody td {
           padding: 12px 16px;
-          border-bottom: 1px solid #F0EDE8;
-          color: #4D4744;
+          border-bottom: 1px solid var(--color-gray-100);
+          color: var(--color-gray-700);
         }
 
         .table tbody tr:hover td {
-          background: #F8F6F2;
+          background: var(--color-gray-50);
         }
 
         .table tbody tr:last-child td {
@@ -2191,12 +2191,12 @@ export default function Events() {
 
         .participant-info {
           font-size: 12px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
         }
 
         .participant-contact {
           font-size: 13px;
-          color: #667085;
+          color: var(--color-gray-500);
         }
 
         .action-buttons {
@@ -2230,7 +2230,7 @@ export default function Events() {
         .form-group label {
           display: block;
           font-weight: 500;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin-bottom: 4px;
           font-size: 13px;
         }
@@ -2239,19 +2239,19 @@ export default function Events() {
         .form-group select {
           width: 100%;
           padding: 10px 14px;
-          border: 1.5px solid #D5DCE7;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 8px;
           font-size: 14px;
           outline: none;
           transition: all 0.3s ease;
           background: white;
           font-family: inherit;
-          color: #0B1F3A;
+          color: var(--color-primary);
         }
         .form-group input:focus,
         .form-group textarea:focus,
         .form-group select:focus {
-          border-color: #C9A227;
+          border-color: var(--color-gold);
           box-shadow: 0 0 0 3px rgba(201,162,39,0.1);
         }
         .form-group textarea {
@@ -2261,7 +2261,7 @@ export default function Events() {
 
         .form-hint {
           font-size: 11px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-top: 4px;
         }
 
@@ -2285,11 +2285,11 @@ export default function Events() {
 
         .form-club-info {
           padding: 10px 16px;
-          background: #EAF2FA;
+          background: var(--color-info-bg);
           border-radius: 8px;
           margin-bottom: 16px;
           font-size: 14px;
-          color: #174A7E;
+          color: var(--color-primary-light);
           display: flex;
           align-items: center;
           gap: 8px;
@@ -2297,11 +2297,11 @@ export default function Events() {
 
         .form-global-info {
           padding: 12px 16px;
-          background: #EAF2FA;
+          background: var(--color-info-bg);
           border-radius: 8px;
           margin-bottom: 16px;
           font-size: 14px;
-          color: #174A7E;
+          color: var(--color-primary-light);
           display: flex;
           align-items: center;
           gap: 8px;
@@ -2319,10 +2319,10 @@ export default function Events() {
 
         .club-count {
           padding: 6px 16px;
-          background: #E8F5EF;
+          background: var(--color-success-bg);
           border-radius: 8px;
           font-size: 13px;
-          color: #16845B;
+          color: var(--color-success);
           font-weight: 500;
           display: inline-flex;
           align-items: center;
@@ -2332,26 +2332,26 @@ export default function Events() {
           padding: 6px 12px;
           font-size: 12px;
           background: transparent;
-          border: 1px solid #B3262E;
+          border: 1px solid var(--color-error);
           border-radius: 6px;
-          color: #B3262E;
+          color: var(--color-error);
           cursor: pointer;
         }
         .btn-clear:hover {
-          background: #FCEBEC;
+          background: var(--color-error-bg);
         }
 
         .club-search input {
           width: 100%;
           padding: 8px 14px;
-          border: 1.5px solid #D5DCE7;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 8px;
           font-size: 13px;
           outline: none;
           margin-bottom: 10px;
         }
         .club-search input:focus {
-          border-color: #C9A227;
+          border-color: var(--color-gold);
           box-shadow: 0 0 0 3px rgba(201,162,39,0.1);
         }
 
@@ -2360,9 +2360,9 @@ export default function Events() {
           grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
           gap: 6px;
           padding: 10px;
-          border: 1px solid #E2E7EF;
+          border: 1px solid var(--color-gray-200);
           border-radius: 8px;
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           max-height: 200px;
           overflow-y: auto;
         }
@@ -2378,16 +2378,16 @@ export default function Events() {
           border: 1px solid transparent;
         }
         .club-item:hover {
-          background: #F4F6F9;
+          background: var(--color-gray-100);
         }
         .club-item:has(input:checked) {
-          background: #EAF2FA;
-          border-color: #174A7E;
+          background: var(--color-info-bg);
+          border-color: var(--color-primary-light);
         }
         .club-item input[type="checkbox"] {
           width: 16px;
           height: 16px;
-          accent-color: #174A7E;
+          accent-color: var(--color-primary-light);
           cursor: pointer;
           flex-shrink: 0;
         }
@@ -2409,16 +2409,16 @@ export default function Events() {
           cursor: pointer;
         }
         .club-actions button:first-child {
-          background: #EAF2FA;
-          color: #174A7E;
+          background: var(--color-info-bg);
+          color: var(--color-primary-light);
         }
         .club-actions button:nth-child(2) {
-          background: #FCEBEC;
-          color: #B3262E;
+          background: var(--color-error-bg);
+          color: var(--color-error);
         }
         .club-actions button:last-child {
-          background: #FBF4DC;
-          color: #8A6A00;
+          background: var(--color-gold-pale);
+          color: var(--color-gold-dark);
         }
 
         .global-info {
@@ -2435,8 +2435,8 @@ export default function Events() {
         .spinner {
           width: 36px;
           height: 36px;
-          border: 3px solid #E4DFD8;
-          border-top-color: #C9A227;
+          border: 3px solid var(--color-gray-200);
+          border-top-color: var(--color-gold);
           border-radius: 50%;
           animation: spin 0.7s linear infinite;
           margin: 0 auto;

@@ -103,7 +103,7 @@ export default function DashboardAnalytics() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -137,8 +137,8 @@ export default function DashboardAnalytics() {
             <div className="number">{stats.totalEvents}</div>
             <div className="label">📅 Мероприятий</div>
           </div>
-          <div className="stat-card" style={{ borderTop: '4px solid #C9A227' }}>
-            <div className="number" style={{ color: '#C9A227' }}>{stats.newParticipantsThisMonth}</div>
+          <div className="stat-card" style={{ borderTop: '4px solid var(--color-gold)' }}>
+            <div className="number" style={{ color: 'var(--color-gold)' }}>{stats.newParticipantsThisMonth}</div>
             <div className="label">⭐ Новых за месяц</div>
           </div>
         </div>
@@ -146,16 +146,16 @@ export default function DashboardAnalytics() {
         {/* ТОП-5 КЮДОВ + ГРАФИК */}
         <div className="grid-2" style={{ marginBottom: '24px' }}>
           <div className="card">
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
               🏆 Топ-5 КЮДов
             </h3>
             {stats.topClubs.length === 0 ? (
-              <p style={{ color: '#667085' }}>Нет данных</p>
+              <p style={{ color: 'var(--color-gray-500)' }}>Нет данных</p>
             ) : (
               stats.topClubs.map((club, index) => (
                 <div key={club.id} className="list-item" style={{
-                  borderLeftColor: index === 0 ? '#C9A227' : '#667085',
-                  background: index === 0 ? '#FBF4DC' : 'transparent'
+                  borderLeftColor: index === 0 ? 'var(--color-gold)' : 'var(--color-gray-500)',
+                  background: index === 0 ? 'var(--color-gold-pale)' : 'transparent'
                 }}>
                   <div className="title">
                     #{index + 1} {club.name}
@@ -169,11 +169,11 @@ export default function DashboardAnalytics() {
           </div>
 
           <div className="card">
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
               📈 Активность по месяцам
             </h3>
             {stats.monthlyActivity.length === 0 || stats.monthlyActivity.every(v => v === 0) ? (
-              <p style={{ color: '#667085' }}>Нет данных</p>
+              <p style={{ color: 'var(--color-gray-500)' }}>Нет данных</p>
             ) : (
               <div>
                 <div style={{
@@ -196,13 +196,13 @@ export default function DashboardAnalytics() {
                         width: '100%',
                         height: `${(count / maxMonthly) * 100}%`,
                         minHeight: count > 0 ? '4px' : '0',
-                        background: '#174A7E',
+                        background: 'var(--color-primary-light)',
                         borderRadius: '4px 4px 0 0',
                         transition: 'height 0.5s ease'
                       }} />
                       <div style={{
                         fontSize: '10px',
-                        color: '#667085',
+                        color: 'var(--color-gray-500)',
                         marginTop: '4px',
                         textAlign: 'center'
                       }}>
@@ -211,7 +211,7 @@ export default function DashboardAnalytics() {
                     </div>
                   ))}
                 </div>
-                <div style={{ fontSize: '12px', color: '#667085', marginTop: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-500)', marginTop: '8px', textAlign: 'center' }}>
                   Всего мероприятий: {stats.monthlyActivity.reduce((a, b) => a + b, 0)}
                 </div>
               </div>
@@ -221,7 +221,7 @@ export default function DashboardAnalytics() {
 
         {/* БЫСТРЫЕ ДЕЙСТВИЯ */}
         <div className="card">
-          <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '12px' }}>
             🚀 Быстрые действия
           </h3>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>

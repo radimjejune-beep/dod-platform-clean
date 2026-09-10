@@ -138,10 +138,10 @@ export default function TutorInvitations() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { color: '#8A6A00', bg: '#FBF4DC', label: '⏳ Ожидает' },
-      'accepted': { color: '#16845B', bg: '#E8F5EF', label: '✅ Принято' },
-      'declined': { color: '#B3262E', bg: '#FCEBEC', label: '❌ Отклонено' },
-      'cancelled': { color: '#667085', bg: '#F4F6F9', label: '✖ Отменено' }
+      'pending': { color: 'var(--color-gold-dark)', bg: 'var(--color-gold-pale)', label: '⏳ Ожидает' },
+      'accepted': { color: 'var(--color-success)', bg: 'var(--color-success-bg)', label: '✅ Принято' },
+      'declined': { color: 'var(--color-error)', bg: 'var(--color-error-bg)', label: '❌ Отклонено' },
+      'cancelled': { color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)', label: '✖ Отменено' }
     };
     return badges[status] || badges['pending'];
   };
@@ -152,7 +152,7 @@ export default function TutorInvitations() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -165,8 +165,8 @@ export default function TutorInvitations() {
         <div className="container-page">
           <div className="empty-state">
             <div className="icon">⛔</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Доступ запрещён</p>
-            <p style={{ color: '#667085' }}>Только тьюторы и администраторы</p>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
+            <p style={{ color: 'var(--color-gray-500)' }}>Только тьюторы и администраторы</p>
           </div>
         </div>
       </div>
@@ -240,7 +240,7 @@ export default function TutorInvitations() {
                       left: 0,
                       right: 0,
                       background: 'white',
-                      border: '1px solid #E2E7EF',
+                      border: '1px solid var(--color-gray-200)',
                       borderRadius: '10px',
                       boxShadow: '0 8px 30px rgba(11, 31, 58, 0.12)',
                       maxHeight: '200px',
@@ -253,16 +253,16 @@ export default function TutorInvitations() {
                           style={{
                             padding: '10px 14px',
                             cursor: 'pointer',
-                            borderBottom: '1px solid #F4F6F9'
+                            borderBottom: '1px solid var(--color-gray-100)'
                           }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = '#F4F6F9'}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-gray-100)'}
                           onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
                           onClick={() => handleSelectTutor(t)}
                         >
-                          <div style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                          <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                             {t.full_name}
                           </div>
-                          <div style={{ fontSize: '12px', color: '#667085' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--color-gray-500)' }}>
                             📧 {t.email}
                           </div>
                         </div>
@@ -273,10 +273,10 @@ export default function TutorInvitations() {
                     <div style={{
                       marginTop: '6px',
                       padding: '6px 12px',
-                      background: '#E8F5EF',
+                      background: 'var(--color-success-bg)',
                       borderRadius: '6px',
                       fontSize: '13px',
-                      color: '#16845B',
+                      color: 'var(--color-success)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px'
@@ -284,7 +284,7 @@ export default function TutorInvitations() {
                       ✅ Выбран: <strong>{tutorSearch}</strong>
                       <button
                         type="button"
-                        style={{ background: 'none', border: 'none', color: '#B3262E', cursor: 'pointer', marginLeft: 'auto' }}
+                        style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', marginLeft: 'auto' }}
                         onClick={() => {
                           setForm({ ...form, tutor_id: '' });
                           setTutorSearch('');
@@ -414,7 +414,7 @@ export default function TutorInvitations() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                        <h3 style={{ fontSize: '17px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
+                        <h3 style={{ fontSize: '17px', fontWeight: '600', color: 'var(--color-primary)', margin: 0 }}>
                           {inv.event_title || 'Мероприятие'}
                         </h3>
                         <span className="tag" style={{ background: status.bg, color: status.color }}>
@@ -442,16 +442,16 @@ export default function TutorInvitations() {
                         </div>
                       )}
                       {inv.responsibilities && inv.responsibilities.length > 0 && (
-                        <div style={{ fontSize: '13px', color: '#667085', marginTop: '4px' }}>
+                        <div style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
                           📋 Обязанности: {inv.responsibilities.join(', ')}
                         </div>
                       )}
                       {inv.message && (
-                        <div style={{ fontSize: '13px', color: '#667085', marginTop: '4px' }}>
+                        <div style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
                           💬 {inv.message}
                         </div>
                       )}
-                      <div style={{ fontSize: '12px', color: '#98A2B3', marginTop: '4px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
                         👤 От: {inv.created_by_name || 'Неизвестно'}
                         {' • '}
                         📅 {new Date(inv.created_at).toLocaleString('ru-RU')}

@@ -97,21 +97,21 @@ export default function CoordinatorDashboard() {
           title: `${p.full_name} присоединился к движению`,
           date: p.created_at,
           icon: '👤',
-          color: '#16845B'
+          color: 'var(--color-success)'
         })),
         ...eventsThisMonth.slice(0, 3).map(e => ({
           type: 'event',
           title: `Создано мероприятие: ${e.title}`,
           date: e.event_date,
           icon: '📅',
-          color: '#174A7E'
+          color: 'var(--color-primary-light)'
         })),
         ...achievements.slice(0, 2).map(a => ({
           type: 'achievement',
           title: `Новое достижение: ${a.title}`,
           date: a.created_at,
           icon: '🏆',
-          color: '#C9A227'
+          color: 'var(--color-gold)'
         }))
       ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8);
 
@@ -141,7 +141,7 @@ export default function CoordinatorDashboard() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -154,28 +154,28 @@ export default function CoordinatorDashboard() {
         {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <div className="grid-4" style={{ marginBottom: '24px' }}>
-          <div className="stat-card" style={{ borderTop: '3px solid #174A7E' }}>
+          <div className="stat-card" style={{ borderTop: '3px solid var(--color-primary-light)' }}>
             <div className="number">{stats.totalParticipants}</div>
             <div className="label">👥 Участников</div>
-            <div style={{ fontSize: '11px', color: '#16845B' }}>
+            <div style={{ fontSize: '11px', color: 'var(--color-success)' }}>
               +{stats.newParticipantsThisMonth} за месяц
             </div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid #C9A227' }}>
+          <div className="stat-card" style={{ borderTop: '3px solid var(--color-gold)' }}>
             <div className="number">{stats.totalClubs}</div>
             <div className="label">🏫 КЮДов</div>
-            <div style={{ fontSize: '11px', color: '#667085' }}>
+            <div style={{ fontSize: '11px', color: 'var(--color-gray-500)' }}>
               📊 {stats.topClubs.length} активных
             </div>
           </div>
           <div className="stat-card" style={{ borderTop: '3px solid #6B46C1' }}>
             <div className="number">{stats.eventsThisMonth}</div>
             <div className="label">📅 Мероприятий за месяц</div>
-            <div style={{ fontSize: '11px', color: '#667085' }}>
+            <div style={{ fontSize: '11px', color: 'var(--color-gray-500)' }}>
               Всего: {stats.totalEvents}
             </div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid #16845B' }}>
+          <div className="stat-card" style={{ borderTop: '3px solid var(--color-success)' }}>
             <div className="number">{stats.totalAchievements}</div>
             <div className="label">🏆 Достижений</div>
           </div>
@@ -184,8 +184,8 @@ export default function CoordinatorDashboard() {
         {(stats.pendingAppeals > 0 || stats.consentsPending > 0 || stats.pendingTasks > 0) && (
           <div style={{
             padding: '14px 20px',
-            background: '#FBF4DC',
-            borderLeft: '4px solid #C9A227',
+            background: 'var(--color-gold-pale)',
+            borderLeft: '4px solid var(--color-gold)',
             borderRadius: '8px',
             marginBottom: '24px',
             display: 'flex',
@@ -217,11 +217,11 @@ export default function CoordinatorDashboard() {
 
         <div className="grid-2" style={{ marginBottom: '24px' }}>
           <div className="card">
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
               📈 Активность по месяцам
             </h3>
             {stats.monthlyData.length === 0 || stats.monthlyData.every(d => d.count === 0) ? (
-              <p style={{ color: '#98A2B3', textAlign: 'center', padding: '20px' }}>Нет данных</p>
+              <p style={{ color: 'var(--color-gray-400)', textAlign: 'center', padding: '20px' }}>Нет данных</p>
             ) : (
               <div>
                 <div style={{
@@ -244,13 +244,13 @@ export default function CoordinatorDashboard() {
                         width: '100%',
                         height: `${(item.count / maxMonthly) * 100}%`,
                         minHeight: item.count > 0 ? '4px' : '0',
-                        background: 'linear-gradient(180deg, #C9A227, #E8D9A8)',
+                        background: 'linear-gradient(180deg, var(--color-gold), var(--color-gold-light))',
                         borderRadius: '4px 4px 0 0',
                         transition: 'height 0.5s ease'
                       }} />
                       <div style={{
                         fontSize: '10px',
-                        color: '#667085',
+                        color: 'var(--color-gray-500)',
                         marginTop: '4px',
                         textAlign: 'center'
                       }}>
@@ -259,7 +259,7 @@ export default function CoordinatorDashboard() {
                     </div>
                   ))}
                 </div>
-                <div style={{ fontSize: '12px', color: '#667085', marginTop: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-500)', marginTop: '8px', textAlign: 'center' }}>
                   Всего мероприятий: {stats.monthlyData.reduce((a, b) => a + b.count, 0)}
                 </div>
               </div>
@@ -267,11 +267,11 @@ export default function CoordinatorDashboard() {
           </div>
 
           <div className="card">
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
               🏆 Топ-5 КЮДов
             </h3>
             {stats.topClubs.length === 0 ? (
-              <p style={{ color: '#98A2B3', textAlign: 'center', padding: '20px' }}>Нет данных</p>
+              <p style={{ color: 'var(--color-gray-400)', textAlign: 'center', padding: '20px' }}>Нет данных</p>
             ) : (
               stats.topClubs.map((club, index) => (
                 <div key={club.id} style={{
@@ -279,8 +279,8 @@ export default function CoordinatorDashboard() {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   padding: '8px 12px',
-                  borderBottom: index < stats.topClubs.length - 1 ? '1px solid #F4F6F9' : 'none',
-                  background: index === 0 ? '#FBF4DC' : 'transparent',
+                  borderBottom: index < stats.topClubs.length - 1 ? '1px solid var(--color-gray-100)' : 'none',
+                  background: index === 0 ? 'var(--color-gold-pale)' : 'transparent',
                   borderRadius: index === 0 ? '8px' : '0'
                 }}>
                   <span style={{ fontWeight: index === 0 ? '600' : '400' }}>
@@ -288,7 +288,7 @@ export default function CoordinatorDashboard() {
                     {' '}
                     {club.name}
                   </span>
-                  <span style={{ color: '#667085' }}>👥 {club.participants}</span>
+                  <span style={{ color: 'var(--color-gray-500)' }}>👥 {club.participants}</span>
                 </div>
               ))
             )}
@@ -304,11 +304,11 @@ export default function CoordinatorDashboard() {
 
         <div className="grid-2">
           <div className="card">
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
               📋 Последняя активность
             </h3>
             {stats.recentActivity.length === 0 ? (
-              <p style={{ color: '#98A2B3', textAlign: 'center', padding: '20px' }}>Активности пока нет</p>
+              <p style={{ color: 'var(--color-gray-400)', textAlign: 'center', padding: '20px' }}>Активности пока нет</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {stats.recentActivity.map((activity, index) => (
@@ -317,14 +317,14 @@ export default function CoordinatorDashboard() {
                     alignItems: 'center',
                     gap: '10px',
                     padding: '8px 12px',
-                    background: '#F8FAFC',
+                    background: 'var(--color-gray-50)',
                     borderRadius: '8px',
                     borderLeft: `3px solid ${activity.color}`
                   }}>
                     <span style={{ fontSize: '20px' }}>{activity.icon}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', color: '#0B1F3A' }}>{activity.title}</div>
-                      <div style={{ fontSize: '11px', color: '#98A2B3' }}>
+                      <div style={{ fontSize: '13px', color: 'var(--color-primary)' }}>{activity.title}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--color-gray-400)' }}>
                         📅 {new Date(activity.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
                       </div>
                     </div>
@@ -335,7 +335,7 @@ export default function CoordinatorDashboard() {
           </div>
 
           <div className="card">
-            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '12px' }}>
               ⚡ Быстрые действия
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -348,7 +348,7 @@ export default function CoordinatorDashboard() {
               <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', background: '#6B46C1', color: 'white' }} onClick={() => navigate('/consents-management')}>
                 📝 Управление согласиями
               </button>
-              <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', background: '#C9A227', color: '#0B1F3A' }} onClick={() => navigate('/documents-center')}>
+              <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', background: 'var(--color-gold)', color: 'var(--color-primary)' }} onClick={() => navigate('/documents-center')}>
                 📁 Центр документов
               </button>
               <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/tasks-planner')}>

@@ -86,13 +86,13 @@ export default function Clubs() {
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: #F0EDE8;
+            background: var(--color-gray-100);
           }
           .spinner {
             width: 48px;
             height: 48px;
-            border: 4px solid #E4DFD8;
-            border-top-color: #C9A227;
+            border: 4px solid var(--color-gray-200);
+            border-top-color: var(--color-gold);
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
           }
@@ -168,7 +168,7 @@ export default function Clubs() {
            ============================================================ */
         .page-background {
           min-height: 100vh;
-          background: #F0EDE8;
+          background: var(--color-gray-100);
         }
 
         .container-page {
@@ -192,22 +192,22 @@ export default function Clubs() {
         .page-header-left h1 {
           font-size: 24px;
           font-weight: 700;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin: 0;
         }
 
         .page-header-left p {
-          color: #667085;
+          color: var(--color-gray-500);
           margin: 4px 0 0 0;
         }
 
         .page-header-count {
           font-size: 14px;
-          color: #667085;
+          color: var(--color-gray-500);
           padding: 6px 16px;
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           border-radius: 20px;
-          border: 1px solid #E2E7EF;
+          border: 1px solid var(--color-gray-200);
           white-space: nowrap;
         }
 
@@ -227,10 +227,10 @@ export default function Clubs() {
           background: white;
           border-radius: 12px;
           padding: 24px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           text-decoration: none;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           transition: all 0.3s ease;
           text-align: center;
           cursor: pointer;
@@ -240,7 +240,7 @@ export default function Clubs() {
         .club-card:hover {
           transform: translateY(-6px);
           box-shadow: 0 12px 40px rgba(10,22,40,0.10);
-          border-color: #C9A227;
+          border-color: var(--color-gold);
         }
 
         .club-card-icon {
@@ -252,13 +252,13 @@ export default function Clubs() {
           font-family: 'Playfair Display', serif;
           font-size: 18px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0 0 4px 0;
         }
 
         .club-card-location {
           font-size: 14px;
-          color: #8A8480;
+          color: var(--color-gray-500);
           margin: 0 0 12px 0;
         }
 
@@ -267,9 +267,9 @@ export default function Clubs() {
           justify-content: center;
           gap: 16px;
           font-size: 13px;
-          color: #6B6561;
+          color: var(--color-gray-600);
           padding-top: 12px;
-          border-top: 1px solid #F0EDE8;
+          border-top: 1px solid var(--color-gray-100);
         }
 
         .club-card-stats span {
@@ -282,8 +282,8 @@ export default function Clubs() {
           display: inline-block;
           margin-top: 10px;
           padding: 4px 14px;
-          background: #FBF4DC;
-          color: #C9A227;
+          background: var(--color-gold-pale);
+          color: var(--color-gold);
           border-radius: 20px;
           font-size: 12px;
           font-weight: 500;
@@ -294,12 +294,12 @@ export default function Clubs() {
           bottom: 12px;
           right: 16px;
           font-size: 18px;
-          color: #E4DFD8;
+          color: var(--color-gray-200);
           transition: all 0.3s ease;
         }
 
         .club-card:hover .club-card-arrow {
-          color: #C9A227;
+          color: var(--color-gold);
           transform: translateX(4px);
         }
 
@@ -311,7 +311,7 @@ export default function Clubs() {
           padding: 60px 20px;
           background: white;
           border-radius: 12px;
-          border: 1px dashed #E4DFD8;
+          border: 1px dashed var(--color-gray-200);
         }
 
         .empty-icon {
@@ -323,13 +323,13 @@ export default function Clubs() {
         .empty-state h3 {
           font-family: 'Playfair Display', serif;
           font-size: 18px;
-          color: #4D4744;
+          color: var(--color-gray-700);
           margin-bottom: 4px;
         }
 
         .empty-state p {
           font-size: 14px;
-          color: #8A8480;
+          color: var(--color-gray-500);
         }
 
         /* ============================================================
@@ -338,8 +338,8 @@ export default function Clubs() {
         .spinner {
           width: 48px;
           height: 48px;
-          border: 4px solid #E4DFD8;
-          border-top-color: #C9A227;
+          border: 4px solid var(--color-gray-200);
+          border-top-color: var(--color-gold);
           border-radius: 50%;
           animation: spin 0.7s linear infinite;
         }

@@ -248,13 +248,13 @@ export default function Participants() {
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: #F0EDE8;
+            background: var(--color-gray-100);
           }
           .spinner {
             width: 48px;
             height: 48px;
-            border: 4px solid #E4DFD8;
-            border-top-color: #C9A227;
+            border: 4px solid var(--color-gray-200);
+            border-top-color: var(--color-gold);
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
           }
@@ -273,7 +273,7 @@ export default function Participants() {
         <div className="container-page">
           <div className="empty-state">
             <div className="empty-icon">⛔</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Доступ запрещён</p>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
           </div>
         </div>
         <Footer />
@@ -503,7 +503,7 @@ export default function Participants() {
            ============================================================ */
         .page-background {
           min-height: 100vh;
-          background: #F0EDE8;
+          background: var(--color-gray-100);
         }
 
         .container-page {
@@ -527,12 +527,12 @@ export default function Participants() {
         .page-header-left h1 {
           font-size: 24px;
           font-weight: 700;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin: 0;
         }
 
         .page-header-left p {
-          color: #667085;
+          color: var(--color-gray-500);
           margin: 4px 0 0 0;
         }
 
@@ -543,10 +543,10 @@ export default function Participants() {
 
         .btn-view {
           padding: 8px 16px;
-          border: 1.5px solid #E4DFD8;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 8px;
           background: transparent;
-          color: #6B6561;
+          color: var(--color-gray-600);
           font-size: 13px;
           font-weight: 500;
           cursor: pointer;
@@ -555,14 +555,14 @@ export default function Participants() {
         }
 
         .btn-view:hover {
-          background: #F8F6F2;
-          border-color: #C9A227;
+          background: var(--color-gray-50);
+          border-color: var(--color-gold);
         }
 
         .btn-view.active {
-          background: #0A1628;
+          background: var(--color-primary-dark);
           color: white;
-          border-color: #0A1628;
+          border-color: var(--color-primary-dark);
         }
 
         /* ============================================================
@@ -570,11 +570,11 @@ export default function Participants() {
            ============================================================ */
         .message-success {
           padding: 12px 16px;
-          background: #E8F5EF;
-          color: #16845B;
+          background: var(--color-success-bg);
+          color: var(--color-success);
           border-radius: 8px;
           margin-bottom: 16px;
-          border-left: 4px solid #16845B;
+          border-left: 4px solid var(--color-success);
         }
 
         /* ============================================================
@@ -582,11 +582,11 @@ export default function Participants() {
            ============================================================ */
         .filter-count {
           font-size: 14px;
-          color: #667085;
+          color: var(--color-gray-500);
           padding: 6px 16px;
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           border-radius: 20px;
-          border: 1px solid #E2E7EF;
+          border: 1px solid var(--color-gray-200);
           white-space: nowrap;
         }
 
@@ -599,16 +599,16 @@ export default function Participants() {
           gap: 6px;
           margin-top: 20px;
           padding-top: 16px;
-          border-top: 1px solid #E4DFD8;
+          border-top: 1px solid var(--color-gray-200);
           flex-wrap: wrap;
         }
 
         .pagination-btn {
           padding: 6px 14px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           border-radius: 6px;
           background: white;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           font-size: 14px;
           cursor: pointer;
           transition: all 0.2s ease;
@@ -618,13 +618,13 @@ export default function Participants() {
         }
 
         .pagination-btn:hover:not(:disabled) {
-          border-color: #C9A227;
-          background: #FBF4DC;
+          border-color: var(--color-gold);
+          background: var(--color-gold-pale);
         }
 
         .pagination-btn.active {
-          border-color: #C9A227;
-          background: #C9A227;
+          border-color: var(--color-gold);
+          background: var(--color-gold);
           color: white;
         }
 
@@ -635,7 +635,7 @@ export default function Participants() {
 
         .pagination-info {
           font-size: 13px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-left: 8px;
         }
 
@@ -657,7 +657,7 @@ export default function Participants() {
           overflow-x: auto;
           background: white;
           border-radius: 12px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
         }
 
@@ -669,8 +669,8 @@ export default function Participants() {
         }
 
         .table thead {
-          background: #F8F6F2;
-          border-bottom: 1px solid #E4DFD8;
+          background: var(--color-gray-50);
+          border-bottom: 1px solid var(--color-gray-200);
         }
 
         .table thead th {
@@ -678,19 +678,19 @@ export default function Participants() {
           padding: 12px 16px;
           font-size: 11px;
           font-weight: 600;
-          color: #8A8480;
+          color: var(--color-gray-500);
           text-transform: uppercase;
           letter-spacing: 0.06em;
         }
 
         .table tbody td {
           padding: 12px 16px;
-          border-bottom: 1px solid #F0EDE8;
-          color: #4D4744;
+          border-bottom: 1px solid var(--color-gray-100);
+          color: var(--color-gray-700);
         }
 
         .table tbody tr:hover td {
-          background: #F8F6F2;
+          background: var(--color-gray-50);
         }
 
         .table tbody tr:last-child td {
@@ -700,7 +700,7 @@ export default function Participants() {
         .empty-table {
           text-align: center;
           padding: 40px 20px !important;
-          color: #667085;
+          color: var(--color-gray-500);
         }
 
         .empty-table .empty-icon {
@@ -722,7 +722,7 @@ export default function Participants() {
           width: 32px;
           height: 32px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #0B1F3A, #174A7E);
+          background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
           color: white;
           display: flex;
           align-items: center;
@@ -737,13 +737,13 @@ export default function Participants() {
           height: 32px;
           border-radius: 50%;
           object-fit: cover;
-          border: 2px solid #E2E7EF;
+          border: 2px solid var(--color-gray-200);
           flex-shrink: 0;
         }
 
         .participant-name {
           font-weight: 500;
-          color: #0B1F3A;
+          color: var(--color-primary);
         }
 
         /* ============================================================
@@ -758,13 +758,13 @@ export default function Participants() {
         }
 
         .status-badge.active {
-          background: #E8F5EF;
-          color: #16845B;
+          background: var(--color-success-bg);
+          color: var(--color-success);
         }
 
         .status-badge.inactive {
-          background: #FCEBEC;
-          color: #B3262E;
+          background: var(--color-error-bg);
+          color: var(--color-error);
         }
 
         /* ============================================================
@@ -788,15 +788,15 @@ export default function Participants() {
         }
 
         .btn-icon.view:hover {
-          background: #EAF2FA;
+          background: var(--color-info-bg);
         }
 
         .btn-icon.edit:hover {
-          background: #FBF4DC;
+          background: var(--color-gold-pale);
         }
 
         .btn-icon.delete:hover {
-          background: #FCEBEC;
+          background: var(--color-error-bg);
         }
 
         /* ============================================================
@@ -815,7 +815,7 @@ export default function Participants() {
         .participant-card {
           background: white;
           border-radius: 12px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           padding: 20px;
           cursor: pointer;
@@ -838,7 +838,7 @@ export default function Participants() {
           width: 48px;
           height: 48px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #0B1F3A, #174A7E);
+          background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
           color: white;
           display: flex;
           align-items: center;
@@ -853,14 +853,14 @@ export default function Participants() {
           height: 48px;
           border-radius: 50%;
           object-fit: cover;
-          border: 2px solid #E2E7EF;
+          border: 2px solid var(--color-gray-200);
           flex-shrink: 0;
         }
 
         .card-name {
           font-size: 16px;
           font-weight: 600;
-          color: #0B1F3A;
+          color: var(--color-primary);
         }
 
         .card-body {
@@ -878,11 +878,11 @@ export default function Participants() {
         }
 
         .card-label {
-          color: #98A2B3;
+          color: var(--color-gray-400);
         }
 
         .card-value {
-          color: #0B1F3A;
+          color: var(--color-primary);
           font-weight: 500;
         }
 
@@ -891,7 +891,7 @@ export default function Participants() {
           justify-content: space-between;
           align-items: center;
           padding-top: 12px;
-          border-top: 1px solid #F0EDE8;
+          border-top: 1px solid var(--color-gray-100);
         }
 
         .card-actions {
@@ -914,7 +914,7 @@ export default function Participants() {
         }
 
         .empty-state p {
-          color: #667085;
+          color: var(--color-gray-500);
           font-size: 14px;
         }
 
@@ -924,8 +924,8 @@ export default function Participants() {
         .spinner {
           width: 48px;
           height: 48px;
-          border: 4px solid #E4DFD8;
-          border-top-color: #C9A227;
+          border: 4px solid var(--color-gray-200);
+          border-top-color: var(--color-gold);
           border-radius: 50%;
           animation: spin 0.7s linear infinite;
         }

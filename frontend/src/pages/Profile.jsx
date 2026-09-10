@@ -162,13 +162,13 @@ export default function Profile() {
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: #F0EDE8;
+            background: var(--color-gray-100);
           }
           .spinner {
             width: 48px;
             height: 48px;
-            border: 4px solid #E4DFD8;
-            border-top-color: #C9A227;
+            border: 4px solid var(--color-gray-200);
+            border-top-color: var(--color-gold);
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
           }
@@ -267,8 +267,8 @@ export default function Profile() {
                 style={{ 
                   width: `${consentStatus.percentage}%`,
                   background: consentStatus.percentage === 100 
-                    ? 'linear-gradient(90deg, #16845B, #1A7A4C)' 
-                    : 'linear-gradient(90deg, #C9A227, #E8D9A8)'
+                    ? 'linear-gradient(90deg, var(--color-success), var(--color-success))' 
+                    : 'linear-gradient(90deg, var(--color-gold), var(--color-gold-light))'
                 }}
               />
             </div>
@@ -535,8 +535,8 @@ export default function Profile() {
                         style={{ 
                           width: `${consentStatus.percentage}%`,
                           background: consentStatus.percentage === 100 
-                            ? 'linear-gradient(90deg, #16845B, #1A7A4C)' 
-                            : 'linear-gradient(90deg, #C9A227, #E8D9A8)'
+                            ? 'linear-gradient(90deg, var(--color-success), var(--color-success))' 
+                            : 'linear-gradient(90deg, var(--color-gold), var(--color-gold-light))'
                         }}
                       />
                     </div>
@@ -678,7 +678,7 @@ export default function Profile() {
            ============================================================ */
         .page-background {
           min-height: 100vh;
-          background: #F0EDE8;
+          background: var(--color-gray-100);
         }
 
         .container-page {
@@ -702,12 +702,12 @@ export default function Profile() {
         .page-header-left h1 {
           font-size: 24px;
           font-weight: 700;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin: 0;
         }
 
         .page-header-left p {
-          color: #667085;
+          color: var(--color-gray-500);
           margin: 4px 0 0 0;
         }
 
@@ -717,8 +717,8 @@ export default function Profile() {
           justify-content: center;
           gap: 8px;
           padding: 10px 24px;
-          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
-          color: #0A1628;
+          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
+          color: var(--color-primary-dark);
           border: none;
           border-radius: 8px;
           font-size: 14px;
@@ -746,21 +746,21 @@ export default function Profile() {
            ============================================================ */
         .message-success {
           padding: 14px 20px;
-          background: #E8F5EF;
-          color: #1A7A4C;
+          background: var(--color-success-bg);
+          color: var(--color-success);
           border-radius: 10px;
           margin-bottom: 20px;
-          border-left: 4px solid #1A7A4C;
+          border-left: 4px solid var(--color-success);
           font-weight: 500;
         }
 
         .message-error {
           padding: 14px 20px;
-          background: #FCEBEC;
-          color: #B3262E;
+          background: var(--color-error-bg);
+          color: var(--color-error);
           border-radius: 10px;
           margin-bottom: 20px;
-          border-left: 4px solid #B3262E;
+          border-left: 4px solid var(--color-error);
           font-weight: 500;
         }
 
@@ -770,7 +770,7 @@ export default function Profile() {
         .profile-card {
           background: white;
           border-radius: 16px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           margin-bottom: 24px;
           overflow: hidden;
@@ -781,7 +781,7 @@ export default function Profile() {
           align-items: center;
           gap: 24px;
           padding: 28px 32px;
-          background: linear-gradient(135deg, #0A1628 0%, #1A3555 100%);
+          background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary-light) 100%);
           color: white;
         }
 
@@ -816,7 +816,7 @@ export default function Profile() {
           font-size: 12px;
           font-weight: 500;
           background: rgba(255, 255, 255, 0.15);
-          color: #E8D9A8;
+          color: var(--color-gold-light);
         }
 
         .badge-status {
@@ -866,8 +866,8 @@ export default function Profile() {
            ============================================================ */
         .profile-consent-status {
           padding: 12px 32px;
-          background: #F8FAFC;
-          border-top: 1px solid #E4DFD8;
+          background: var(--color-gray-50);
+          border-top: 1px solid var(--color-gray-200);
           display: flex;
           align-items: center;
           gap: 16px;
@@ -879,24 +879,24 @@ export default function Profile() {
           align-items: center;
           gap: 8px;
           font-size: 13px;
-          color: #4D4744;
+          color: var(--color-gray-700);
           font-weight: 500;
           white-space: nowrap;
         }
 
         .consent-count {
           padding: 2px 10px;
-          background: #E4DFD8;
+          background: var(--color-gray-200);
           border-radius: 12px;
           font-size: 11px;
-          color: #4D4744;
+          color: var(--color-gray-700);
         }
 
         .consent-progress-bar {
           flex: 1;
           min-width: 120px;
           height: 6px;
-          background: #E4DFD8;
+          background: var(--color-gray-200);
           border-radius: 3px;
           overflow: hidden;
         }
@@ -918,7 +918,7 @@ export default function Profile() {
           background: white;
           padding: 4px 4px 0 4px;
           border-radius: 12px 12px 0 0;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           border-bottom: none;
         }
 
@@ -928,7 +928,7 @@ export default function Profile() {
           background: transparent;
           font-size: 14px;
           font-weight: 500;
-          color: #8A8480;
+          color: var(--color-gray-500);
           cursor: pointer;
           transition: all 0.3s ease;
           border-radius: 8px 8px 0 0;
@@ -936,14 +936,14 @@ export default function Profile() {
         }
 
         .tab-btn:hover {
-          color: #0A1628;
-          background: #F8F6F2;
+          color: var(--color-primary-dark);
+          background: var(--color-gray-50);
         }
 
         .tab-btn.active {
-          color: #0A1628;
+          color: var(--color-primary-dark);
           font-weight: 600;
-          background: #FBF4DC;
+          background: var(--color-gold-pale);
           position: relative;
         }
 
@@ -954,7 +954,7 @@ export default function Profile() {
           left: 0;
           right: 0;
           height: 2px;
-          background: #C9A227;
+          background: var(--color-gold);
         }
 
         /* ============================================================
@@ -964,7 +964,7 @@ export default function Profile() {
           background: white;
           border-radius: 0 0 12px 12px;
           padding: 28px 32px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           border-top: none;
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
         }
@@ -1001,41 +1001,41 @@ export default function Profile() {
         .form-group label {
           font-size: 13px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
         }
 
         .form-input {
           width: 100%;
           padding: 10px 14px;
-          border: 1.5px solid #E4DFD8;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 10px;
           font-size: 14px;
           font-family: 'Inter', sans-serif;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           background: white;
           transition: all 0.3s ease;
           outline: none;
         }
 
         .form-input:focus {
-          border-color: #C9A227;
+          border-color: var(--color-gold);
           box-shadow: 0 0 0 3px rgba(201,162,39,0.08);
         }
 
         .form-input.disabled {
-          background: #F8F6F2;
-          color: #8A8480;
+          background: var(--color-gray-50);
+          color: var(--color-gray-500);
           cursor: not-allowed;
         }
 
         .form-textarea {
           width: 100%;
           padding: 10px 14px;
-          border: 1.5px solid #E4DFD8;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 10px;
           font-size: 14px;
           font-family: 'Inter', sans-serif;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           background: white;
           transition: all 0.3s ease;
           outline: none;
@@ -1044,34 +1044,34 @@ export default function Profile() {
         }
 
         .form-textarea:focus {
-          border-color: #C9A227;
+          border-color: var(--color-gold);
           box-shadow: 0 0 0 3px rgba(201,162,39,0.08);
         }
 
         .form-hint {
           font-size: 11px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-top: 2px;
         }
 
         .info-box {
           padding: 12px 16px;
-          background: #EAF2FA;
+          background: var(--color-info-bg);
           border-radius: 8px;
           font-size: 13px;
-          color: #174A7E;
+          color: var(--color-primary-light);
           margin-bottom: 18px;
           line-height: 1.6;
         }
 
         .warning-box {
           padding: 12px 16px;
-          background: #FBF4DC;
+          background: var(--color-gold-pale);
           border-radius: 8px;
           font-size: 13px;
-          color: #8A6A00;
+          color: var(--color-gold-dark);
           margin-top: 12px;
-          border-left: 3px solid #C9A227;
+          border-left: 3px solid var(--color-gold);
         }
 
         /* ============================================================
@@ -1082,7 +1082,7 @@ export default function Profile() {
           align-items: center;
           gap: 16px;
           padding: 16px 20px;
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           border-radius: 10px;
           margin-bottom: 18px;
           flex-wrap: wrap;
@@ -1100,13 +1100,13 @@ export default function Profile() {
 
         .consents-title {
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           font-size: 14px;
         }
 
         .consents-text {
           font-size: 13px;
-          color: #667085;
+          color: var(--color-gray-500);
         }
 
         .consents-progress {
@@ -1116,7 +1116,7 @@ export default function Profile() {
 
         .consents-progress-bar {
           height: 6px;
-          background: #E4DFD8;
+          background: var(--color-gray-200);
           border-radius: 3px;
           overflow: hidden;
         }
@@ -1129,7 +1129,7 @@ export default function Profile() {
 
         .consent-item {
           padding: 14px 16px;
-          border: 1.5px solid #E4DFD8;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 10px;
           margin-bottom: 12px;
           transition: all 0.3s ease;
@@ -1137,11 +1137,11 @@ export default function Profile() {
         }
 
         .consent-item:hover {
-          border-color: #C9A227;
+          border-color: var(--color-gold);
         }
 
         .consent-item:has(input:checked) {
-          border-color: #16845B;
+          border-color: var(--color-success);
           background: #F6FEF9;
         }
 
@@ -1156,31 +1156,31 @@ export default function Profile() {
           width: 20px;
           height: 20px;
           margin-top: 2px;
-          accent-color: #C9A227;
+          accent-color: var(--color-gold);
           cursor: pointer;
           flex-shrink: 0;
         }
 
         .consent-label strong {
           font-size: 14px;
-          color: #0A1628;
+          color: var(--color-primary-dark);
         }
 
         .consent-description {
           font-size: 13px;
-          color: #667085;
+          color: var(--color-gray-500);
           margin-top: 4px;
           line-height: 1.5;
         }
 
         .consents-footer {
           padding: 12px 16px;
-          background: #E8F5EF;
+          background: var(--color-success-bg);
           border-radius: 8px;
           font-size: 13px;
-          color: #16845B;
+          color: var(--color-success);
           margin-top: 12px;
-          border-left: 3px solid #16845B;
+          border-left: 3px solid var(--color-success);
         }
 
         /* ============================================================
@@ -1189,7 +1189,7 @@ export default function Profile() {
         .form-actions-bottom {
           margin-top: 24px;
           padding-top: 20px;
-          border-top: 1px solid #E4DFD8;
+          border-top: 1px solid var(--color-gray-200);
         }
 
         .btn-save-full {
@@ -1198,8 +1198,8 @@ export default function Profile() {
           justify-content: center;
           gap: 8px;
           padding: 14px 40px;
-          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
-          color: #0A1628;
+          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
+          color: var(--color-primary-dark);
           border: none;
           border-radius: 10px;
           font-size: 16px;
@@ -1228,8 +1228,8 @@ export default function Profile() {
         .spinner {
           width: 48px;
           height: 48px;
-          border: 4px solid #E4DFD8;
-          border-top-color: #C9A227;
+          border: 4px solid var(--color-gray-200);
+          border-top-color: var(--color-gold);
           border-radius: 50%;
           animation: spin 0.7s linear infinite;
         }

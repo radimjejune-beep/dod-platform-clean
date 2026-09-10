@@ -117,20 +117,20 @@ export default function Notifications({ profile }) {
   // ============================================================
   const getColor = (type) => {
     const colors = {
-      'event': '#174A7E',
-      'achievement': '#C9A227',
+      'event': 'var(--color-primary-light)',
+      'achievement': 'var(--color-gold)',
       'assignment': '#6B46C1',
-      'appeal': '#B3262E',
-      'system': '#667085',
-      'club': '#0B1F3A',
-      'review': '#16845B',
-      'president': '#C9A227',
-      'invitation': '#174A7E',
-      'report': '#8A6A00',
-      'deadline': '#B3262E',
+      'appeal': 'var(--color-error)',
+      'system': 'var(--color-gray-500)',
+      'club': 'var(--color-primary)',
+      'review': 'var(--color-success)',
+      'president': 'var(--color-gold)',
+      'invitation': 'var(--color-primary-light)',
+      'report': 'var(--color-gold-dark)',
+      'deadline': 'var(--color-error)',
       'mention': '#6B46C1',
     };
-    return colors[type] || '#667085';
+    return colors[type] || 'var(--color-gray-500)';
   };
 
   // ============================================================
@@ -264,15 +264,15 @@ export default function Notifications({ profile }) {
           cursor: pointer;
           font-size: 20px;
           transition: all 0.2s ease;
-          color: #667085;
+          color: var(--color-gray-500);
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
         .notifications-btn:hover {
-          background: #F4F6F9;
-          color: #0B1F3A;
+          background: var(--color-gray-100);
+          color: var(--color-primary);
         }
 
         .notifications-icon {
@@ -284,7 +284,7 @@ export default function Notifications({ profile }) {
           position: absolute;
           top: 0;
           right: 0;
-          background: #B3262E;
+          background: var(--color-error);
           color: white;
           font-size: 10px;
           font-weight: 700;
@@ -308,7 +308,7 @@ export default function Notifications({ profile }) {
           background: white;
           border-radius: 12px;
           box-shadow: 0 8px 40px rgba(11, 31, 58, 0.15);
-          border: 1px solid #E2E7EF;
+          border: 1px solid var(--color-gray-200);
           overflow: hidden;
           z-index: 1000;
           display: flex;
@@ -320,19 +320,19 @@ export default function Notifications({ profile }) {
           justify-content: space-between;
           align-items: center;
           padding: 12px 16px;
-          border-bottom: 1px solid #F4F6F9;
+          border-bottom: 1px solid var(--color-gray-100);
           flex-shrink: 0;
         }
 
         .notifications-title {
           font-size: 15px;
           font-weight: 600;
-          color: #0B1F3A;
+          color: var(--color-primary);
         }
 
         .notifications-mark-all {
           font-size: 12px;
-          color: #174A7E;
+          color: var(--color-primary-light);
           background: none;
           border: none;
           cursor: pointer;
@@ -342,7 +342,7 @@ export default function Notifications({ profile }) {
         }
 
         .notifications-mark-all:hover {
-          background: #EAF2FA;
+          background: var(--color-info-bg);
         }
 
         .notifications-list {
@@ -354,7 +354,7 @@ export default function Notifications({ profile }) {
         .notifications-section-title {
           font-size: 11px;
           font-weight: 600;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           text-transform: uppercase;
           letter-spacing: 0.5px;
           padding: 8px 16px 4px;
@@ -372,7 +372,7 @@ export default function Notifications({ profile }) {
         }
 
         .notification-item:hover {
-          background: #F8FAFC;
+          background: var(--color-gray-50);
         }
 
         .notification-item.unread {
@@ -399,13 +399,13 @@ export default function Notifications({ profile }) {
         .notification-title {
           font-size: 13px;
           font-weight: 600;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin-bottom: 2px;
         }
 
         .notification-message {
           font-size: 13px;
-          color: #667085;
+          color: var(--color-gray-500);
           line-height: 1.4;
           display: -webkit-box;
           -webkit-line-clamp: 2;
@@ -415,7 +415,7 @@ export default function Notifications({ profile }) {
 
         .notification-time {
           font-size: 11px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-top: 4px;
         }
 
@@ -423,7 +423,7 @@ export default function Notifications({ profile }) {
           width: 8px;
           height: 8px;
           border-radius: 50%;
-          background: #174A7E;
+          background: var(--color-primary-light);
           flex-shrink: 0;
           margin-top: 6px;
         }
@@ -435,7 +435,7 @@ export default function Notifications({ profile }) {
         .notifications-empty {
           padding: 30px 20px;
           text-align: center;
-          color: #98A2B3;
+          color: var(--color-gray-400);
         }
 
         .notifications-empty-icon {
@@ -452,7 +452,7 @@ export default function Notifications({ profile }) {
         .notifications-loading {
           padding: 30px 20px;
           text-align: center;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           font-size: 14px;
         }
 

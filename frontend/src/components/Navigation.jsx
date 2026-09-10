@@ -187,7 +187,7 @@ export default function Navigation({ profile }) {
         <style>{`
           .nav {
             background: white;
-            border-bottom: 1px solid #E4DFD8;
+            border-bottom: 1px solid var(--color-gray-200);
             padding: 0 24px;
             position: sticky;
             top: 0;
@@ -209,7 +209,7 @@ export default function Navigation({ profile }) {
             font-family: 'Playfair Display', serif;
             font-size: 20px;
             font-weight: 700;
-            color: #0A1628;
+            color: var(--color-primary-dark);
           }
           .nav-logo img { height: 34px; width: auto; }
           .btn-gold {
@@ -218,8 +218,8 @@ export default function Navigation({ profile }) {
             justify-content: center;
             gap: 10px;
             padding: 10px 28px;
-            background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
-            color: #0A1628;
+            background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
+            color: var(--color-primary-dark);
             border: none;
             border-radius: 8px;
             font-family: 'Inter', sans-serif;
@@ -415,7 +415,7 @@ export default function Navigation({ profile }) {
            ============================================================ */
         .nav {
           background: white;
-          border-bottom: 1px solid #E4DFD8;
+          border-bottom: 1px solid var(--color-gray-200);
           padding: 0 24px;
           position: sticky;
           top: 0;
@@ -448,10 +448,10 @@ export default function Navigation({ profile }) {
           background: transparent;
           border-radius: 8px;
           cursor: pointer;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           transition: all 0.25s ease;
         }
-        .nav-burger:hover { background: #F8F6F2; }
+        .nav-burger:hover { background: var(--color-gray-50); }
 
         .nav-right {
           display: flex;
@@ -466,13 +466,13 @@ export default function Navigation({ profile }) {
         .nav-notifications { position: relative; }
         .nav-notif-btn {
           width: 40px; height: 40px; border: none; background: transparent; border-radius: 50%;
-          cursor: pointer; color: #6B6561; transition: all 0.25s ease;
+          cursor: pointer; color: var(--color-gray-600); transition: all 0.25s ease;
           display: flex; align-items: center; justify-content: center; position: relative;
         }
-        .nav-notif-btn:hover { background: #F8F6F2; color: #0A1628; }
+        .nav-notif-btn:hover { background: var(--color-gray-50); color: var(--color-primary-dark); }
         .nav-notif-badge {
           position: absolute; top: 3px; right: 3px;
-          background: #B3262E; color: white; font-size: 10px; font-weight: 700;
+          background: var(--color-error); color: white; font-size: 10px; font-weight: 700;
           width: 18px; height: 18px; border-radius: 50%;
           display: flex; align-items: center; justify-content: center;
         }
@@ -481,38 +481,38 @@ export default function Navigation({ profile }) {
           width: 360px; max-height: 440px;
           background: white; border-radius: 12px;
           box-shadow: 0 12px 48px rgba(10,22,40,0.12);
-          border: 1px solid #E4DFD8; overflow: hidden; z-index: 1000;
+          border: 1px solid var(--color-gray-200); overflow: hidden; z-index: 1000;
           display: flex; flex-direction: column;
         }
         .nav-notif-header {
           display: flex; justify-content: space-between; align-items: center;
-          padding: 14px 18px; border-bottom: 1px solid #F0EDE8;
-          font-weight: 600; font-size: 14px; color: #0A1628;
+          padding: 14px 18px; border-bottom: 1px solid var(--color-gray-100);
+          font-weight: 600; font-size: 14px; color: var(--color-primary-dark);
           font-family: 'Playfair Display', serif; flex-shrink: 0;
         }
         .nav-notif-markall {
-          background: none; border: none; color: #6B6561; font-size: 12px;
+          background: none; border: none; color: var(--color-gray-600); font-size: 12px;
           cursor: pointer; font-weight: 500; font-family: 'Inter', sans-serif;
         }
-        .nav-notif-markall:hover { color: #0A1628; }
+        .nav-notif-markall:hover { color: var(--color-primary-dark); }
         .nav-notif-list { overflow-y: auto; flex: 1; }
         .nav-notif-item {
-          padding: 12px 18px; border-bottom: 1px solid #F0EDE8;
+          padding: 12px 18px; border-bottom: 1px solid var(--color-gray-100);
           cursor: pointer; transition: all 0.2s ease;
         }
-        .nav-notif-item:hover { background: #F8F6F2; }
-        .nav-notif-item.unread { background: #FBF4DC; border-left: 3px solid #C9A227; }
-        .nav-notif-title { font-weight: 600; font-size: 13px; color: #0A1628; }
-        .nav-notif-message { font-size: 13px; color: #6B6561; margin-top: 2px; }
-        .nav-notif-time { font-size: 11px; color: #A8A29A; margin-top: 4px; }
-        .nav-notif-empty { padding: 32px; text-align: center; color: #A8A29A; font-size: 14px; }
+        .nav-notif-item:hover { background: var(--color-gray-50); }
+        .nav-notif-item.unread { background: var(--color-gold-pale); border-left: 3px solid var(--color-gold); }
+        .nav-notif-title { font-weight: 600; font-size: 13px; color: var(--color-primary-dark); }
+        .nav-notif-message { font-size: 13px; color: var(--color-gray-600); margin-top: 2px; }
+        .nav-notif-time { font-size: 11px; color: var(--color-gray-400); margin-top: 4px; }
+        .nav-notif-empty { padding: 32px; text-align: center; color: var(--color-gray-400); font-size: 14px; }
         .nav-notif-all {
           display: block; padding: 12px 18px; text-align: center;
-          border-top: 1px solid #F0EDE8; color: #0A1628;
+          border-top: 1px solid var(--color-gray-100); color: var(--color-primary-dark);
           text-decoration: none; font-size: 13px; font-weight: 500;
           font-family: 'Inter', sans-serif; flex-shrink: 0;
         }
-        .nav-notif-all:hover { background: #F8F6F2; }
+        .nav-notif-all:hover { background: var(--color-gray-50); }
 
         /* ============================================================
            ПРОФИЛЬ
@@ -522,53 +522,53 @@ export default function Navigation({ profile }) {
           display: flex; align-items: center; gap: 8px;
           padding: 4px 14px 4px 4px; border: none; background: transparent;
           border-radius: 30px; cursor: pointer; transition: all 0.25s ease;
-          font-family: 'Inter', sans-serif; font-size: 14px; color: #0A1628;
+          font-family: 'Inter', sans-serif; font-size: 14px; color: var(--color-primary-dark);
         }
-        .nav-profile-btn:hover { background: #F8F6F2; }
+        .nav-profile-btn:hover { background: var(--color-gray-50); }
         .nav-avatar {
           width: 36px; height: 36px; border-radius: 50%;
-          background: linear-gradient(135deg, #0A1628, #1A3555);
+          background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary-light));
           display: flex; align-items: center; justify-content: center;
           color: white; font-size: 14px; font-weight: 600; flex-shrink: 0;
           overflow: hidden;
         }
         .nav-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .nav-profile-name {
-          font-size: 14px; font-weight: 500; color: #0A1628;
+          font-size: 14px; font-weight: 500; color: var(--color-primary-dark);
           max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .nav-profile-btn svg { color: #A8A29A; flex-shrink: 0; transition: transform 0.2s ease; }
+        .nav-profile-btn svg { color: var(--color-gray-400); flex-shrink: 0; transition: transform 0.2s ease; }
         .nav-profile-btn:hover svg { transform: rotate(180deg); }
         .nav-profile-dropdown {
           position: absolute; top: calc(100% + 10px); right: 0;
           width: 240px; background: white; border-radius: 12px;
           box-shadow: 0 12px 48px rgba(10,22,40,0.12);
-          border: 1px solid #E4DFD8; overflow: hidden; z-index: 1000;
+          border: 1px solid var(--color-gray-200); overflow: hidden; z-index: 1000;
         }
         .nav-profile-header {
           display: flex; align-items: center; gap: 12px; padding: 16px 18px;
         }
         .nav-profile-avatar {
           width: 40px; height: 40px; border-radius: 50%;
-          background: linear-gradient(135deg, #0A1628, #1A3555);
+          background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary-light));
           display: flex; align-items: center; justify-content: center;
           color: white; font-size: 14px; font-weight: 600; flex-shrink: 0;
           overflow: hidden;
         }
         .nav-profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .nav-profile-fullname { font-weight: 600; font-size: 14px; color: #0A1628; }
-        .nav-profile-role { font-size: 12px; color: #6B6561; text-transform: capitalize; }
-        .nav-profile-divider { height: 1px; background: #F0EDE8; margin: 0 12px; }
+        .nav-profile-fullname { font-weight: 600; font-size: 14px; color: var(--color-primary-dark); }
+        .nav-profile-role { font-size: 12px; color: var(--color-gray-600); text-transform: capitalize; }
+        .nav-profile-divider { height: 1px; background: var(--color-gray-100); margin: 0 12px; }
         .nav-profile-item {
           display: flex; align-items: center; gap: 10px;
-          padding: 10px 18px; color: #0A1628; text-decoration: none;
+          padding: 10px 18px; color: var(--color-primary-dark); text-decoration: none;
           font-size: 14px; transition: all 0.2s ease;
           border: none; background: none; width: 100%; cursor: pointer;
           font-family: 'Inter', sans-serif; text-align: left;
         }
-        .nav-profile-item:hover { background: #F8F6F2; }
-        .nav-profile-logout { color: #B3262E; }
-        .nav-profile-logout:hover { background: #FCEBEC; }
+        .nav-profile-item:hover { background: var(--color-gray-50); }
+        .nav-profile-logout { color: var(--color-error); }
+        .nav-profile-logout:hover { background: var(--color-error-bg); }
 
         /* ============================================================
            ОВЕРЛЕЙ
@@ -615,7 +615,7 @@ export default function Navigation({ profile }) {
           align-items: center;
           justify-content: space-between;
           padding: 16px 20px;
-          border-bottom: 1px solid #F0EDE8;
+          border-bottom: 1px solid var(--color-gray-100);
           flex-shrink: 0;
         }
         .sidebar-brand {
@@ -632,7 +632,7 @@ export default function Navigation({ profile }) {
           font-family: 'Playfair Display', serif;
           font-size: 18px;
           font-weight: 700;
-          color: #0A1628;
+          color: var(--color-primary-dark);
         }
         .sidebar-close {
           width: 36px;
@@ -641,27 +641,27 @@ export default function Navigation({ profile }) {
           background: transparent;
           border-radius: 50%;
           font-size: 18px;
-          color: #6B6561;
+          color: var(--color-gray-600);
           cursor: pointer;
           transition: all 0.25s ease;
           display: flex;
           align-items: center;
           justify-content: center;
         }
-        .sidebar-close:hover { background: #F8F6F2; }
+        .sidebar-close:hover { background: var(--color-gray-50); }
 
         .sidebar-profile {
           display: flex;
           align-items: center;
           gap: 12px;
           padding: 16px 20px;
-          border-bottom: 1px solid #F0EDE8;
+          border-bottom: 1px solid var(--color-gray-100);
         }
         .sidebar-avatar {
           width: 40px;
           height: 40px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #0A1628, #1A3555);
+          background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary-light));
           display: flex;
           align-items: center;
           justify-content: center;
@@ -675,11 +675,11 @@ export default function Navigation({ profile }) {
         .sidebar-profile-name {
           font-size: 14px;
           font-weight: 500;
-          color: #0A1628;
+          color: var(--color-primary-dark);
         }
         .sidebar-profile-role {
           font-size: 12px;
-          color: #6B6561;
+          color: var(--color-gray-600);
           text-transform: capitalize;
         }
 
@@ -695,14 +695,14 @@ export default function Navigation({ profile }) {
           gap: 12px;
           padding: 10px 14px;
           border-radius: 8px;
-          color: #6B6561;
+          color: var(--color-gray-600);
           text-decoration: none;
           font-size: 14px;
           font-weight: 500;
           transition: all 0.2s ease;
         }
-        .sidebar-link:hover { background: #F8F6F2; color: #0A1628; }
-        .sidebar-link.active { background: #FBF4DC; color: #C9A227; }
+        .sidebar-link:hover { background: var(--color-gray-50); color: var(--color-primary-dark); }
+        .sidebar-link.active { background: var(--color-gold-pale); color: var(--color-gold); }
         .sidebar-link-icon { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
 
         .sidebar-group { margin-bottom: 2px; }
@@ -715,16 +715,16 @@ export default function Navigation({ profile }) {
           border: none;
           background: none;
           border-radius: 8px;
-          color: #6B6561;
+          color: var(--color-gray-600);
           font-size: 14px;
           font-weight: 500;
           cursor: pointer;
           transition: all 0.2s ease;
           font-family: 'Inter', sans-serif;
         }
-        .sidebar-group-toggle:hover { background: #F8F6F2; color: #0A1628; }
-        .sidebar-group-toggle.active { background: #FBF4DC; color: #C9A227; }
-        .sidebar-group-arrow { margin-left: auto; font-size: 12px; color: #A8A29A; }
+        .sidebar-group-toggle:hover { background: var(--color-gray-50); color: var(--color-primary-dark); }
+        .sidebar-group-toggle.active { background: var(--color-gold-pale); color: var(--color-gold); }
+        .sidebar-group-arrow { margin-left: auto; font-size: 12px; color: var(--color-gray-400); }
         .sidebar-group-children {
           padding-left: 16px;
         }
@@ -735,7 +735,7 @@ export default function Navigation({ profile }) {
 
         .sidebar-footer {
           padding: 12px 20px 20px;
-          border-top: 1px solid #F0EDE8;
+          border-top: 1px solid var(--color-gray-100);
           flex-shrink: 0;
         }
         .sidebar-logout {
@@ -746,7 +746,7 @@ export default function Navigation({ profile }) {
           border: none;
           background: none;
           border-radius: 8px;
-          color: #B3262E;
+          color: var(--color-error);
           font-size: 14px;
           font-weight: 500;
           cursor: pointer;
@@ -754,7 +754,7 @@ export default function Navigation({ profile }) {
           font-family: 'Inter', sans-serif;
           width: 100%;
         }
-        .sidebar-logout:hover { background: #FCEBEC; }
+        .sidebar-logout:hover { background: var(--color-error-bg); }
 
         @media (max-width: 768px) {
           .nav { padding: 0 16px; }

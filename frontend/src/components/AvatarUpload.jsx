@@ -127,16 +127,16 @@ export default function AvatarUpload({ currentAvatar, onAvatarUpdated, userId })
           borderRadius: '50%',
           cursor: 'pointer',
           overflow: 'hidden',
-          border: '3px solid #C9A227',
-          background: '#F4F6F9',
+          border: '3px solid var(--color-gold)',
+          background: 'var(--color-gray-100)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           transition: 'all 0.3s ease',
           position: 'relative'
         }}
-        onMouseEnter={(e) => e.currentTarget.style.borderColor = '#E8D9A8'}
-        onMouseLeave={(e) => e.currentTarget.style.borderColor = '#C9A227'}
+        onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--color-gold-light)'}
+        onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--color-gold)'}
       >
         {loading ? (
           <div className="spinner" style={{ width: '30px', height: '30px' }} />
@@ -151,7 +151,7 @@ export default function AvatarUpload({ currentAvatar, onAvatarUpdated, userId })
             }}
           />
         ) : (
-          <span style={{ fontSize: '40px', color: '#98A2B3' }}>📷</span>
+          <span style={{ fontSize: '40px', color: 'var(--color-gray-400)' }}>📷</span>
         )}
         <div
           style={{
@@ -179,12 +179,12 @@ export default function AvatarUpload({ currentAvatar, onAvatarUpdated, userId })
       />
 
       {error && (
-        <div style={{ color: '#B3262E', fontSize: '12px', textAlign: 'center', maxWidth: '200px' }}>
+        <div style={{ color: 'var(--color-error)', fontSize: '12px', textAlign: 'center', maxWidth: '200px' }}>
           {error}
         </div>
       )}
 
-      <div style={{ fontSize: '11px', color: '#98A2B3', textAlign: 'center' }}>
+      <div style={{ fontSize: '11px', color: 'var(--color-gray-400)', textAlign: 'center' }}>
         Максимум 500KB<br />
         Рекомендуемый размер: 200×200
       </div>

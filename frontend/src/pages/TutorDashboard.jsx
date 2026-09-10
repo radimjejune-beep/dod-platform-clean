@@ -55,7 +55,7 @@ export default function TutorDashboard() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -80,13 +80,13 @@ export default function TutorDashboard() {
             <div className="number">{stats.reviews}</div>
             <div className="label">Оценок</div>
           </div>
-          <div className="stat-card" style={{ borderTop: stats.pending_invitations > 0 ? '3px solid #C9A227' : '3px solid transparent' }}>
-            <div className="number" style={{ color: stats.pending_invitations > 0 ? '#C9A227' : '#667085' }}>
+          <div className="stat-card" style={{ borderTop: stats.pending_invitations > 0 ? '3px solid var(--color-gold)' : '3px solid transparent' }}>
+            <div className="number" style={{ color: stats.pending_invitations > 0 ? 'var(--color-gold)' : 'var(--color-gray-500)' }}>
               {stats.pending_invitations}
             </div>
             <div className="label">Приглашений</div>
             {stats.pending_invitations > 0 && (
-              <div style={{ fontSize: '11px', color: '#C9A227' }}>
+              <div style={{ fontSize: '11px', color: 'var(--color-gold)' }}>
                 ⏳ Ожидают ответа
               </div>
             )}
@@ -95,15 +95,15 @@ export default function TutorDashboard() {
 
         <div className="grid-2">
           <div className="card">
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
               📨 Ожидающие приглашения
             </h3>
             {pendingInvitations.length === 0 ? (
-              <p style={{ color: '#667085' }}>Нет ожидающих приглашений</p>
+              <p style={{ color: 'var(--color-gray-500)' }}>Нет ожидающих приглашений</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {pendingInvitations.map((inv) => (
-                  <div key={inv.id} className="list-item" style={{ borderLeftColor: '#C9A227' }}>
+                  <div key={inv.id} className="list-item" style={{ borderLeftColor: 'var(--color-gold)' }}>
                     <div className="title">{inv.event_title || 'Мероприятие'}</div>
                     <div className="subtitle">
                       📅 {inv.event_date ? new Date(inv.event_date).toLocaleDateString('ru-RU') : ''}
@@ -139,15 +139,15 @@ export default function TutorDashboard() {
           </div>
 
           <div className="card">
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
               📋 Мои мероприятия
             </h3>
             {recentAssignments.length === 0 ? (
-              <p style={{ color: '#667085' }}>У вас пока нет назначений</p>
+              <p style={{ color: 'var(--color-gray-500)' }}>У вас пока нет назначений</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {recentAssignments.map((assignment) => (
-                  <div key={assignment.id} className="list-item" style={{ borderLeftColor: '#174A7E' }}>
+                  <div key={assignment.id} className="list-item" style={{ borderLeftColor: 'var(--color-primary-light)' }}>
                     <div className="title">{assignment.event_title || 'Мероприятие'}</div>
                     <div className="subtitle">
                       📅 {assignment.event_date ? new Date(assignment.event_date).toLocaleDateString('ru-RU') : ''}
@@ -183,7 +183,7 @@ export default function TutorDashboard() {
         </div>
 
         <div className="card" style={{ marginTop: '20px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '12px' }}>
             ⚡ Быстрые действия
           </h3>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>

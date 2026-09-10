@@ -183,22 +183,22 @@ export default function MassNotifications() {
 
   const getPriorityColor = (priority) => {
     const colors = {
-      'low': '#16845B',
-      'normal': '#C9A227',
-      'high': '#B3262E',
-      'urgent': '#B3262E'
+      'low': 'var(--color-success)',
+      'normal': 'var(--color-gold)',
+      'high': 'var(--color-error)',
+      'urgent': 'var(--color-error)'
     };
-    return colors[priority] || '#667085';
+    return colors[priority] || 'var(--color-gray-500)';
   };
 
   const getPriorityBg = (priority) => {
     const colors = {
-      'low': '#E8F5EF',
-      'normal': '#FBF4DC',
-      'high': '#FCEBEC',
-      'urgent': '#FCEBEC'
+      'low': 'var(--color-success-bg)',
+      'normal': 'var(--color-gold-pale)',
+      'high': 'var(--color-error-bg)',
+      'urgent': 'var(--color-error-bg)'
     };
-    return colors[priority] || '#F4F6F9';
+    return colors[priority] || 'var(--color-gray-100)';
   };
 
   const formatDate = (date) => {
@@ -213,7 +213,7 @@ export default function MassNotifications() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -242,15 +242,15 @@ export default function MassNotifications() {
 
         {/* СТАТИСТИКА */}
         <div className="stats-grid">
-          <div className="stat-card" style={{ borderTop: '3px solid #174A7E' }}>
+          <div className="stat-card" style={{ borderTop: '3px solid var(--color-primary-light)' }}>
             <div className="stat-number">{stats.totalUsers}</div>
             <div className="stat-label">👥 Всего пользователей</div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid #16845B' }}>
+          <div className="stat-card" style={{ borderTop: '3px solid var(--color-success)' }}>
             <div className="stat-number">{stats.participants}</div>
             <div className="stat-label">👤 Участников</div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid #C9A227' }}>
+          <div className="stat-card" style={{ borderTop: '3px solid var(--color-gold)' }}>
             <div className="stat-number">{stats.coordinators}</div>
             <div className="stat-label">🏫 Координаторов</div>
           </div>
@@ -446,16 +446,16 @@ export default function MassNotifications() {
                   'failed': '❌ Ошибка'
                 };
                 const statusColor = {
-                  'pending': '#C9A227',
-                  'sent': '#16845B',
-                  'scheduled': '#174A7E',
-                  'failed': '#B3262E'
+                  'pending': 'var(--color-gold)',
+                  'sent': 'var(--color-success)',
+                  'scheduled': 'var(--color-primary-light)',
+                  'failed': 'var(--color-error)'
                 };
                 const statusBg = {
-                  'pending': '#FBF4DC',
-                  'sent': '#E8F5EF',
-                  'scheduled': '#EAF2FA',
-                  'failed': '#FCEBEC'
+                  'pending': 'var(--color-gold-pale)',
+                  'sent': 'var(--color-success-bg)',
+                  'scheduled': 'var(--color-info-bg)',
+                  'failed': 'var(--color-error-bg)'
                 };
 
                 return (
@@ -483,8 +483,8 @@ export default function MassNotifications() {
                           {getPriorityLabel(n.priority)}
                         </span>
                         <span className="status-badge" style={{
-                          background: statusBg[n.status] || '#F4F6F9',
-                          color: statusColor[n.status] || '#667085'
+                          background: statusBg[n.status] || 'var(--color-gray-100)',
+                          color: statusColor[n.status] || 'var(--color-gray-500)'
                         }}>
                           {statusMap[n.status] || n.status}
                         </span>
@@ -501,7 +501,7 @@ export default function MassNotifications() {
       <style>{`
         .page-background {
           min-height: 100vh;
-          background: #F0EDE8;
+          background: var(--color-gray-100);
         }
 
         .container-page {
@@ -519,7 +519,7 @@ export default function MassNotifications() {
           padding: 20px 28px;
           background: white;
           border-radius: 12px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
         }
 
@@ -527,34 +527,34 @@ export default function MassNotifications() {
           font-family: 'Playfair Display', serif;
           font-size: 24px;
           font-weight: 700;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0;
         }
 
         .page-header p {
           font-size: 14px;
-          color: #8A8480;
+          color: var(--color-gray-500);
           margin: 4px 0 0 0;
         }
 
         /* ===== СООБЩЕНИЯ ===== */
         .message-success {
           padding: 14px 20px;
-          background: #E8F5EF;
-          color: #1A7A4C;
+          background: var(--color-success-bg);
+          color: var(--color-success);
           border-radius: 10px;
           margin-bottom: 20px;
-          border-left: 4px solid #1A7A4C;
+          border-left: 4px solid var(--color-success);
           font-weight: 500;
         }
 
         .message-error {
           padding: 14px 20px;
-          background: #FCEBEC;
-          color: #B3262E;
+          background: var(--color-error-bg);
+          color: var(--color-error);
           border-radius: 10px;
           margin-bottom: 20px;
-          border-left: 4px solid #B3262E;
+          border-left: 4px solid var(--color-error);
           font-weight: 500;
         }
 
@@ -570,7 +570,7 @@ export default function MassNotifications() {
           background: white;
           padding: 20px 24px;
           border-radius: 12px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           text-align: center;
           transition: all 0.3s ease;
@@ -585,13 +585,13 @@ export default function MassNotifications() {
           font-family: 'Playfair Display', serif;
           font-size: 32px;
           font-weight: 700;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           line-height: 1.2;
         }
 
         .stat-label {
           font-size: 13px;
-          color: #8A8480;
+          color: var(--color-gray-500);
           margin-top: 4px;
         }
 
@@ -600,7 +600,7 @@ export default function MassNotifications() {
           background: white;
           border-radius: 12px;
           padding: 28px 32px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           margin-bottom: 24px;
         }
@@ -609,7 +609,7 @@ export default function MassNotifications() {
           font-family: 'Playfair Display', serif;
           font-size: 20px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0 0 20px 0;
         }
 
@@ -621,7 +621,7 @@ export default function MassNotifications() {
           display: block;
           font-size: 13px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin-bottom: 6px;
         }
 
@@ -630,11 +630,11 @@ export default function MassNotifications() {
         .form-textarea {
           width: 100%;
           padding: 10px 14px;
-          border: 1.5px solid #E4DFD8;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 10px;
           font-size: 14px;
           font-family: 'Inter', sans-serif;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           background: white;
           transition: all 0.3s ease;
           outline: none;
@@ -643,7 +643,7 @@ export default function MassNotifications() {
         .form-input:focus,
         .form-select:focus,
         .form-textarea:focus {
-          border-color: #C9A227;
+          border-color: var(--color-gold);
           box-shadow: 0 0 0 3px rgba(201,162,39,0.08);
         }
 
@@ -654,14 +654,14 @@ export default function MassNotifications() {
 
         .recipient-info {
           font-size: 12px;
-          color: #8A8480;
+          color: var(--color-gray-500);
           margin-top: 6px;
         }
 
         .char-counter {
           text-align: right;
           font-size: 12px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-top: 4px;
         }
 
@@ -687,13 +687,13 @@ export default function MassNotifications() {
           gap: 8px;
           cursor: pointer;
           font-size: 14px;
-          color: #4D4744;
+          color: var(--color-gray-700);
         }
 
         .radio-label input[type="radio"] {
           width: 18px;
           height: 18px;
-          accent-color: #C9A227;
+          accent-color: var(--color-gold);
           cursor: pointer;
         }
 
@@ -711,8 +711,8 @@ export default function MassNotifications() {
           justify-content: center;
           gap: 8px;
           padding: 12px 32px;
-          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
-          color: #0A1628;
+          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
+          color: var(--color-primary-dark);
           border: none;
           border-radius: 10px;
           font-size: 15px;
@@ -742,8 +742,8 @@ export default function MassNotifications() {
           gap: 8px;
           padding: 12px 24px;
           background: transparent;
-          color: #0A1628;
-          border: 1.5px solid #E4DFD8;
+          color: var(--color-primary-dark);
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 10px;
           font-size: 14px;
           font-weight: 500;
@@ -753,8 +753,8 @@ export default function MassNotifications() {
         }
 
         .btn-preview:hover {
-          background: #F8F6F2;
-          border-color: #C9A227;
+          background: var(--color-gray-50);
+          border-color: var(--color-gold);
         }
 
         .btn-cancel {
@@ -764,8 +764,8 @@ export default function MassNotifications() {
           gap: 8px;
           padding: 12px 24px;
           background: transparent;
-          color: #B3262E;
-          border: 1.5px solid #FCEBEC;
+          color: var(--color-error);
+          border: 1.5px solid var(--color-error-bg);
           border-radius: 10px;
           font-size: 14px;
           font-weight: 500;
@@ -775,22 +775,22 @@ export default function MassNotifications() {
         }
 
         .btn-cancel:hover {
-          background: #FCEBEC;
+          background: var(--color-error-bg);
         }
 
         /* ===== ПРЕДПРОСМОТР ===== */
         .preview-box {
           margin-top: 20px;
           padding: 20px;
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           border-radius: 10px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
         }
 
         .preview-box h4 {
           font-size: 14px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0 0 12px 0;
         }
 
@@ -798,7 +798,7 @@ export default function MassNotifications() {
           background: white;
           padding: 20px;
           border-radius: 10px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
         }
 
         .preview-header {
@@ -813,7 +813,7 @@ export default function MassNotifications() {
         .preview-header h4 {
           font-size: 16px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0;
         }
 
@@ -826,7 +826,7 @@ export default function MassNotifications() {
 
         .preview-message {
           font-size: 14px;
-          color: #4D4744;
+          color: var(--color-gray-700);
           line-height: 1.7;
           margin: 0 0 12px 0;
           white-space: pre-wrap;
@@ -834,9 +834,9 @@ export default function MassNotifications() {
 
         .preview-footer {
           font-size: 12px;
-          color: #8A8480;
+          color: var(--color-gray-500);
           padding-top: 12px;
-          border-top: 1px solid #F0EDE8;
+          border-top: 1px solid var(--color-gray-100);
         }
 
         /* ===== ПОСЛЕДНИЕ УВЕДОМЛЕНИЯ ===== */
@@ -844,7 +844,7 @@ export default function MassNotifications() {
           background: white;
           border-radius: 12px;
           padding: 24px 28px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
         }
 
@@ -859,14 +859,14 @@ export default function MassNotifications() {
           font-family: 'Playfair Display', serif;
           font-size: 18px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0;
         }
 
         .btn-view-all {
           background: none;
           border: none;
-          color: #174A7E;
+          color: var(--color-primary-light);
           font-size: 13px;
           font-weight: 500;
           cursor: pointer;
@@ -875,7 +875,7 @@ export default function MassNotifications() {
         }
 
         .btn-view-all:hover {
-          color: #C9A227;
+          color: var(--color-gold);
         }
 
         .notifications-list {
@@ -888,14 +888,14 @@ export default function MassNotifications() {
           display: flex;
           gap: 14px;
           padding: 14px 18px;
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           border-radius: 10px;
-          border: 1px solid #F0EDE8;
+          border: 1px solid var(--color-gray-100);
           transition: all 0.2s ease;
         }
 
         .notification-item:hover {
-          background: #F0EDE8;
+          background: var(--color-gray-100);
         }
 
         .notification-icon {
@@ -913,12 +913,12 @@ export default function MassNotifications() {
         .notification-title {
           font-weight: 600;
           font-size: 14px;
-          color: #0A1628;
+          color: var(--color-primary-dark);
         }
 
         .notification-message {
           font-size: 13px;
-          color: #6B6561;
+          color: var(--color-gray-600);
           margin-top: 2px;
           display: -webkit-box;
           -webkit-line-clamp: 2;
@@ -932,7 +932,7 @@ export default function MassNotifications() {
           flex-wrap: wrap;
           margin-top: 6px;
           font-size: 12px;
-          color: #8A8480;
+          color: var(--color-gray-500);
         }
 
         .meta-item {

@@ -107,7 +107,7 @@ export default function ParticipantDashboard() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -121,7 +121,7 @@ export default function ParticipantDashboard() {
 
         <div className="card" style={{ 
           marginBottom: '24px',
-          background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
+          background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-light))',
           color: 'white',
           border: 'none'
         }}>
@@ -191,7 +191,7 @@ export default function ParticipantDashboard() {
               <div style={{
                 width: `${stats.progress}%`,
                 height: '100%',
-                background: 'linear-gradient(90deg, #C9A227, #E8D9A8)',
+                background: 'linear-gradient(90deg, var(--color-gold), var(--color-gold-light))',
                 borderRadius: '3px',
                 transition: 'width 0.5s ease'
               }} />
@@ -206,7 +206,7 @@ export default function ParticipantDashboard() {
           display: 'flex',
           gap: '4px',
           marginBottom: '24px',
-          borderBottom: '2px solid #E2E7EF',
+          borderBottom: '2px solid var(--color-gray-200)',
           paddingBottom: '4px',
           flexWrap: 'wrap'
         }}>
@@ -215,8 +215,8 @@ export default function ParticipantDashboard() {
             style={{
               padding: '8px 20px',
               border: 'none',
-              background: activeTab === 'overview' ? '#0B1F3A' : 'transparent',
-              color: activeTab === 'overview' ? 'white' : '#667085',
+              background: activeTab === 'overview' ? 'var(--color-primary)' : 'transparent',
+              color: activeTab === 'overview' ? 'white' : 'var(--color-gray-500)',
               borderRadius: '8px 8px 0 0',
               cursor: 'pointer',
               fontWeight: activeTab === 'overview' ? '600' : '500',
@@ -231,8 +231,8 @@ export default function ParticipantDashboard() {
             style={{
               padding: '8px 20px',
               border: 'none',
-              background: activeTab === 'achievements' ? '#0B1F3A' : 'transparent',
-              color: activeTab === 'achievements' ? 'white' : '#667085',
+              background: activeTab === 'achievements' ? 'var(--color-primary)' : 'transparent',
+              color: activeTab === 'achievements' ? 'white' : 'var(--color-gray-500)',
               borderRadius: '8px 8px 0 0',
               cursor: 'pointer',
               fontWeight: activeTab === 'achievements' ? '600' : '500',
@@ -247,8 +247,8 @@ export default function ParticipantDashboard() {
             style={{
               padding: '8px 20px',
               border: 'none',
-              background: activeTab === 'events' ? '#0B1F3A' : 'transparent',
-              color: activeTab === 'events' ? 'white' : '#667085',
+              background: activeTab === 'events' ? 'var(--color-primary)' : 'transparent',
+              color: activeTab === 'events' ? 'white' : 'var(--color-gray-500)',
               borderRadius: '8px 8px 0 0',
               cursor: 'pointer',
               fontWeight: activeTab === 'events' ? '600' : '500',
@@ -263,8 +263,8 @@ export default function ParticipantDashboard() {
             style={{
               padding: '8px 20px',
               border: 'none',
-              background: activeTab === 'interests' ? '#0B1F3A' : 'transparent',
-              color: activeTab === 'interests' ? 'white' : '#667085',
+              background: activeTab === 'interests' ? 'var(--color-primary)' : 'transparent',
+              color: activeTab === 'interests' ? 'white' : 'var(--color-gray-500)',
               borderRadius: '8px 8px 0 0',
               cursor: 'pointer',
               fontWeight: activeTab === 'interests' ? '600' : '500',
@@ -279,15 +279,15 @@ export default function ParticipantDashboard() {
         {activeTab === 'overview' && (
           <div>
             <div className="grid-4" style={{ marginBottom: '24px' }}>
-              <div className="stat-card" style={{ borderTop: '3px solid #174A7E' }}>
+              <div className="stat-card" style={{ borderTop: '3px solid var(--color-primary-light)' }}>
                 <div className="number">{stats.total_events}</div>
                 <div className="label">📅 Всего мероприятий</div>
               </div>
-              <div className="stat-card" style={{ borderTop: '3px solid #16845B' }}>
+              <div className="stat-card" style={{ borderTop: '3px solid var(--color-success)' }}>
                 <div className="number">{stats.attended_events}</div>
                 <div className="label">✅ Посещено</div>
               </div>
-              <div className="stat-card" style={{ borderTop: '3px solid #C9A227' }}>
+              <div className="stat-card" style={{ borderTop: '3px solid var(--color-gold)' }}>
                 <div className="number">{stats.achievements_count}</div>
                 <div className="label">🏆 Достижений</div>
               </div>
@@ -299,12 +299,12 @@ export default function ParticipantDashboard() {
 
             {recentAchievements.length > 0 && (
               <div className="card" style={{ marginBottom: '24px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
                   🏆 Последние достижения
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {recentAchievements.map((a) => (
-                    <div key={a.id} className="list-item" style={{ borderLeftColor: '#C9A227' }}>
+                    <div key={a.id} className="list-item" style={{ borderLeftColor: 'var(--color-gold)' }}>
                       <div className="title">{a.title}</div>
                       <div className="subtitle">
                         📅 {new Date(a.achievement_date || a.created_at).toLocaleDateString('ru-RU')}
@@ -317,12 +317,12 @@ export default function ParticipantDashboard() {
 
             {upcomingEvents.length > 0 && (
               <div className="card">
-                <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
                   📅 Ближайшие мероприятия
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {upcomingEvents.map((e) => (
-                    <div key={e.id} className="list-item" style={{ borderLeftColor: '#174A7E' }}>
+                    <div key={e.id} className="list-item" style={{ borderLeftColor: 'var(--color-primary-light)' }}>
                       <div className="title">{e.title}</div>
                       <div className="subtitle">
                         📅 {new Date(e.event_date).toLocaleDateString('ru-RU')}
@@ -348,8 +348,8 @@ export default function ParticipantDashboard() {
             {stats.achievements_count === 0 ? (
               <div className="empty-state">
                 <div className="icon">🌟</div>
-                <p style={{ color: '#667085' }}>У вас пока нет достижений</p>
-                <p style={{ fontSize: '13px', color: '#98A2B3' }}>
+                <p style={{ color: 'var(--color-gray-500)' }}>У вас пока нет достижений</p>
+                <p style={{ fontSize: '13px', color: 'var(--color-gray-400)' }}>
                   Участвуйте в мероприятиях и получайте награды!
                 </p>
               </div>
@@ -358,15 +358,15 @@ export default function ParticipantDashboard() {
                 {recentAchievements.map((a) => (
                   <div key={a.id} className="card" style={{ 
                     padding: '16px', 
-                    borderLeft: '4px solid #C9A227',
+                    borderLeft: '4px solid var(--color-gold)',
                     marginBottom: '0'
                   }}>
                     <div style={{ fontSize: '32px', marginBottom: '8px' }}>🏆</div>
-                    <div style={{ fontWeight: '600', color: '#0B1F3A' }}>{a.title}</div>
+                    <div style={{ fontWeight: '600', color: 'var(--color-primary)' }}>{a.title}</div>
                     {a.description && (
-                      <div style={{ fontSize: '13px', color: '#667085', marginTop: '4px' }}>{a.description}</div>
+                      <div style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>{a.description}</div>
                     )}
-                    <div style={{ fontSize: '12px', color: '#98A2B3', marginTop: '8px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '8px' }}>
                       📅 {new Date(a.achievement_date || a.created_at).toLocaleDateString('ru-RU')}
                     </div>
                   </div>
@@ -379,7 +379,7 @@ export default function ParticipantDashboard() {
         {activeTab === 'events' && (
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', margin: 0 }}>
                 Мои мероприятия
               </h3>
               <button
@@ -399,11 +399,11 @@ export default function ParticipantDashboard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {upcomingEvents.length > 0 && (
                   <>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#0B1F3A', paddingBottom: '8px', borderBottom: '1px solid #E2E7EF' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-primary)', paddingBottom: '8px', borderBottom: '1px solid var(--color-gray-200)' }}>
                       📅 Предстоящие
                     </div>
                     {upcomingEvents.map((e) => (
-                      <div key={e.id} className="list-item" style={{ borderLeftColor: '#174A7E' }}>
+                      <div key={e.id} className="list-item" style={{ borderLeftColor: 'var(--color-primary-light)' }}>
                         <div className="title">{e.title}</div>
                         <div className="subtitle">
                           📅 {new Date(e.event_date).toLocaleDateString('ru-RU')}
@@ -420,7 +420,7 @@ export default function ParticipantDashboard() {
 
         {activeTab === 'interests' && (
           <div className="card">
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
               🎯 Мои интересы
             </h3>
             {profile?.interests ? (
@@ -432,12 +432,12 @@ export default function ParticipantDashboard() {
                 ))}
               </div>
             ) : (
-              <p style={{ color: '#667085' }}>
-                Интересы не указаны. <Link to="/profile" style={{ color: '#C9A227' }}>Добавить интересы</Link>
+              <p style={{ color: 'var(--color-gray-500)' }}>
+                Интересы не указаны. <Link to="/profile" style={{ color: 'var(--color-gold)' }}>Добавить интересы</Link>
               </p>
             )}
 
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginTop: '24px', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginTop: '24px', marginBottom: '16px' }}>
               💪 Мои навыки
             </h3>
             {profile?.skills ? (
@@ -449,17 +449,17 @@ export default function ParticipantDashboard() {
                 ))}
               </div>
             ) : (
-              <p style={{ color: '#667085' }}>
-                Навыки не указаны. <Link to="/profile" style={{ color: '#C9A227' }}>Добавить навыки</Link>
+              <p style={{ color: 'var(--color-gray-500)' }}>
+                Навыки не указаны. <Link to="/profile" style={{ color: 'var(--color-gold)' }}>Добавить навыки</Link>
               </p>
             )}
 
             {profile?.bio && (
               <>
-                <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginTop: '24px', marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginTop: '24px', marginBottom: '16px' }}>
                   📝 О себе
                 </h3>
-                <p style={{ color: '#667085', lineHeight: '1.6' }}>{profile.bio}</p>
+                <p style={{ color: 'var(--color-gray-500)', lineHeight: '1.6' }}>{profile.bio}</p>
               </>
             )}
           </div>

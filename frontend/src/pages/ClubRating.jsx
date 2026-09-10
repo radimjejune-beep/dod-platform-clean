@@ -64,7 +64,7 @@ export default function ClubRating() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -77,7 +77,7 @@ export default function ClubRating() {
         {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <div className="card">
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
             📊 Таблица лидеров
           </h3>
 
@@ -96,9 +96,9 @@ export default function ClubRating() {
                     alignItems: 'center',
                     gap: '12px',
                     padding: '10px 16px',
-                    background: index < 3 ? '#FBF4DC' : '#F8FAFC',
+                    background: index < 3 ? 'var(--color-gold-pale)' : 'var(--color-gray-50)',
                     borderRadius: '10px',
-                    border: index < 3 ? '1.5px solid #C9A227' : '1px solid #E2E7EF',
+                    border: index < 3 ? '1.5px solid var(--color-gold)' : '1px solid var(--color-gray-200)',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease'
                   }}
@@ -108,8 +108,8 @@ export default function ClubRating() {
                     width: '36px',
                     height: '36px',
                     borderRadius: '50%',
-                    background: index === 0 ? '#C9A227' : index === 1 ? '#A0A0A0' : index === 2 ? '#CD7F32' : '#667085',
-                    color: index < 3 ? '#0B1F3A' : 'white',
+                    background: index === 0 ? 'var(--color-gold)' : index === 1 ? '#A0A0A0' : index === 2 ? '#CD7F32' : 'var(--color-gray-500)',
+                    color: index < 3 ? 'var(--color-primary)' : 'white',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -124,7 +124,7 @@ export default function ClubRating() {
                     width: '40px',
                     height: '40px',
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #0B1F3A, #174A7E)',
+                    background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-light))',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -137,10 +137,10 @@ export default function ClubRating() {
                   </div>
 
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '600', color: '#0B1F3A' }}>
+                    <div style={{ fontWeight: '600', color: 'var(--color-primary)' }}>
                       {participant.full_name}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#98A2B3' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
                       {participant.school || 'Школа не указана'} • {participant.class_name || 'Класс не указан'}
                     </div>
                   </div>
@@ -149,14 +149,14 @@ export default function ClubRating() {
                     display: 'flex',
                     gap: '16px',
                     fontSize: '13px',
-                    color: '#667085',
+                    color: 'var(--color-gray-500)',
                     flexShrink: 0
                   }}>
                     <span>📅 {participant.events_count || 0}</span>
                     <span>🏆 {participant.achievements_count || 0}</span>
                     <span style={{
                       fontWeight: '700',
-                      color: '#C9A227',
+                      color: 'var(--color-gold)',
                       fontSize: '16px',
                       minWidth: '50px',
                       textAlign: 'right'

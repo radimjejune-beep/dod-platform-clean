@@ -31,22 +31,22 @@ export default function NewsDetail() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
   }
 
   return (
-    <div style={{ background: '#F4F6F9', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--color-gray-100)', minHeight: '100vh' }}>
       <Navigation profile={profile} />
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '30px 24px' }}>
-        <button onClick={() => navigate('/')} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #D5DCE7', borderRadius: '8px', cursor: 'pointer', marginBottom: '20px' }}>
+        <button onClick={() => navigate('/')} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid var(--color-gray-200)', borderRadius: '8px', cursor: 'pointer', marginBottom: '20px' }}>
           ← Назад
         </button>
-        <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0B1F3A' }}>📰 Новость #{id}</h1>
-        <div style={{ background: 'white', borderRadius: '16px', padding: '40px', textAlign: 'center', border: '1px solid #E2E7EF', marginTop: '20px' }}>
-          <p style={{ color: '#667085' }}>Новость в разработке</p>
+        <h1 style={{ fontSize: '28px', fontWeight: '700', color: 'var(--color-primary)' }}>📰 Новость #{id}</h1>
+        <div style={{ background: 'white', borderRadius: '16px', padding: '40px', textAlign: 'center', border: '1px solid var(--color-gray-200)', marginTop: '20px' }}>
+          <p style={{ color: 'var(--color-gray-500)' }}>Новость в разработке</p>
         </div>
       </div>
     </div>

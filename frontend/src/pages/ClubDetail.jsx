@@ -100,7 +100,7 @@ export default function ClubDetail() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -113,7 +113,7 @@ export default function ClubDetail() {
         <div className="container-page">
           <div className="empty-state">
             <div className="icon">❌</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>КЮД не найден</p>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>КЮД не найден</p>
           </div>
         </div>
       </div>
@@ -148,16 +148,16 @@ export default function ClubDetail() {
         <div className="card" style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0B1F3A', margin: 0 }}>
+              <h1 style={{ fontSize: '28px', fontWeight: '700', color: 'var(--color-primary)', margin: 0 }}>
                 🏫 {club.name}
               </h1>
-              {club.description && <p style={{ color: '#667085', marginTop: '8px' }}>{club.description}</p>}
+              {club.description && <p style={{ color: 'var(--color-gray-500)', marginTop: '8px' }}>{club.description}</p>}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '8px' }}>
-                {club.city && <span style={{ color: '#667085' }}>📍 {club.city}</span>}
-                {club.school && <span style={{ color: '#667085' }}>🏫 {club.school}</span>}
-                {club.leader_name && <span style={{ color: '#667085' }}>👤 {club.leader_name}</span>}
-                {club.contact_email && <span style={{ color: '#667085' }}>📧 {club.contact_email}</span>}
-                {club.contact_phone && <span style={{ color: '#667085' }}>📞 {club.contact_phone}</span>}
+                {club.city && <span style={{ color: 'var(--color-gray-500)' }}>📍 {club.city}</span>}
+                {club.school && <span style={{ color: 'var(--color-gray-500)' }}>🏫 {club.school}</span>}
+                {club.leader_name && <span style={{ color: 'var(--color-gray-500)' }}>👤 {club.leader_name}</span>}
+                {club.contact_email && <span style={{ color: 'var(--color-gray-500)' }}>📧 {club.contact_email}</span>}
+                {club.contact_phone && <span style={{ color: 'var(--color-gray-500)' }}>📞 {club.contact_phone}</span>}
               </div>
               <div style={{ marginTop: '12px' }}>
                 <span className="status-active">👥 {participants.length} участников</span>
@@ -176,7 +176,7 @@ export default function ClubDetail() {
 
         {showEditForm && canEditThis && (
           <div className="card" style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
               ✏️ Редактировать КЮД
             </h3>
             <form onSubmit={handleSave}>
@@ -263,7 +263,7 @@ export default function ClubDetail() {
           display: 'flex',
           gap: '4px',
           marginBottom: '24px',
-          borderBottom: '2px solid #E2E7EF',
+          borderBottom: '2px solid var(--color-gray-200)',
           paddingBottom: '4px',
           flexWrap: 'wrap'
         }}>
@@ -274,8 +274,8 @@ export default function ClubDetail() {
               style={{
                 padding: '8px 20px',
                 border: 'none',
-                background: activeTab === tab.id ? '#0B1F3A' : 'transparent',
-                color: activeTab === tab.id ? 'white' : '#667085',
+                background: activeTab === tab.id ? 'var(--color-primary)' : 'transparent',
+                color: activeTab === tab.id ? 'white' : 'var(--color-gray-500)',
                 borderRadius: '8px 8px 0 0',
                 cursor: 'pointer',
                 fontWeight: activeTab === tab.id ? '600' : '500',
@@ -292,44 +292,44 @@ export default function ClubDetail() {
           <div className="card">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Название</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{club.name}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Название</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{club.name}</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Город</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{club.city || 'Не указан'}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Город</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{club.city || 'Не указан'}</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Школа</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{club.school || 'Не указана'}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Школа</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{club.school || 'Не указана'}</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Руководитель</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{club.leader_name || 'Не указан'}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Руководитель</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{club.leader_name || 'Не указан'}</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Email</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{club.contact_email || 'Не указан'}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Email</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{club.contact_email || 'Не указан'}</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Телефон</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{club.contact_phone || 'Не указан'}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Телефон</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{club.contact_phone || 'Не указан'}</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Участников</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{participants.length}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Участников</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{participants.length}</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Дата создания</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Дата создания</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                   {club.created_at ? new Date(club.created_at).toLocaleDateString('ru-RU') : 'Не указана'}
                 </div>
               </div>
             </div>
             {club.description && (
-              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E7EF' }}>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Описание</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A', marginTop: '4px' }}>{club.description}</div>
+              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-gray-200)' }}>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Описание</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)', marginTop: '4px' }}>{club.description}</div>
               </div>
             )}
           </div>
@@ -343,7 +343,7 @@ export default function ClubDetail() {
 
         {activeTab === 'members' && (
           <div className="card">
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
               👥 Участники КЮДа ({participants.length})
             </h3>
             {participants.length === 0 ? (
@@ -357,7 +357,7 @@ export default function ClubDetail() {
                   <div
                     key={p.id}
                     className="list-item"
-                    style={{ borderLeftColor: '#174A7E', cursor: 'pointer' }}
+                    style={{ borderLeftColor: 'var(--color-primary-light)', cursor: 'pointer' }}
                     onClick={() => navigate(`/participant/${p.id}`)}
                   >
                     <div className="title">

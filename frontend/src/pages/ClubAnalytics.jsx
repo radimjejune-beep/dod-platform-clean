@@ -101,7 +101,7 @@ export default function ClubAnalytics() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -127,7 +127,7 @@ export default function ClubAnalytics() {
             >
               ◀
             </button>
-            <span style={{ fontWeight: '600', color: '#0B1F3A', minWidth: '140px', textAlign: 'center' }}>
+            <span style={{ fontWeight: '600', color: 'var(--color-primary)', minWidth: '140px', textAlign: 'center' }}>
               {getMonthLabel(selectedMonth)}
             </span>
             <button
@@ -152,22 +152,22 @@ export default function ClubAnalytics() {
                 key={club.id}
                 className="card"
                 style={{
-                  borderLeft: index === 0 ? '4px solid #C9A227' : '4px solid #174A7E',
-                  background: index === 0 ? '#FBF4DC' : 'white'
+                  borderLeft: index === 0 ? '4px solid var(--color-gold)' : '4px solid var(--color-primary-light)',
+                  background: index === 0 ? 'var(--color-gold-pale)' : 'white'
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
-                    <div style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+                    <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
                       {index === 0 && '🏆 '}
                       {club.name}
                     </div>
-                    <div style={{ fontSize: '13px', color: '#667085' }}>
+                    <div style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
                       👥 {club.participantsCount} участников
                       {club.activeParticipants > 0 && ` • 🟢 ${club.activeParticipants} активных`}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: '#667085' }}>
+                  <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: 'var(--color-gray-500)' }}>
                     <span>📅 {club.eventsCount} мероприятий</span>
                     <span>🏆 {club.achievementsCount} достижений</span>
                   </div>

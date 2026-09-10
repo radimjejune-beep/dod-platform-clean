@@ -65,7 +65,7 @@ export default function Analytics() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -97,11 +97,11 @@ export default function Analytics() {
         </div>
 
         <div className="card">
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
             🏆 Топ-5 КЮДов по количеству участников
           </h3>
           {topClubs.length === 0 ? (
-            <p style={{ color: '#667085', textAlign: 'center', padding: '20px' }}>
+            <p style={{ color: 'var(--color-gray-500)', textAlign: 'center', padding: '20px' }}>
               Нет данных
             </p>
           ) : (
@@ -114,22 +114,22 @@ export default function Analytics() {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '12px 16px',
-                    borderBottom: index < topClubs.length - 1 ? '1px solid #F4F6F9' : 'none',
-                    background: index === 0 ? '#FBF4DC' : 'transparent'
+                    borderBottom: index < topClubs.length - 1 ? '1px solid var(--color-gray-100)' : 'none',
+                    background: index === 0 ? 'var(--color-gold-pale)' : 'transparent'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span style={{
                       fontWeight: 'bold',
                       fontSize: '18px',
-                      color: index === 0 ? '#C9A227' : index === 1 ? '#A0A0A0' : index === 2 ? '#CD7F32' : '#667085'
+                      color: index === 0 ? 'var(--color-gold)' : index === 1 ? '#A0A0A0' : index === 2 ? '#CD7F32' : 'var(--color-gray-500)'
                     }}>
                       #{index + 1}
                     </span>
                     <span style={{ fontWeight: '500' }}>{club.name}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <span style={{ fontSize: '13px', color: '#667085' }}>
+                    <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
                       👥 {club.participantsCount}
                     </span>
                   </div>
@@ -140,7 +140,7 @@ export default function Analytics() {
         </div>
 
         <div className="card" style={{ marginTop: '20px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
             🚀 Быстрые действия
           </h3>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>

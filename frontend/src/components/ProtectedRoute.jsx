@@ -197,7 +197,7 @@ export default function ProtectedRoute({ children }) {
         alignItems: 'center', 
         height: '100vh',
         fontSize: '18px',
-        color: '#667085'
+        color: 'var(--color-gray-500)'
       }}>
         ⏳ Проверка сессии...
       </div>

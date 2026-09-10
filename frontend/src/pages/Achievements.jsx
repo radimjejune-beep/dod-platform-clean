@@ -383,13 +383,13 @@ export default function Achievements() {
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: #F0EDE8;
+            background: var(--color-gray-100);
           }
           .spinner {
             width: 48px;
             height: 48px;
-            border: 4px solid #E4DFD8;
-            border-top-color: #C9A227;
+            border: 4px solid var(--color-gray-200);
+            border-top-color: var(--color-gold);
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
           }
@@ -587,8 +587,8 @@ export default function Achievements() {
                     key={a.id}
                     className="achievement-item"
                     style={{
-                      borderLeftColor: a.is_club_award ? '#C9A227' : 
-                                     a.is_tutor_award ? '#174A7E' : '#0B1F3A'
+                      borderLeftColor: a.is_club_award ? 'var(--color-gold)' : 
+                                     a.is_tutor_award ? 'var(--color-primary-light)' : 'var(--color-primary)'
                     }}
                   >
                     <div className="achievement-title">
@@ -650,7 +650,7 @@ export default function Achievements() {
            ============================================================ */
         .page-background {
           min-height: 100vh;
-          background: #F0EDE8;
+          background: var(--color-gray-100);
         }
 
         .container-page {
@@ -674,12 +674,12 @@ export default function Achievements() {
         .page-header-left h1 {
           font-size: 24px;
           font-weight: 700;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin: 0;
         }
 
         .page-header-left p {
-          color: #667085;
+          color: var(--color-gray-500);
           margin: 4px 0 0 0;
         }
 
@@ -692,16 +692,16 @@ export default function Achievements() {
           gap: 6px;
           margin-top: 20px;
           padding-top: 16px;
-          border-top: 1px solid #E4DFD8;
+          border-top: 1px solid var(--color-gray-200);
           flex-wrap: wrap;
         }
 
         .pagination-btn {
           padding: 6px 14px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           border-radius: 6px;
           background: white;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           font-size: 14px;
           cursor: pointer;
           transition: all 0.2s ease;
@@ -711,13 +711,13 @@ export default function Achievements() {
         }
 
         .pagination-btn:hover:not(:disabled) {
-          border-color: #C9A227;
-          background: #FBF4DC;
+          border-color: var(--color-gold);
+          background: var(--color-gold-pale);
         }
 
         .pagination-btn.active {
-          border-color: #C9A227;
-          background: #C9A227;
+          border-color: var(--color-gold);
+          background: var(--color-gold);
           color: white;
         }
 
@@ -728,7 +728,7 @@ export default function Achievements() {
 
         .pagination-info {
           font-size: 13px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-left: 8px;
         }
 
@@ -748,11 +748,11 @@ export default function Achievements() {
            ============================================================ */
         .filter-count {
           font-size: 14px;
-          color: #667085;
+          color: var(--color-gray-500);
           padding: 6px 16px;
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           border-radius: 20px;
-          border: 1px solid #E2E7EF;
+          border: 1px solid var(--color-gray-200);
           white-space: nowrap;
         }
 
@@ -767,7 +767,7 @@ export default function Achievements() {
         .filter-club select {
           min-width: 200px;
           padding: 10px 14px;
-          border: 1.5px solid #D5DCE7;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 10px;
           font-size: 14px;
           outline: none;
@@ -776,17 +776,17 @@ export default function Achievements() {
 
         .filter-info {
           font-size: 14px;
-          color: #667085;
+          color: var(--color-gray-500);
         }
 
         .filter-clear {
           padding: 4px 12px;
-          background: #FCEBEC;
+          background: var(--color-error-bg);
           border: none;
           border-radius: 6px;
           cursor: pointer;
           font-size: 12px;
-          color: #B3262E;
+          color: var(--color-error);
         }
         .filter-clear:hover {
           background: #FED7D7;
@@ -801,8 +801,8 @@ export default function Achievements() {
           justify-content: center;
           gap: 8px;
           padding: 10px 24px;
-          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
-          color: #0A1628;
+          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
+          color: var(--color-primary-dark);
           border: none;
           border-radius: 8px;
           font-size: 14px;
@@ -820,7 +820,7 @@ export default function Achievements() {
         }
 
         .btn-success {
-          background: #1A7A4C;
+          background: var(--color-success);
           color: white;
           box-shadow: 0 4px 16px rgba(26,122,76,0.2);
         }
@@ -832,17 +832,17 @@ export default function Achievements() {
 
         .btn-secondary {
           background: transparent;
-          color: #0A1628;
-          border: 1.5px solid #E4DFD8;
+          color: var(--color-primary-dark);
+          border: 1.5px solid var(--color-gray-200);
         }
         .btn-secondary:hover {
-          background: #F8F6F2;
-          border-color: #C9A227;
+          background: var(--color-gray-50);
+          border-color: var(--color-gold);
           transform: translateY(-2px);
         }
 
         .btn-danger {
-          background: #B3262E;
+          background: var(--color-error);
           color: white;
           box-shadow: 0 4px 16px rgba(179,38,46,0.2);
         }
@@ -866,7 +866,7 @@ export default function Achievements() {
           background: white;
           border-radius: 12px;
           padding: 24px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           margin-bottom: 20px;
         }
@@ -881,13 +881,13 @@ export default function Achievements() {
         .card-header-simple h3 {
           font-size: 18px;
           font-weight: 600;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin: 0;
         }
 
         .card-count {
           font-size: 13px;
-          color: #667085;
+          color: var(--color-gray-500);
         }
 
         /* ============================================================
@@ -909,7 +909,7 @@ export default function Achievements() {
         .form-group label {
           display: block;
           font-weight: 500;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin-bottom: 4px;
           font-size: 13px;
         }
@@ -917,18 +917,18 @@ export default function Achievements() {
         .form-group textarea {
           width: 100%;
           padding: 10px 14px;
-          border: 1.5px solid #D5DCE7;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 8px;
           font-size: 14px;
           outline: none;
           transition: all 0.3s ease;
           background: white;
           font-family: inherit;
-          color: #0B1F3A;
+          color: var(--color-primary);
         }
         .form-group input:focus,
         .form-group textarea:focus {
-          border-color: #C9A227;
+          border-color: var(--color-gold);
           box-shadow: 0 0 0 3px rgba(201,162,39,0.1);
         }
         .form-group textarea {
@@ -952,18 +952,18 @@ export default function Achievements() {
         .participant-search input {
           width: 100%;
           padding: 10px 14px;
-          border: 1.5px solid #D5DCE7;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 8px;
           font-size: 14px;
           outline: none;
           transition: all 0.3s ease;
           background: white;
           font-family: inherit;
-          color: #0B1F3A;
+          color: var(--color-primary);
         }
 
         .participant-search input:focus {
-          border-color: #C9A227;
+          border-color: var(--color-gold);
           box-shadow: 0 0 0 3px rgba(201,162,39,0.1);
         }
 
@@ -973,7 +973,7 @@ export default function Achievements() {
           left: 0;
           right: 0;
           background: white;
-          border: 1px solid #E2E7EF;
+          border: 1px solid var(--color-gray-200);
           border-radius: 10px;
           box-shadow: 0 8px 30px rgba(11, 31, 58, 0.12);
           max-height: 200px;
@@ -984,12 +984,12 @@ export default function Achievements() {
         .participant-option {
           padding: 10px 14px;
           cursor: pointer;
-          border-bottom: 1px solid #F4F6F9;
+          border-bottom: 1px solid var(--color-gray-100);
           transition: background 0.15s ease;
         }
 
         .participant-option:hover {
-          background: #F4F6F9;
+          background: var(--color-gray-100);
         }
 
         .participant-option:last-child {
@@ -999,21 +999,21 @@ export default function Achievements() {
         .participant-option-name {
           font-weight: 500;
           font-size: 14px;
-          color: #0B1F3A;
+          color: var(--color-primary);
         }
 
         .participant-option-info {
           font-size: 12px;
-          color: #667085;
+          color: var(--color-gray-500);
         }
 
         .participant-selected {
           margin-top: 6px;
           padding: 6px 12px;
-          background: #E8F5EF;
+          background: var(--color-success-bg);
           border-radius: 6px;
           font-size: 13px;
-          color: #16845B;
+          color: var(--color-success);
           display: flex;
           align-items: center;
           gap: 8px;
@@ -1022,7 +1022,7 @@ export default function Achievements() {
         .participant-selected button {
           background: none;
           border: none;
-          color: #B3262E;
+          color: var(--color-error);
           cursor: pointer;
           margin-left: auto;
           font-size: 16px;
@@ -1039,20 +1039,20 @@ export default function Achievements() {
 
         .achievement-item {
           padding: 14px 18px;
-          border-left: 3px solid #0B1F3A;
-          background: #F8FAFC;
+          border-left: 3px solid var(--color-primary);
+          background: var(--color-gray-50);
           border-radius: 0 8px 8px 0;
           transition: all 0.2s ease;
         }
 
         .achievement-item:hover {
-          background: #F0EDE8;
+          background: var(--color-gray-100);
           transform: translateX(4px);
         }
 
         .achievement-title {
           font-weight: 600;
-          color: #0B1F3A;
+          color: var(--color-primary);
           font-size: 15px;
           display: flex;
           align-items: center;
@@ -1066,13 +1066,13 @@ export default function Achievements() {
 
         .achievement-subtitle {
           font-size: 13px;
-          color: #667085;
+          color: var(--color-gray-500);
           margin-top: 2px;
         }
 
         .achievement-description {
           font-size: 12px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-top: 4px;
         }
 
@@ -1095,13 +1095,13 @@ export default function Achievements() {
         }
 
         .tag-gold {
-          background: #FBF4DC;
-          color: #8A6A00;
+          background: var(--color-gold-pale);
+          color: var(--color-gold-dark);
         }
 
         .tag-blue {
-          background: #EAF2FA;
-          color: #174A7E;
+          background: var(--color-info-bg);
+          color: var(--color-primary-light);
         }
 
         /* ============================================================
@@ -1109,20 +1109,20 @@ export default function Achievements() {
            ============================================================ */
         .message-success {
           padding: 12px 16px;
-          background: #E8F5EF;
-          color: #16845B;
+          background: var(--color-success-bg);
+          color: var(--color-success);
           border-radius: 8px;
           margin-bottom: 16px;
-          border-left: 4px solid #16845B;
+          border-left: 4px solid var(--color-success);
         }
 
         .message-error {
           padding: 12px 16px;
-          background: #FCEBEC;
-          color: #B3262E;
+          background: var(--color-error-bg);
+          color: var(--color-error);
           border-radius: 8px;
           margin-bottom: 16px;
-          border-left: 4px solid #B3262E;
+          border-left: 4px solid var(--color-error);
         }
 
         /* ============================================================
@@ -1140,7 +1140,7 @@ export default function Achievements() {
         }
 
         .empty-state p {
-          color: #667085;
+          color: var(--color-gray-500);
           font-size: 14px;
         }
 
@@ -1150,8 +1150,8 @@ export default function Achievements() {
         .spinner {
           width: 48px;
           height: 48px;
-          border: 4px solid #E4DFD8;
-          border-top-color: #C9A227;
+          border: 4px solid var(--color-gray-200);
+          border-top-color: var(--color-gold);
           border-radius: 50%;
           animation: spin 0.7s linear infinite;
         }

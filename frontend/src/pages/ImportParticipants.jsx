@@ -257,12 +257,12 @@ export default function ImportParticipants() {
         {/* СПИСОК ПАРОЛЕЙ */}
         {showPasswordList && importedUsers.length > 0 && (
           <div className="card" style={{
-            background: '#FBF4DC',
-            border: '2px solid #C9A227',
+            background: 'var(--color-gold-pale)',
+            border: '2px solid var(--color-gold)',
             marginBottom: '16px'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0B1F3A' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--color-primary)' }}>
                 🔑 Данные для входа (Импорт)
               </h3>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -278,7 +278,7 @@ export default function ImportParticipants() {
             <div style={{ overflow: 'auto', maxHeight: '400px' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                 <thead>
-                  <tr style={{ background: '#F4F6F9' }}>
+                  <tr style={{ background: 'var(--color-gray-100)' }}>
                     <th style={{ padding: '8px 12px', textAlign: 'left' }}>ФИО</th>
                     <th style={{ padding: '8px 12px', textAlign: 'left' }}>Email</th>
                     <th style={{ padding: '8px 12px', textAlign: 'left' }}>Пароль</th>
@@ -287,17 +287,17 @@ export default function ImportParticipants() {
                 </thead>
                 <tbody>
                   {importedUsers.map((u, index) => (
-                    <tr key={index} style={{ borderBottom: '1px solid #E2E7EF' }}>
+                    <tr key={index} style={{ borderBottom: '1px solid var(--color-gray-200)' }}>
                       <td style={{ padding: '8px 12px', fontWeight: '500' }}>{u.full_name}</td>
                       <td style={{ padding: '8px 12px' }}>{u.email}</td>
                       <td>
                         <code style={{
-                          background: '#F4F6F9',
+                          background: 'var(--color-gray-100)',
                           padding: '2px 8px',
                           borderRadius: '4px',
                           fontSize: '13px',
                           fontWeight: '600',
-                          color: '#0B1F3A'
+                          color: 'var(--color-primary)'
                         }}>
                           {u.password}
                         </code>
@@ -309,7 +309,7 @@ export default function ImportParticipants() {
               </table>
             </div>
 
-            <div style={{ marginTop: '12px', padding: '12px', background: '#EAF2FA', borderRadius: '8px', fontSize: '13px', color: '#174A7E' }}>
+            <div style={{ marginTop: '12px', padding: '12px', background: 'var(--color-info-bg)', borderRadius: '8px', fontSize: '13px', color: 'var(--color-primary-light)' }}>
               💡 Скопируйте данные и разошлите пользователям. Пароли можно изменить при первом входе.
             </div>
           </div>
@@ -317,10 +317,10 @@ export default function ImportParticipants() {
 
         {/* ШАГ 1: СКАЧАТЬ ШАБЛОН */}
         <div className="card" style={{ marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '8px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '8px' }}>
             📋 Шаг 1: Скачайте шаблон
           </h3>
-          <p style={{ color: '#667085', marginBottom: '12px' }}>
+          <p style={{ color: 'var(--color-gray-500)', marginBottom: '12px' }}>
             Скачайте шаблон Excel-файла с правильной структурой колонок
           </p>
           <button className="btn-primary" onClick={downloadTemplate}>
@@ -330,33 +330,33 @@ export default function ImportParticipants() {
 
         {/* ШАГ 2: ЗАГРУЗИТЬ ФАЙЛ */}
         <div className="card" style={{ marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '8px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '8px' }}>
             📤 Шаг 2: Загрузите файл
           </h3>
-          <p style={{ color: '#667085', marginBottom: '12px' }}>
+          <p style={{ color: 'var(--color-gray-500)', marginBottom: '12px' }}>
             Загрузите заполненный Excel-файл (.xlsx или .xls)
           </p>
           <div style={{
-            border: '2px dashed #D5DCE7',
+            border: '2px dashed var(--color-gray-200)',
             borderRadius: '12px',
             padding: '30px',
             textAlign: 'center',
-            background: '#F8FAFC',
+            background: 'var(--color-gray-50)',
             transition: 'all 0.2s'
           }}
           onDragOver={(e) => {
             e.preventDefault();
-            e.currentTarget.style.borderColor = '#C9A227';
-            e.currentTarget.style.background = '#FBF4DC';
+            e.currentTarget.style.borderColor = 'var(--color-gold)';
+            e.currentTarget.style.background = 'var(--color-gold-pale)';
           }}
           onDragLeave={(e) => {
-            e.currentTarget.style.borderColor = '#D5DCE7';
-            e.currentTarget.style.background = '#F8FAFC';
+            e.currentTarget.style.borderColor = 'var(--color-gray-200)';
+            e.currentTarget.style.background = 'var(--color-gray-50)';
           }}
           onDrop={(e) => {
             e.preventDefault();
-            e.currentTarget.style.borderColor = '#D5DCE7';
-            e.currentTarget.style.background = '#F8FAFC';
+            e.currentTarget.style.borderColor = 'var(--color-gray-200)';
+            e.currentTarget.style.background = 'var(--color-gray-50)';
             const file = e.dataTransfer.files[0];
             if (file) {
               const input = document.getElementById('fileInput');
@@ -368,7 +368,7 @@ export default function ImportParticipants() {
           }}
           >
             <div style={{ fontSize: '48px', marginBottom: '8px' }}>📂</div>
-            <p style={{ color: '#667085', marginBottom: '8px' }}>
+            <p style={{ color: 'var(--color-gray-500)', marginBottom: '8px' }}>
               Перетащите файл сюда или нажмите для выбора
             </p>
             <input
@@ -385,7 +385,7 @@ export default function ImportParticipants() {
               Выбрать файл
             </button>
             {file && (
-              <div style={{ marginTop: '12px', color: '#16845B' }}>
+              <div style={{ marginTop: '12px', color: 'var(--color-success)' }}>
                 ✅ Файл выбран: <strong>{file.name}</strong> ({Math.round(file.size / 1024)} KB)
               </div>
             )}
@@ -396,10 +396,10 @@ export default function ImportParticipants() {
         {previewData.length > 0 && (
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
                 📊 Шаг 3: Проверка данных
               </h3>
-              <span style={{ fontSize: '14px', color: '#667085' }}>
+              <span style={{ fontSize: '14px', color: 'var(--color-gray-500)' }}>
                 {previewData.length} записей
               </span>
             </div>
@@ -407,7 +407,7 @@ export default function ImportParticipants() {
             <div style={{ overflow: 'auto', maxHeight: '300px' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
-                  <tr style={{ background: '#F4F6F9' }}>
+                  <tr style={{ background: 'var(--color-gray-100)' }}>
                     <th style={{ padding: '8px 12px' }}>#</th>
                     <th style={{ padding: '8px 12px' }}>ФИО</th>
                     <th style={{ padding: '8px 12px' }}>Email</th>
@@ -418,7 +418,7 @@ export default function ImportParticipants() {
                 </thead>
                 <tbody>
                   {previewData.slice(0, 20).map((row) => (
-                    <tr key={row.index} style={{ borderBottom: '1px solid #F4F6F9' }}>
+                    <tr key={row.index} style={{ borderBottom: '1px solid var(--color-gray-100)' }}>
                       <td style={{ padding: '8px 12px' }}>{row.index}</td>
                       <td style={{ padding: '8px 12px' }}>{row.full_name}</td>
                       <td style={{ padding: '8px 12px' }}>{row.email}</td>
@@ -430,7 +430,7 @@ export default function ImportParticipants() {
                 </tbody>
               </table>
               {previewData.length > 20 && (
-                <div style={{ padding: '8px', textAlign: 'center', color: '#98A2B3' }}>
+                <div style={{ padding: '8px', textAlign: 'center', color: 'var(--color-gray-400)' }}>
                   ... и еще {previewData.length - 20} записей
                 </div>
               )}

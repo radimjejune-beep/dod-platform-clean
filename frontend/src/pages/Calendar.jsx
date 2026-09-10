@@ -95,13 +95,13 @@ export default function CalendarPage() {
                 width: '6px',
                 height: '6px',
                 borderRadius: '50%',
-                background: e.type === 'internal' ? '#174A7E' : 
-                           e.type === 'outgoing' ? '#C9A227' : '#B3262E',
+                background: e.type === 'internal' ? 'var(--color-primary-light)' : 
+                           e.type === 'outgoing' ? 'var(--color-gold)' : 'var(--color-error)',
                 display: 'inline-block'
               }} />
             ))}
             {dayEvents.length > 3 && (
-              <span style={{ fontSize: '8px', color: '#667085' }}>
+              <span style={{ fontSize: '8px', color: 'var(--color-gray-500)' }}>
                 +{dayEvents.length - 3}
               </span>
             )}
@@ -166,7 +166,7 @@ export default function CalendarPage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -179,7 +179,7 @@ export default function CalendarPage() {
         <div className="container-page">
           <div className="empty-state">
             <div className="icon">❌</div>
-            <p style={{ fontSize: '18px', color: '#B3262E' }}>{error}</p>
+            <p style={{ fontSize: '18px', color: 'var(--color-error)' }}>{error}</p>
             <button className="btn-primary" onClick={() => { setError(''); loadData(); }}>
               🔄 Попробовать снова
             </button>
@@ -216,10 +216,10 @@ export default function CalendarPage() {
                 font-size: 14px !important;
               }
               .react-calendar__tile:hover {
-                background: #F4F6F9 !important;
+                background: var(--color-gray-100) !important;
               }
               .react-calendar__tile--active {
-                background: #0B1F3A !important;
+                background: var(--color-primary) !important;
                 color: white !important;
               }
               .react-calendar__tile--now {
@@ -228,7 +228,7 @@ export default function CalendarPage() {
               .react-calendar__month-view__weekdays {
                 font-size: 11px !important;
                 font-weight: 600 !important;
-                color: #667085 !important;
+                color: var(--color-gray-500) !important;
                 text-transform: uppercase !important;
                 letter-spacing: 0.5px !important;
               }
@@ -244,13 +244,13 @@ export default function CalendarPage() {
               .react-calendar__navigation button {
                 font-size: 16px !important;
                 font-weight: 600 !important;
-                color: #0B1F3A !important;
+                color: var(--color-primary) !important;
                 padding: 8px 16px !important;
                 border-radius: 8px !important;
                 transition: all 0.2s ease !important;
               }
               .react-calendar__navigation button:hover {
-                background: #F4F6F9 !important;
+                background: var(--color-gray-100) !important;
               }
               .event-day {
                 background: #F0F7FF !important;
@@ -260,7 +260,7 @@ export default function CalendarPage() {
                 background: #E2E8F0 !important;
               }
               .react-calendar__month-view__days__day--weekend {
-                color: #B3262E !important;
+                color: var(--color-error) !important;
               }
             `}
           </style>
@@ -276,10 +276,10 @@ export default function CalendarPage() {
 
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
               📋 {selectedDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
             </h3>
-            <span style={{ fontSize: '13px', color: '#667085' }}>
+            <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               {eventsForSelectedDate.length} мероприятий
             </span>
           </div>
@@ -296,8 +296,8 @@ export default function CalendarPage() {
                   key={event.id}
                   className="list-item"
                   style={{
-                    borderLeftColor: event.type === 'internal' ? '#174A7E' : 
-                                   event.type === 'outgoing' ? '#C9A227' : '#B3262E'
+                    borderLeftColor: event.type === 'internal' ? 'var(--color-primary-light)' : 
+                                   event.type === 'outgoing' ? 'var(--color-gold)' : 'var(--color-error)'
                   }}
                   onClick={() => {
                     setSelectedEvent(event);
@@ -343,9 +343,9 @@ export default function CalendarPage() {
           >
             <button
               onClick={() => setShowModal(false)}
-              style={{ position: 'absolute', top: '12px', right: '16px', background: 'none', border: 'none', fontSize: '24px', color: '#98A2B3', cursor: 'pointer' }}
-              onMouseEnter={(e) => e.target.style.color = '#0B1F3A'}
-              onMouseLeave={(e) => e.target.style.color = '#98A2B3'}
+              style={{ position: 'absolute', top: '12px', right: '16px', background: 'none', border: 'none', fontSize: '24px', color: 'var(--color-gray-400)', cursor: 'pointer' }}
+              onMouseEnter={(e) => e.target.style.color = 'var(--color-primary)'}
+              onMouseLeave={(e) => e.target.style.color = 'var(--color-gray-400)'}
             >
               ✕
             </button>
@@ -355,18 +355,18 @@ export default function CalendarPage() {
                 {selectedEvent.type === 'internal' ? '📌' : 
                  selectedEvent.type === 'outgoing' ? '🌍' : '🏛️'}
               </span>
-              <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#0B1F3A' }}>
+              <h2 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--color-primary)' }}>
                 {selectedEvent.title}
               </h2>
             </div>
 
             {selectedEvent.club_name && (
-              <p style={{ fontSize: '14px', color: '#667085', marginBottom: '4px' }}>
+              <p style={{ fontSize: '14px', color: 'var(--color-gray-500)', marginBottom: '4px' }}>
                 🏫 {selectedEvent.club_name}
               </p>
             )}
 
-            <p style={{ fontSize: '14px', color: '#667085', marginBottom: '4px' }}>
+            <p style={{ fontSize: '14px', color: 'var(--color-gray-500)', marginBottom: '4px' }}>
               📅 {new Date(selectedEvent.event_date).toLocaleDateString('ru-RU')}
               {selectedEvent.end_date && selectedEvent.end_date !== selectedEvent.event_date && (
                 <> — {new Date(selectedEvent.end_date).toLocaleDateString('ru-RU')}</>
@@ -374,42 +374,42 @@ export default function CalendarPage() {
             </p>
 
             {selectedEvent.start_time && (
-              <p style={{ fontSize: '14px', color: '#667085', marginBottom: '4px' }}>
+              <p style={{ fontSize: '14px', color: 'var(--color-gray-500)', marginBottom: '4px' }}>
                 ⏰ {selectedEvent.start_time}
                 {selectedEvent.end_time && <> — {selectedEvent.end_time}</>}
               </p>
             )}
 
             {selectedEvent.location && (
-              <p style={{ fontSize: '14px', color: '#667085', marginBottom: '4px' }}>
+              <p style={{ fontSize: '14px', color: 'var(--color-gray-500)', marginBottom: '4px' }}>
                 📍 {selectedEvent.location}
               </p>
             )}
 
             <div className="tag" style={{
               marginTop: '8px',
-              background: selectedEvent.type === 'internal' ? '#EAF2FA' : 
-                         selectedEvent.type === 'outgoing' ? '#FBF4DC' : '#FCEBEC',
-              color: selectedEvent.type === 'internal' ? '#174A7E' : 
-                     selectedEvent.type === 'outgoing' ? '#C9A227' : '#B3262E'
+              background: selectedEvent.type === 'internal' ? 'var(--color-info-bg)' : 
+                         selectedEvent.type === 'outgoing' ? 'var(--color-gold-pale)' : 'var(--color-error-bg)',
+              color: selectedEvent.type === 'internal' ? 'var(--color-primary-light)' : 
+                     selectedEvent.type === 'outgoing' ? 'var(--color-gold)' : 'var(--color-error)'
             }}>
               {selectedEvent.type === 'internal' ? 'Внутреннее' : 
                selectedEvent.type === 'outgoing' ? 'Выездное' : 'Форум'}
             </div>
 
             {selectedEvent.description && (
-              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E7EF' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#0B1F3A', marginBottom: '4px' }}>
+              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-gray-200)' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '4px' }}>
                   Описание
                 </h4>
-                <p style={{ fontSize: '14px', color: '#667085', lineHeight: '1.6' }}>
+                <p style={{ fontSize: '14px', color: 'var(--color-gray-500)', lineHeight: '1.6' }}>
                   {selectedEvent.description}
                 </p>
               </div>
             )}
 
-            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E7EF' }}>
-              <p style={{ fontSize: '13px', color: '#98A2B3' }}>
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-gray-200)' }}>
+              <p style={{ fontSize: '13px', color: 'var(--color-gray-400)' }}>
                 👥 Лимит мест: {selectedEvent.capacity || 'Не ограничен'}
               </p>
             </div>

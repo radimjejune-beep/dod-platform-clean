@@ -79,11 +79,11 @@ export default function OfficialDocuments() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'draft': { label: '📝 Черновик', color: '#8A9AAA', bg: '#F4F6F9' },
-      'pending_approval': { label: '⏳ На согласовании', color: '#C9A227', bg: '#FBF4DC' },
-      'approved': { label: '✅ Одобрено', color: '#16845B', bg: '#E8F5EF' },
-      'published': { label: '📢 Опубликовано', color: '#174A7E', bg: '#EAF2FA' },
-      'rejected': { label: '❌ Отклонено', color: '#B3262E', bg: '#FCEBEC' }
+      'draft': { label: '📝 Черновик', color: '#8A9AAA', bg: 'var(--color-gray-100)' },
+      'pending_approval': { label: '⏳ На согласовании', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'approved': { label: '✅ Одобрено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'published': { label: '📢 Опубликовано', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
+      'rejected': { label: '❌ Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
     };
     return badges[status] || badges['draft'];
   };
@@ -287,7 +287,7 @@ export default function OfficialDocuments() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -300,8 +300,8 @@ export default function OfficialDocuments() {
         <div className="container-page">
           <div className="empty-state">
             <div className="icon">⛔</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Доступ запрещён</p>
-            <p style={{ color: '#667085' }}>Только сотрудники движения</p>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
+            <p style={{ color: 'var(--color-gray-500)' }}>Только сотрудники движения</p>
           </div>
         </div>
       </div>
@@ -347,8 +347,8 @@ export default function OfficialDocuments() {
         )}
 
         {showForm && canCreate && (
-          <div className="card" style={{ marginBottom: '24px', borderLeft: '4px solid #C9A227' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+          <div className="card" style={{ marginBottom: '24px', borderLeft: '4px solid var(--color-gold)' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
               📝 Создать официальный документ
             </h3>
             <form onSubmit={handleSubmit}>
@@ -410,7 +410,7 @@ export default function OfficialDocuments() {
                       onChange={(e) => setForm({ ...form, is_urgent: e.target.checked })}
                       style={{ width: '18px', height: '18px' }}
                     />
-                    <span style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                    <span style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                       🔥 Срочный документ
                     </span>
                   </label>
@@ -426,7 +426,7 @@ export default function OfficialDocuments() {
                 </button>
               </div>
 
-              <div style={{ marginTop: '12px', padding: '12px 16px', background: '#FBF4DC', borderRadius: '8px', fontSize: '13px', color: '#8A6A00' }}>
+              <div style={{ marginTop: '12px', padding: '12px 16px', background: 'var(--color-gold-pale)', borderRadius: '8px', fontSize: '13px', color: 'var(--color-gold-dark)' }}>
                 📌 После создания документ будет отправлен на согласование <strong>президенту движения</strong>.
                 После одобрения он станет доступен всем сотрудникам движения.
               </div>
@@ -436,10 +436,10 @@ export default function OfficialDocuments() {
 
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
               📋 Все документы
             </h3>
-            <span style={{ fontSize: '13px', color: '#667085' }}>
+            <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               {documents.length} документов
             </span>
           </div>
@@ -447,11 +447,11 @@ export default function OfficialDocuments() {
           {documents.length === 0 ? (
             <div className="empty-state">
               <div className="icon">📜</div>
-              <p style={{ fontSize: '18px', color: '#0B1F3A' }}>
+              <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>
                 Официальных документов пока нет
               </p>
               {canCreate && (
-                <p style={{ color: '#667085' }}>
+                <p style={{ color: 'var(--color-gray-500)' }}>
                   Создайте первый документ для публикации
                 </p>
               )}
@@ -468,10 +468,10 @@ export default function OfficialDocuments() {
                     key={doc.id}
                     className="list-item"
                     style={{
-                      borderLeftColor: isUrgent ? '#B3262E' :
-                                    doc.status === 'published' ? '#174A7E' :
-                                    doc.status === 'approved' ? '#16845B' : '#C9A227',
-                      background: isUrgent ? '#FCEBEC' : (isRead ? '#F8FAFC' : 'transparent'),
+                      borderLeftColor: isUrgent ? 'var(--color-error)' :
+                                    doc.status === 'published' ? 'var(--color-primary-light)' :
+                                    doc.status === 'approved' ? 'var(--color-success)' : 'var(--color-gold)',
+                      background: isUrgent ? 'var(--color-error-bg)' : (isRead ? 'var(--color-gray-50)' : 'transparent'),
                       opacity: isRead ? 0.85 : 1
                     }}
                     onClick={() => {
@@ -492,7 +492,7 @@ export default function OfficialDocuments() {
                         </span>
                       )}
                       {doc.priority === 'high' && (
-                        <span className="tag" style={{ marginLeft: '8px', background: '#FCEBEC', color: '#B3262E', fontSize: '10px' }}>
+                        <span className="tag" style={{ marginLeft: '8px', background: 'var(--color-error-bg)', color: 'var(--color-error)', fontSize: '10px' }}>
                           Высокий приоритет
                         </span>
                       )}
@@ -500,7 +500,7 @@ export default function OfficialDocuments() {
                         {status.label}
                       </span>
                       {!isRead && doc.status === 'published' && (
-                        <span className="tag" style={{ marginLeft: '8px', background: '#EAF2FA', color: '#174A7E', fontSize: '10px' }}>
+                        <span className="tag" style={{ marginLeft: '8px', background: 'var(--color-info-bg)', color: 'var(--color-primary-light)', fontSize: '10px' }}>
                           🔵 Новое
                         </span>
                       )}
@@ -629,7 +629,7 @@ export default function OfficialDocuments() {
                 background: 'none',
                 border: 'none',
                 fontSize: '24px',
-                color: '#98A2B3',
+                color: 'var(--color-gray-400)',
                 cursor: 'pointer'
               }}
             >
@@ -642,15 +642,15 @@ export default function OfficialDocuments() {
                  selectedDocument.document_type === 'invitation' ? '📩' :
                  selectedDocument.document_type === 'regulation' ? '📋' : '📢'}
               </span>
-              <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0B1F3A' }}>
+              <h2 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--color-primary)' }}>
                 {selectedDocument.title}
               </h2>
             </div>
 
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
               <span className="tag" style={{
-                background: '#F4F6F9',
-                color: '#667085'
+                background: 'var(--color-gray-100)',
+                color: 'var(--color-gray-500)'
               }}>
                 {getDocumentTypeLabel(selectedDocument.document_type)}
               </span>
@@ -662,10 +662,10 @@ export default function OfficialDocuments() {
               </span>
               {selectedDocument.priority && (
                 <span className="tag" style={{
-                  background: selectedDocument.priority === 'urgent' ? '#FCEBEC' :
-                             selectedDocument.priority === 'high' ? '#FCEBEC' : '#F4F6F9',
-                  color: selectedDocument.priority === 'urgent' ? '#B3262E' :
-                         selectedDocument.priority === 'high' ? '#B3262E' : '#667085'
+                  background: selectedDocument.priority === 'urgent' ? 'var(--color-error-bg)' :
+                             selectedDocument.priority === 'high' ? 'var(--color-error-bg)' : 'var(--color-gray-100)',
+                  color: selectedDocument.priority === 'urgent' ? 'var(--color-error)' :
+                         selectedDocument.priority === 'high' ? 'var(--color-error)' : 'var(--color-gray-500)'
                 }}>
                   {getPriorityLabel(selectedDocument.priority)}
                 </span>
@@ -677,12 +677,12 @@ export default function OfficialDocuments() {
 
             <div style={{
               padding: '16px 20px',
-              background: '#F8FAFC',
+              background: 'var(--color-gray-50)',
               borderRadius: '8px',
-              borderLeft: '4px solid #C9A227',
+              borderLeft: '4px solid var(--color-gold)',
               marginBottom: '16px'
             }}>
-              <p style={{ fontSize: '15px', color: '#0B1F3A', lineHeight: '1.8', whiteSpace: 'pre-wrap', margin: 0 }}>
+              <p style={{ fontSize: '15px', color: 'var(--color-primary)', lineHeight: '1.8', whiteSpace: 'pre-wrap', margin: 0 }}>
                 {selectedDocument.content}
               </p>
             </div>
@@ -692,44 +692,44 @@ export default function OfficialDocuments() {
               gridTemplateColumns: '1fr 1fr',
               gap: '12px',
               fontSize: '13px',
-              color: '#667085',
+              color: 'var(--color-gray-500)',
               paddingTop: '16px',
-              borderTop: '1px solid #E2E7EF'
+              borderTop: '1px solid var(--color-gray-200)'
             }}>
               <div>
-                <span style={{ color: '#98A2B3' }}>Создал:</span>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                <span style={{ color: 'var(--color-gray-400)' }}>Создал:</span>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                   {selectedDocument.created_by_name || 'Неизвестно'}
                 </div>
               </div>
               {selectedDocument.approved_by_name && (
                 <div>
-                  <span style={{ color: '#98A2B3' }}>Одобрил:</span>
-                  <div style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                  <span style={{ color: 'var(--color-gray-400)' }}>Одобрил:</span>
+                  <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                     {selectedDocument.approved_by_name}
                   </div>
                 </div>
               )}
               {selectedDocument.created_at && (
                 <div>
-                  <span style={{ color: '#98A2B3' }}>Создан:</span>
-                  <div style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                  <span style={{ color: 'var(--color-gray-400)' }}>Создан:</span>
+                  <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                     {new Date(selectedDocument.created_at).toLocaleDateString('ru-RU')}
                   </div>
                 </div>
               )}
               {selectedDocument.published_at && (
                 <div>
-                  <span style={{ color: '#98A2B3' }}>Опубликован:</span>
-                  <div style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                  <span style={{ color: 'var(--color-gray-400)' }}>Опубликован:</span>
+                  <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                     {new Date(selectedDocument.published_at).toLocaleDateString('ru-RU')}
                   </div>
                 </div>
               )}
               {selectedDocument.read_count !== undefined && (
                 <div>
-                  <span style={{ color: '#98A2B3' }}>Прочитали:</span>
-                  <div style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                  <span style={{ color: 'var(--color-gray-400)' }}>Прочитали:</span>
+                  <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                     {selectedDocument.read_count} человек
                   </div>
                 </div>
@@ -750,7 +750,7 @@ export default function OfficialDocuments() {
             )}
 
             {canApprove && selectedDocument.status === 'pending_approval' && (
-              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E7EF', display: 'flex', gap: '12px' }}>
+              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-gray-200)', display: 'flex', gap: '12px' }}>
                 <button
                   className="btn-success"
                   style={{ flex: 1 }}
@@ -826,10 +826,10 @@ export default function OfficialDocuments() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
               ❌ Отклонить документ
             </h3>
-            <p style={{ color: '#667085', marginBottom: '16px' }}>
+            <p style={{ color: 'var(--color-gray-500)', marginBottom: '16px' }}>
               Документ: <strong>{selectedDocument.title}</strong>
             </p>
 

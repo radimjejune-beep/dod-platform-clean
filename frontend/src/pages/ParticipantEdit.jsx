@@ -105,7 +105,7 @@ export default function ParticipantEdit() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -118,7 +118,7 @@ export default function ParticipantEdit() {
         <div className="container-page">
           <div className="empty-state">
             <div className="icon">❌</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Участник не найден</p>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Участник не найден</p>
           </div>
         </div>
       </div>
@@ -132,8 +132,8 @@ export default function ParticipantEdit() {
         <div className="container-page">
           <div className="empty-state">
             <div className="icon">⛔</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Доступ запрещён</p>
-            <p style={{ color: '#667085' }}>У вас нет прав для редактирования этого участника</p>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
+            <p style={{ color: 'var(--color-gray-500)' }}>У вас нет прав для редактирования этого участника</p>
           </div>
         </div>
       </div>
@@ -179,7 +179,7 @@ export default function ParticipantEdit() {
                   type="email"
                   value={participant.email || ''}
                   disabled
-                  style={{ background: '#F4F6F9', cursor: 'not-allowed' }}
+                  style={{ background: 'var(--color-gray-100)', cursor: 'not-allowed' }}
                 />
               </div>
               <div className="form-group">

@@ -568,7 +568,7 @@ export default function AdminUsers() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -619,7 +619,7 @@ export default function AdminUsers() {
           onSearchChange={setSearchQuery}
           searchPlaceholder="🔍 Поиск по ФИО, email, школе..."
         >
-          <div style={{ fontSize: '14px', color: '#667085', padding: '6px 12px', background: '#F8FAFC', borderRadius: '8px' }}>
+          <div style={{ fontSize: '14px', color: 'var(--color-gray-500)', padding: '6px 12px', background: 'var(--color-gray-50)', borderRadius: '8px' }}>
             Найдено: <strong>{filteredUsers.length}</strong>
           </div>
         </FilterBar>
@@ -628,8 +628,8 @@ export default function AdminUsers() {
           <div className="card" style={{ 
             padding: '24px', 
             marginBottom: '24px', 
-            background: '#FBF4DC', 
-            border: '2px solid #C9A227',
+            background: 'var(--color-gold-pale)', 
+            border: '2px solid var(--color-gold)',
             borderRadius: '16px'
           }}>
             <div style={{ 
@@ -640,7 +640,7 @@ export default function AdminUsers() {
               flexWrap: 'wrap',
               gap: '8px'
             }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0B1F3A' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--color-primary)' }}>
                 🔑 Данные для входа
               </h3>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -663,7 +663,7 @@ export default function AdminUsers() {
             <div style={{ overflow: 'auto', maxHeight: '400px' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                 <thead>
-                  <tr style={{ background: '#F4F6F9' }}>
+                  <tr style={{ background: 'var(--color-gray-100)' }}>
                     <th style={{ padding: '8px 12px', textAlign: 'left' }}>ФИО</th>
                     <th style={{ padding: '8px 12px', textAlign: 'left' }}>Логин</th>
                     <th style={{ padding: '8px 12px', textAlign: 'left' }}>Пароль</th>
@@ -673,7 +673,7 @@ export default function AdminUsers() {
                 </thead>
                 <tbody>
                   {(createdUsers.length > 0 ? createdUsers : importedUsersList).map((u, index) => (
-                    <tr key={index} style={{ borderBottom: '1px solid #E2E7EF' }}>
+                    <tr key={index} style={{ borderBottom: '1px solid var(--color-gray-200)' }}>
                       <td style={{ padding: '8px 12px', fontWeight: '500' }}>{u.full_name}</td>
                       <td style={{ padding: '8px 12px' }}>
                         {u.email}
@@ -682,8 +682,8 @@ export default function AdminUsers() {
                             marginLeft: '8px', 
                             fontSize: '10px', 
                             padding: '2px 8px', 
-                            background: '#EAF2FA', 
-                            color: '#174A7E', 
+                            background: 'var(--color-info-bg)', 
+                            color: 'var(--color-primary-light)', 
                             borderRadius: '12px' 
                           }}>
                             Авто
@@ -692,12 +692,12 @@ export default function AdminUsers() {
                       </td>
                       <td>
                         <code style={{ 
-                          background: '#F4F6F9', 
+                          background: 'var(--color-gray-100)', 
                           padding: '2px 10px', 
                           borderRadius: '6px', 
                           fontSize: '13px', 
                           fontWeight: '600', 
-                          color: '#0B1F3A',
+                          color: 'var(--color-primary)',
                           display: 'inline-block'
                         }}>
                           {u.password}
@@ -713,10 +713,10 @@ export default function AdminUsers() {
             <div style={{ 
               marginTop: '12px', 
               padding: '12px 16px', 
-              background: '#EAF2FA', 
+              background: 'var(--color-info-bg)', 
               borderRadius: '10px', 
               fontSize: '13px', 
-              color: '#174A7E' 
+              color: 'var(--color-primary-light)' 
             }}>
               💡 Скопируйте данные или выгрузите в Excel для раздачи пользователям.
             </div>
@@ -726,13 +726,13 @@ export default function AdminUsers() {
         {showCreateUser && canCreate && (
           <div className="card" style={{ padding: '24px', marginBottom: '24px', borderRadius: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>📝 Создать пользователя</h3>
-            <p style={{ fontSize: '13px', color: '#667085', marginBottom: '16px' }}>
+            <p style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginBottom: '16px' }}>
               🔑 Пароль будет сгенерирован автоматически и показан после создания
             </p>
             <form onSubmit={handleSubmitUser}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
                 <div className="form-group">
-                  <label>ФИО <span style={{ color: '#B3262E' }}>*</span></label>
+                  <label>ФИО <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <input 
                     type="text" 
                     value={form.full_name} 
@@ -742,7 +742,7 @@ export default function AdminUsers() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Роль <span style={{ color: '#B3262E' }}>*</span></label>
+                  <label>Роль <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} required>
                     <option value="participant">👤 Участник</option>
                     <option value="parent">👨‍👩‍👦 Родитель</option>
@@ -755,14 +755,14 @@ export default function AdminUsers() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Email <span style={{ fontSize: '12px', color: '#98A2B3' }}>(необязательно)</span></label>
+                  <label>Email <span style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>(необязательно)</span></label>
                   <input 
                     type="email" 
                     value={form.email} 
                     onChange={(e) => setForm({ ...form, email: e.target.value })} 
                     placeholder="ivan@example.com" 
                   />
-                  <div style={{ fontSize: '11px', color: '#98A2B3', marginTop: '4px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
                     Если не указан, будет сгенерирован автоматически
                   </div>
                 </div>
@@ -828,7 +828,7 @@ export default function AdminUsers() {
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>📥 Массовый импорт</h3>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
               <button className="btn-secondary" onClick={downloadTemplate}>📄 Скачать шаблон</button>
-              <input type="file" accept=".xlsx,.xls" onChange={handleImportFile} style={{ padding: '8px', border: '1px solid #D5DCE7', borderRadius: '8px' }} />
+              <input type="file" accept=".xlsx,.xls" onChange={handleImportFile} style={{ padding: '8px', border: '1px solid var(--color-gray-200)', borderRadius: '8px' }} />
             </div>
             {importPreview.length > 0 && (
               <div>
@@ -847,7 +847,7 @@ export default function AdminUsers() {
                         </tr>
                       ))}
                       {importPreview.length > 10 && (
-                        <tr><td colSpan="6" style={{ textAlign: 'center', color: '#98A2B3' }}>
+                        <tr><td colSpan="6" style={{ textAlign: 'center', color: 'var(--color-gray-400)' }}>
                           ... и еще {importPreview.length - 10} записей
                         </td></tr>
                       )}
@@ -884,7 +884,7 @@ export default function AdminUsers() {
           }} onClick={() => setShowParentChildModal(false)}>
             <div className="card" style={{ maxWidth: '500px', width: '100%', padding: '32px' }} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>👨‍👩‍👦 Привязка ребёнка к родителю</h3>
-              <p style={{ fontSize: '13px', color: '#667085', marginBottom: '16px' }}>
+              <p style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginBottom: '16px' }}>
                 Выберите родителя и ребёнка для привязки. После привязки родитель сможет видеть профиль ребёнка.
               </p>
               <div className="form-group">
@@ -933,21 +933,21 @@ export default function AdminUsers() {
             </thead>
             <tbody>
               {filteredUsers.length === 0 ? (
-                <tr><td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#667085' }}>Пользователей не найдено</td></tr>
+                <tr><td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: 'var(--color-gray-500)' }}>Пользователей не найдено</td></tr>
               ) : (
                 filteredUsers.map((u) => (
                   <tr key={u.id}>
                     <td style={{ fontWeight: '500' }}>{u.full_name}</td>
-                    <td style={{ color: '#667085' }}>{u.email}</td>
+                    <td style={{ color: 'var(--color-gray-500)' }}>{u.email}</td>
                     <td>{getRoleLabel(u.role)}</td>
-                    <td style={{ color: '#667085' }}>{clubs.find(c => c.id === u.club_id)?.name || '—'}</td>
+                    <td style={{ color: 'var(--color-gray-500)' }}>{clubs.find(c => c.id === u.club_id)?.name || '—'}</td>
                     <td>
                       <span style={{
                         padding: '2px 12px',
                         borderRadius: '20px',
                         fontSize: '12px',
-                        background: u.status === 'active' ? '#E8F5EF' : '#FCEBEC',
-                        color: u.status === 'active' ? '#16845B' : '#B3262E'
+                        background: u.status === 'active' ? 'var(--color-success-bg)' : 'var(--color-error-bg)',
+                        color: u.status === 'active' ? 'var(--color-success)' : 'var(--color-error)'
                       }}>
                         {u.status === 'active' ? '🟢 Активен' : '🔴 Неактивен'}
                       </span>
@@ -955,7 +955,7 @@ export default function AdminUsers() {
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button
-                          style={{ padding: '4px 10px', background: '#F4F6F9', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}
+                          style={{ padding: '4px 10px', background: 'var(--color-gray-100)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}
                           onClick={() => navigate(`/participant/${u.id}`)}
                           title="Просмотр профиля"
                         >
@@ -965,7 +965,7 @@ export default function AdminUsers() {
                         {isAdmin && (
                           <>
                             <button
-                              style={{ padding: '4px 10px', background: '#FBF4DC', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}
+                              style={{ padding: '4px 10px', background: 'var(--color-gold-pale)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}
                               onClick={() => handleResetPassword(u.id, u.full_name)}
                               title="Сбросить пароль"
                             >
@@ -987,16 +987,16 @@ export default function AdminUsers() {
                             <button
                               style={{
                                 padding: '4px 10px',
-                                background: '#FCEBEC',
+                                background: 'var(--color-error-bg)',
                                 border: 'none',
                                 borderRadius: '8px',
                                 cursor: 'pointer',
                                 fontSize: '13px',
-                                color: '#B3262E',
+                                color: 'var(--color-error)',
                                 transition: 'all 0.2s ease'
                               }}
                               onMouseEnter={(e) => e.currentTarget.style.background = '#FED7D7'}
-                              onMouseLeave={(e) => e.currentTarget.style.background = '#FCEBEC'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = 'var(--color-error-bg)'}
                               onClick={() => handleDeleteUser(u.id, u.full_name)}
                               title="Удалить пользователя"
                             >

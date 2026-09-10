@@ -79,17 +79,17 @@ export default function NotificationHistory() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { label: '⏳ Ожидает', color: '#C9A227', bg: '#FBF4DC' },
-      'sent': { label: '✅ Отправлено', color: '#16845B', bg: '#E8F5EF' },
-      'scheduled': { label: '📅 Запланировано', color: '#174A7E', bg: '#EAF2FA' },
-      'failed': { label: '❌ Ошибка', color: '#B3262E', bg: '#FCEBEC' }
+      'pending': { label: '⏳ Ожидает', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'sent': { label: '✅ Отправлено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'scheduled': { label: '📅 Запланировано', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
+      'failed': { label: '❌ Ошибка', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
     };
     return badges[status] || badges['pending'];
   };
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -140,19 +140,19 @@ export default function NotificationHistory() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                        <h3 style={{ fontSize: '17px', fontWeight: '600', color: '#0B1F3A', margin: 0 }}>
+                        <h3 style={{ fontSize: '17px', fontWeight: '600', color: 'var(--color-primary)', margin: 0 }}>
                           {n.title}
                         </h3>
                         <span className="tag" style={{ background: status.bg, color: status.color }}>
                           {status.label}
                         </span>
                         <span className="tag" style={{
-                          background: n.priority === 'urgent' ? '#FCEBEC' :
-                                    n.priority === 'high' ? '#FCEBEC' :
-                                    n.priority === 'normal' ? '#FBF4DC' : '#F4F6F9',
-                          color: n.priority === 'urgent' ? '#B3262E' :
-                                 n.priority === 'high' ? '#B3262E' :
-                                 n.priority === 'normal' ? '#8A6A00' : '#667085'
+                          background: n.priority === 'urgent' ? 'var(--color-error-bg)' :
+                                    n.priority === 'high' ? 'var(--color-error-bg)' :
+                                    n.priority === 'normal' ? 'var(--color-gold-pale)' : 'var(--color-gray-100)',
+                          color: n.priority === 'urgent' ? 'var(--color-error)' :
+                                 n.priority === 'high' ? 'var(--color-error)' :
+                                 n.priority === 'normal' ? 'var(--color-gold-dark)' : 'var(--color-gray-500)'
                         }}>
                           {getPriorityLabel(n.priority)}
                         </span>
@@ -162,7 +162,7 @@ export default function NotificationHistory() {
                         {n.message}
                       </p>
 
-                      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13px', color: '#667085', marginTop: '4px' }}>
+                      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
                         <span>📤 {getRecipientLabel(n.recipients)} ({n.recipient_count} чел.)</span>
                         <span>👤 {n.created_by_name || 'Система'}</span>
                         <span>📅 {new Date(n.created_at).toLocaleString('ru-RU')}</span>

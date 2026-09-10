@@ -137,7 +137,7 @@ export default function ParticipantProfile() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -150,7 +150,7 @@ export default function ParticipantProfile() {
         <div className="container-page">
           <div className="empty-state">
             <div className="icon">❌</div>
-            <p style={{ fontSize: '18px', color: '#B3262E' }}>{error}</p>
+            <p style={{ fontSize: '18px', color: 'var(--color-error)' }}>{error}</p>
             <button className="btn-primary" onClick={() => { setError(''); loadData(); }}>
               🔄 Попробовать снова
             </button>
@@ -167,8 +167,8 @@ export default function ParticipantProfile() {
         <div className="container-page">
           <div className="empty-state">
             <div className="icon">⛔</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Доступ запрещён</p>
-            <p style={{ color: '#667085' }}>У вас нет прав для просмотра этого профиля</p>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
+            <p style={{ color: 'var(--color-gray-500)' }}>У вас нет прав для просмотра этого профиля</p>
           </div>
         </div>
       </div>
@@ -182,7 +182,7 @@ export default function ParticipantProfile() {
         <div className="container-page">
           <div className="empty-state">
             <div className="icon">❌</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Участник не найден</p>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Участник не найден</p>
           </div>
         </div>
       </div>
@@ -211,7 +211,7 @@ export default function ParticipantProfile() {
               width: '100px',
               height: '100px',
               borderRadius: '50%',
-              background: participant.avatar_url ? `url(${participant.avatar_url}) center/cover` : 'linear-gradient(135deg, #0B1F3A, #174A7E)',
+              background: participant.avatar_url ? `url(${participant.avatar_url}) center/cover` : 'linear-gradient(135deg, var(--color-primary), var(--color-primary-light))',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -219,16 +219,16 @@ export default function ParticipantProfile() {
               color: 'white',
               fontWeight: 'bold',
               flexShrink: 0,
-              border: '3px solid #C9A227'
+              border: '3px solid var(--color-gold)'
             }}>
               {!participant.avatar_url && getInitials(participant.full_name)}
             </div>
 
             <div style={{ flex: 1 }}>
-              <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0B1F3A', margin: 0 }}>
+              <h1 style={{ fontSize: '28px', fontWeight: '700', color: 'var(--color-primary)', margin: 0 }}>
                 {participant.full_name}
               </h1>
-              <p style={{ color: '#667085', marginTop: '4px' }}>
+              <p style={{ color: 'var(--color-gray-500)', marginTop: '4px' }}>
                 {participant.school || 'Школа не указана'} • {participant.class_name || 'Класс не указан'}
                 {participant.club_name && ` • 🏫 ${participant.club_name}`}
               </p>
@@ -271,12 +271,12 @@ export default function ParticipantProfile() {
             <div style={{ 
               marginTop: '16px', 
               paddingTop: '16px', 
-              borderTop: '1px solid #E2E7EF',
+              borderTop: '1px solid var(--color-gray-200)',
               display: 'flex',
               alignItems: 'center',
               gap: '8px'
             }}>
-              <span style={{ fontSize: '14px', color: '#667085' }}>
+              <span style={{ fontSize: '14px', color: 'var(--color-gray-500)' }}>
                 🏫 Клуб: <strong>{participant.club_name}</strong>
               </span>
             </div>
@@ -287,7 +287,7 @@ export default function ParticipantProfile() {
           display: 'flex',
           gap: '4px',
           marginBottom: '24px',
-          borderBottom: '2px solid #E2E7EF',
+          borderBottom: '2px solid var(--color-gray-200)',
           paddingBottom: '4px',
           flexWrap: 'wrap'
         }}>
@@ -296,8 +296,8 @@ export default function ParticipantProfile() {
             style={{
               padding: '8px 20px',
               border: 'none',
-              background: activeTab === 'info' ? '#0B1F3A' : 'transparent',
-              color: activeTab === 'info' ? 'white' : '#667085',
+              background: activeTab === 'info' ? 'var(--color-primary)' : 'transparent',
+              color: activeTab === 'info' ? 'white' : 'var(--color-gray-500)',
               borderRadius: '8px 8px 0 0',
               cursor: 'pointer',
               fontWeight: activeTab === 'info' ? '600' : '500',
@@ -311,8 +311,8 @@ export default function ParticipantProfile() {
             style={{
               padding: '8px 20px',
               border: 'none',
-              background: activeTab === 'interests' ? '#0B1F3A' : 'transparent',
-              color: activeTab === 'interests' ? 'white' : '#667085',
+              background: activeTab === 'interests' ? 'var(--color-primary)' : 'transparent',
+              color: activeTab === 'interests' ? 'white' : 'var(--color-gray-500)',
               borderRadius: '8px 8px 0 0',
               cursor: 'pointer',
               fontWeight: activeTab === 'interests' ? '600' : '500',
@@ -326,8 +326,8 @@ export default function ParticipantProfile() {
             style={{
               padding: '8px 20px',
               border: 'none',
-              background: activeTab === 'achievements' ? '#0B1F3A' : 'transparent',
-              color: activeTab === 'achievements' ? 'white' : '#667085',
+              background: activeTab === 'achievements' ? 'var(--color-primary)' : 'transparent',
+              color: activeTab === 'achievements' ? 'white' : 'var(--color-gray-500)',
               borderRadius: '8px 8px 0 0',
               cursor: 'pointer',
               fontWeight: activeTab === 'achievements' ? '600' : '500',
@@ -341,8 +341,8 @@ export default function ParticipantProfile() {
             style={{
               padding: '8px 20px',
               border: 'none',
-              background: activeTab === 'events' ? '#0B1F3A' : 'transparent',
-              color: activeTab === 'events' ? 'white' : '#667085',
+              background: activeTab === 'events' ? 'var(--color-primary)' : 'transparent',
+              color: activeTab === 'events' ? 'white' : 'var(--color-gray-500)',
               borderRadius: '8px 8px 0 0',
               cursor: 'pointer',
               fontWeight: activeTab === 'events' ? '600' : '500',
@@ -356,8 +356,8 @@ export default function ParticipantProfile() {
             style={{
               padding: '8px 20px',
               border: 'none',
-              background: activeTab === 'bio' ? '#0B1F3A' : 'transparent',
-              color: activeTab === 'bio' ? 'white' : '#667085',
+              background: activeTab === 'bio' ? 'var(--color-primary)' : 'transparent',
+              color: activeTab === 'bio' ? 'white' : 'var(--color-gray-500)',
               borderRadius: '8px 8px 0 0',
               cursor: 'pointer',
               fontWeight: activeTab === 'bio' ? '600' : '500',
@@ -372,46 +372,46 @@ export default function ParticipantProfile() {
           <div className="card">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>ФИО</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{participant.full_name}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>ФИО</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{participant.full_name}</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Email</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{participant.email || 'Не указан'}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Email</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{participant.email || 'Не указан'}</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Телефон</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{participant.phone || 'Не указан'}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Телефон</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{participant.phone || 'Не указан'}</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Дата рождения</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{formatDate(participant.birth_date)}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Дата рождения</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{formatDate(participant.birth_date)}</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Город</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{participant.city || 'Не указан'}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Город</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{participant.city || 'Не указан'}</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Школа</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{participant.school || 'Не указана'}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Школа</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{participant.school || 'Не указана'}</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Класс</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{participant.class_name || 'Не указан'}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Класс</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{participant.class_name || 'Не указан'}</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Клуб</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>{participant.club_name || 'Не привязан'}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Клуб</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{participant.club_name || 'Не привязан'}</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Статус</div>
-                <div style={{ fontWeight: '500', color: participant.status === 'active' ? '#16845B' : '#B3262E' }}>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Статус</div>
+                <div style={{ fontWeight: '500', color: participant.status === 'active' ? 'var(--color-success)' : 'var(--color-error)' }}>
                   {participant.status === 'active' ? '🟢 Активен' : '🔴 Неактивен'}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#98A2B3' }}>Дата регистрации</div>
-                <div style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Дата регистрации</div>
+                <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                   {new Date(participant.created_at).toLocaleDateString('ru-RU')}
                 </div>
               </div>
@@ -421,11 +421,11 @@ export default function ParticipantProfile() {
 
         {activeTab === 'interests' && (
           <div className="card">
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
               🎯 Интересы
             </h3>
             {interests.length === 0 ? (
-              <p style={{ color: '#667085' }}>Интересы не указаны</p>
+              <p style={{ color: 'var(--color-gray-500)' }}>Интересы не указаны</p>
             ) : (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {interests.map((interest, index) => (
@@ -436,11 +436,11 @@ export default function ParticipantProfile() {
               </div>
             )}
 
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginTop: '24px', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginTop: '24px', marginBottom: '16px' }}>
               💪 Навыки
             </h3>
             {skills.length === 0 ? (
-              <p style={{ color: '#667085' }}>Навыки не указаны</p>
+              <p style={{ color: 'var(--color-gray-500)' }}>Навыки не указаны</p>
             ) : (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {skills.map((skill, index) => (
@@ -453,10 +453,10 @@ export default function ParticipantProfile() {
 
             {participant.education && (
               <>
-                <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginTop: '24px', marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginTop: '24px', marginBottom: '16px' }}>
                   📚 Образование
                 </h3>
-                <p style={{ color: '#667085', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                <p style={{ color: 'var(--color-gray-500)', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
                   {participant.education}
                 </p>
               </>
@@ -466,15 +466,15 @@ export default function ParticipantProfile() {
 
         {activeTab === 'achievements' && (
           <div className="card">
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
               🏆 Достижения
             </h3>
             {achievements.length === 0 ? (
-              <p style={{ color: '#667085' }}>Достижений пока нет</p>
+              <p style={{ color: 'var(--color-gray-500)' }}>Достижений пока нет</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {achievements.map((a) => (
-                  <div key={a.id} className="list-item" style={{ borderLeftColor: '#C9A227' }}>
+                  <div key={a.id} className="list-item" style={{ borderLeftColor: 'var(--color-gold)' }}>
                     <div className="title">{a.title}</div>
                     {a.description && <div className="subtitle">{a.description}</div>}
                     <div className="meta">
@@ -489,16 +489,16 @@ export default function ParticipantProfile() {
 
         {activeTab === 'events' && (
           <div className="card">
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
               📅 Мероприятия
             </h3>
             {events.length === 0 ? (
-              <p style={{ color: '#667085' }}>Мероприятий пока нет</p>
+              <p style={{ color: 'var(--color-gray-500)' }}>Мероприятий пока нет</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {events.map((e) => (
                   <div key={e.id} className="list-item" style={{
-                    borderLeftColor: e.status === 'attended' || e.status === 'confirmed' ? '#16845B' : '#C9A227'
+                    borderLeftColor: e.status === 'attended' || e.status === 'confirmed' ? 'var(--color-success)' : 'var(--color-gold)'
                   }}>
                     <div className="title">{e.title}</div>
                     <div className="subtitle">
@@ -519,23 +519,23 @@ export default function ParticipantProfile() {
 
         {activeTab === 'bio' && (
           <div className="card">
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginBottom: '12px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '12px' }}>
               📝 О себе
             </h3>
             {participant.bio ? (
-              <p style={{ color: '#667085', lineHeight: '1.8', whiteSpace: 'pre-wrap' }}>
+              <p style={{ color: 'var(--color-gray-500)', lineHeight: '1.8', whiteSpace: 'pre-wrap' }}>
                 {participant.bio}
               </p>
             ) : (
-              <p style={{ color: '#98A2B3' }}>Участник пока ничего не рассказал о себе</p>
+              <p style={{ color: 'var(--color-gray-400)' }}>Участник пока ничего не рассказал о себе</p>
             )}
 
             {participant.achievements && (
               <>
-                <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A', marginTop: '24px', marginBottom: '12px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginTop: '24px', marginBottom: '12px' }}>
                   🏅 Личные достижения
                 </h3>
-                <p style={{ color: '#667085', lineHeight: '1.8', whiteSpace: 'pre-wrap' }}>
+                <p style={{ color: 'var(--color-gray-500)', lineHeight: '1.8', whiteSpace: 'pre-wrap' }}>
                   {participant.achievements}
                 </p>
               </>

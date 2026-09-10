@@ -161,16 +161,16 @@ export default function ClubsManagement() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'active': { label: '🟢 Активен', color: '#16845B', bg: '#E8F5EF' },
-      'inactive': { label: '🔴 Неактивен', color: '#B3262E', bg: '#FCEBEC' },
-      'archived': { label: '📦 Архивирован', color: '#667085', bg: '#F4F6F9' }
+      'active': { label: '🟢 Активен', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'inactive': { label: '🔴 Неактивен', color: 'var(--color-error)', bg: 'var(--color-error-bg)' },
+      'archived': { label: '📦 Архивирован', color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)' }
     };
     return badges[status] || badges['active'];
   };
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -319,8 +319,8 @@ export default function ClubsManagement() {
                     key={club.id}
                     className="list-item"
                     style={{
-                      borderLeftColor: club.status === 'active' ? '#16845B' : 
-                                    club.status === 'archived' ? '#667085' : '#B3262E',
+                      borderLeftColor: club.status === 'active' ? 'var(--color-success)' : 
+                                    club.status === 'archived' ? 'var(--color-gray-500)' : 'var(--color-error)',
                       opacity: club.status === 'archived' ? 0.7 : 1
                     }}
                   >
@@ -354,7 +354,7 @@ export default function ClubsManagement() {
                       {club.status !== 'archived' && (
                         <button
                           className="btn-secondary"
-                          style={{ padding: '4px 12px', fontSize: '12px', background: '#667085', color: 'white' }}
+                          style={{ padding: '4px 12px', fontSize: '12px', background: 'var(--color-gray-500)', color: 'white' }}
                           onClick={() => handleArchive(club.id)}
                         >
                           📦 Архивировать

@@ -175,7 +175,7 @@ export default function EventManagement() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#F4F6F9' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
         <div className="spinner" />
       </div>
     );
@@ -224,7 +224,7 @@ export default function EventManagement() {
 
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B1F3A' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
               👥 Участники ({participants.length})
             </h3>
             {isTutor && (
@@ -243,7 +243,7 @@ export default function EventManagement() {
               <div className="icon">👀</div>
               <p>Участников пока нет</p>
               {canManage && (
-                <p style={{ fontSize: '13px', color: '#98A2B3' }}>
+                <p style={{ fontSize: '13px', color: 'var(--color-gray-400)' }}>
                   Нажмите <strong>"Добавить участников"</strong> чтобы добавить участников на мероприятие
                 </p>
               )}
@@ -254,19 +254,19 @@ export default function EventManagement() {
                 <div
                   key={p.id}
                   className="list-item"
-                  style={{ borderLeftColor: '#174A7E' }}
+                  style={{ borderLeftColor: 'var(--color-primary-light)' }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                     <div>
                       <div className="title">
                         {p.full_name}
                         {p.club_name && (
-                          <span className="tag" style={{ marginLeft: '8px', background: '#EAF2FA', color: '#174A7E', fontSize: '10px' }}>
+                          <span className="tag" style={{ marginLeft: '8px', background: 'var(--color-info-bg)', color: 'var(--color-primary-light)', fontSize: '10px' }}>
                             🏫 {p.club_name}
                           </span>
                         )}
                         {p.status === 'attended' && (
-                          <span className="tag" style={{ marginLeft: '8px', background: '#E8F5EF', color: '#16845B', fontSize: '10px' }}>
+                          <span className="tag" style={{ marginLeft: '8px', background: 'var(--color-success-bg)', color: 'var(--color-success)', fontSize: '10px' }}>
                             ✅ Присутствовал
                           </span>
                         )}
@@ -278,10 +278,10 @@ export default function EventManagement() {
                     <div style={{ display: 'flex', gap: '8px' }}>
                       {p.score_status && (
                         <span className="tag" style={{
-                          background: p.score_status === 'approved' ? '#E8F5EF' :
-                                   p.score_status === 'submitted' ? '#FBF4DC' : '#F4F6F9',
-                          color: p.score_status === 'approved' ? '#16845B' :
-                                 p.score_status === 'submitted' ? '#C9A227' : '#667085',
+                          background: p.score_status === 'approved' ? 'var(--color-success-bg)' :
+                                   p.score_status === 'submitted' ? 'var(--color-gold-pale)' : 'var(--color-gray-100)',
+                          color: p.score_status === 'approved' ? 'var(--color-success)' :
+                                 p.score_status === 'submitted' ? 'var(--color-gold)' : 'var(--color-gray-500)',
                           fontSize: '10px'
                         }}>
                           {p.score_status === 'approved' ? '✅ Оценено' :
@@ -346,17 +346,17 @@ export default function EventManagement() {
                 background: 'none',
                 border: 'none',
                 fontSize: '24px',
-                color: '#98A2B3',
+                color: 'var(--color-gray-400)',
                 cursor: 'pointer'
               }}
             >
               ✕
             </button>
 
-            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0B1F3A', marginBottom: '4px' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '4px' }}>
               ➕ Добавить участников
             </h3>
-            <p style={{ color: '#667085', marginBottom: '16px' }}>
+            <p style={{ color: 'var(--color-gray-500)', marginBottom: '16px' }}>
               Выберите участников для добавления на мероприятие
             </p>
 
@@ -369,7 +369,7 @@ export default function EventManagement() {
                 style={{
                   width: '100%',
                   padding: '8px 14px',
-                  border: '1.5px solid #D5DCE7',
+                  border: '1.5px solid var(--color-gray-200)',
                   borderRadius: '10px',
                   fontSize: '13px',
                   outline: 'none'
@@ -378,7 +378,7 @@ export default function EventManagement() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <span style={{ fontSize: '13px', color: '#667085' }}>
+              <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
                 Доступно: {filteredAvailable.length} участников
               </span>
               <button
@@ -390,9 +390,9 @@ export default function EventManagement() {
               </button>
             </div>
 
-            <div style={{ maxHeight: '300px', overflow: 'auto', border: '1px solid #E2E7EF', borderRadius: '8px' }}>
+            <div style={{ maxHeight: '300px', overflow: 'auto', border: '1px solid var(--color-gray-200)', borderRadius: '8px' }}>
               {filteredAvailable.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center', color: '#98A2B3' }}>
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-gray-400)' }}>
                   Все участники уже добавлены на мероприятие
                 </div>
               ) : (
@@ -404,14 +404,14 @@ export default function EventManagement() {
                       alignItems: 'center',
                       gap: '12px',
                       padding: '8px 14px',
-                      borderBottom: '1px solid #F4F6F9',
+                      borderBottom: '1px solid var(--color-gray-100)',
                       cursor: 'pointer',
-                      background: selectedParticipants.includes(p.id) ? '#FBF4DC' : 'transparent'
+                      background: selectedParticipants.includes(p.id) ? 'var(--color-gold-pale)' : 'transparent'
                     }}
                     onClick={() => toggleParticipantSelection(p.id)}
                     onMouseEnter={(e) => {
                       if (!selectedParticipants.includes(p.id)) {
-                        e.currentTarget.style.background = '#F8FAFC';
+                        e.currentTarget.style.background = 'var(--color-gray-50)';
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -427,10 +427,10 @@ export default function EventManagement() {
                       style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                     />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '500', color: '#0B1F3A' }}>
+                      <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
                         {p.full_name}
                       </div>
-                      <div style={{ fontSize: '12px', color: '#98A2B3' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
                         {p.school || 'Школа не указана'} • {p.class_name || 'Класс не указан'}
                         {p.club_name && ` • 🏫 ${p.club_name}`}
                       </div>

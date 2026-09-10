@@ -469,10 +469,10 @@ export default function Reports() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'draft': { color: '#8A9AAA', bg: '#F4F6F9', label: '📝 Черновик' },
-      'submitted': { color: '#C9A227', bg: '#FBF4DC', label: '⏳ На проверке' },
-      'approved': { color: '#16845B', bg: '#E8F5EF', label: '✅ Утверждён' },
-      'rejected': { color: '#B3262E', bg: '#FCEBEC', label: '❌ Отклонён' }
+      'draft': { color: '#8A9AAA', bg: 'var(--color-gray-100)', label: '📝 Черновик' },
+      'submitted': { color: 'var(--color-gold)', bg: 'var(--color-gold-pale)', label: '⏳ На проверке' },
+      'approved': { color: 'var(--color-success)', bg: 'var(--color-success-bg)', label: '✅ Утверждён' },
+      'rejected': { color: 'var(--color-error)', bg: 'var(--color-error-bg)', label: '❌ Отклонён' }
     };
     return badges[status] || badges['draft'];
   };
@@ -494,13 +494,13 @@ export default function Reports() {
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: #F0EDE8;
+            background: var(--color-gray-100);
           }
           .spinner {
             width: 48px;
             height: 48px;
-            border: 4px solid #E4DFD8;
-            border-top-color: #C9A227;
+            border: 4px solid var(--color-gray-200);
+            border-top-color: var(--color-gold);
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
           }
@@ -519,8 +519,8 @@ export default function Reports() {
         <div className="container-page">
           <div className="empty-state">
             <div className="empty-icon">⛔</div>
-            <p style={{ fontSize: '18px', color: '#0B1F3A' }}>Доступ запрещён</p>
-            <p style={{ color: '#667085' }}>Только координаторы и администраторы</p>
+            <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
+            <p style={{ color: 'var(--color-gray-500)' }}>Только координаторы и администраторы</p>
           </div>
         </div>
         <Footer />
@@ -827,11 +827,11 @@ export default function Reports() {
             </div>
 
             <div className="modal-tags">
-              <span className="tag" style={{ background: '#F4F6F9', color: '#667085' }}>
+              <span className="tag" style={{ background: 'var(--color-gray-100)', color: 'var(--color-gray-500)' }}>
                 🏫 {selectedReport.club_name || 'Клуб'}
               </span>
               {selectedReport.report_month && (
-                <span className="tag" style={{ background: '#F4F6F9', color: '#667085' }}>
+                <span className="tag" style={{ background: 'var(--color-gray-100)', color: 'var(--color-gray-500)' }}>
                   📅 {selectedReport.report_month}
                 </span>
               )}
@@ -889,7 +889,7 @@ export default function Reports() {
            ============================================================ */
         .page-background {
           min-height: 100vh;
-          background: #F0EDE8;
+          background: var(--color-gray-100);
         }
 
         .container-page {
@@ -913,12 +913,12 @@ export default function Reports() {
         .page-header-left h1 {
           font-size: 24px;
           font-weight: 700;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin: 0;
         }
 
         .page-header-left p {
-          color: #667085;
+          color: var(--color-gray-500);
           margin: 4px 0 0 0;
         }
 
@@ -931,8 +931,8 @@ export default function Reports() {
           justify-content: center;
           gap: 8px;
           padding: 10px 24px;
-          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
-          color: #0A1628;
+          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
+          color: var(--color-primary-dark);
           border: none;
           border-radius: 8px;
           font-size: 14px;
@@ -950,7 +950,7 @@ export default function Reports() {
         }
 
         .btn-success {
-          background: #1A7A4C;
+          background: var(--color-success);
           color: white;
           box-shadow: 0 4px 16px rgba(26,122,76,0.2);
         }
@@ -962,17 +962,17 @@ export default function Reports() {
 
         .btn-secondary {
           background: transparent;
-          color: #0A1628;
-          border: 1.5px solid #E4DFD8;
+          color: var(--color-primary-dark);
+          border: 1.5px solid var(--color-gray-200);
         }
         .btn-secondary:hover {
-          background: #F8F6F2;
-          border-color: #C9A227;
+          background: var(--color-gray-50);
+          border-color: var(--color-gold);
           transform: translateY(-2px);
         }
 
         .btn-danger {
-          background: #B3262E;
+          background: var(--color-error);
           color: white;
           box-shadow: 0 4px 16px rgba(179,38,46,0.2);
         }
@@ -1008,16 +1008,16 @@ export default function Reports() {
           gap: 6px;
           margin-top: 20px;
           padding-top: 16px;
-          border-top: 1px solid #E4DFD8;
+          border-top: 1px solid var(--color-gray-200);
           flex-wrap: wrap;
         }
 
         .pagination-btn {
           padding: 6px 14px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           border-radius: 6px;
           background: white;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           font-size: 14px;
           cursor: pointer;
           transition: all 0.2s ease;
@@ -1027,13 +1027,13 @@ export default function Reports() {
         }
 
         .pagination-btn:hover:not(:disabled) {
-          border-color: #C9A227;
-          background: #FBF4DC;
+          border-color: var(--color-gold);
+          background: var(--color-gold-pale);
         }
 
         .pagination-btn.active {
-          border-color: #C9A227;
-          background: #C9A227;
+          border-color: var(--color-gold);
+          background: var(--color-gold);
           color: white;
         }
 
@@ -1044,7 +1044,7 @@ export default function Reports() {
 
         .pagination-info {
           font-size: 13px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-left: 8px;
         }
 
@@ -1066,7 +1066,7 @@ export default function Reports() {
           background: white;
           border-radius: 12px;
           padding: 24px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           margin-bottom: 20px;
         }
@@ -1081,13 +1081,13 @@ export default function Reports() {
         .card-header-simple h3 {
           font-size: 18px;
           font-weight: 600;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin: 0;
         }
 
         .card-count {
           font-size: 13px;
-          color: #667085;
+          color: var(--color-gray-500);
         }
 
         /* ============================================================
@@ -1109,7 +1109,7 @@ export default function Reports() {
         .form-group label {
           display: block;
           font-weight: 500;
-          color: #0B1F3A;
+          color: var(--color-primary);
           margin-bottom: 4px;
           font-size: 13px;
         }
@@ -1118,19 +1118,19 @@ export default function Reports() {
         .form-group select {
           width: 100%;
           padding: 10px 14px;
-          border: 1.5px solid #D5DCE7;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 8px;
           font-size: 14px;
           outline: none;
           transition: all 0.3s ease;
           background: white;
           font-family: inherit;
-          color: #0B1F3A;
+          color: var(--color-primary);
         }
         .form-group input:focus,
         .form-group textarea:focus,
         .form-group select:focus {
-          border-color: #C9A227;
+          border-color: var(--color-gold);
           box-shadow: 0 0 0 3px rgba(201,162,39,0.1);
         }
         .form-group textarea {
@@ -1140,7 +1140,7 @@ export default function Reports() {
 
         .form-hint {
           font-size: 11px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-top: 4px;
         }
 
@@ -1158,11 +1158,11 @@ export default function Reports() {
 
         .form-club-info {
           padding: 10px 16px;
-          background: #EAF2FA;
+          background: var(--color-info-bg);
           border-radius: 8px;
           margin-bottom: 16px;
           font-size: 14px;
-          color: #174A7E;
+          color: var(--color-primary-light);
           display: flex;
           align-items: center;
           gap: 8px;
@@ -1182,7 +1182,7 @@ export default function Reports() {
         .filter-club select {
           min-width: 200px;
           padding: 10px 14px;
-          border: 1.5px solid #D5DCE7;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 10px;
           font-size: 14px;
           outline: none;
@@ -1191,17 +1191,17 @@ export default function Reports() {
 
         .filter-info {
           font-size: 14px;
-          color: #667085;
+          color: var(--color-gray-500);
         }
 
         .filter-clear {
           padding: 4px 12px;
-          background: #FCEBEC;
+          background: var(--color-error-bg);
           border: none;
           border-radius: 6px;
           cursor: pointer;
           font-size: 12px;
-          color: #B3262E;
+          color: var(--color-error);
         }
         .filter-clear:hover {
           background: #FED7D7;
@@ -1218,20 +1218,20 @@ export default function Reports() {
 
         .report-item {
           padding: 14px 18px;
-          border-left: 3px solid #0B1F3A;
-          background: #F8FAFC;
+          border-left: 3px solid var(--color-primary);
+          background: var(--color-gray-50);
           border-radius: 0 8px 8px 0;
           transition: all 0.2s ease;
           cursor: pointer;
         }
         .report-item:hover {
-          background: #F0EDE8;
+          background: var(--color-gray-100);
           transform: translateX(4px);
         }
 
         .report-title {
           font-weight: 600;
-          color: #0B1F3A;
+          color: var(--color-primary);
           font-size: 15px;
           display: flex;
           align-items: center;
@@ -1241,13 +1241,13 @@ export default function Reports() {
 
         .report-subtitle {
           font-size: 13px;
-          color: #667085;
+          color: var(--color-gray-500);
           margin-top: 2px;
         }
 
         .report-meta {
           font-size: 12px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-top: 4px;
         }
 
@@ -1263,20 +1263,20 @@ export default function Reports() {
            ============================================================ */
         .message-success {
           padding: 12px 16px;
-          background: #E8F5EF;
-          color: #16845B;
+          background: var(--color-success-bg);
+          color: var(--color-success);
           border-radius: 8px;
           margin-bottom: 16px;
-          border-left: 4px solid #16845B;
+          border-left: 4px solid var(--color-success);
         }
 
         .message-error {
           padding: 12px 16px;
-          background: #FCEBEC;
-          color: #B3262E;
+          background: var(--color-error-bg);
+          color: var(--color-error);
           border-radius: 8px;
           margin-bottom: 16px;
-          border-left: 4px solid #B3262E;
+          border-left: 4px solid var(--color-error);
         }
 
         /* ============================================================
@@ -1303,12 +1303,12 @@ export default function Reports() {
           opacity: 0.6;
         }
         .empty-state p {
-          color: #667085;
+          color: var(--color-gray-500);
           font-size: 14px;
         }
         .empty-hint {
           font-size: 13px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
         }
 
         /* ============================================================
@@ -1336,7 +1336,7 @@ export default function Reports() {
           max-width: 600px;
           width: 100%;
           box-shadow: 0 24px 64px rgba(10,22,40,0.2);
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           max-height: 90vh;
           overflow-y: auto;
         }
@@ -1352,7 +1352,7 @@ export default function Reports() {
           font-family: 'Playfair Display', serif;
           font-size: 20px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0;
         }
 
@@ -1360,12 +1360,12 @@ export default function Reports() {
           background: none;
           border: none;
           font-size: 24px;
-          color: #A8A29A;
+          color: var(--color-gray-400);
           cursor: pointer;
           transition: color 0.2s ease;
           padding: 4px 8px;
         }
-        .modal-close:hover { color: #0A1628; }
+        .modal-close:hover { color: var(--color-primary-dark); }
 
         .modal-tags {
           display: flex;
@@ -1376,9 +1376,9 @@ export default function Reports() {
 
         .modal-content {
           padding: 16px;
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           border-radius: 8px;
-          border: 1px solid #E2E7EF;
+          border: 1px solid var(--color-gray-200);
           margin-bottom: 16px;
           max-height: 200px;
           overflow: auto;
@@ -1387,7 +1387,7 @@ export default function Reports() {
 
         .modal-content p {
           font-size: 14px;
-          color: #0B1F3A;
+          color: var(--color-primary);
           line-height: 1.6;
           margin: 0;
         }
@@ -1400,7 +1400,7 @@ export default function Reports() {
         }
 
         .modal-stat {
-          background: #F8FAFC;
+          background: var(--color-gray-50);
           padding: 12px;
           border-radius: 8px;
           text-align: center;
@@ -1409,35 +1409,35 @@ export default function Reports() {
         .modal-stat .stat-number {
           font-size: 24px;
           font-weight: 700;
-          color: #0B1F3A;
+          color: var(--color-primary);
           display: block;
         }
 
         .modal-stat .stat-label {
           font-size: 12px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
         }
 
         .modal-meta {
           font-size: 13px;
-          color: #98A2B3;
+          color: var(--color-gray-400);
           margin-bottom: 12px;
         }
 
         .modal-comment {
           padding: 12px;
-          background: #FCEBEC;
+          background: var(--color-error-bg);
           border-radius: 8px;
           margin-bottom: 12px;
           border: 1px solid #FED7D7;
         }
 
         .modal-comment strong {
-          color: #B3262E;
+          color: var(--color-error);
         }
 
         .modal-comment p {
-          color: #B3262E;
+          color: var(--color-error);
           margin: 4px 0 0 0;
           font-size: 14px;
         }
@@ -1448,8 +1448,8 @@ export default function Reports() {
         .spinner {
           width: 48px;
           height: 48px;
-          border: 4px solid #E4DFD8;
-          border-top-color: #C9A227;
+          border: 4px solid var(--color-gray-200);
+          border-top-color: var(--color-gold);
           border-radius: 50%;
           animation: spin 0.7s linear infinite;
         }

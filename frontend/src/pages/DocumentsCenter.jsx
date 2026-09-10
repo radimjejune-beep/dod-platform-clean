@@ -554,7 +554,7 @@ export default function DocumentsCenter() {
            ============================================================ */
         .page-background {
           min-height: 100vh;
-          background: #F0EDE8;
+          background: var(--color-gray-100);
         }
 
         .documents-page {
@@ -577,7 +577,7 @@ export default function DocumentsCenter() {
           padding: 20px 28px;
           background: white;
           border-radius: 12px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
         }
 
@@ -585,13 +585,13 @@ export default function DocumentsCenter() {
           font-family: 'Playfair Display', serif;
           font-size: 24px;
           font-weight: 700;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           margin: 0;
         }
 
         .documents-header-left p {
           font-size: 14px;
-          color: #8A8480;
+          color: var(--color-gray-500);
           margin: 4px 0 0 0;
         }
 
@@ -617,8 +617,8 @@ export default function DocumentsCenter() {
         }
 
         .btn-gold {
-          background: linear-gradient(135deg, #C9A227, #D4B84A, #E8D9A8);
-          color: #0A1628;
+          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
+          color: var(--color-primary-dark);
           box-shadow: 0 2px 16px rgba(201,162,39,0.25);
         }
         .btn-gold:hover {
@@ -627,18 +627,18 @@ export default function DocumentsCenter() {
         }
 
         .btn-primary {
-          background: #0A1628;
+          background: var(--color-primary-dark);
           color: white;
           box-shadow: 0 4px 16px rgba(10,22,40,0.15);
         }
         .btn-primary:hover {
-          background: #1A3555;
+          background: var(--color-primary-light);
           transform: translateY(-2px);
           box-shadow: 0 8px 32px rgba(10,22,40,0.25);
         }
 
         .btn-success {
-          background: #1A7A4C;
+          background: var(--color-success);
           color: white;
           box-shadow: 0 4px 16px rgba(26,122,76,0.2);
         }
@@ -649,7 +649,7 @@ export default function DocumentsCenter() {
         }
 
         .btn-danger {
-          background: #B3262E;
+          background: var(--color-error);
           color: white;
           box-shadow: 0 4px 16px rgba(179,38,46,0.2);
         }
@@ -661,13 +661,13 @@ export default function DocumentsCenter() {
 
         .btn-outline {
           background: transparent;
-          color: #0A1628;
-          border: 1.5px solid #E4DFD8;
+          color: var(--color-primary-dark);
+          border: 1.5px solid var(--color-gray-200);
           box-shadow: none;
         }
         .btn-outline:hover {
-          background: #F8F6F2;
-          border-color: #C9A227;
+          background: var(--color-gray-50);
+          border-color: var(--color-gold);
           transform: translateY(-2px);
         }
 
@@ -697,15 +697,15 @@ export default function DocumentsCenter() {
         }
 
         .message-success {
-          background: #E8F5EF;
-          color: #1A7A4C;
-          border-left-color: #1A7A4C;
+          background: var(--color-success-bg);
+          color: var(--color-success);
+          border-left-color: var(--color-success);
         }
 
         .message-error {
-          background: #FCEBEC;
-          color: #B3262E;
-          border-left-color: #B3262E;
+          background: var(--color-error-bg);
+          color: var(--color-error);
+          border-left-color: var(--color-error);
         }
 
         /* ============================================================
@@ -723,10 +723,10 @@ export default function DocumentsCenter() {
           align-items: center;
           gap: 8px;
           padding: 8px 18px;
-          border: 1.5px solid #E4DFD8;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 8px;
           background: white;
-          color: #6B6561;
+          color: var(--color-gray-600);
           font-family: 'Inter', sans-serif;
           font-size: 13px;
           font-weight: 500;
@@ -735,29 +735,29 @@ export default function DocumentsCenter() {
         }
 
         .category-filter-btn:hover {
-          border-color: #C9A227;
-          color: #0A1628;
-          background: #FBF4DC;
+          border-color: var(--color-gold);
+          color: var(--color-primary-dark);
+          background: var(--color-gold-pale);
         }
 
         .category-filter-btn.active {
-          border-color: #C9A227;
-          background: #FBF4DC;
-          color: #0A1628;
+          border-color: var(--color-gold);
+          background: var(--color-gold-pale);
+          color: var(--color-primary-dark);
           font-weight: 600;
         }
 
         .category-count {
-          background: #F8F6F2;
+          background: var(--color-gray-50);
           padding: 1px 8px;
           border-radius: 12px;
           font-size: 11px;
-          color: #8A8480;
+          color: var(--color-gray-500);
         }
 
         .category-filter-btn.active .category-count {
-          background: #E8D9A8;
-          color: #0A1628;
+          background: var(--color-gold-light);
+          color: var(--color-primary-dark);
         }
 
         /* ============================================================
@@ -767,7 +767,7 @@ export default function DocumentsCenter() {
           overflow-x: auto;
           background: white;
           border-radius: 12px;
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           box-shadow: 0 2px 12px rgba(10,22,40,0.04);
           width: 100%;
         }
@@ -780,8 +780,8 @@ export default function DocumentsCenter() {
         }
 
         .table thead {
-          background: #F8F6F2;
-          border-bottom: 1px solid #E4DFD8;
+          background: var(--color-gray-50);
+          border-bottom: 1px solid var(--color-gray-200);
         }
 
         .table thead th {
@@ -789,19 +789,19 @@ export default function DocumentsCenter() {
           padding: 12px 16px;
           font-size: 11px;
           font-weight: 600;
-          color: #8A8480;
+          color: var(--color-gray-500);
           text-transform: uppercase;
           letter-spacing: 0.06em;
         }
 
         .table tbody td {
           padding: 12px 16px;
-          border-bottom: 1px solid #F0EDE8;
-          color: #4D4744;
+          border-bottom: 1px solid var(--color-gray-100);
+          color: var(--color-gray-700);
         }
 
         .table tbody tr:hover td {
-          background: #F8F6F2;
+          background: var(--color-gray-50);
         }
 
         .table tbody tr:last-child td {
@@ -826,18 +826,18 @@ export default function DocumentsCenter() {
         }
 
         .badge-success {
-          background: #E8F5EF;
-          color: #16845B;
+          background: var(--color-success-bg);
+          color: var(--color-success);
         }
 
         .badge-info {
-          background: #EAF2FA;
-          color: #174A7E;
+          background: var(--color-info-bg);
+          color: var(--color-primary-light);
         }
 
         .badge-blue {
-          background: #EAF2FA;
-          color: #174A7E;
+          background: var(--color-info-bg);
+          color: var(--color-primary-light);
         }
 
         /* ============================================================
@@ -848,7 +848,7 @@ export default function DocumentsCenter() {
           padding: 60px 20px;
           background: white;
           border-radius: 12px;
-          border: 1px dashed #E4DFD8;
+          border: 1px dashed var(--color-gray-200);
         }
 
         .empty-state-icon {
@@ -860,13 +860,13 @@ export default function DocumentsCenter() {
         .empty-state h3 {
           font-family: 'Playfair Display', serif;
           font-size: 18px;
-          color: #4D4744;
+          color: var(--color-gray-700);
           margin-bottom: 4px;
         }
 
         .empty-state p {
           font-size: 14px;
-          color: #8A8480;
+          color: var(--color-gray-500);
         }
 
         /* ============================================================
@@ -894,7 +894,7 @@ export default function DocumentsCenter() {
           max-width: 560px;
           width: 100%;
           box-shadow: 0 24px 64px rgba(10,22,40,0.2);
-          border: 1px solid #E4DFD8;
+          border: 1px solid var(--color-gray-200);
           max-height: 90vh;
           overflow-y: auto;
         }
@@ -910,20 +910,20 @@ export default function DocumentsCenter() {
           font-family: 'Playfair Display', serif;
           font-size: 20px;
           font-weight: 600;
-          color: #0A1628;
+          color: var(--color-primary-dark);
         }
 
         .modal-close {
           background: none;
           border: none;
           font-size: 24px;
-          color: #A8A29A;
+          color: var(--color-gray-400);
           cursor: pointer;
           transition: color 0.2s ease;
         }
 
         .modal-close:hover {
-          color: #0A1628;
+          color: var(--color-primary-dark);
         }
 
         .modal-actions {
@@ -947,22 +947,22 @@ export default function DocumentsCenter() {
           display: block;
           font-size: 13px;
           font-weight: 500;
-          color: #6B6561;
+          color: var(--color-gray-600);
           margin-bottom: 4px;
         }
 
         .required {
-          color: #B3262E;
+          color: var(--color-error);
         }
 
         .form-control {
           width: 100%;
           padding: 10px 14px;
-          border: 1.5px solid #E4DFD8;
+          border: 1.5px solid var(--color-gray-200);
           border-radius: 8px;
           font-family: 'Inter', sans-serif;
           font-size: 14px;
-          color: #0A1628;
+          color: var(--color-primary-dark);
           background: white;
           transition: all 0.3s ease;
           outline: none;
@@ -970,12 +970,12 @@ export default function DocumentsCenter() {
         }
 
         .form-control:focus {
-          border-color: #C9A227;
+          border-color: var(--color-gold);
           box-shadow: 0 0 0 3px rgba(201,162,39,0.08);
         }
 
         .form-control:disabled {
-          background: #F8F6F2;
+          background: var(--color-gray-50);
           cursor: not-allowed;
         }
 
@@ -995,13 +995,13 @@ export default function DocumentsCenter() {
         .checkbox-label input[type="checkbox"] {
           width: 18px;
           height: 18px;
-          accent-color: #C9A227;
+          accent-color: var(--color-gold);
           cursor: pointer;
         }
 
         small {
           font-size: 12px;
-          color: #8A8480;
+          color: var(--color-gray-500);
           display: block;
           margin-top: 4px;
         }

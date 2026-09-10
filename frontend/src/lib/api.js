@@ -78,6 +78,23 @@ export const changePassword = async (data) => {
 };
 
 // ============================================================
+// РАЗБОР ОШИБОК API
+// ============================================================
+// Сервер при ошибке валидации возвращает { error, details: [{field, message}] },
+// но интерфейс показывал только error — то есть «Ошибка валидации данных»
+// без единого намёка, какое поле не так.
+export const describeApiError = (result, fallback = 'Неизвестная ошибка') => {
+  if (!result) return fallback;
+
+  const details = Array.isArray(result.details)
+    ? result.details.map((d) => (d.field ? `${d.field}: ${d.message}` : d.message)).join('; ')
+    : '';
+
+  if (details) return `${result.error || fallback}. ${details}`;
+  return result.error || fallback;
+};
+
+// ============================================================
 // 2. ПОЛЬЗОВАТЕЛИ
 // ============================================================
 export const getUsers = async (params = {}) => {
@@ -969,6 +986,9 @@ export const uploadAvatar = async (avatarBase64) => {
 // ЭКСПОРТ
 // ============================================================
 const api = {
+  // Разбор ошибок
+  describeApiError,
+
   // Аутентификация
   login,
   logout,

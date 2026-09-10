@@ -24,7 +24,7 @@ export const userSchema = Joi.object({
   role: Joi.string().valid('participant', 'parent', 'club_coordinator', 'tutor', 'movement_coordinator', 'admin', 'president', 'vice_president'),
   school: Joi.string().max(200).allow(''),
   class_name: Joi.string().max(50).allow(''),
-  birth_date: Joi.date().allow(null),
+  birth_date: Joi.date().allow(null, ''),
   city: Joi.string().max(100).allow(''),
   interests: Joi.string().max(500).allow(''),
   bio: Joi.string().max(1000).allow(''),
@@ -37,8 +37,14 @@ export const userSchema = Joi.object({
   parent_full_name: Joi.string().max(100).allow(''),
   parent_phone: Joi.string().pattern(/^[\+\d\s\-\(\)]{10,20}$/).allow(''),
   parent_email: Joi.string().email().max(100).allow(''),
-  club_id: Joi.string().uuid().allow(null),
-  status: Joi.string().valid('active', 'inactive', 'pending')
+  // Форма шлёт '' при выборе «Без клуба» — раньше это валило всю проверку
+  club_id: Joi.string().uuid().allow(null, ''),
+  status: Joi.string().valid('active', 'inactive', 'pending'),
+  // Пароля в схеме не было вовсе, а stripUnknown его молча выбрасывал:
+  // сервер всегда генерировал свой, даже когда админ задал пароль вручную
+  password: Joi.string().min(8).max(128).allow('').messages({
+    'string.min': 'Пароль должен содержать минимум 8 символов'
+  })
 });
 
 // 2. СОБЫТИЕ

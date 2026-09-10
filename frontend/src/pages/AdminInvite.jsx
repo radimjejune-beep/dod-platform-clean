@@ -73,7 +73,7 @@ export default function AdminInvite() {
         full_name: form.full_name,
         email: form.email,
         role: form.role,
-        club_id: form.club_id || '',
+        club_id: form.club_id || null,
         phone: '',
         school: '',
         class_name: '',
@@ -81,7 +81,7 @@ export default function AdminInvite() {
       });
 
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       // ⚠️ Раньше пароль генерировался здесь, на фронте, и подставлялся в

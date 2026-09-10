@@ -121,6 +121,18 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Привязка ребёнка требует пароль ребёнка — значит, это тоже точка подбора.
+const linkChildLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: {
+    error: 'Слишком много попыток привязки. Попробуйте через час.',
+    code: 'RATE_LIMIT_EXCEEDED'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Смена пароля — тоже точка подбора: по reset-токену и по текущему паролю.
 const changePasswordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -2015,7 +2027,7 @@ app.get('/api/parent-children', authenticate, async (req, res) => {
 // ============================================================
 // ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ
 // ============================================================
-app.post('/api/parent-link-child', authenticate, async (req, res) => {
+app.post('/api/parent-link-child', authenticate, linkChildLimiter, async (req, res) => {
   try {
     const parentId = req.user.userId;
     const parentRole = req.user.role;
@@ -2030,21 +2042,57 @@ app.post('/api/parent-link-child', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Email и пароль ребёнка обязательны' });
     }
 
-    const childResult = await pool.query('SELECT id, full_name, role, password_hash FROM users WHERE email = $1', [child_email]);
-    if (childResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Ребёнок с таким email не найден' });
+    // ⚠️ Раньше этот эндпоинт был оракулом для подбора паролей: 404 означало
+    // «такого email нет», 401 — «email есть, пароль неверный», 200 — «угадал».
+    // Ни лимитов, ни счётчика попыток, ни блокировки здесь не было — вся
+    // защита стояла только на /api/login. Теперь: единый ответ на все случаи,
+    // общий счётчик неудачных попыток и уважение к блокировке аккаунта.
+    const childResult = await pool.query(
+      `SELECT id, email, full_name, role, password_hash, login_attempts, locked_until
+       FROM users WHERE email = $1`,
+      [child_email]
+    );
+
+    const child = childResult.rows[0] || null;
+
+    // Сравниваем всегда, даже если пользователя нет, — чтобы время ответа
+    // не выдавало существование email.
+    const DUMMY_HASH = '$2b$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalidinv';
+    const validPassword = await bcrypt.compare(
+      child_password,
+      child ? child.password_hash : DUMMY_HASH
+    );
+
+    const INVALID = { error: 'Неверный email или пароль ребёнка', code: 'INVALID_CHILD_CREDENTIALS' };
+
+    if (child && child.locked_until && new Date(child.locked_until) > new Date()) {
+      return res.status(403).json({
+        error: 'Учётная запись ребёнка временно заблокирована. Попробуйте позже.',
+        code: 'ACCOUNT_LOCKED'
+      });
     }
 
-    const child = childResult.rows[0];
-
-    if (child.role !== 'participant') {
-      return res.status(400).json({ error: 'Указанный пользователь не является участником' });
+    if (!child || child.role !== 'participant' || !validPassword) {
+      // Неудачные попытки идут в тот же счётчик, что и вход
+      if (child) {
+        const attempts = (child.login_attempts || 0) + 1;
+        if (attempts >= 5) {
+          await pool.query(
+            'UPDATE users SET login_attempts = $1, locked_until = $2 WHERE id = $3',
+            [attempts, new Date(Date.now() + 30 * 60 * 1000), child.id]
+          );
+          await logActivity(child.id, 'ACCOUNT_LOCKED', 'user', child.id, {
+            reason: 'Неудачные попытки привязки родителем',
+            parent_id: parentId
+          });
+        } else {
+          await pool.query('UPDATE users SET login_attempts = $1 WHERE id = $2', [attempts, child.id]);
+        }
+      }
+      return res.status(401).json(INVALID);
     }
 
-    const validPassword = await bcrypt.compare(child_password, child.password_hash);
-    if (!validPassword) {
-      return res.status(401).json({ error: 'Неверный пароль' });
-    }
+    await pool.query('UPDATE users SET login_attempts = 0 WHERE id = $1', [child.id]);
 
     const existingLink = await pool.query('SELECT id FROM child_parent WHERE child_id = $1 AND status = $2', [child.id, 'active']);
     if (existingLink.rows.length > 0) {
@@ -2060,6 +2108,10 @@ app.post('/api/parent-link-child', authenticate, async (req, res) => {
        VALUES ($1, $2, 'active', NOW()) RETURNING *`,
       [parentId, child.id]
     );
+
+    await logActivity(parentId, 'PARENT_LINKED_CHILD', 'user', child.id, {
+      child: child.full_name
+    });
 
     res.json({
       message: 'Ребёнок успешно привязан!',

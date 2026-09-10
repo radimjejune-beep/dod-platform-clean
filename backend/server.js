@@ -261,6 +261,46 @@ async function createNotification(userId, type, title, message, link = null, pri
 }
 
 // ============================================================
+// РАЗБОР КАРТИНКИ В ФОРМАТЕ data:URL
+// ============================================================
+// Белый список форматов. svg+xml намеренно отсутствует: это документ,
+// который умеет исполнять скрипты, и его нельзя принимать как аватар.
+const ALLOWED_IMAGE_TYPES = ['png', 'jpeg', 'jpg', 'webp', 'gif'];
+
+function parseDataImage(value, maxBytes) {
+  if (typeof value !== 'string') {
+    return { error: 'Неверный формат изображения' };
+  }
+
+  const match = value.match(/^data:image\/([a-z0-9.+-]+);base64,([A-Za-z0-9+/=]+)$/i);
+  if (!match) {
+    return { error: 'Неверный формат изображения' };
+  }
+
+  const type = match[1].toLowerCase();
+  if (!ALLOWED_IMAGE_TYPES.includes(type)) {
+    return { error: `Формат ${type} не поддерживается. Допустимы: ${ALLOWED_IMAGE_TYPES.join(', ')}` };
+  }
+
+  let bytes;
+  try {
+    bytes = Buffer.from(match[2], 'base64');
+  } catch {
+    return { error: 'Не удалось прочитать изображение' };
+  }
+
+  if (bytes.length === 0) {
+    return { error: 'Изображение пустое' };
+  }
+
+  if (bytes.length > maxBytes) {
+    return { error: `Изображение слишком большое. Максимум ${Math.round(maxBytes / 1024)}KB.` };
+  }
+
+  return { type, bytes };
+}
+
+// ============================================================
 // ПРОВЕРКИ ДОСТУПА
 // ============================================================
 
@@ -2183,13 +2223,12 @@ app.post('/api/upload-avatar', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Нет данных изображения' });
     }
 
-    if (!avatar_base64.startsWith('data:image/')) {
-      return res.status(400).json({ error: 'Неверный формат изображения' });
-    }
-
-    const sizeInBytes = Buffer.from(avatar_base64.split(',')[1], 'base64').length;
-    if (sizeInBytes > 500 * 1024) {
-      return res.status(400).json({ error: 'Изображение слишком большое. Максимум 500KB.' });
+    // ⚠️ Проверялся только префикс 'data:image/', поэтому проходил, например,
+    // data:image/svg+xml — а SVG это документ, который умеет исполнять скрипты.
+    // Плюс split(',')[1] на строке без запятой ронял запрос в 500.
+    const parsed = parseDataImage(avatar_base64, 500 * 1024);
+    if (parsed.error) {
+      return res.status(400).json({ error: parsed.error });
     }
 
     const result = await pool.query(
@@ -2216,8 +2255,12 @@ app.post('/api/upload-news-image', authenticate, requireAdminOrCoordinator, asyn
       return res.status(400).json({ error: 'Нет данных изображения' });
     }
 
-    if (!image_base64.startsWith('data:image/')) {
-      return res.status(400).json({ error: 'Неверный формат изображения' });
+    // Эндпоинт ничего не сохраняет — возвращает строку обратно, и фронт
+    // кладёт её в поле image_url новости. Раз уж так, хотя бы проверяем,
+    // что это действительно картинка допустимого типа и размера.
+    const parsed = parseDataImage(image_base64, 2 * 1024 * 1024);
+    if (parsed.error) {
+      return res.status(400).json({ error: parsed.error });
     }
 
     res.json({ message: 'Изображение загружено', image_url: image_base64 });
@@ -2469,9 +2512,25 @@ app.patch('/api/clubs/:clubId/president', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'У вас нет прав для этого клуба.' });
     }
 
+    // ⚠️ Ниже идут три UPDATE подряд, раньше — без транзакции. Сбой между
+    // ними оставлял клуб либо с двумя президентами, либо с president_id на
+    // пользователя, у которого снят флаг.
     if (!president_id) {
-      await pool.query('UPDATE users SET is_president = false WHERE club_id = $1 AND is_president = true', [clubId]);
-      await pool.query('UPDATE clubs SET president_id = NULL, updated_at = NOW() WHERE id = $1', [clubId]);
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query('UPDATE users SET is_president = false WHERE club_id = $1 AND is_president = true', [clubId]);
+        await client.query('UPDATE clubs SET president_id = NULL, updated_at = NOW() WHERE id = $1', [clubId]);
+        await client.query('COMMIT');
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+
+      invalidateUserCache();
+      await logActivity(userId, 'PRESIDENT_REMOVED', 'club', clubId, {});
       return res.json({ message: 'Президент снят с должности', president: null });
     }
 
@@ -2494,12 +2553,36 @@ app.patch('/api/clubs/:clubId/president', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Участник не состоит в этом клубе' });
     }
 
-    await pool.query('UPDATE users SET is_president = false WHERE club_id = $1 AND is_president = true', [clubId]);
-    await pool.query('UPDATE users SET is_president = true WHERE id = $1', [president_id]);
+    const client = await pool.connect();
+    let result;
+    try {
+      await client.query('BEGIN');
+      await client.query('UPDATE users SET is_president = false WHERE club_id = $1 AND is_president = true', [clubId]);
+      await client.query('UPDATE users SET is_president = true WHERE id = $1', [president_id]);
+      result = await client.query('UPDATE clubs SET president_id = $1, updated_at = NOW() WHERE id = $2 RETURNING *', [president_id, clubId]);
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
     invalidateUserCache();   // сменился президент — сбрасываем кэш целиком
 
-    const result = await pool.query('UPDATE clubs SET president_id = $1, updated_at = NOW() WHERE id = $2 RETURNING *', [president_id, clubId]);
     const president = await pool.query('SELECT id, full_name, email, avatar_url FROM users WHERE id = $1', [president_id]);
+
+    await logActivity(userId, 'PRESIDENT_ASSIGNED', 'club', clubId, {
+      president: candidate.full_name
+    });
+
+    await createNotification(
+      president_id,
+      'president',
+      '👑 Вы назначены президентом клуба',
+      `Вам присвоена должность президента КЮДа`,
+      '/president-tasks'
+    );
 
     res.json({ message: 'Президент назначен', club: result.rows[0], president: president.rows[0] });
   } catch (error) {
@@ -3737,38 +3820,9 @@ app.get('/api/events/:eventId/available-participants', authenticate, async (req,
   }
 });
 
-// ============================================================
-// ВНУТРЕННИЕ МЕРОПРИЯТИЯ КЛУБА
-// ============================================================
-app.get('/api/my-club-events', authenticate, async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const userRole = req.user.role;
-
-    const userCheck = await pool.query('SELECT club_id FROM users WHERE id = $1', [userId]);
-    if (userCheck.rows.length === 0 || !userCheck.rows[0].club_id) {
-      console.log('❌ У пользователя нет клуба');
-      return res.json([]);
-    }
-
-    const clubId = userCheck.rows[0].club_id;
-
-    const result = await pool.query(
-      `SELECT e.*, c.name as club_name, u.full_name as proposed_by_name
-       FROM events e
-       LEFT JOIN clubs c ON e.club_id = c.id
-       LEFT JOIN users u ON e.proposed_by = u.id
-       WHERE e.is_club_event = true AND e.status = 'approved' AND e.club_id = $1
-       ORDER BY e.event_date ASC`,
-      [clubId]
-    );
-
-    res.json(result.rows);
-  } catch (error) {
-    console.error('❌ Ошибка получения мероприятий клуба:', error);
-    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
-  }
-});
+// Второй обработчик /api/my-club-events удалён: Express отдаёт запрос
+// первому подходящему маршруту, поэтому этот код никогда не выполнялся,
+// но при правках вводил в заблуждение — правили мёртвую копию.
 
 // ============================================================
 // АУДИТ ЛОГОВ
@@ -4551,8 +4605,15 @@ app.get('/api/bulk-actions/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
 
+    // ⚠️ Проверки прав здесь не было вообще: любой авторизованный читал
+    // чужие массовые действия вместе со списком затронутых участников.
+    if (!['admin', 'movement_coordinator'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
     const result = await pool.query(
-      `SELECT * FROM bulk_actions WHERE id = $1`,
+      `SELECT id, action_type, target_ids, created_by, status, result, created_at, completed_at
+       FROM bulk_actions WHERE id = $1`,
       [id]
     );
 
@@ -4631,6 +4692,21 @@ app.post('/api/reminders', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'title и remind_at обязательны' });
     }
 
+    // ⚠️ Раньше любой авторизованный мог создать напоминание любому
+    // пользователю — готовый канал для спама по всему движению.
+    const targetId = user_id || userId;
+    if (targetId !== userId && !STAFF_ROLES.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Напоминание можно создать только себе' });
+    }
+    if (targetId !== userId && !(await canViewParticipant(req.user, targetId))) {
+      return res.status(403).json({ error: 'Этот пользователь вне вашей зоны ответственности' });
+    }
+
+    // Напоминание «всем» (user_id = null) — только для координаторов движения
+    if (!user_id && !MOVEMENT_ROLES.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Общие напоминания может создавать только координатор движения' });
+    }
+
     const result = await pool.query(
       `INSERT INTO reminders (event_id, user_id, type, title, message, remind_at, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, NOW())
@@ -4675,12 +4751,14 @@ app.patch('/api/reminders/:id/sent', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
 
+    // ⚠️ Проверки владельца не было: любой мог пометить чужое напоминание
+    // отправленным, то есть погасить его до того, как человек его увидит.
     const result = await pool.query(
       `UPDATE reminders 
        SET sent = true, sent_at = NOW()
-       WHERE id = $1
+       WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)
        RETURNING *`,
-      [id]
+      [id, req.user.userId]
     );
 
     if (result.rows.length === 0) {

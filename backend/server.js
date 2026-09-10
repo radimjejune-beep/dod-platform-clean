@@ -3351,37 +3351,6 @@ app.get('/api/activity-log', authenticate, async (req, res) => {
 });
 
 // ============================================================
-// СОЗДАНИЕ ТЕСТОВОГО ПОЛЬЗОВАТЕЛЯ
-// ============================================================
-app.post('/api/create-test-user', async (req, res) => {
-  try {
-    const email = 'newadmin@dod.ru';
-    const password = '123456';
-    const full_name = 'Администратор';
-    const role = 'admin';
-
-    await pool.query('DELETE FROM users WHERE email = $1', [email]);
-    console.log('🗑️ Старый пользователь удалён');
-
-    const password_hash = await bcrypt.hash(password, 10);
-
-    const result = await pool.query(
-      `INSERT INTO users (email, password_hash, full_name, role, birth_date, registration_status, must_change_password, status)
-       VALUES ($1, $2, $3, $4, '2000-01-01', 'active', false, 'active')
-       RETURNING id, email, full_name, role, registration_status`,
-      [email, password_hash, full_name, role]
-    );
-
-    console.log('✅ Тестовый пользователь создан');
-    res.json({ message: 'Пользователь создан!', user: result.rows[0] });
-
-  } catch (error) {
-    console.error('❌ Ошибка:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ============================================================
 // РЕГИСТРАЦИЯ НА МЕРОПРИЯТИЯ (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // ============================================================
 
@@ -4255,7 +4224,5 @@ app.patch('/api/reminders/:id/sent', authenticate, async (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Сервер запущен на порту ${PORT}`);
   console.log(`🔐 JWT_SECRET: ${JWT_SECRET ? 'установлен' : '❌ НЕ УСТАНОВЛЕН!'}`);
-  console.log(`📝 Создать тестового пользователя: POST /api/create-test-user`);
-  console.log(`👤 Тестовый пользователь: newadmin@dod.ru / 123456`);
   console.log(`✅ ВСЕ API ЗАГРУЖЕНЫ!`);
 });

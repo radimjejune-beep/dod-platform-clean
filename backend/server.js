@@ -227,7 +227,12 @@ app.post('/api/login', loginLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Email и пароль обязательны' });
     }
 
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const result = await pool.query(
+      `SELECT id, email, password_hash, full_name, role, club_id, is_president,
+              avatar_url, status, login_attempts, locked_until, must_change_password
+       FROM users WHERE email = $1`,
+      [email]
+    );
     const user = result.rows[0];
 
     if (!user) {
@@ -442,7 +447,11 @@ app.post('/api/change-password', changePasswordLimiter, async (req, res) => {
     });
     
     if (isFirstLogin) {
-      const user = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+      const user = await pool.query(
+        `SELECT id, email, full_name, role, club_id, is_president, avatar_url
+         FROM users WHERE id = $1`,
+        [userId]
+      );
       const userData = user.rows[0];
       
       const token = jwt.sign(
@@ -918,11 +927,23 @@ app.patch('/api/profile', authenticate, async (req, res) => {
     }
 
     values.push(userId);
+
+    // ⚠️ Здесь было RETURNING *, то есть при каждом сохранении профиля
+    // клиенту уезжал bcrypt-хеш пароля, а также login_attempts и
+    // locked_until. Возвращаем только то, что фронт действительно рисует.
     const query = `
       UPDATE users 
       SET ${fields.join(', ')}
       WHERE id = $${paramIndex}
-      RETURNING *
+      RETURNING id, email, full_name, role, phone, school, class_name,
+                birth_date, is_minor, registration_status, interests, bio, city,
+                position, status, club_id, created_at, avatar_url, is_president,
+                social_links, skills, education, achievements, telegram, vk,
+                must_change_password,
+                parent_full_name, parent_phone, parent_email,
+                consent_personal_data, consent_photo_publication,
+                consent_event_participation, consent_agreement_date,
+                charter_acceptance_date
     `;
 
     const result = await pool.query(query, values);

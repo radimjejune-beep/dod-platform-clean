@@ -63,12 +63,26 @@ pool.connect((err) => {
 // ============================================================
 // CORS (ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // ============================================================
-const allowedOrigins = [
-  'https://dod-frontend.relaxdev.ru',
+// Это список ORIGIN'ов — адресов, с которых браузер открывает интерфейс.
+// Собственный домен бэкенда (dod-backend.relaxdev.ru) сюда не входит и не
+// должен: он никогда не приходит в заголовке Origin.
+//
+// Убран https://dod-frontend.relaxdev.ru — такого проекта на RelaxDev нет.
+// Мёртвый домен в белом списке опасен: если кто-то зарегистрирует его на
+// том же хостинге, он получит разрешённый origin.
+//
+// Список переопределяется переменной CORS_ORIGINS (адреса через запятую) —
+// добавить домен можно без правки кода и передеплоя фронта.
+const allowedOrigins = (process.env.CORS_ORIGINS || [
   'https://dod-platform-clean.relaxdev.ru',
   'http://localhost:5173',
   'http://localhost:3000'
-];
+].join(','))
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+console.log(`✅ CORS разрешён для: ${allowedOrigins.join(', ')}`);
 
 // Основной CORS
 app.use(cors({
@@ -76,7 +90,10 @@ app.use(cors({
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
     console.log(`⚠️ CORS: запрос от ${origin} отклонён`);
-    return callback(new Error('Not allowed by CORS'));
+    const err = new Error('Not allowed by CORS');
+    err.status = 403;
+    err.code = 'CORS_DENIED';
+    return callback(err);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -4569,6 +4586,21 @@ app.patch('/api/reminders/:id/sent', authenticate, async (req, res) => {
     console.error('❌ Ошибка:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// ============================================================
+// ОБРАБОТКА ОШИБОК CORS
+// ============================================================
+// Раньше отклонённый по CORS запрос уходил в стандартный обработчик Express
+// и клиент получал HTML-страницу со стектрейсом.
+app.use((err, req, res, next) => {
+  if (err && err.code === 'CORS_DENIED') {
+    return res.status(403).json({
+      error: 'Источник запроса не разрешён',
+      code: 'CORS_DENIED'
+    });
+  }
+  return next(err);
 });
 
 // ============================================================

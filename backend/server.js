@@ -1102,11 +1102,23 @@ app.patch('/api/profile', authenticate, async (req, res) => {
     addField('parent_full_name', parent_full_name);
     addField('parent_phone', parent_phone);
     addField('parent_email', parent_email);
-    addField('consent_personal_data', consent_personal_data);
-    addField('consent_photo_publication', consent_photo_publication);
-    addField('consent_event_participation', consent_event_participation);
-    addField('consent_agreement_date', formatDate(consent_agreement_date));
     addField('charter_acceptance_date', formatDate(charter_acceptance_date));
+
+    // ⚠️ consent_personal_data, consent_photo_publication и
+    // consent_event_participation здесь больше НЕ принимаются.
+    // Их ставил сам участник в своём профиле, а участники —
+    // несовершеннолетние: согласие за них может дать только законный
+    // представитель. Такое самосогласие юридически ничтожно.
+    // Согласия оформляются через POST /api/consents родителем.
+    if (consent_personal_data !== undefined ||
+        consent_photo_publication !== undefined ||
+        consent_event_participation !== undefined ||
+        consent_agreement_date !== undefined) {
+      return res.status(400).json({
+        error: 'Согласия оформляются законным представителем в разделе «Согласия», а не в профиле',
+        code: 'CONSENT_VIA_PROFILE_FORBIDDEN'
+      });
+    }
 
     if (fields.length === 0) {
       return res.status(400).json({ error: 'Нет данных для обновления' });
@@ -5255,6 +5267,484 @@ app.delete('/api/tutor-invitations/:id', authenticate, async (req, res) => {
     res.json({ message: 'Приглашение отозвано' });
   } catch (error) {
     console.error('❌ Ошибка отзыва приглашения:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// ========== СОГЛАСИЯ НА ОБРАБОТКУ ПЕРСОНАЛЬНЫХ ДАННЫХ ==========
+// ============================================================
+// Ключевое правило: за несовершеннолетнего согласие даёт только законный
+// представитель. Сам ребёнок подтвердить его не может — такое согласие
+// юридически ничтожно, и Роскомнадзор признаёт это нарушением.
+//
+// Каждое согласие — отдельный документ под свою цель. С 01.09.2025
+// объединять разные цели в одном согласии нельзя.
+//
+// Вместе с согласием сохраняется редакция текста, которую человек видел,
+// его адрес и браузер: при проверке предъявлять надо именно это.
+
+const CONSENT_CODES = ['personal_data', 'data_distribution', 'event_participation'];
+
+// Возраст на сегодня по дате рождения
+function ageFromBirthDate(birthDate) {
+  if (!birthDate) return null;
+  const b = new Date(birthDate);
+  if (isNaN(b.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - b.getFullYear();
+  const m = now.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+  return age;
+}
+
+function clientIp(req) {
+  return (req.ip || req.connection?.remoteAddress || '').slice(0, 64);
+}
+
+// ============================================================
+// ТЕКСТЫ СОГЛАСИЙ
+// ============================================================
+
+// Действующие редакции — их видит родитель перед подтверждением
+app.get('/api/consent-documents', authenticate, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, code, version, title, body, purpose, data_categories, retention,
+              is_required, operator_name, operator_address, operator_inn, published_at
+       FROM consent_documents
+       WHERE is_current = true
+       ORDER BY is_required DESC, code`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения текстов согласий:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Все редакции, включая прошлые — для администратора и для проверок
+app.get('/api/consent-documents/all', authenticate, requireAdminOrCoordinator, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT d.id, d.code, d.version, d.title, d.is_required, d.is_current,
+              d.published_at, u.full_name AS created_by_name,
+              (SELECT COUNT(*)::int FROM user_consents uc WHERE uc.document_id = d.id) AS used_count
+       FROM consent_documents d
+       LEFT JOIN users u ON d.created_by = u.id
+       ORDER BY d.code, d.published_at DESC`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения редакций согласий:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Публикация новой редакции. Старая остаётся в базе навсегда: на неё
+// ссылаются уже данные согласия.
+app.post('/api/consent-documents', authenticate, requireAdmin, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const {
+      code, version, title, body, purpose, data_categories, retention,
+      is_required = true, operator_name, operator_address, operator_inn
+    } = req.body;
+
+    if (!CONSENT_CODES.includes(code)) {
+      return res.status(400).json({ error: `code должен быть одним из: ${CONSENT_CODES.join(', ')}` });
+    }
+    if (!version || !title || !body) {
+      return res.status(400).json({ error: 'version, title и body обязательны' });
+    }
+
+    await client.query('BEGIN');
+
+    // Снимаем признак «действующая» со старой редакции этого вида
+    await client.query('UPDATE consent_documents SET is_current = false WHERE code = $1 AND is_current = true', [code]);
+
+    const result = await client.query(
+      `INSERT INTO consent_documents (code, version, title, body, purpose, data_categories,
+                                      retention, is_required, operator_name, operator_address,
+                                      operator_inn, is_current, published_at, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true, NOW(), $12)
+       RETURNING *`,
+      [code, version.trim(), title.trim(), body, purpose || null, data_categories || null,
+       retention || null, is_required !== false, operator_name || null, operator_address || null,
+       operator_inn || null, req.user.userId]
+    );
+
+    await client.query('COMMIT');
+
+    await logActivity(req.user.userId, 'CONSENT_DOCUMENT_PUBLISHED', 'consent_document', result.rows[0].id, {
+      code, version
+    });
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    if (error.code === '23505') {
+      return res.status(409).json({ error: 'Такая версия этого согласия уже опубликована', code: 'DUPLICATE_VERSION' });
+    }
+    console.error('❌ Ошибка публикации редакции согласия:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  } finally {
+    client.release();
+  }
+});
+
+// ============================================================
+// СОСТОЯНИЕ СОГЛАСИЙ КОНКРЕТНОГО ЧЕЛОВЕКА
+// ============================================================
+app.get('/api/consents/:userId', authenticate, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!(await canViewParticipant(req.user, userId))) {
+      return res.status(403).json({ error: 'Нет доступа к данным этого участника' });
+    }
+
+    const current = await pool.query(
+      `SELECT uc.consent_type, uc.given_at, uc.revoked_at, uc.version,
+              uc.given_by, uc.given_by_relation, uc.given_by_full_name,
+              d.title, d.version AS document_version, d.is_required
+       FROM user_consents uc
+       LEFT JOIN consent_documents d ON uc.document_id = d.id
+       WHERE uc.user_id = $1`,
+      [userId]
+    );
+
+    const history = await pool.query(
+      `SELECT cl.consent_type, cl.status, cl.changed_at, cl.document_version,
+              cl.given_by_relation, cl.ip_address, u.full_name AS changed_by_name
+       FROM consent_logs cl
+       LEFT JOIN users u ON cl.changed_by = u.id
+       WHERE cl.user_id = $1
+       ORDER BY cl.changed_at DESC`,
+      [userId]
+    );
+
+    res.json({ current: current.rows, history: history.rows });
+  } catch (error) {
+    console.error('❌ Ошибка получения согласий:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// ПОДТВЕРЖДЕНИЕ СОГЛАСИЯ
+// ============================================================
+app.post('/api/consents', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { subject_id, code } = req.body;
+    const actorId = req.user.userId;
+
+    if (!subject_id || !code) {
+      return res.status(400).json({ error: 'subject_id и code обязательны' });
+    }
+    if (!CONSENT_CODES.includes(code)) {
+      return res.status(400).json({ error: 'Неизвестный вид согласия' });
+    }
+
+    const subject = await pool.query('SELECT id, full_name, birth_date FROM users WHERE id = $1', [subject_id]);
+    if (subject.rows.length === 0) {
+      return res.status(404).json({ error: 'Участник не найден' });
+    }
+
+    const age = ageFromBirthDate(subject.rows[0].birth_date);
+    const isSelf = subject_id === actorId;
+
+    // ⚠️ Главное правило: за несовершеннолетнего согласие даёт только
+    // законный представитель. Проверяем это на сервере, а не в интерфейсе.
+    let relation;
+    if (isSelf) {
+      if (age === null) {
+        return res.status(400).json({
+          error: 'Не указана дата рождения — невозможно определить, кто вправе дать согласие',
+          code: 'BIRTH_DATE_REQUIRED'
+        });
+      }
+      if (age < 18) {
+        return res.status(403).json({
+          error: 'Согласие за несовершеннолетнего может дать только родитель или опекун',
+          code: 'MINOR_CANNOT_CONSENT'
+        });
+      }
+      relation = 'self';
+    } else {
+      const link = await pool.query(
+        `SELECT 1 FROM child_parent WHERE parent_id = $1 AND child_id = $2 AND status = 'active'`,
+        [actorId, subject_id]
+      );
+      if (link.rows.length === 0) {
+        return res.status(403).json({
+          error: 'Давать согласие за участника может только привязанный к нему законный представитель',
+          code: 'NOT_LEGAL_REPRESENTATIVE'
+        });
+      }
+      relation = 'parent';
+    }
+
+    const doc = await pool.query(
+      'SELECT id, code, version, title FROM consent_documents WHERE code = $1 AND is_current = true',
+      [code]
+    );
+    if (doc.rows.length === 0) {
+      return res.status(400).json({
+        error: 'Текст этого согласия ещё не опубликован — обратитесь к администратору',
+        code: 'NO_CURRENT_DOCUMENT'
+      });
+    }
+    const document = doc.rows[0];
+
+    const actor = await pool.query('SELECT full_name FROM users WHERE id = $1', [actorId]);
+
+    await client.query('BEGIN');
+
+    await client.query(
+      `INSERT INTO user_consents (user_id, consent_type, given_at, revoked_at, version,
+                                  document_id, given_by, given_by_relation, given_by_full_name, updated_at)
+       VALUES ($1, $2, NOW(), NULL, $3, $4, $5, $6, $7, NOW())
+       ON CONFLICT (user_id, consent_type) DO UPDATE
+       SET given_at = NOW(), revoked_at = NULL, version = EXCLUDED.version,
+           document_id = EXCLUDED.document_id, given_by = EXCLUDED.given_by,
+           given_by_relation = EXCLUDED.given_by_relation,
+           given_by_full_name = EXCLUDED.given_by_full_name, updated_at = NOW()`,
+      [subject_id, code, document.version, document.id, actorId, relation, actor.rows[0]?.full_name || null]
+    );
+
+    // Журнал только пополняется — историю не переписываем
+    await client.query(
+      `INSERT INTO consent_logs (user_id, consent_type, status, changed_by, changed_at,
+                                 document_id, document_version, given_by_relation, ip_address, user_agent)
+       VALUES ($1, $2, true, $3, NOW(), $4, $5, $6, $7, $8)`,
+      [subject_id, code, actorId, document.id, document.version, relation,
+       clientIp(req), (req.headers['user-agent'] || '').slice(0, 500)]
+    );
+
+    await client.query('COMMIT');
+
+    await logActivity(actorId, 'CONSENT_GIVEN', 'user', subject_id, {
+      consent_type: code,
+      document_version: document.version,
+      relation
+    });
+
+    res.status(201).json({
+      message: 'Согласие зафиксировано',
+      consent_type: code,
+      document_version: document.version,
+      subject: subject.rows[0].full_name
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Ошибка фиксации согласия:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  } finally {
+    client.release();
+  }
+});
+
+// ============================================================
+// ОТЗЫВ СОГЛАСИЯ
+// ============================================================
+// Отзыв — право субъекта по закону, отказать в нём нельзя. Запись не
+// удаляется: в журнале остаётся и выдача, и отзыв.
+app.post('/api/consents/revoke', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { subject_id, code, reason } = req.body;
+    const actorId = req.user.userId;
+
+    if (!subject_id || !code) {
+      return res.status(400).json({ error: 'subject_id и code обязательны' });
+    }
+
+    const isSelf = subject_id === actorId;
+    let allowed = isSelf || MOVEMENT_ROLES.includes(req.user.role);
+
+    if (!allowed) {
+      const link = await pool.query(
+        `SELECT 1 FROM child_parent WHERE parent_id = $1 AND child_id = $2 AND status = 'active'`,
+        [actorId, subject_id]
+      );
+      allowed = link.rows.length > 0;
+    }
+
+    if (!allowed) {
+      return res.status(403).json({ error: 'Отозвать согласие может субъект, его законный представитель или администрация' });
+    }
+
+    const existing = await pool.query(
+      'SELECT document_id, version FROM user_consents WHERE user_id = $1 AND consent_type = $2 AND revoked_at IS NULL',
+      [subject_id, code]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Действующего согласия такого вида нет' });
+    }
+
+    await client.query('BEGIN');
+
+    await client.query(
+      'UPDATE user_consents SET revoked_at = NOW(), updated_at = NOW() WHERE user_id = $1 AND consent_type = $2',
+      [subject_id, code]
+    );
+
+    await client.query(
+      `INSERT INTO consent_logs (user_id, consent_type, status, changed_by, changed_at,
+                                 document_id, document_version, ip_address, user_agent)
+       VALUES ($1, $2, false, $3, NOW(), $4, $5, $6, $7)`,
+      [subject_id, code, actorId, existing.rows[0].document_id, existing.rows[0].version,
+       clientIp(req), (req.headers['user-agent'] || '').slice(0, 500)]
+    );
+
+    await client.query('COMMIT');
+
+    await logActivity(actorId, 'CONSENT_REVOKED', 'user', subject_id, { consent_type: code, reason: reason || null });
+
+    // Администрации нужно узнать об отзыве: дальнейшая обработка данных
+    // после отзыва — это уже нарушение
+    const admins = await pool.query(
+      "SELECT id FROM users WHERE role IN ('admin', 'movement_coordinator') AND status <> 'inactive'"
+    );
+    for (const a of admins.rows) {
+      await createNotification(
+        a.id,
+        'consent',
+        '⚠️ Отозвано согласие',
+        `Отозвано согласие «${code}». Проверьте, что обработка данных прекращена.`,
+        '/consents-management',
+        'high'
+      );
+    }
+
+    res.json({ message: 'Согласие отозвано' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Ошибка отзыва согласия:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  } finally {
+    client.release();
+  }
+});
+
+// ============================================================
+// СВОДКА ПО СОГЛАСИЯМ (для координаторов)
+// ============================================================
+app.get('/api/consents-stats', authenticate, async (req, res) => {
+  try {
+    const { role, userId } = req.user;
+    if (!STAFF_ROLES.includes(role)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    let clubFilter = '';
+    const params = [];
+
+    if (req.query.club_id) {
+      clubFilter = ' AND u.club_id = $1';
+      params.push(req.query.club_id);
+    } else if (role === 'club_coordinator') {
+      const clubIds = await getCoordinatorClubIds(userId);
+      if (clubIds.length === 0) {
+        return res.json({ total: 0, complete: 0, incomplete: 0, by_type: [] });
+      }
+      clubFilter = ' AND u.club_id = ANY($1)';
+      params.push(clubIds);
+    }
+
+    const required = await pool.query(
+      "SELECT code FROM consent_documents WHERE is_current = true AND is_required = true"
+    );
+    const requiredCodes = required.rows.map((r) => r.code);
+
+    const totals = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM users u WHERE u.role = 'participant'${clubFilter}`,
+      params
+    );
+
+    const complete = requiredCodes.length === 0
+      ? { rows: [{ n: 0 }] }
+      : await pool.query(
+          `SELECT COUNT(*)::int AS n FROM users u
+           WHERE u.role = 'participant'${clubFilter}
+             AND (
+               SELECT COUNT(DISTINCT uc.consent_type) FROM user_consents uc
+               WHERE uc.user_id = u.id AND uc.revoked_at IS NULL
+                 AND uc.consent_type = ANY($${params.length + 1})
+             ) = $${params.length + 2}`,
+          [...params, requiredCodes, requiredCodes.length]
+        );
+
+    const byType = await pool.query(
+      `SELECT d.code, d.title, d.is_required,
+              (SELECT COUNT(*)::int FROM user_consents uc
+               JOIN users u ON u.id = uc.user_id
+               WHERE uc.consent_type = d.code AND uc.revoked_at IS NULL
+                 AND u.role = 'participant'${clubFilter.replace(/\$(\d+)/g, (m, n) => '$' + n)}) AS given
+       FROM consent_documents d WHERE d.is_current = true ORDER BY d.is_required DESC, d.code`,
+      params
+    );
+
+    res.json({
+      total: totals.rows[0].total,
+      complete: complete.rows[0].n,
+      incomplete: totals.rows[0].total - complete.rows[0].n,
+      required_codes: requiredCodes,
+      by_type: byType.rows
+    });
+  } catch (error) {
+    console.error('❌ Ошибка сводки по согласиям:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// У КОГО НЕТ СОГЛАСИЙ
+// ============================================================
+app.get('/api/consents-missing', authenticate, async (req, res) => {
+  try {
+    const { role, userId } = req.user;
+    if (!STAFF_ROLES.includes(role)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    let clubFilter = '';
+    const params = [];
+
+    if (req.query.club_id) {
+      clubFilter = ' AND u.club_id = $1';
+      params.push(req.query.club_id);
+    } else if (role === 'club_coordinator') {
+      const clubIds = await getCoordinatorClubIds(userId);
+      if (clubIds.length === 0) return res.json([]);
+      clubFilter = ' AND u.club_id = ANY($1)';
+      params.push(clubIds);
+    }
+
+    const result = await pool.query(
+      `SELECT u.id, u.full_name, u.email, u.birth_date, u.club_id, c.name AS club_name,
+              EXISTS (SELECT 1 FROM child_parent cp WHERE cp.child_id = u.id AND cp.status = 'active') AS has_parent,
+              ARRAY(
+                SELECT d.code FROM consent_documents d
+                WHERE d.is_current = true AND d.is_required = true
+                  AND NOT EXISTS (
+                    SELECT 1 FROM user_consents uc
+                    WHERE uc.user_id = u.id AND uc.consent_type = d.code AND uc.revoked_at IS NULL
+                  )
+              ) AS missing
+       FROM users u
+       LEFT JOIN clubs c ON u.club_id = c.id
+       WHERE u.role = 'participant'${clubFilter}
+       ORDER BY u.full_name`,
+      params
+    );
+
+    // Отдаём только тех, у кого действительно чего-то не хватает
+    res.json(result.rows.filter((r) => Array.isArray(r.missing) && r.missing.length > 0));
+  } catch (error) {
+    console.error('❌ Ошибка получения списка без согласий:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });

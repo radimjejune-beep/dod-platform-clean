@@ -27,3 +27,8 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Дампы базы данных: содержат персональные данные участников и хеши паролей
+backend/migrations/db_*.sql
+*dump*.sql
+*.dump

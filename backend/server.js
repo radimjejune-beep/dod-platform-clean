@@ -2,7 +2,7 @@
 
 // config.js импортируется ПЕРВЫМ: он вызывает dotenv.config() до того,
 // как любой другой модуль обратится к process.env.
-import { JWT_SECRET, DATABASE_URL, PORT, IS_PRODUCTION, JWT_EXPIRES_IN } from './lib/config.js';
+import { JWT_SECRET, DATABASE_URL, PORT, IS_PRODUCTION, JWT_EXPIRES_IN, TRUST_PROXY_HOPS } from './lib/config.js';
 
 import express from 'express';
 import cors from 'cors';
@@ -39,8 +39,13 @@ console.log('🚀 ЗАПУСК БЭКЕНДА');
 // ============================================================
 // TRUST PROXY (ДЛЯ RELAXDEV)
 // ============================================================
-app.set('trust proxy', true);
-console.log('✅ Trust proxy enabled');
+// ⚠️ Было app.set('trust proxy', true) — безусловное доверие заголовку
+// X-Forwarded-For. Клиент подставляет его сам, поэтому rate limiting
+// обходился подстановкой случайного IP на каждый запрос, а
+// express-rate-limit писал в лог ERR_ERL_PERMISSIVE_TRUST_PROXY.
+// Доверяем ровно тому числу прокси, которое стоит перед приложением.
+app.set('trust proxy', TRUST_PROXY_HOPS);
+console.log(`✅ Trust proxy: ${TRUST_PROXY_HOPS} прокси`);
 
 // ============================================================
 // БАЗА ДАННЫХ

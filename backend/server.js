@@ -121,6 +121,18 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Смена пароля — тоже точка подбора: по reset-токену и по текущему паролю.
+const changePasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    error: 'Слишком много попыток смены пароля. Попробуйте через 15 минут.',
+    code: 'RATE_LIMIT_EXCEEDED'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ============================================================
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================================
@@ -315,39 +327,103 @@ app.post('/api/login', loginLimiter, async (req, res) => {
 // ============================================================
 // СМЕНА ПАРОЛЯ
 // ============================================================
-app.post('/api/change-password', async (req, res) => {
+app.post('/api/change-password', changePasswordLimiter, async (req, res) => {
   try {
     const { current_password, new_password, reset_token } = req.body;
-    
+
+    if (!new_password) {
+      return res.status(400).json({ error: 'Новый пароль обязателен', code: 'NEW_PASSWORD_REQUIRED' });
+    }
+
     let userId;
     let isFirstLogin = false;
-    
+
     if (reset_token) {
+      // ⚠️ Раньше сюда принимался ЛЮБОЙ токен, подписанный JWT_SECRET, —
+      // в том числе обычный токен входа. Достаточно было передать его в
+      // поле reset_token, и пароль менялся без знания текущего. Украденный
+      // токен превращался во владение аккаунтом навсегда.
+      let decoded;
       try {
-        const decoded = jwt.verify(reset_token, JWT_SECRET);
-        userId = decoded.userId;
-        isFirstLogin = decoded.mustChange === true;
+        decoded = jwt.verify(reset_token, JWT_SECRET);
       } catch (error) {
         return res.status(401).json({
           error: 'Ссылка для смены пароля недействительна или истекла',
           code: 'INVALID_RESET_TOKEN'
         });
       }
+
+      // Токен должен быть выдан именно под смену пароля
+      if (decoded.mustChange !== true) {
+        return res.status(401).json({
+          error: 'Недействительный токен смены пароля',
+          code: 'INVALID_RESET_TOKEN'
+        });
+      }
+
+      userId = decoded.userId;
+      isFirstLogin = true;
+
+      // ...и пользователь всё ещё должен быть в состоянии «смени пароль»,
+      // иначе один и тот же токен работает повторно в течение часа
+      const state = await pool.query(
+        'SELECT must_change_password FROM users WHERE id = $1',
+        [userId]
+      );
+      if (state.rows.length === 0) {
+        return res.status(404).json({ error: 'Пользователь не найден' });
+      }
+      if (state.rows[0].must_change_password !== true) {
+        return res.status(401).json({
+          error: 'Токен смены пароля уже использован',
+          code: 'RESET_TOKEN_USED'
+        });
+      }
     } else {
       const authHeader = req.headers.authorization;
-      if (!authHeader) return res.status(401).json({ error: 'Требуется авторизация' });
+      if (!authHeader) {
+        return res.status(401).json({ error: 'Требуется авторизация', code: 'UNAUTHORIZED' });
+      }
 
       const token = authHeader.split(' ')[1];
-      const decoded = jwt.verify(token, JWT_SECRET);
+      if (!token) {
+        return res.status(401).json({ error: 'Неверный формат токена', code: 'INVALID_TOKEN_FORMAT' });
+      }
+
+      // Раньше jwt.verify здесь не был обёрнут: на просроченном токене
+      // исключение уходило во внешний catch и клиент получал 500 вместо 401.
+      let decoded;
+      try {
+        decoded = jwt.verify(token, JWT_SECRET);
+      } catch (error) {
+        return res.status(401).json({ error: 'Сессия истекла. Войдите заново.', code: 'TOKEN_EXPIRED' });
+      }
+
+      // Токен смены пароля не годится для смены пароля «изнутри»:
+      // по нему нельзя подтвердить знание текущего пароля.
+      if (decoded.mustChange === true) {
+        return res.status(401).json({ error: 'Требуется авторизация', code: 'UNAUTHORIZED' });
+      }
+
       userId = decoded.userId;
-      
+
+      if (!current_password) {
+        return res.status(400).json({ error: 'Текущий пароль обязателен', code: 'CURRENT_PASSWORD_REQUIRED' });
+      }
+
       const user = await pool.query('SELECT password_hash FROM users WHERE id = $1', [userId]);
       if (user.rows.length === 0) return res.status(404).json({ error: 'Пользователь не найден' });
-      
+
       const valid = await bcrypt.compare(current_password, user.rows[0].password_hash);
-      if (!valid) return res.status(401).json({ error: 'Неверный текущий пароль' });
+      if (!valid) return res.status(401).json({ error: 'Неверный текущий пароль', code: 'WRONG_PASSWORD' });
+
+      // Новый пароль не должен совпадать со старым
+      const same = await bcrypt.compare(new_password, user.rows[0].password_hash);
+      if (same) {
+        return res.status(400).json({ error: 'Новый пароль совпадает с текущим', code: 'PASSWORD_UNCHANGED' });
+      }
     }
-    
+
     const strength = isPasswordStrong(new_password);
     if (!strength.valid) {
       return res.status(400).json({ error: strength.message, code: 'WEAK_PASSWORD' });

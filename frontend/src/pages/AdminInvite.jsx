@@ -69,8 +69,6 @@ export default function AdminInvite() {
     setSending(true);
 
     try {
-      const password = form.password || generatePassword();
-
       const result = await api.createUser({
         full_name: form.full_name,
         email: form.email,
@@ -78,11 +76,22 @@ export default function AdminInvite() {
         club_id: form.club_id || '',
         phone: '',
         school: '',
-        class_name: ''
+        class_name: '',
+        ...(form.password ? { password: form.password } : {})
       });
 
       if (result.error) {
         throw new Error(result.error);
+      }
+
+      // ⚠️ Раньше пароль генерировался здесь, на фронте, и подставлялся в
+      // текст приглашения — но на сервер он не передавался, и сервер
+      // создавал учётную запись со СВОИМ паролем. То есть в каждом
+      // приглашении был пароль, который не работал.
+      const password = result.temp_password || form.password;
+
+      if (!password) {
+        throw new Error('Сервер не вернул временный пароль — сообщите разработчику');
       }
 
       const inviteText = `
@@ -98,7 +107,7 @@ export default function AdminInvite() {
 
 Ваши данные для входа:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  📧 Email: ${form.email}
+  📧 Email: ${result.user?.email || form.email}
   🔒 Пароль: ${password}
   👤 Роль: ${getRoleLabel(form.role)}
   ${form.club_id ? `🏫 Клуб: ${clubs.find(c => c.id === form.club_id)?.name || '—'}` : ''}

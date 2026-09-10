@@ -558,7 +558,36 @@ export default function AdminUsers() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* Панель действий. Раньше эти кнопки жили в шапке страницы, которую
+            удалили как дублирующуюся, — вместе с ней пропала единственная
+            возможность открыть формы создания, импорта и привязки родителя. */}
+        {canCreate && (
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            flexWrap: 'wrap',
+            marginBottom: '16px'
+          }}>
+            <button
+              className="btn-primary"
+              onClick={() => setShowCreateUser((v) => !v)}
+            >
+              {showCreateUser ? '✖ Закрыть форму' : '➕ Создать пользователя'}
+            </button>
+            <button
+              className="btn-secondary"
+              onClick={() => setShowImportModal((v) => !v)}
+            >
+              📥 Импорт из Excel
+            </button>
+            <button
+              className="btn-secondary"
+              onClick={() => setShowParentChildModal(true)}
+            >
+              👨‍👩‍👦 Привязать родителя
+            </button>
+          </div>
+        )}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>

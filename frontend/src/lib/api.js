@@ -972,6 +972,47 @@ export const getConsentsMissing = async (clubId = null) => {
 };
 
 // ============================================================
+// 21a. СОГЛАСИЯ (152-ФЗ)
+// ============================================================
+// Согласие за несовершеннолетнего даёт только законный представитель.
+// Участник видит своё состояние согласий, но подтвердить их не может.
+export const getConsentDocuments = async () => {
+  const response = await fetch(`${API_URL}/consent-documents`, {
+    method: 'GET',
+    headers: headers()
+  });
+  if (!response.ok) return [];
+  return response.json();
+};
+
+export const getUserConsents = async (userId) => {
+  const response = await fetch(`${API_URL}/consents/${userId}`, {
+    method: 'GET',
+    headers: headers()
+  });
+  if (!response.ok) return { current: [], history: [] };
+  return response.json();
+};
+
+export const giveConsent = async (subjectId, code) => {
+  const response = await fetch(`${API_URL}/consents`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ subject_id: subjectId, code })
+  });
+  return response.json();
+};
+
+export const revokeConsent = async (subjectId, code, reason) => {
+  const response = await fetch(`${API_URL}/consents/revoke`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ subject_id: subjectId, code, reason })
+  });
+  return response.json();
+};
+
+// ============================================================
 // 22. ДЕТИ РОДИТЕЛЯ
 // ============================================================
 export const getParentChildren = async (params = {}) => {
@@ -1133,6 +1174,10 @@ const api = {
   // Согласия
   getConsentsStats,
   getConsentsMissing,
+  getConsentDocuments,
+  getUserConsents,
+  giveConsent,
+  revokeConsent,
   
   // Дети
   getParentChildren,

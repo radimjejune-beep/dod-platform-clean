@@ -15,6 +15,8 @@ export default function Profile() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
   const [activeTab, setActiveTab] = useState('main');
+  const [consents, setConsents] = useState([]);
+  const [consentDocs, setConsentDocs] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,6 +28,15 @@ export default function Profile() {
       const data = await api.getMe();
       if (data && data.id) {
         setProfile(data);
+
+        // Состояние согласий читаем с сервера: в карточке участника оно
+        // больше не хранится
+        const [docs, own] = await Promise.all([
+          api.getConsentDocuments(),
+          api.getUserConsents(data.id)
+        ]);
+        setConsentDocs(Array.isArray(docs) ? docs : []);
+        setConsents(Array.isArray(own?.current) ? own.current : []);
       } else {
         navigate('/login');
       }
@@ -81,10 +92,6 @@ export default function Profile() {
         parent_full_name: profile.parent_full_name || '',
         parent_phone: profile.parent_phone || '',
         parent_email: profile.parent_email || '',
-        consent_personal_data: profile.consent_personal_data || false,
-        consent_photo_publication: profile.consent_photo_publication || false,
-        consent_event_participation: profile.consent_event_participation || false,
-        consent_agreement_date: formatDate(profile.consent_agreement_date),
         charter_acceptance_date: formatDate(profile.charter_acceptance_date)
       };
 
@@ -116,18 +123,22 @@ export default function Profile() {
     });
   };
 
-  const getConsentStatus = () => {
-    const consents = [
-      { key: 'consent_personal_data', label: 'Персональные данные' },
-      { key: 'consent_photo_publication', label: 'Публикация фото' },
-      { key: 'consent_event_participation', label: 'Участие в мероприятиях' }
-    ];
-    const total = consents.length;
-    const given = consents.filter(c => profile?.[c.key]).length;
-    return { total, given, percentage: Math.round((given / total) * 100) };
-  };
+  // ⚠️ Раньше состояние согласий бралось из галочек в карточке самого
+  // участника. Участники несовершеннолетние, а согласие за них вправе дать
+  // только законный представитель — такие галочки юридической силы не
+  // имели. Теперь состояние приходит с сервера и здесь только показывается.
+  const requiredCodes = consentDocs.filter(d => d.is_required).map(d => d.code);
+  const givenCodes = consents
+    .filter(c => !c.revoked_at)
+    .map(c => c.consent_type);
 
-  const consentStatus = getConsentStatus();
+  const consentStatus = {
+    total: requiredCodes.length,
+    given: requiredCodes.filter(code => givenCodes.includes(code)).length,
+    percentage: requiredCodes.length === 0
+      ? 0
+      : Math.round((requiredCodes.filter(code => givenCodes.includes(code)).length / requiredCodes.length) * 100)
+  };
 
   const getInitials = (name) => {
     if (!name) return '?';
@@ -543,68 +554,69 @@ export default function Profile() {
                   </div>
                 </div>
 
-                <div className="consent-item">
-                  <label className="consent-label">
-                    <input
-                      type="checkbox"
-                      name="consent_personal_data"
-                      checked={profile?.consent_personal_data || false}
-                      onChange={handleChange}
-                    />
-                    <div>
-                      <strong>Согласие на обработку персональных данных</strong>
-                      <div className="consent-description">
-                        Я даю согласие на обработку моих персональных данных в соответствии с Федеральным законом № 152-ФЗ.
-                      </div>
-                    </div>
-                  </label>
+                {/* ⚠️ Галочки убраны намеренно. Согласие на обработку
+                    персональных данных несовершеннолетнего вправе дать
+                    только законный представитель — родитель или опекун.
+                    Участник видит состояние своих согласий, но подтвердить
+                    их не может: такое согласие юридической силы не имеет. */}
+
+                <div className="card" style={{
+                  padding: '16px',
+                  marginBottom: '16px',
+                  background: 'var(--color-info-bg)',
+                  borderLeft: '3px solid var(--color-primary-light)'
+                }}>
+                  <div style={{ fontSize: '14px', color: 'var(--color-gray-700)', lineHeight: 1.6 }}>
+                    Согласия за участника оформляет <strong>родитель или опекун</strong> в своём
+                    личном кабинете. Здесь показано только их текущее состояние.
+                  </div>
                 </div>
 
-                <div className="consent-item">
-                  <label className="consent-label">
-                    <input
-                      type="checkbox"
-                      name="consent_photo_publication"
-                      checked={profile?.consent_photo_publication || false}
-                      onChange={handleChange}
-                    />
-                    <div>
-                      <strong>Согласие на публикацию фото и видео</strong>
-                      <div className="consent-description">
-                        Я даю согласие на использование моих изображений в официальных источниках движения.
-                      </div>
-                    </div>
-                  </label>
-                </div>
+                {consentDocs.length === 0 && (
+                  <div className="empty-state">
+                    <div className="empty-state-icon">📄</div>
+                    <div>Тексты согласий ещё не опубликованы администрацией</div>
+                  </div>
+                )}
 
-                <div className="consent-item">
-                  <label className="consent-label">
-                    <input
-                      type="checkbox"
-                      name="consent_event_participation"
-                      checked={profile?.consent_event_participation || false}
-                      onChange={handleChange}
-                    />
-                    <div>
-                      <strong>Согласие на участие в мероприятиях</strong>
-                      <div className="consent-description">
-                        Я подтверждаю, что ознакомлен с правилами участия в мероприятиях движения.
+                {consentDocs.map((doc) => {
+                  const given = consents.find(c => c.consent_type === doc.code && !c.revoked_at);
+                  const revoked = consents.find(c => c.consent_type === doc.code && c.revoked_at);
+
+                  return (
+                    <div className="consent-item" key={doc.code}>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: '20px', lineHeight: 1.2 }}>
+                          {given ? '✅' : revoked ? '🚫' : doc.is_required ? '⚠️' : '○'}
+                        </span>
+                        <div style={{ flex: 1 }}>
+                          <strong>{doc.title}</strong>
+                          {!doc.is_required && (
+                            <span className="tag" style={{ marginLeft: '8px' }}>необязательное</span>
+                          )}
+                          <div className="consent-description">
+                            {given && (
+                              <>
+                                Дано {new Date(given.given_at).toLocaleDateString('ru-RU')}
+                                {given.given_by_full_name && ` — ${given.given_by_full_name}`}
+                                {given.given_by_relation === 'parent' && ' (законный представитель)'}
+                                {given.document_version && `, редакция ${given.document_version}`}
+                              </>
+                            )}
+                            {!given && revoked && (
+                              <>Отозвано {new Date(revoked.revoked_at).toLocaleDateString('ru-RU')}</>
+                            )}
+                            {!given && !revoked && (
+                              <>Не оформлено{doc.is_required ? ' — требуется для участия' : ''}</>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </label>
-                </div>
+                  );
+                })}
 
                 <div className="form-grid">
-                  <div className="form-group">
-                    <label>Дата подписания согласий</label>
-                    <input
-                      type="date"
-                      name="consent_agreement_date"
-                      value={profile?.consent_agreement_date || ''}
-                      onChange={handleChange}
-                      className="form-input"
-                    />
-                  </div>
                   <div className="form-group">
                     <label>Дата принятия Устава</label>
                     <input

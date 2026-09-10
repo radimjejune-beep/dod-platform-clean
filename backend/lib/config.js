@@ -75,4 +75,9 @@ export const TRUST_PROXY_HOPS = parseInt(process.env.TRUST_PROXY_HOPS, 10) || 1;
 // Стоимость bcrypt. 12 — разумный минимум на 2026 год.
 export const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS, 10) || 12;
 
+// Шифрование соединения с базой. На RelaxDev TLS у базы нет — она доступна
+// только из внутренней сети, и панель прямо предписывает ssl: false.
+// Включать только если база переедет туда, где TLS есть.
+export const DB_SSL = process.env.DB_SSL === 'true';
+
 console.log('✅ Конфигурация загружена');

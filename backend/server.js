@@ -2,7 +2,7 @@
 
 // config.js импортируется ПЕРВЫМ: он вызывает dotenv.config() до того,
 // как любой другой модуль обратится к process.env.
-import { JWT_SECRET, DATABASE_URL, PORT, IS_PRODUCTION, JWT_EXPIRES_IN, TRUST_PROXY_HOPS } from './lib/config.js';
+import { JWT_SECRET, DATABASE_URL, PORT, IS_PRODUCTION, JWT_EXPIRES_IN, TRUST_PROXY_HOPS, DB_SSL } from './lib/config.js';
 
 import express from 'express';
 import cors from 'cors';
@@ -12,7 +12,7 @@ import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
 
-import { authenticate, requireRole, requireAdmin, requireAdminOrCoordinator } from './middleware/auth.js';
+import { authenticate, requireRole, requireAdmin, requireAdminOrCoordinator, initAuth, invalidateUserCache, BLOCKED_STATUSES } from './middleware/auth.js';
 import { logActivity, initLogger, getActivityLogs } from './lib/logger.js';
 
 // ===== ВАЛИДАЦИЯ =====
@@ -50,12 +50,19 @@ console.log(`✅ Trust proxy: ${TRUST_PROXY_HOPS} прокси`);
 // ============================================================
 // БАЗА ДАННЫХ
 // ============================================================
+// ⚠️ RelaxDev: «TLS не используется. База доступна только из внутренней
+// сети, поэтому в коде укажите ssl: false». Раньше здесь стояло
+// ssl: IS_PRODUCTION ? {...} : false — то есть подключение работало
+// только потому, что NODE_ENV не выставлен. Стоило бы кому-то задать
+// NODE_ENV=production, и база отвалилась бы с «server does not support
+// SSL connections». Управляем этим явной переменной.
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: IS_PRODUCTION ? { rejectUnauthorized: false } : false
+  ssl: DB_SSL ? { rejectUnauthorized: false } : false
 });
 
 initLogger(pool);
+initAuth(pool);
 
 pool.connect((err) => {
   if (err) {
@@ -331,6 +338,16 @@ app.post('/api/login', loginLimiter, async (req, res) => {
     if (!user) {
       console.log(`❌ Пользователь не найден: ${email}`);
       return res.status(401).json({ error: 'Неверный email или пароль' });
+    }
+
+    // ⚠️ Вход не смотрел на status вообще: пользователь, помеченный как
+    // отключённый, спокойно заходил в систему.
+    if (BLOCKED_STATUSES.includes(user.status)) {
+      console.log(`⛔ Вход отключённой учётной записи: ${email}`);
+      return res.status(403).json({
+        error: 'Учётная запись отключена. Обратитесь к администратору.',
+        code: 'ACCOUNT_DISABLED'
+      });
     }
 
     if (user.locked_until && new Date(user.locked_until) > new Date()) {
@@ -787,6 +804,7 @@ app.patch('/api/users/:id/assign-club', authenticate, async (req, res) => {
     
     if (!club_id) {
       await pool.query('UPDATE users SET club_id = NULL WHERE id = $1', [id]);
+      invalidateUserCache(id);
       return res.json({ 
         message: 'Пользователь откреплён от клуба',
         user: { id: user.id, full_name: user.full_name },
@@ -802,6 +820,7 @@ app.patch('/api/users/:id/assign-club', authenticate, async (req, res) => {
     const club = clubCheck.rows[0];
     
     await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, id]);
+    invalidateUserCache(id);
     await pool.query(
       `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
        VALUES ($1, $2, 'active', NOW()) ON CONFLICT (profile_id, club_id) DO NOTHING`,
@@ -1066,12 +1085,38 @@ app.delete('/api/users/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const check = await pool.query('SELECT id FROM users WHERE id = $1', [id]);
+    const check = await pool.query('SELECT id, email, role FROM users WHERE id = $1', [id]);
     if (check.rows.length === 0) {
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
 
+    // Нельзя удалить самого себя — иначе админ остаётся без доступа
+    if (id === req.user.userId) {
+      return res.status(400).json({
+        error: 'Нельзя удалить собственную учётную запись',
+        code: 'CANNOT_DELETE_SELF'
+      });
+    }
+
+    // И нельзя удалить последнего администратора
+    if (check.rows[0].role === 'admin') {
+      const admins = await pool.query("SELECT COUNT(*)::int AS n FROM users WHERE role = 'admin'");
+      if (admins.rows[0].n <= 1) {
+        return res.status(400).json({
+          error: 'Это последний администратор — удаление заблокировано',
+          code: 'LAST_ADMIN'
+        });
+      }
+    }
+
     await pool.query('DELETE FROM users WHERE id = $1', [id]);
+    invalidateUserCache(id);
+
+    await logActivity(req.user.userId, 'USER_DELETED', 'user', id, {
+      deleted_email: check.rows[0].email,
+      deleted_role: check.rows[0].role
+    });
+
     res.json({ message: 'Пользователь удалён' });
   } catch (error) {
     console.error('❌ Ошибка удаления пользователя:', error);
@@ -2426,6 +2471,7 @@ app.patch('/api/clubs/:clubId/president', authenticate, async (req, res) => {
 
     await pool.query('UPDATE users SET is_president = false WHERE club_id = $1 AND is_president = true', [clubId]);
     await pool.query('UPDATE users SET is_president = true WHERE id = $1', [president_id]);
+    invalidateUserCache();   // сменился президент — сбрасываем кэш целиком
 
     const result = await pool.query('UPDATE clubs SET president_id = $1, updated_at = NOW() WHERE id = $2 RETURNING *', [president_id, clubId]);
     const president = await pool.query('SELECT id, full_name, email, avatar_url FROM users WHERE id = $1', [president_id]);

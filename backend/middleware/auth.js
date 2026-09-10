@@ -12,7 +12,53 @@ import { JWT_SECRET } from '../lib/config.js';
 // ============================================================
 // ПРОВЕРКА АВТОРИЗАЦИИ
 // ============================================================
-export const authenticate = (req, res, next) => {
+// ============================================================
+// ПОДКЛЮЧЕНИЕ К БАЗЕ (как в lib/logger.js)
+// ============================================================
+let poolInstance = null;
+
+export const initAuth = (pool) => {
+  poolInstance = pool;
+};
+
+// Статусы, при которых доступ закрыт. Список намеренно перечисляет
+// блокирующие значения, а не требует status === 'active': у части
+// пользователей поле может быть пустым или 'pending', и такие люди
+// не должны внезапно лишиться доступа.
+export const BLOCKED_STATUSES = ['inactive', 'blocked', 'banned', 'deleted', 'archived'];
+
+// ============================================================
+// КЭШ АКТУАЛЬНЫХ ДАННЫХ ПОЛЬЗОВАТЕЛЯ
+// ============================================================
+// Роль и статус читаются из базы на каждый запрос, но не чаще раза в
+// 30 секунд на пользователя — иначе получаем лишний запрос к базе на
+// каждый вызов API.
+const CACHE_TTL_MS = 30 * 1000;
+const userCache = new Map();
+
+export const invalidateUserCache = (userId) => {
+  if (userId) userCache.delete(userId);
+  else userCache.clear();
+};
+
+async function getFreshUser(userId) {
+  const cached = userCache.get(userId);
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.user;
+
+  const result = await poolInstance.query(
+    'SELECT id, role, club_id, is_president, status FROM users WHERE id = $1',
+    [userId]
+  );
+
+  const user = result.rows[0] || null;
+  userCache.set(userId, { user, at: Date.now() });
+  return user;
+}
+
+// ============================================================
+// ПРОВЕРКА АВТОРИЗАЦИИ
+// ============================================================
+export const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   
   if (!authHeader) {
@@ -31,10 +77,9 @@ export const authenticate = (req, res, next) => {
     });
   }
 
+  let decoded;
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
+    decoded = jwt.verify(token, JWT_SECRET);
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ 
@@ -46,6 +91,48 @@ export const authenticate = (req, res, next) => {
       error: 'Неверный токен',
       code: 'INVALID_TOKEN'
     });
+  }
+
+  // ⚠️ Раньше req.user = decoded, то есть роль, клуб и признак президента
+  // брались прямо из токена. Токен живёт сутки и не отзывается: разжаловали
+  // координатора — он оставался координатором до конца срока, уволили
+  // сотрудника — доступ жил дальше, перевели участника в другой КЮД — он
+  // продолжал видеть старый. Берём актуальные данные из базы.
+  if (!poolInstance) {
+    console.error('❌ authenticate: база не подключена, вызовите initAuth(pool)');
+    return res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+
+  try {
+    const fresh = await getFreshUser(decoded.userId);
+
+    if (!fresh) {
+      return res.status(401).json({
+        error: 'Учётная запись не найдена',
+        code: 'ACCOUNT_NOT_FOUND'
+      });
+    }
+
+    if (BLOCKED_STATUSES.includes(fresh.status)) {
+      return res.status(403).json({
+        error: 'Учётная запись отключена. Обратитесь к администратору.',
+        code: 'ACCOUNT_DISABLED'
+      });
+    }
+
+    req.user = {
+      ...decoded,
+      userId: fresh.id,
+      role: fresh.role,
+      club_id: fresh.club_id,
+      is_president: fresh.is_president || false,
+      status: fresh.status
+    };
+
+    next();
+  } catch (error) {
+    console.error('❌ Ошибка проверки пользователя:', error.message);
+    return res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 };
 

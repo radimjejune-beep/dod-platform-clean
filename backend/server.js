@@ -917,16 +917,22 @@ app.get('/api/participants', authenticate, async (req, res) => {
     const params = [];
 
     if (req.user.role === 'club_coordinator') {
-      const clubResult = await pool.query(
-        'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
-        [req.user.userId]
-      );
-      if (clubResult.rows.length > 0) {
-        query += ' AND u.club_id = $1';
-        params.push(clubResult.rows[0].club_id);
-      } else {
-        return res.json([]);
-      }
+      // ⚠️ Бралось rows[0]: координатор, ведущий два КЮДа, второго не видел
+      const clubIds = await getCoordinatorClubIds(req.user.userId);
+      if (clubIds.length === 0) return res.json([]);
+      query += ' AND u.club_id = ANY($1)';
+      params.push(clubIds);
+    }
+
+    if (req.user.role === 'tutor') {
+      // ⚠️ Тьютор получал всех участников движения. По матрице ролей он
+      // должен видеть только участников мероприятий, на которые назначен.
+      query += ` AND u.id IN (
+        SELECT ep.participant_id FROM event_participants ep
+        JOIN event_tutor_assignments eta ON eta.event_id = ep.event_id
+        WHERE eta.tutor_id = $1
+      )`;
+      params.push(req.user.userId);
     }
 
     query += ' ORDER BY u.full_name';
@@ -2157,6 +2163,13 @@ app.post('/api/upload-news-image', authenticate, requireAdminOrCoordinator, asyn
 app.get('/api/participant-events/:userId', authenticate, async (req, res) => {
   try {
     const { userId } = req.params;
+
+    // ⚠️ Раньше userId брался из адреса и ни с чем не сверялся: любой
+    // авторизованный участник перебором мог читать историю мероприятий
+    // любого другого ребёнка.
+    if (!(await canViewParticipant(req.user, userId))) {
+      return res.status(403).json({ error: 'Нет доступа к данным этого участника' });
+    }
     
     const result = await pool.query(
       `SELECT e.*, c.name as club_name,
@@ -2181,6 +2194,12 @@ app.get('/api/participant-events/:userId', authenticate, async (req, res) => {
 app.get('/api/participant-stats/:userId', authenticate, async (req, res) => {
   try {
     const { userId } = req.params;
+
+    // Та же дыра, что и в /api/participant-events: достижения, уровень и
+    // посещаемость любого участника читались по одному подбору id.
+    if (!(await canViewParticipant(req.user, userId))) {
+      return res.status(403).json({ error: 'Нет доступа к данным этого участника' });
+    }
     
     const eventsResult = await pool.query(
       `SELECT COUNT(*) as total_events,
@@ -4276,6 +4295,12 @@ app.get('/api/participant-notes/:participantId', authenticate, async (req, res) 
       return res.status(403).json({ error: 'Недостаточно прав' });
     }
 
+    // ⚠️ Роль проверялась, а клуб — нет: координатор одного КЮДа читал
+    // внутренние заметки сотрудников о детях любого другого КЮДа.
+    if (!(await canViewParticipant(req.user, participantId))) {
+      return res.status(403).json({ error: 'Этот участник вне вашей зоны ответственности' });
+    }
+
     let visibilityCondition = '';
     const params = [participantId];
 
@@ -4319,6 +4344,11 @@ app.post('/api/participant-notes', authenticate, async (req, res) => {
 
     if (!participant_id || !content) {
       return res.status(400).json({ error: 'participant_id и content обязательны' });
+    }
+
+    // Заметку тоже можно было написать о ком угодно, включая чужие КЮДы
+    if (!(await canViewParticipant(req.user, participant_id))) {
+      return res.status(403).json({ error: 'Этот участник вне вашей зоны ответственности' });
     }
 
     await client.query('BEGIN');

@@ -30,7 +30,9 @@ import {
   goalSchema,
   taskSchema,
   presidentTaskSchema,
-  massNotificationSchema
+  massNotificationSchema,
+  achievementCategorySchema,
+  tutorInvitationSchema
 } from './lib/validation.js';
 
 const app = express();
@@ -357,6 +359,13 @@ async function canViewParticipant(requester, participantId) {
   }
 
   return false;
+}
+
+// Пустая строка из формы должна становиться NULL, а не падать в базе
+function nullableDate(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
 }
 
 async function getClubName(clubId) {
@@ -4768,6 +4777,484 @@ app.patch('/api/reminders/:id/sent', authenticate, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// ========== ЗАДАЧИ (ПЛАНИРОВЩИК) ==========
+// ============================================================
+// Таблица tasks и схема taskSchema существовали с самого начала, но
+// обработчиков не было: страница «Планировщик задач» показывала форму,
+// делала вид, что сохраняет, и теряла всё при обновлении.
+
+app.get('/api/tasks', authenticate, async (req, res) => {
+  try {
+    const { userId, role } = req.user;
+
+    if (!STAFF_ROLES.includes(role)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    // Координаторы движения и админы видят все задачи, остальные —
+    // свои: поставленные им либо созданные ими.
+    let where = '';
+    const params = [];
+    if (!MOVEMENT_ROLES.includes(role)) {
+      where = 'WHERE (t.assigned_to = $1 OR t.created_by = $1)';
+      params.push(userId);
+    }
+
+    const result = await pool.query(
+      `SELECT t.id, t.title, t.description, t.category, t.priority, t.status,
+              t.due_date, t.assigned_to, t.created_by, t.recurrence,
+              t.recurrence_end, t.completed_at, t.created_at, t.updated_at,
+              a.full_name AS assigned_to_name,
+              c.full_name AS created_by_name
+       FROM tasks t
+       LEFT JOIN users a ON t.assigned_to = a.id
+       LEFT JOIN users c ON t.created_by = c.id
+       ${where}
+       ORDER BY
+         CASE t.status WHEN 'completed' THEN 1 ELSE 0 END,
+         CASE t.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+         t.due_date NULLS LAST,
+         t.created_at DESC`,
+      params
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения задач:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.post('/api/tasks', authenticate, validateBody(taskSchema), async (req, res) => {
+  try {
+    const { userId, role } = req.user;
+
+    if (!STAFF_ROLES.includes(role)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    const d = req.validatedBody;
+
+    const result = await pool.query(
+      `INSERT INTO tasks (title, description, category, priority, status, due_date,
+                          assigned_to, created_by, recurrence, recurrence_end,
+                          created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+       RETURNING *`,
+      [
+        d.title.trim(), d.description || '', d.category || 'general',
+        d.priority || 'medium', d.status || 'pending', nullableDate(d.due_date),
+        d.assigned_to || null, userId, d.recurrence || 'none', nullableDate(d.recurrence_end)
+      ]
+    );
+
+    const task = result.rows[0];
+
+    await logActivity(userId, 'TASK_CREATED', 'task', task.id, { title: task.title });
+
+    if (task.assigned_to && task.assigned_to !== userId) {
+      await createNotification(
+        task.assigned_to,
+        'task',
+        '📋 Новая задача',
+        `Вам поставлена задача: ${task.title}`,
+        '/tasks-planner',
+        task.priority === 'urgent' ? 'high' : 'normal'
+      );
+    }
+
+    res.status(201).json(task);
+  } catch (error) {
+    console.error('❌ Ошибка создания задачи:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.put('/api/tasks/:id', authenticate, validateBody(taskSchema), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId, role } = req.user;
+
+    const check = await pool.query('SELECT created_by, assigned_to, status FROM tasks WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Задача не найдена' });
+    }
+
+    const task = check.rows[0];
+    const canEdit = MOVEMENT_ROLES.includes(role) || task.created_by === userId || task.assigned_to === userId;
+    if (!canEdit) {
+      return res.status(403).json({ error: 'Можно менять только свои задачи' });
+    }
+
+    const d = req.validatedBody;
+
+    // completed_at проставляется в момент, когда задача стала выполненной,
+    // и снимается, если её вернули в работу
+    const wasCompleted = task.status === 'completed';
+    const isCompleted = d.status === 'completed';
+    const completedAt = isCompleted ? (wasCompleted ? undefined : 'NOW()') : null;
+
+    const result = await pool.query(
+      `UPDATE tasks
+       SET title = $1, description = $2, category = $3, priority = $4, status = $5,
+           due_date = $6, assigned_to = $7, recurrence = $8, recurrence_end = $9,
+           completed_at = ${completedAt === undefined ? 'completed_at' : (completedAt === null ? 'NULL' : 'NOW()')},
+           updated_at = NOW()
+       WHERE id = $10
+       RETURNING *`,
+      [
+        d.title.trim(), d.description || '', d.category || 'general',
+        d.priority || 'medium', d.status || 'pending', nullableDate(d.due_date),
+        d.assigned_to || null, d.recurrence || 'none', nullableDate(d.recurrence_end),
+        id
+      ]
+    );
+
+    await logActivity(userId, 'TASK_UPDATED', 'task', id, { title: d.title, status: d.status });
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка обновления задачи:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.delete('/api/tasks/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId, role } = req.user;
+
+    const check = await pool.query('SELECT created_by, title FROM tasks WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Задача не найдена' });
+    }
+
+    if (!MOVEMENT_ROLES.includes(role) && check.rows[0].created_by !== userId) {
+      return res.status(403).json({ error: 'Удалять можно только свои задачи' });
+    }
+
+    await pool.query('DELETE FROM tasks WHERE id = $1', [id]);
+    await logActivity(userId, 'TASK_DELETED', 'task', id, { title: check.rows[0].title });
+
+    res.json({ message: 'Задача удалена' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления задачи:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// ========== КАТЕГОРИИ ДОСТИЖЕНИЙ ==========
+// ============================================================
+// Таблица заполнена восемью категориями с баллами и цветами, но страница
+// управления ими тоже ничего не сохраняла.
+
+app.get('/api/achievement-categories', authenticate, async (req, res) => {
+  try {
+    // Читать может любой авторизованный: категории нужны, чтобы
+    // показывать достижения в профиле участника
+    const result = await pool.query(
+      `SELECT id, name, description, icon, color, points, is_active, created_at
+       FROM achievement_categories
+       ORDER BY is_active DESC, points DESC, name`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения категорий достижений:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.post('/api/achievement-categories', authenticate, requireAdminOrCoordinator, validateBody(achievementCategorySchema), async (req, res) => {
+  try {
+    const d = req.validatedBody;
+
+    const exists = await pool.query('SELECT id FROM achievement_categories WHERE lower(name) = lower($1)', [d.name.trim()]);
+    if (exists.rows.length > 0) {
+      return res.status(409).json({ error: 'Категория с таким названием уже есть', code: 'DUPLICATE_NAME' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO achievement_categories (name, description, icon, color, points, is_active, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       RETURNING id, name, description, icon, color, points, is_active, created_at`,
+      [d.name.trim(), d.description || '', d.icon || '', d.color || '#0B1F3A', d.points ?? 0, d.is_active !== false]
+    );
+
+    await logActivity(req.user.userId, 'ACHIEVEMENT_CATEGORY_CREATED', 'achievement_category', result.rows[0].id, { name: d.name });
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания категории:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.put('/api/achievement-categories/:id', authenticate, requireAdminOrCoordinator, validateBody(achievementCategorySchema), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const d = req.validatedBody;
+
+    const result = await pool.query(
+      `UPDATE achievement_categories
+       SET name = $1, description = $2, icon = $3, color = $4, points = $5, is_active = $6
+       WHERE id = $7
+       RETURNING id, name, description, icon, color, points, is_active, created_at`,
+      [d.name.trim(), d.description || '', d.icon || '', d.color || '#0B1F3A', d.points ?? 0, d.is_active !== false, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Категория не найдена' });
+    }
+
+    await logActivity(req.user.userId, 'ACHIEVEMENT_CATEGORY_UPDATED', 'achievement_category', id, { name: d.name });
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка обновления категории:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.delete('/api/achievement-categories/:id', authenticate, requireAdminOrCoordinator, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const check = await pool.query('SELECT name FROM achievement_categories WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Категория не найдена' });
+    }
+
+    // Если категорией уже пользовались, удалять нельзя: у участников
+    // пропадут награды. Прячем её, а не стираем.
+    const used = await pool.query('SELECT COUNT(*)::int AS n FROM achievements WHERE category_id = $1', [id]);
+    if (used.rows[0].n > 0) {
+      await pool.query('UPDATE achievement_categories SET is_active = false WHERE id = $1', [id]);
+      await logActivity(req.user.userId, 'ACHIEVEMENT_CATEGORY_ARCHIVED', 'achievement_category', id, {
+        name: check.rows[0].name,
+        used_by: used.rows[0].n
+      });
+      return res.json({
+        message: `Категория скрыта: она уже присвоена ${used.rows[0].n} достижениям, удалить её нельзя`,
+        archived: true
+      });
+    }
+
+    await pool.query('DELETE FROM achievement_categories WHERE id = $1', [id]);
+    await logActivity(req.user.userId, 'ACHIEVEMENT_CATEGORY_DELETED', 'achievement_category', id, { name: check.rows[0].name });
+
+    res.json({ message: 'Категория удалена', archived: false });
+  } catch (error) {
+    console.error('❌ Ошибка удаления категории:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// ========== ПРИГЛАШЕНИЯ ТЬЮТОРОВ ==========
+// ============================================================
+// Страница вызывала четыре метода API, которых на сервере не было —
+// все запросы отвечали 404.
+
+app.get('/api/tutor-invitations', authenticate, async (req, res) => {
+  try {
+    const { userId, role } = req.user;
+
+    let where = '';
+    const params = [];
+
+    if (role === 'tutor') {
+      where = 'WHERE ti.tutor_id = $1';
+      params.push(userId);
+    } else if (role === 'club_coordinator') {
+      const clubIds = await getCoordinatorClubIds(userId);
+      if (clubIds.length === 0) {
+        where = 'WHERE ti.created_by = $1';
+        params.push(userId);
+      } else {
+        where = 'WHERE (ti.created_by = $1 OR ti.club_id = ANY($2))';
+        params.push(userId, clubIds);
+      }
+    } else if (!MOVEMENT_ROLES.includes(role)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    const result = await pool.query(
+      `SELECT ti.id, ti.tutor_id, ti.event_id, ti.club_id, ti.created_by, ti.message,
+              ti.role, ti.responsibilities, ti.start_date, ti.end_date, ti.status,
+              ti.responded_at, ti.created_at,
+              t.full_name AS tutor_name, t.email AS tutor_email,
+              e.title AS event_title, e.event_date,
+              c.name AS club_name,
+              cr.full_name AS created_by_name
+       FROM tutor_invitations ti
+       LEFT JOIN users t ON ti.tutor_id = t.id
+       LEFT JOIN events e ON ti.event_id = e.id
+       LEFT JOIN clubs c ON ti.club_id = c.id
+       LEFT JOIN users cr ON ti.created_by = cr.id
+       ${where}
+       ORDER BY ti.created_at DESC`,
+      params
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения приглашений тьюторов:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.post('/api/tutor-invitations', authenticate, validateBody(tutorInvitationSchema), async (req, res) => {
+  try {
+    const { userId, role } = req.user;
+
+    const allowed = [...MOVEMENT_ROLES, 'club_coordinator'];
+    if (!allowed.includes(role)) {
+      return res.status(403).json({ error: 'Приглашать тьюторов могут координаторы и администрация' });
+    }
+
+    const d = req.validatedBody;
+
+    const tutor = await pool.query('SELECT id, full_name, role FROM users WHERE id = $1', [d.tutor_id]);
+    if (tutor.rows.length === 0) {
+      return res.status(404).json({ error: 'Тьютор не найден' });
+    }
+    if (tutor.rows[0].role !== 'tutor') {
+      return res.status(400).json({ error: 'Приглашать можно только пользователя с ролью «тьютор»' });
+    }
+
+    // Координатор КЮДа приглашает только в свои клубы
+    if (role === 'club_coordinator' && d.club_id) {
+      const clubIds = await getCoordinatorClubIds(userId);
+      if (!clubIds.includes(d.club_id)) {
+        return res.status(403).json({ error: 'Этот КЮД вне вашей зоны ответственности' });
+      }
+    }
+
+    let result;
+    try {
+      result = await pool.query(
+        `INSERT INTO tutor_invitations (tutor_id, event_id, club_id, created_by, message,
+                                        role, responsibilities, start_date, end_date,
+                                        status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', NOW(), NOW())
+         RETURNING *`,
+        [
+          d.tutor_id, d.event_id || null, d.club_id || null, userId, d.message || '',
+          d.role || 'Тьютор', d.responsibilities || [], nullableDate(d.start_date), nullableDate(d.end_date)
+        ]
+      );
+    } catch (error) {
+      // В таблице есть UNIQUE (tutor_id, event_id)
+      if (error.code === '23505') {
+        return res.status(409).json({
+          error: 'Этот тьютор уже приглашён на данное мероприятие',
+          code: 'DUPLICATE_INVITATION'
+        });
+      }
+      throw error;
+    }
+
+    const invitation = result.rows[0];
+
+    await logActivity(userId, 'TUTOR_INVITED', 'tutor_invitation', invitation.id, {
+      tutor: tutor.rows[0].full_name
+    });
+
+    await createNotification(
+      d.tutor_id,
+      'tutor_invitation',
+      '📚 Приглашение к работе',
+      `Вас приглашают в качестве тьютора${d.role && d.role !== 'Тьютор' ? ` (${d.role})` : ''}`,
+      '/tutor-invitations',
+      'high'
+    );
+
+    res.status(201).json(invitation);
+  } catch (error) {
+    console.error('❌ Ошибка создания приглашения:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.patch('/api/tutor-invitations/:id/respond', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const { userId } = req.user;
+
+    if (!['accepted', 'declined'].includes(status)) {
+      return res.status(400).json({ error: 'Ответ должен быть accepted или declined' });
+    }
+
+    const check = await pool.query(
+      'SELECT tutor_id, created_by, status, event_id FROM tutor_invitations WHERE id = $1',
+      [id]
+    );
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Приглашение не найдено' });
+    }
+
+    // Отвечать может только сам приглашённый
+    if (check.rows[0].tutor_id !== userId) {
+      return res.status(403).json({ error: 'Отвечать на приглашение может только приглашённый тьютор' });
+    }
+
+    if (check.rows[0].status !== 'pending') {
+      return res.status(400).json({ error: 'На это приглашение уже дан ответ', code: 'ALREADY_ANSWERED' });
+    }
+
+    const result = await pool.query(
+      `UPDATE tutor_invitations
+       SET status = $1, responded_at = NOW(), updated_at = NOW()
+       WHERE id = $2
+       RETURNING *`,
+      [status, id]
+    );
+
+    await logActivity(userId, status === 'accepted' ? 'TUTOR_INVITATION_ACCEPTED' : 'TUTOR_INVITATION_DECLINED',
+      'tutor_invitation', id, {});
+
+    await createNotification(
+      check.rows[0].created_by,
+      'tutor_invitation',
+      status === 'accepted' ? '✅ Приглашение принято' : '❌ Приглашение отклонено',
+      `Тьютор ${status === 'accepted' ? 'принял' : 'отклонил'} ваше приглашение`,
+      '/tutor-invitations'
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка ответа на приглашение:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.delete('/api/tutor-invitations/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId, role } = req.user;
+
+    const check = await pool.query('SELECT created_by, tutor_id FROM tutor_invitations WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Приглашение не найдено' });
+    }
+
+    if (!MOVEMENT_ROLES.includes(role) && check.rows[0].created_by !== userId) {
+      return res.status(403).json({ error: 'Отзывать можно только свои приглашения' });
+    }
+
+    await pool.query('DELETE FROM tutor_invitations WHERE id = $1', [id]);
+    await logActivity(userId, 'TUTOR_INVITATION_CANCELLED', 'tutor_invitation', id, {});
+
+    res.json({ message: 'Приглашение отозвано' });
+  } catch (error) {
+    console.error('❌ Ошибка отзыва приглашения:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });

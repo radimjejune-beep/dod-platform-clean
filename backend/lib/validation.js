@@ -168,11 +168,40 @@ export const taskSchema = Joi.object({
   description: Joi.string().max(2000).allow(''),
   priority: Joi.string().valid('low', 'medium', 'high', 'urgent').default('medium'),
   status: Joi.string().valid('pending', 'in_progress', 'completed', 'cancelled').default('pending'),
-  due_date: Joi.date().allow(null),
+  due_date: Joi.date().allow(null, ''),
   category: Joi.string().valid('general', 'reports', 'events', 'communications', 'administration').default('general'),
-  assigned_to: Joi.string().uuid().allow(null),
+  assigned_to: Joi.string().uuid().allow(null, ''),
   recurrence: Joi.string().valid('none', 'daily', 'weekly', 'monthly').default('none'),
-  recurrence_end: Joi.date().allow(null)
+  recurrence_end: Joi.date().allow(null, '')
+});
+
+// 10a. КАТЕГОРИЯ ДОСТИЖЕНИЙ
+export const achievementCategorySchema = Joi.object({
+  name: Joi.string().min(2).max(100).required().messages({
+    'string.empty': 'Название категории обязательно',
+    'any.required': 'Название категории обязательно'
+  }),
+  description: Joi.string().max(500).allow(''),
+  icon: Joi.string().max(50).allow(''),
+  color: Joi.string().pattern(/^#[0-9A-Fa-f]{6}$/).allow('').messages({
+    'string.pattern.base': 'Цвет должен быть в формате #RRGGBB'
+  }),
+  points: Joi.number().integer().min(0).max(1000).default(0),
+  is_active: Joi.boolean().default(true)
+});
+
+// 10b. ПРИГЛАШЕНИЕ ТЬЮТОРА
+export const tutorInvitationSchema = Joi.object({
+  tutor_id: Joi.string().uuid().required().messages({
+    'any.required': 'Нужно выбрать тьютора'
+  }),
+  event_id: Joi.string().uuid().allow(null, ''),
+  club_id: Joi.string().uuid().allow(null, ''),
+  message: Joi.string().max(2000).allow(''),
+  role: Joi.string().max(100).allow(''),
+  responsibilities: Joi.array().items(Joi.string().max(200)).max(20).default([]),
+  start_date: Joi.date().allow(null, ''),
+  end_date: Joi.date().allow(null, '')
 });
 
 // 11. ЗАДАНИЕ ПРЕЗИДЕНТА
@@ -226,6 +255,8 @@ export default {
   newsSchema,
   goalSchema,
   taskSchema,
+  achievementCategorySchema,
+  tutorInvitationSchema,
   presidentTaskSchema,
   massNotificationSchema,
   validate

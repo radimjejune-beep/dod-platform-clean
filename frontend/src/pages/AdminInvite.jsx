@@ -105,7 +105,7 @@ export default function AdminInvite() {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Для входа перейдите по ссылке:
-https://dod-frontend.relaxdev.ru/login
+${window.location.origin}/login
 
 С уважением,
 Команда ДОД «Дипломаты будущего»

@@ -8,6 +8,8 @@
 | `002_seed_achievement_categories.sql` | Справочник категорий достижений (8 строк) — настроечные данные |
 | `003_consents.sql` | Согласия по 152-ФЗ: редакции текстов, кто за кого подтвердил, журнал |
 | `004_consent_documents.sql` | Тексты трёх согласий, редакция «1.0-черновик» |
+| `005_club_staff.sql` | Должности сотрудников в КЮДе; club_coordinators становится представлением |
+| `006_teams.sql` | Команды клубов на форумы и выезды |
 
 Снято с рабочей базы `db_dod_platform_clean` (PostgreSQL 17) через Adminer
 10 сентября 2026 года.
@@ -19,6 +21,8 @@ psql "$DATABASE_URL" -f backend/migrations/001_schema.sql
 psql "$DATABASE_URL" -f backend/migrations/002_seed_achievement_categories.sql
 psql "$DATABASE_URL" -f backend/migrations/003_consents.sql
 psql "$DATABASE_URL" -f backend/migrations/004_consent_documents.sql
+psql "$DATABASE_URL" -f backend/migrations/005_club_staff.sql
+psql "$DATABASE_URL" -f backend/migrations/006_teams.sql
 ```
 
 ## ⚠️ Про 004: тексты согласий — черновик

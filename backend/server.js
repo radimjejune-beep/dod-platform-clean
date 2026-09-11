@@ -6134,6 +6134,833 @@ app.get('/api/my-clubs', authenticate, async (req, res) => {
 });
 
 // ============================================================
+// ========== КОМАНДЫ КЛУБОВ НА ФОРУМЫ И ВЫЕЗДЫ ==========
+// ============================================================
+
+// Каких обязательных согласий не хватает участнику.
+// Пустой массив — можно везти.
+async function missingConsentsFor(participantId) {
+  const r = await pool.query(
+    `SELECT d.code, d.title
+     FROM consent_documents d
+     WHERE d.is_current = true AND d.is_required = true
+       AND NOT EXISTS (
+         SELECT 1 FROM user_consents uc
+         WHERE uc.user_id = $1 AND uc.consent_type = d.code AND uc.revoked_at IS NULL
+       )`,
+    [participantId]
+  );
+  return r.rows;
+}
+
+// Заявку правит только клуб-автор и только пока она в работе
+function submissionIsEditable(status) {
+  return status === 'draft' || status === 'revision_requested';
+}
+
+// ============================================================
+// ПРИГЛАШЕНИЕ КЛУБОВ НА МЕРОПРИЯТИЕ
+// ============================================================
+app.post('/api/events/:eventId/invite-clubs', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { eventId } = req.params;
+    const { club_ids, deadline, quota, allow_escorts = false, message } = req.body;
+
+    if (!MOVEMENT_ROLES.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Приглашать клубы может координатор движения' });
+    }
+    if (!Array.isArray(club_ids) || club_ids.length === 0) {
+      return res.status(400).json({ error: 'club_ids обязателен и не может быть пустым' });
+    }
+    if (quota !== undefined && quota !== null && (!Number.isInteger(quota) || quota < 1)) {
+      return res.status(400).json({ error: 'quota должна быть целым числом больше нуля либо не указана' });
+    }
+
+    const event = await pool.query('SELECT id, title, event_date FROM events WHERE id = $1', [eventId]);
+    if (event.rows.length === 0) {
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    await client.query('BEGIN');
+
+    for (const clubId of club_ids) {
+      await client.query(
+        `INSERT INTO event_club_targets (event_id, club_id, invited_by, invited_at, deadline, quota, allow_escorts, message)
+         VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7)
+         ON CONFLICT (event_id, club_id) DO UPDATE
+         SET deadline = EXCLUDED.deadline, quota = EXCLUDED.quota,
+             allow_escorts = EXCLUDED.allow_escorts, message = EXCLUDED.message`,
+        [eventId, clubId, req.user.userId, nullableDate(deadline), quota ?? null, allow_escorts === true, message || null]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    // Уведомляем руководителей и заместителей приглашённых клубов
+    const staff = await pool.query(
+      `SELECT DISTINCT cs.user_id FROM club_staff cs
+       WHERE cs.club_id = ANY($1) AND cs.removed_at IS NULL
+         AND cs.position IN ('head', 'deputy')`,
+      [club_ids]
+    );
+    for (const s of staff.rows) {
+      await createNotification(
+        s.user_id,
+        'team_invitation',
+        '📣 Приглашение на мероприятие',
+        `Ваш КЮД приглашён на «${event.rows[0].title}». Сформируйте команду${deadline ? ` до ${new Date(deadline).toLocaleDateString('ru-RU')}` : ''}.`,
+        '/my-invitations',
+        'high'
+      );
+    }
+
+    await logActivity(req.user.userId, 'EVENT_CLUBS_INVITED', 'event', eventId, {
+      clubs: club_ids.length, quota: quota ?? null, deadline: deadline || null
+    });
+
+    res.json({ message: `Приглашено клубов: ${club_ids.length}`, event: event.rows[0].title });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Ошибка приглашения клубов:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  } finally {
+    client.release();
+  }
+});
+
+// ============================================================
+// МОИ ПРИГЛАШЕНИЯ
+// ============================================================
+app.get('/api/my-club-invitations', authenticate, async (req, res) => {
+  try {
+    const clubIds = MOVEMENT_ROLES.includes(req.user.role)
+      ? null
+      : await getCoordinatorClubIds(req.user.userId);
+
+    if (clubIds && clubIds.length === 0) return res.json([]);
+
+    const result = await pool.query(
+      `SELECT ect.event_id, ect.club_id, ect.deadline, ect.quota, ect.allow_escorts, ect.message,
+              ect.invited_at,
+              e.title AS event_title, e.event_date, e.location, e.description,
+              c.name AS club_name,
+              ts.id AS submission_id, ts.status, ts.submitted_at, ts.review_comment,
+              COALESCE((SELECT COUNT(*)::int FROM team_members tm WHERE tm.submission_id = ts.id), 0) AS members_count
+       FROM event_club_targets ect
+       JOIN events e ON e.id = ect.event_id
+       JOIN clubs c ON c.id = ect.club_id
+       LEFT JOIN team_submissions ts ON ts.event_id = ect.event_id AND ts.club_id = ect.club_id
+       ${clubIds ? 'WHERE ect.club_id = ANY($1)' : ''}
+       ORDER BY COALESCE(ect.deadline, e.event_date) NULLS LAST, e.event_date`,
+      clubIds ? [clubIds] : []
+    );
+
+    res.json(result.rows.map((r) => ({
+      ...r,
+      status: r.status || 'not_started',
+      is_overdue: r.deadline ? new Date(r.deadline) < new Date() && !r.submitted_at : false
+    })));
+  } catch (error) {
+    console.error('❌ Ошибка получения приглашений:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// СОЗДАНИЕ ЧЕРНОВИКА КОМАНДЫ
+// ============================================================
+app.post('/api/team-submissions', authenticate, async (req, res) => {
+  try {
+    const { event_id, club_id } = req.body;
+
+    if (!event_id || !club_id) {
+      return res.status(400).json({ error: 'event_id и club_id обязательны' });
+    }
+    if (!(await canInClub(req.user, club_id, 'form_team'))) {
+      return res.status(403).json({ error: 'Формировать команду может руководитель КЮДа или его заместитель' });
+    }
+
+    const invited = await pool.query(
+      'SELECT 1 FROM event_club_targets WHERE event_id = $1 AND club_id = $2',
+      [event_id, club_id]
+    );
+    if (invited.rows.length === 0) {
+      return res.status(403).json({ error: 'Ваш КЮД не приглашён на это мероприятие', code: 'NOT_INVITED' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO team_submissions (event_id, club_id, status, created_by)
+       VALUES ($1, $2, 'draft', $3)
+       ON CONFLICT (event_id, club_id) DO UPDATE SET updated_at = NOW()
+       RETURNING *`,
+      [event_id, club_id, req.user.userId]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания команды:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// КОМАНДА С СОСТАВОМ
+// ============================================================
+app.get('/api/team-submissions/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const sub = await pool.query(
+      `SELECT ts.*, e.title AS event_title, e.event_date, c.name AS club_name,
+              ect.quota, ect.deadline, ect.allow_escorts, ect.message AS invitation_message,
+              cb.full_name AS created_by_name, sb.full_name AS submitted_by_name,
+              rb.full_name AS reviewed_by_name
+       FROM team_submissions ts
+       JOIN events e ON e.id = ts.event_id
+       JOIN clubs c ON c.id = ts.club_id
+       LEFT JOIN event_club_targets ect ON ect.event_id = ts.event_id AND ect.club_id = ts.club_id
+       LEFT JOIN users cb ON cb.id = ts.created_by
+       LEFT JOIN users sb ON sb.id = ts.submitted_by
+       LEFT JOIN users rb ON rb.id = ts.reviewed_by
+       WHERE ts.id = $1`,
+      [id]
+    );
+    if (sub.rows.length === 0) {
+      return res.status(404).json({ error: 'Команда не найдена' });
+    }
+
+    const submission = sub.rows[0];
+
+    if (!(await canInClub(req.user, submission.club_id, 'view_participants'))) {
+      return res.status(403).json({ error: 'Нет доступа к этой команде' });
+    }
+
+    // Документы в состав НЕ подтягиваем: только признак, заполнен ли он
+    const members = await pool.query(
+      `SELECT tm.id, tm.participant_id, tm.role_in_team, tm.full_name, tm.birth_date,
+              tm.city, tm.school_full_name, tm.class_name, tm.parent_full_name,
+              tm.parent_phone, tm.participant_phone, tm.extra_program,
+              tm.extra_program_ack, tm.comment, tm.created_at,
+              (d.id IS NOT NULL AND d.purged_at IS NULL) AS has_document,
+              d.document_type
+       FROM team_members tm
+       LEFT JOIN team_member_documents d ON d.member_id = tm.id
+       WHERE tm.submission_id = $1
+       ORDER BY CASE tm.role_in_team WHEN 'escort' THEN 1 ELSE 0 END, tm.full_name`,
+      [id]
+    );
+
+    res.json({
+      ...submission,
+      editable: submissionIsEditable(submission.status),
+      members: members.rows,
+      members_count: members.rows.length
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения команды:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// ДОБАВЛЕНИЕ УЧАСТНИКА В КОМАНДУ
+// ============================================================
+app.post('/api/team-submissions/:id/members', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    const {
+      participant_id, role_in_team = 'student',
+      full_name, birth_date, city, school_full_name, class_name,
+      parent_full_name, parent_phone, participant_phone,
+      extra_program = false, extra_program_ack = false, comment,
+      document
+    } = req.body;
+
+    const sub = await pool.query(
+      `SELECT ts.*, ect.quota, ect.allow_escorts
+       FROM team_submissions ts
+       LEFT JOIN event_club_targets ect ON ect.event_id = ts.event_id AND ect.club_id = ts.club_id
+       WHERE ts.id = $1`,
+      [id]
+    );
+    if (sub.rows.length === 0) return res.status(404).json({ error: 'Команда не найдена' });
+    const submission = sub.rows[0];
+
+    if (!(await canInClub(req.user, submission.club_id, 'form_team'))) {
+      return res.status(403).json({ error: 'Формировать команду может руководитель КЮДа или его заместитель' });
+    }
+    if (!submissionIsEditable(submission.status)) {
+      return res.status(400).json({
+        error: 'Команда уже отправлена — чтобы изменить состав, попросите координатора вернуть её на доработку',
+        code: 'NOT_EDITABLE'
+      });
+    }
+    if (!['student', 'captain', 'escort'].includes(role_in_team)) {
+      return res.status(400).json({ error: 'role_in_team: student, captain или escort' });
+    }
+    if (role_in_team === 'escort' && submission.allow_escorts !== true) {
+      return res.status(400).json({
+        error: 'На этом мероприятии сопровождающие не предусмотрены',
+        code: 'ESCORTS_NOT_ALLOWED'
+      });
+    }
+
+    // Квота считается только по детям: сопровождающие в неё не входят
+    if (submission.quota && role_in_team !== 'escort') {
+      const count = await pool.query(
+        `SELECT COUNT(*)::int AS n FROM team_members
+         WHERE submission_id = $1 AND role_in_team <> 'escort'`,
+        [id]
+      );
+      if (count.rows[0].n >= submission.quota) {
+        return res.status(400).json({
+          error: `Квота исчерпана: от клуба можно заявить ${submission.quota} чел.`,
+          code: 'QUOTA_EXCEEDED'
+        });
+      }
+    }
+
+    let snapshot = {
+      full_name, birth_date, city, school_full_name, class_name,
+      parent_full_name, parent_phone, participant_phone
+    };
+
+    // Участника выбирают из клуба — данные подтягиваем из карточки,
+    // вручную вводят только сопровождающих
+    if (participant_id) {
+      const p = await pool.query(
+        `SELECT u.id, u.full_name, u.birth_date, u.city, u.school, u.class_name,
+                u.phone, u.parent_full_name, u.parent_phone, u.club_id
+         FROM users u WHERE u.id = $1`,
+        [participant_id]
+      );
+      if (p.rows.length === 0) return res.status(404).json({ error: 'Участник не найден' });
+
+      const participant = p.rows[0];
+      if (participant.club_id !== submission.club_id) {
+        return res.status(400).json({ error: 'Этот участник не состоит в вашем КЮДе', code: 'WRONG_CLUB' });
+      }
+
+      // ⚠️ Главная проверка. Без согласий родителей ребёнка нельзя везти
+      // на мероприятие, и ловить это надо здесь, а не когда автобус заказан.
+      const missing = await missingConsentsFor(participant_id);
+      if (missing.length > 0) {
+        return res.status(400).json({
+          error: 'У участника не оформлены согласия родителей',
+          code: 'CONSENTS_MISSING',
+          missing: missing.map((m) => m.title)
+        });
+      }
+
+      snapshot = {
+        full_name: full_name || participant.full_name,
+        birth_date: birth_date || participant.birth_date,
+        city: city || participant.city,
+        school_full_name: school_full_name || participant.school,
+        class_name: class_name || participant.class_name,
+        parent_full_name: parent_full_name || participant.parent_full_name,
+        parent_phone: parent_phone || participant.parent_phone,
+        participant_phone: participant_phone || participant.phone
+      };
+    } else if (role_in_team !== 'escort') {
+      return res.status(400).json({
+        error: 'Участника нужно выбрать из списка клуба. Вручную вводятся только сопровождающие.',
+        code: 'PARTICIPANT_REQUIRED'
+      });
+    }
+
+    if (!snapshot.full_name) {
+      return res.status(400).json({ error: 'ФИО обязательно' });
+    }
+
+    await client.query('BEGIN');
+
+    let member;
+    try {
+      member = await client.query(
+        `INSERT INTO team_members (submission_id, participant_id, role_in_team, full_name,
+                                   birth_date, city, school_full_name, class_name,
+                                   parent_full_name, parent_phone, participant_phone,
+                                   extra_program, extra_program_ack, comment, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+         RETURNING *`,
+        [id, participant_id || null, role_in_team, snapshot.full_name,
+         nullableDate(snapshot.birth_date), snapshot.city || null, snapshot.school_full_name || null,
+         snapshot.class_name || null, snapshot.parent_full_name || null, snapshot.parent_phone || null,
+         snapshot.participant_phone || null, extra_program === true, extra_program_ack === true,
+         comment || null, req.user.userId]
+      );
+    } catch (error) {
+      await client.query('ROLLBACK');
+      if (error.code === '23505') {
+        return res.status(409).json({ error: 'Этот участник уже в команде', code: 'ALREADY_IN_TEAM' });
+      }
+      throw error;
+    }
+
+    // Документ, удостоверяющий личность — в отдельную таблицу
+    if (document && document.document_type) {
+      if (!['passport', 'birth_certificate'].includes(document.document_type)) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'document_type: passport или birth_certificate' });
+      }
+      await client.query(
+        `INSERT INTO team_member_documents (member_id, document_type, series_number, issued_by, issued_at, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [member.rows[0].id, document.document_type, document.series_number || null,
+         document.issued_by || null, nullableDate(document.issued_at), req.user.userId]
+      );
+    }
+
+    await client.query('UPDATE team_submissions SET updated_at = NOW() WHERE id = $1', [id]);
+    await client.query('COMMIT');
+
+    res.status(201).json(member.rows[0]);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Ошибка добавления в команду:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  } finally {
+    client.release();
+  }
+});
+
+// ============================================================
+// ПРАВКА И УДАЛЕНИЕ УЧАСТНИКА КОМАНДЫ
+// ============================================================
+app.patch('/api/team-submissions/:id/members/:memberId', authenticate, async (req, res) => {
+  try {
+    const { id, memberId } = req.params;
+
+    const sub = await pool.query('SELECT club_id, status FROM team_submissions WHERE id = $1', [id]);
+    if (sub.rows.length === 0) return res.status(404).json({ error: 'Команда не найдена' });
+
+    if (!(await canInClub(req.user, sub.rows[0].club_id, 'form_team'))) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+    if (!submissionIsEditable(sub.rows[0].status)) {
+      return res.status(400).json({ error: 'Команда уже отправлена', code: 'NOT_EDITABLE' });
+    }
+
+    const allowed = ['full_name', 'birth_date', 'city', 'school_full_name', 'class_name',
+                     'parent_full_name', 'parent_phone', 'participant_phone',
+                     'extra_program', 'extra_program_ack', 'comment', 'role_in_team'];
+    const fields = [];
+    const values = [];
+    let i = 1;
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) {
+        fields.push(`${key} = $${i}`);
+        values.push(key === 'birth_date' ? nullableDate(req.body[key]) : req.body[key]);
+        i++;
+      }
+    }
+    if (fields.length === 0) return res.status(400).json({ error: 'Нет полей для обновления' });
+
+    values.push(memberId, id);
+    const result = await pool.query(
+      `UPDATE team_members SET ${fields.join(', ')}, updated_at = NOW()
+       WHERE id = $${i} AND submission_id = $${i + 1} RETURNING *`,
+      values
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Участник команды не найден' });
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка правки участника команды:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.delete('/api/team-submissions/:id/members/:memberId', authenticate, async (req, res) => {
+  try {
+    const { id, memberId } = req.params;
+
+    const sub = await pool.query('SELECT club_id, status FROM team_submissions WHERE id = $1', [id]);
+    if (sub.rows.length === 0) return res.status(404).json({ error: 'Команда не найдена' });
+
+    if (!(await canInClub(req.user, sub.rows[0].club_id, 'form_team'))) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+    if (!submissionIsEditable(sub.rows[0].status)) {
+      return res.status(400).json({ error: 'Команда уже отправлена', code: 'NOT_EDITABLE' });
+    }
+
+    const r = await pool.query('DELETE FROM team_members WHERE id = $1 AND submission_id = $2', [memberId, id]);
+    if (r.rowCount === 0) return res.status(404).json({ error: 'Участник команды не найден' });
+
+    res.json({ message: 'Участник убран из команды' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления из команды:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// ДАННЫЕ ДОКУМЕНТА — ОТДЕЛЬНЫМ ЗАПРОСОМ И ОТДЕЛЬНЫМ ПРАВОМ
+// ============================================================
+// В списках документы не показываются никогда. Смотреть их может
+// руководитель КЮДа и координаторы движения — методисту и куратору
+// паспортные данные детей не нужны.
+app.get('/api/team-submissions/:id/members/:memberId/document', authenticate, async (req, res) => {
+  try {
+    const { id, memberId } = req.params;
+
+    const sub = await pool.query('SELECT club_id FROM team_submissions WHERE id = $1', [id]);
+    if (sub.rows.length === 0) return res.status(404).json({ error: 'Команда не найдена' });
+
+    const position = await getClubPosition(req.user.userId, sub.rows[0].club_id);
+    const allowed = MOVEMENT_ROLES.includes(req.user.role) || position === 'head';
+    if (!allowed) {
+      return res.status(403).json({
+        error: 'Данные документов доступны руководителю КЮДа и координаторам движения',
+        code: 'DOCUMENT_ACCESS_DENIED'
+      });
+    }
+
+    const doc = await pool.query(
+      `SELECT d.document_type, d.series_number, d.issued_by, d.issued_at, d.purged_at
+       FROM team_member_documents d
+       JOIN team_members tm ON tm.id = d.member_id
+       WHERE d.member_id = $1 AND tm.submission_id = $2`,
+      [memberId, id]
+    );
+    if (doc.rows.length === 0) return res.status(404).json({ error: 'Документ не заполнен' });
+    if (doc.rows[0].purged_at) {
+      return res.status(410).json({ error: 'Данные документа удалены после мероприятия', code: 'PURGED' });
+    }
+
+    await logActivity(req.user.userId, 'TEAM_DOCUMENT_VIEWED', 'team_member', memberId, {});
+
+    res.json(doc.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка получения документа:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// ОТПРАВКА КОМАНДЫ НА УТВЕРЖДЕНИЕ
+// ============================================================
+// Отправляет только руководитель КЮДа: это подпись под списком детей,
+// которые поедут на выезд, и она должна быть персональной.
+app.post('/api/team-submissions/:id/submit', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+
+    const sub = await pool.query(
+      `SELECT ts.*, e.title AS event_title, c.name AS club_name
+       FROM team_submissions ts
+       JOIN events e ON e.id = ts.event_id
+       JOIN clubs c ON c.id = ts.club_id
+       WHERE ts.id = $1`,
+      [id]
+    );
+    if (sub.rows.length === 0) return res.status(404).json({ error: 'Команда не найдена' });
+    const submission = sub.rows[0];
+
+    const position = await getClubPosition(req.user.userId, submission.club_id);
+    if (position !== 'head' && !MOVEMENT_ROLES.includes(req.user.role)) {
+      return res.status(403).json({
+        error: 'Отправить команду может только руководитель КЮДа',
+        code: 'HEAD_ONLY'
+      });
+    }
+    if (!submissionIsEditable(submission.status)) {
+      return res.status(400).json({ error: 'Команда уже отправлена', code: 'ALREADY_SUBMITTED' });
+    }
+
+    const members = await pool.query(
+      'SELECT id, participant_id, full_name, role_in_team FROM team_members WHERE submission_id = $1',
+      [id]
+    );
+    if (members.rows.length === 0) {
+      return res.status(400).json({ error: 'Команда пуста — добавьте участников', code: 'EMPTY_TEAM' });
+    }
+
+    // Перепроверяем согласия перед отправкой: с момента добавления
+    // родитель мог отозвать согласие
+    const problems = [];
+    for (const m of members.rows) {
+      if (!m.participant_id) continue;
+      const missing = await missingConsentsFor(m.participant_id);
+      if (missing.length > 0) {
+        problems.push({ full_name: m.full_name, missing: missing.map((x) => x.title) });
+      }
+    }
+    if (problems.length > 0) {
+      return res.status(400).json({
+        error: 'У части участников нет действующих согласий родителей',
+        code: 'CONSENTS_MISSING',
+        problems
+      });
+    }
+
+    await client.query('BEGIN');
+    const result = await client.query(
+      `UPDATE team_submissions
+       SET status = 'submitted', submitted_by = $1, submitted_at = NOW(), updated_at = NOW()
+       WHERE id = $2 RETURNING *`,
+      [req.user.userId, id]
+    );
+    await client.query('COMMIT');
+
+    await logActivity(req.user.userId, 'TEAM_SUBMITTED', 'team_submission', id, {
+      event: submission.event_title, club: submission.club_name, members: members.rows.length
+    });
+
+    const coordinators = await pool.query(
+      "SELECT id FROM users WHERE role IN ('admin', 'movement_coordinator') AND status IS DISTINCT FROM 'inactive'"
+    );
+    for (const c of coordinators.rows) {
+      await createNotification(
+        c.id,
+        'team_submission',
+        '📋 Команда на утверждение',
+        `${submission.club_name} подал команду на «${submission.event_title}» — ${members.rows.length} чел.`,
+        '/event-teams',
+        'high'
+      );
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Ошибка отправки команды:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  } finally {
+    client.release();
+  }
+});
+
+// ============================================================
+// УТВЕРЖДЕНИЕ ИЛИ ВОЗВРАТ НА ДОРАБОТКУ
+// ============================================================
+app.patch('/api/team-submissions/:id/review', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { decision, comment } = req.body;
+
+    if (!MOVEMENT_ROLES.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Утверждать команды может координатор движения' });
+    }
+    if (!['approve', 'return'].includes(decision)) {
+      return res.status(400).json({ error: 'decision: approve или return' });
+    }
+    if (decision === 'return' && !comment?.trim()) {
+      return res.status(400).json({
+        error: 'При возврате на доработку нужен комментарий — иначе руководитель не поймёт, что исправлять',
+        code: 'COMMENT_REQUIRED'
+      });
+    }
+
+    const sub = await pool.query(
+      `SELECT ts.*, e.title AS event_title, c.name AS club_name
+       FROM team_submissions ts
+       JOIN events e ON e.id = ts.event_id
+       JOIN clubs c ON c.id = ts.club_id
+       WHERE ts.id = $1`,
+      [id]
+    );
+    if (sub.rows.length === 0) return res.status(404).json({ error: 'Команда не найдена' });
+    if (sub.rows[0].status !== 'submitted') {
+      return res.status(400).json({ error: 'Рассматривать можно только отправленную команду' });
+    }
+
+    const newStatus = decision === 'approve' ? 'approved' : 'revision_requested';
+    const result = await pool.query(
+      `UPDATE team_submissions
+       SET status = $1, reviewed_by = $2, reviewed_at = NOW(), review_comment = $3, updated_at = NOW()
+       WHERE id = $4 RETURNING *`,
+      [newStatus, req.user.userId, comment?.trim() || null, id]
+    );
+
+    await logActivity(req.user.userId, decision === 'approve' ? 'TEAM_APPROVED' : 'TEAM_RETURNED',
+      'team_submission', id, { club: sub.rows[0].club_name, event: sub.rows[0].event_title });
+
+    const staff = await pool.query(
+      `SELECT user_id FROM club_staff
+       WHERE club_id = $1 AND removed_at IS NULL AND position IN ('head', 'deputy')`,
+      [sub.rows[0].club_id]
+    );
+    for (const s of staff.rows) {
+      await createNotification(
+        s.user_id,
+        'team_submission',
+        decision === 'approve' ? '✅ Команда утверждена' : '↩️ Команда возвращена на доработку',
+        decision === 'approve'
+          ? `Команда на «${sub.rows[0].event_title}» утверждена`
+          : `Команда на «${sub.rows[0].event_title}» возвращена: ${comment.trim()}`,
+        '/my-invitations',
+        'high'
+      );
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка рассмотрения команды:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// ВСЕ КОМАНДЫ НА МЕРОПРИЯТИЕ
+// ============================================================
+app.get('/api/events/:eventId/teams', authenticate, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    if (!MOVEMENT_ROLES.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    const result = await pool.query(
+      `SELECT ect.club_id, c.name AS club_name, ect.quota, ect.deadline, ect.allow_escorts,
+              ts.id AS submission_id, ts.status, ts.submitted_at, ts.reviewed_at, ts.review_comment,
+              sb.full_name AS submitted_by_name,
+              COALESCE((SELECT COUNT(*)::int FROM team_members tm
+                        WHERE tm.submission_id = ts.id AND tm.role_in_team <> 'escort'), 0) AS students_count,
+              COALESCE((SELECT COUNT(*)::int FROM team_members tm
+                        WHERE tm.submission_id = ts.id AND tm.role_in_team = 'escort'), 0) AS escorts_count
+       FROM event_club_targets ect
+       JOIN clubs c ON c.id = ect.club_id
+       LEFT JOIN team_submissions ts ON ts.event_id = ect.event_id AND ts.club_id = ect.club_id
+       LEFT JOIN users sb ON sb.id = ts.submitted_by
+       WHERE ect.event_id = $1
+       ORDER BY c.name`,
+      [eventId]
+    );
+
+    const rows = result.rows.map((r) => ({ ...r, status: r.status || 'not_started' }));
+
+    res.json({
+      total_clubs: rows.length,
+      submitted: rows.filter((r) => ['submitted', 'approved'].includes(r.status)).length,
+      approved: rows.filter((r) => r.status === 'approved').length,
+      waiting: rows.filter((r) => r.status === 'submitted').length,
+      not_started: rows.filter((r) => r.status === 'not_started').length,
+      total_participants: rows.reduce((s, r) => s + r.students_count + r.escorts_count, 0),
+      clubs: rows
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения команд:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// ВЫГРУЗКА СВОДНОГО СПИСКА
+// ============================================================
+// Колонки повторяют прежнюю Google-форму, чтобы не пришлось переучиваться.
+app.get('/api/events/:eventId/teams/export', authenticate, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const withDocuments = req.query.documents === 'true';
+
+    if (!MOVEMENT_ROLES.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    const event = await pool.query('SELECT title FROM events WHERE id = $1', [eventId]);
+    if (event.rows.length === 0) return res.status(404).json({ error: 'Мероприятие не найдено' });
+
+    const rows = await pool.query(
+      `SELECT c.name AS club_name, ts.status,
+              tm.role_in_team, tm.full_name, tm.birth_date, tm.city,
+              tm.school_full_name, tm.class_name, tm.parent_full_name,
+              tm.parent_phone, tm.participant_phone,
+              tm.extra_program, tm.extra_program_ack,
+              d.document_type, d.series_number, d.issued_by
+       FROM team_submissions ts
+       JOIN clubs c ON c.id = ts.club_id
+       JOIN team_members tm ON tm.submission_id = ts.id
+       LEFT JOIN team_member_documents d ON d.member_id = tm.id AND d.purged_at IS NULL
+       WHERE ts.event_id = $1 AND ts.status IN ('submitted', 'approved')
+       ORDER BY c.name, CASE tm.role_in_team WHEN 'escort' THEN 1 ELSE 0 END, tm.full_name`,
+      [eventId]
+    );
+
+    const header = [
+      'КЮД', 'Статус заявки', 'Сопровождающий или школьник', 'ФИО', 'Дата рождения',
+      'Город', 'Учебное заведение', 'Класс', 'ФИО родителя', 'Телефон родителя',
+      'Телефон школьника', 'Доп. программа', 'Ознакомлен с условиями доп. программы'
+    ];
+    if (withDocuments) header.push('Тип документа', 'Серия и номер', 'Кем выдан');
+
+    const roleLabel = { student: 'Школьник', captain: 'Капитан команды', escort: 'Сопровождающий' };
+    const statusLabel = { submitted: 'На утверждении', approved: 'Утверждена' };
+
+    const esc = (v) => {
+      if (v === null || v === undefined) return '';
+      const s = String(v);
+      return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+
+    const lines = [header.join(';')];
+    for (const r of rows.rows) {
+      const line = [
+        r.club_name, statusLabel[r.status] || r.status, roleLabel[r.role_in_team] || r.role_in_team,
+        r.full_name, r.birth_date ? new Date(r.birth_date).toLocaleDateString('ru-RU') : '',
+        r.city, r.school_full_name, r.class_name, r.parent_full_name,
+        r.parent_phone, r.participant_phone,
+        r.extra_program ? 'Да' : 'Нет', r.extra_program_ack ? 'Да' : 'Нет'
+      ];
+      if (withDocuments) {
+        line.push(
+          r.document_type === 'passport' ? 'Паспорт РФ' : r.document_type === 'birth_certificate' ? 'Свидетельство о рождении' : '',
+          r.series_number, r.issued_by
+        );
+      }
+      lines.push(line.map(esc).join(';'));
+    }
+
+    await logActivity(req.user.userId, 'TEAMS_EXPORTED', 'event', eventId, {
+      rows: rows.rows.length, with_documents: withDocuments
+    });
+
+    const fileName = `Komandy_${event.rows[0].title.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`);
+    res.send('﻿' + lines.join('\n'));
+  } catch (error) {
+    console.error('❌ Ошибка выгрузки команд:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// УДАЛЕНИЕ ДАННЫХ ДОКУМЕНТОВ ПОСЛЕ МЕРОПРИЯТИЯ
+// ============================================================
+// Паспортные данные нужны для проведения мероприятия, а не навсегда.
+// Сам состав команды остаётся — удаляются только документы.
+app.post('/api/events/:eventId/teams/purge-documents', authenticate, requireAdminOrCoordinator, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    const result = await pool.query(
+      `UPDATE team_member_documents d
+       SET series_number = NULL, issued_by = NULL, issued_at = NULL, purged_at = NOW()
+       FROM team_members tm
+       JOIN team_submissions ts ON ts.id = tm.submission_id
+       WHERE d.member_id = tm.id AND ts.event_id = $1 AND d.purged_at IS NULL`,
+      [eventId]
+    );
+
+    await logActivity(req.user.userId, 'TEAM_DOCUMENTS_PURGED', 'event', eventId, {
+      purged: result.rowCount
+    });
+
+    res.json({ message: `Удалены данные документов: ${result.rowCount}`, purged: result.rowCount });
+  } catch (error) {
+    console.error('❌ Ошибка удаления документов:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
 // ОБРАБОТКА ОШИБОК CORS
 // ============================================================
 // Раньше отклонённый по CORS запрос уходил в стандартный обработчик Express

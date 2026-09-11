@@ -145,6 +145,13 @@ export default function ParticipantEdit() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
+
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Карточка участника</h1>
+            <p className="page-subtitle">Редактирование данных участника движения</p>
+          </div>
+        </div>
         <button
           className="btn-secondary"
           onClick={() => navigate(-1)}

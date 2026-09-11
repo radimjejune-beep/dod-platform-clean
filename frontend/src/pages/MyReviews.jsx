@@ -199,6 +199,14 @@ export default function MyReviews() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
+
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Мои оценки</h1>
+            <p className="page-subtitle">Оценки за участие в мероприятиях</p>
+          </div>
+        </div>
+
         {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {canFilterByClub && clubs.length > 0 && (

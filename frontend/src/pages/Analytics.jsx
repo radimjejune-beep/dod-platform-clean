@@ -75,6 +75,14 @@ export default function Analytics() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
+
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Аналитика</h1>
+            <p className="page-subtitle">Сводные показатели по движению</p>
+          </div>
+        </div>
+
         {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <div className="grid-4" style={{ marginBottom: '24px' }}>

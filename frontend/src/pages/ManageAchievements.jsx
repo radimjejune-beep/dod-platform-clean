@@ -252,6 +252,14 @@ export default function ManageAchievements() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
+
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Достижения</h1>
+            <p className="page-subtitle">Награды участников вашего КЮДа</p>
+          </div>
+        </div>
+
         {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (

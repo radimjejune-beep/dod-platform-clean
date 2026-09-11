@@ -75,6 +75,14 @@ export default function ClubRating() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
+
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Рейтинг клуба</h1>
+            <p className="page-subtitle">Место вашего КЮДа среди клубов движения</p>
+          </div>
+        </div>
+
         {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <div className="card">

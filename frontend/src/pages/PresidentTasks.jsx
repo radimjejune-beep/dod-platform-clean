@@ -363,6 +363,14 @@ export default function PresidentTasks() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
+
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Задания</h1>
+            <p className="page-subtitle">Поручения президента движения</p>
+          </div>
+        </div>
+
         {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (

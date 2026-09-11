@@ -147,6 +147,13 @@ export default function Settings() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
+
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Настройки</h1>
+            <p className="page-subtitle">Общие настройки сайта и публикация новостей</p>
+          </div>
+        </div>
         {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <div style={{

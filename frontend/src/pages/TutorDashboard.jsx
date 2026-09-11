@@ -66,6 +66,14 @@ export default function TutorDashboard() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
+
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Дашборд тьютора</h1>
+            <p className="page-subtitle">Ваши назначения и приглашения на мероприятия</p>
+          </div>
+        </div>
+
         {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <div className="grid-4" style={{ marginBottom: '24px' }}>

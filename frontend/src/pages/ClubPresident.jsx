@@ -214,6 +214,14 @@ export default function ClubPresident() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
+
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Президент КЮДа</h1>
+            <p className="page-subtitle">Назначение президента клуба на учебный год</p>
+          </div>
+        </div>
+
         <button
           className="btn-secondary"
           onClick={() => navigate(-1)}

@@ -76,6 +76,14 @@ export default function MyAchievements() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
+
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Мои достижения</h1>
+            <p className="page-subtitle">Награды и баллы, полученные в движении</p>
+          </div>
+        </div>
+
         {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <div className="grid-4" style={{ marginBottom: '20px' }}>

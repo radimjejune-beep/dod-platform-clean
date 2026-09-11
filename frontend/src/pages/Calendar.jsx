@@ -196,6 +196,13 @@ export default function CalendarPage() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
+
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Календарь</h1>
+            <p className="page-subtitle">Мероприятия движения по датам</p>
+          </div>
+        </div>
         {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <div className="card" style={{ marginBottom: '24px' }}>

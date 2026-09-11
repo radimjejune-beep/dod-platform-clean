@@ -248,6 +248,14 @@ export default function AdminNews() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
+
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Новости</h1>
+            <p className="page-subtitle">Публикации на главной странице сайта движения</p>
+          </div>
+        </div>
+
         {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (

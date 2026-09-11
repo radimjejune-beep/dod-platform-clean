@@ -293,7 +293,7 @@ export default function ParticipantDashboard() {
                 <div className="number">{stats.achievements_count}</div>
                 <div className="label">Достижений</div>
               </div>
-              <div className="stat-card" style={{ borderTop: '3px solid #6B46C1' }}>
+              <div className="stat-card" style={{ borderTop: '3px solid var(--color-primary-light)' }}>
                 <div className="number">{stats.level}</div>
                 <div className="label">Уровень</div>
               </div>

@@ -962,52 +962,50 @@ export default function AdminUsers() {
                       </span>
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                      {/* Раньше каждое действие было кнопкой своего цвета —
+                          серая, жёлтая, фиолетовая (var(--color-primary-light), которого нет в
+                          палитре) и красная. Строка превращалась в гирлянду.
+                          Теперь кнопки спокойные, цвет появляется при
+                          наведении, и только удаление краснеет. */}
+                      <div className="row-actions">
                         <button
-                          style={{ padding: '4px 10px', background: 'var(--color-gray-100)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}
+                          className="btn-ghost btn-sm btn-icon"
                           onClick={() => navigate(`/participant/${u.id}`)}
                           title="Просмотр профиля"
+                          aria-label="Просмотр профиля"
                         >
                           <Icon name="eye" />
                         </button>
-                        
+
                         {isAdmin && (
                           <>
                             <button
-                              style={{ padding: '4px 10px', background: 'var(--color-gold-pale)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}
+                              className="btn-ghost btn-sm btn-icon"
                               onClick={() => handleResetPassword(u.id, u.full_name)}
                               title="Сбросить пароль"
+                              aria-label="Сбросить пароль"
                             >
                               <Icon name="key" />
                             </button>
 
                             <button
-                              style={{ padding: '4px 10px', background: '#6B46C1', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: 'white' }}
+                              className="btn-ghost btn-sm btn-icon"
                               onClick={() => {
                                 setSelectedUserId(u.id);
                                 setSelectedUserFullName(u.full_name);
                                 setShowAssignModal(true);
                               }}
                               title="Прикрепить к КЮДу"
+                              aria-label="Прикрепить к КЮДу"
                             >
-                              <Icon name="flag" />
+                              <Icon name="club" />
                             </button>
 
                             <button
-                              style={{
-                                padding: '4px 10px',
-                                background: 'var(--color-error-bg)',
-                                border: 'none',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                fontSize: '13px',
-                                color: 'var(--color-error)',
-                                transition: 'all 0.2s ease'
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.background = '#FED7D7'}
-                              onMouseLeave={(e) => e.currentTarget.style.background = 'var(--color-error-bg)'}
+                              className="btn-ghost btn-sm btn-icon row-action-danger"
                               onClick={() => handleDeleteUser(u.id, u.full_name)}
                               title="Удалить пользователя"
+                              aria-label="Удалить пользователя"
                             >
                               <Icon name="trash" />
                             </button>

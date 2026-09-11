@@ -1452,3 +1452,39 @@ select.form-control {
   justify-content: center;
   color: var(--color-gold-dark);
 }
+
+
+/* ============================================================
+   ДЕЙСТВИЯ В СТРОКЕ ТАБЛИЦЫ
+   ============================================================
+   Три-четыре действия на строку — норма для списков. Раньше каждое
+   красили в свой цвет, и таблица превращалась в гирлянду. Кнопки
+   держатся тихо, цвет появляется только при наведении.
+   ============================================================ */
+.row-actions {
+  display: flex;
+  gap: 2px;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.row-actions button {
+  color: var(--color-gray-500);
+}
+
+.row-actions button:hover {
+  color: var(--color-primary);
+  background: var(--color-gray-100);
+}
+
+/* Удаление краснеет только под курсором: пока на него не навели,
+   оно не должно кричать громче остальных действий */
+.row-action-danger:hover {
+  color: var(--color-error) !important;
+  background: var(--color-error-bg) !important;
+}
+
+@media (max-width: 640px) {
+  .row-actions { justify-content: flex-start; }
+}

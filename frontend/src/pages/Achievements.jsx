@@ -793,7 +793,7 @@ export default function Achievements() {
           color: var(--color-error);
         }
         .filter-clear:hover {
-          background: #FED7D7;
+          background: var(--color-error-bg);
         }
 
         /* ============================================================

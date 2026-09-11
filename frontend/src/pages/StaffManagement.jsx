@@ -823,7 +823,7 @@ export default function StaffManagement() {
               {filteredStaff.map((s) => (
                 <div key={s.id} className="list-item" style={{ 
                   borderLeftColor: s.role === 'admin' ? 'var(--color-error)' : 
-                                  s.role === 'movement_coordinator' ? '#6B46C1' : 
+                                  s.role === 'movement_coordinator' ? 'var(--color-primary-light)' : 
                                   s.role === 'club_coordinator' ? 'var(--color-gold)' : 'var(--color-primary-light)'
                 }}>
                   <div className="title">
@@ -831,10 +831,10 @@ export default function StaffManagement() {
                     <span className="tag" style={{
                       marginLeft: '8px',
                       background: s.role === 'admin' ? 'var(--color-error-bg)' : 
-                                s.role === 'movement_coordinator' ? '#EDE7F6' : 
+                                s.role === 'movement_coordinator' ? 'var(--color-info-bg)' : 
                                 s.role === 'club_coordinator' ? 'var(--color-gold-pale)' : 'var(--color-info-bg)',
                       color: s.role === 'admin' ? 'var(--color-error)' : 
-                             s.role === 'movement_coordinator' ? '#6B46C1' : 
+                             s.role === 'movement_coordinator' ? 'var(--color-primary-light)' : 
                              s.role === 'club_coordinator' ? 'var(--color-gold-dark)' : 'var(--color-primary-light)'
                     }}>
                       {s.role === 'tutor' ? 'Тьютор' :

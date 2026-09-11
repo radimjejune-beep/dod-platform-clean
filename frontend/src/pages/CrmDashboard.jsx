@@ -191,7 +191,7 @@ export default function CrmDashboard() {
             <div className="stat-label">Мероприятий</div>
             <div className="stat-change">{stats.upcomingEvents} предстоящих</div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid #6B46C1' }}>
+          <div className="stat-card" style={{ borderTop: '3px solid var(--color-primary-light)' }}>
             <div className="stat-number">{stats.totalClubs}</div>
             <div className="stat-label">КЮДов</div>
           </div>

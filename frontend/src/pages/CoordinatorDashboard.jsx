@@ -177,7 +177,7 @@ export default function CoordinatorDashboard() {
               {stats.topClubs.length} активных
             </div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid #6B46C1' }}>
+          <div className="stat-card" style={{ borderTop: '3px solid var(--color-primary-light)' }}>
             <div className="number">{stats.eventsThisMonth}</div>
             <div className="label">Мероприятий за месяц</div>
             <div style={{ fontSize: '11px', color: 'var(--color-gray-500)' }}>
@@ -216,7 +216,7 @@ export default function CoordinatorDashboard() {
                 </button>
               )}
               {stats.consentsPending > 0 && (
-                <button className="btn-primary" style={{ padding: '4px 16px', fontSize: '12px', background: '#6B46C1', color: 'white' }} onClick={() => navigate('/consents-management')}>
+                <button className="btn-primary" style={{ padding: '4px 16px', fontSize: '12px', background: 'var(--color-primary-light)', color: 'white' }} onClick={() => navigate('/consents-management')}>
                   Согласия
                 </button>
               )}
@@ -354,7 +354,7 @@ export default function CoordinatorDashboard() {
               <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/mass-notifications')}>
                 Массовые уведомления
               </button>
-              <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', background: '#6B46C1', color: 'white' }} onClick={() => navigate('/consents-management')}>
+              <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', background: 'var(--color-primary-light)', color: 'white' }} onClick={() => navigate('/consents-management')}>
                 Управление согласиями
               </button>
               <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', background: 'var(--color-gold)', color: 'var(--color-primary)' }} onClick={() => navigate('/documents-center')}>

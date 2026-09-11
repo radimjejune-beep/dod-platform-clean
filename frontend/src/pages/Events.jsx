@@ -1163,7 +1163,7 @@ export default function Events() {
                     className="event-item"
                     style={{
                       borderLeftColor: event.moderation_status === 'pending' ? 'var(--color-gold)' :
-                                    event.is_global ? '#6B46C1' :
+                                    event.is_global ? 'var(--color-primary-light)' :
                                     event.is_club_event ? 'var(--color-primary-light)' :
                                     event.type === 'internal' ? 'var(--color-primary-light)' :
                                     event.type === 'outgoing' ? 'var(--color-gold)' : 'var(--color-error)'
@@ -1331,7 +1331,7 @@ export default function Events() {
                         <>
                           <button
                             className="btn-primary btn-sm"
-                            style={{ background: '#6B46C1', color: 'white' }}
+                            style={{ background: 'var(--color-primary-light)', color: 'white' }}
                             onClick={async () => {
                               setSelectedEventForRegistrations(event);
                               await loadRegistrations(event.id);
@@ -1353,7 +1353,7 @@ export default function Events() {
                       {canAssignTutorLocal && (
                         <button
                           className="btn-primary btn-sm"
-                          style={{ background: '#6B46C1', color: 'white' }}
+                          style={{ background: 'var(--color-primary-light)', color: 'white' }}
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedEventForTutor(event);
@@ -1758,7 +1758,7 @@ export default function Events() {
         }
 
         .btn-primary {
-          background: #6B46C1;
+          background: var(--color-primary-light);
           color: white;
           box-shadow: 0 4px 16px rgba(107,70,193,0.2);
         }
@@ -1964,7 +1964,7 @@ export default function Events() {
           font-size: 10px;
           font-weight: 500;
         }
-        .tag-global { background: #EDE7F6; color: #6B46C1; }
+        .tag-global { background: var(--color-info-bg); color: var(--color-primary-light); }
         .tag-club { background: var(--color-info-bg); color: var(--color-primary-light); }
         .tag-outgoing { background: var(--color-gold-pale); color: var(--color-gold-dark); }
         .tag-pending { background: var(--color-gold-pale); color: var(--color-gold-dark); }
@@ -2423,10 +2423,10 @@ export default function Events() {
 
         .global-info {
           padding: 12px 16px;
-          background: #EDE7F6;
+          background: var(--color-info-bg);
           border-radius: 8px;
           font-size: 13px;
-          color: #6B46C1;
+          color: var(--color-primary-light);
         }
 
         /* ============================================================

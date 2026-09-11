@@ -498,7 +498,8 @@ export default function Dashboard() {
         .profile-info-item {
           display: flex;
           flex-direction: column;
-          gap: 2px;
+          align-items: flex-start;
+          gap: 4px;
           min-width: 0;
         }
 

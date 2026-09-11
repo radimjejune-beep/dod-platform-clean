@@ -987,7 +987,7 @@ export default function Reports() {
         }
 
         .btn-primary {
-          background: #6B46C1;
+          background: var(--color-primary-light);
           color: white;
           box-shadow: 0 4px 16px rgba(107,70,193,0.2);
         }
@@ -1208,7 +1208,7 @@ export default function Reports() {
           color: var(--color-error);
         }
         .filter-clear:hover {
-          background: #FED7D7;
+          background: var(--color-error-bg);
         }
 
         /* ============================================================
@@ -1433,7 +1433,7 @@ export default function Reports() {
           background: var(--color-error-bg);
           border-radius: 8px;
           margin-bottom: 12px;
-          border: 1px solid #FED7D7;
+          border: 1px solid var(--color-error-bg);
         }
 
         .modal-comment strong {

@@ -592,7 +592,7 @@ export default function PresidentTasks() {
                           {getPriorityLabel(task.priority)}
                         </span>
                         {task.is_global && (
-                          <span className="tag" style={{ background: '#EDE7F6', color: '#6B46C1' }}>
+                          <span className="tag" style={{ background: 'var(--color-info-bg)', color: 'var(--color-primary-light)' }}>
                             Глобальное
                           </span>
                         )}

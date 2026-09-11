@@ -697,7 +697,7 @@ export default function NewsSection({ limit = 3 }) {
         }
 
         .news-remove-image:hover {
-          background: #FED7D7;
+          background: var(--color-error-bg);
         }
 
         .news-upload-placeholder span {

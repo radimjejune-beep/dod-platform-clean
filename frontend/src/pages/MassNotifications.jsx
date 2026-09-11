@@ -255,7 +255,7 @@ export default function MassNotifications() {
             <div className="stat-number">{stats.coordinators}</div>
             <div className="stat-label">Координаторов</div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid #6B46C1' }}>
+          <div className="stat-card" style={{ borderTop: '3px solid var(--color-primary-light)' }}>
             <div className="stat-number">{stats.tutors}</div>
             <div className="stat-label">Тьюторов</div>
           </div>

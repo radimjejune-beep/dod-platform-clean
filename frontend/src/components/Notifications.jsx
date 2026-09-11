@@ -120,7 +120,7 @@ export default function Notifications({ profile }) {
     const colors = {
       'event': 'var(--color-primary-light)',
       'achievement': 'var(--color-gold)',
-      'assignment': '#6B46C1',
+      'assignment': 'var(--color-primary-light)',
       'appeal': 'var(--color-error)',
       'system': 'var(--color-gray-500)',
       'club': 'var(--color-primary)',
@@ -129,7 +129,7 @@ export default function Notifications({ profile }) {
       'invitation': 'var(--color-primary-light)',
       'report': 'var(--color-gold-dark)',
       'deadline': 'var(--color-error)',
-      'mention': '#6B46C1',
+      'mention': 'var(--color-primary-light)',
     };
     return colors[type] || 'var(--color-gray-500)';
   };

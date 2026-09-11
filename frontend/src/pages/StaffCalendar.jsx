@@ -62,7 +62,7 @@ export default function StaffCalendar() {
     const colors = {
       'tutor': 'var(--color-primary-light)',
       'club_coordinator': 'var(--color-gold)',
-      'movement_coordinator': '#6B46C1',
+      'movement_coordinator': 'var(--color-primary-light)',
       'admin': 'var(--color-error)'
     };
     return colors[role] || 'var(--color-gray-500)';

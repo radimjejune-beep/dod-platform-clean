@@ -203,7 +203,7 @@ export default function EventManagement() {
             <p>
               {event?.event_date ? new Date(event.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
               {event?.location && ` • ${event.location}`}
-              {event?.is_global && <span className="tag" style={{ marginLeft: '8px', background: '#EDE7F6', color: '#6B46C1' }}>Глобальное</span>}
+              {event?.is_global && <span className="tag" style={{ marginLeft: '8px', background: 'var(--color-info-bg)', color: 'var(--color-primary-light)' }}>Глобальное</span>}
             </p>
           </div>
           {canManage && (

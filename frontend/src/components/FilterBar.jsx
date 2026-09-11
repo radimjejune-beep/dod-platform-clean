@@ -248,7 +248,7 @@ export default function FilterBar({
               gap: '4px'
             }}
             onMouseEnter={(e) => {
-              e.target.style.background = '#FED7D7';
+              e.target.style.background = 'var(--color-error-bg)';
             }}
             onMouseLeave={(e) => {
               e.target.style.background = 'var(--color-error-bg)';

@@ -299,7 +299,7 @@ export default function StaffManagement() {
         <Navigation profile={profile} />
         <div className="container-page">
           <div className="page-header">
-            <span style={{ fontSize: '32px' }}><Icon name="mail" size={32} /></span>
+            <span className="page-header-icon"><Icon name="mail" size={26} /></span>
             <div>
               <h1>Мои приглашения</h1>
               <p>Приглашения на мероприятия от координаторов</p>
@@ -320,7 +320,7 @@ export default function StaffManagement() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="users" size={32} /></span>
+          <span className="page-header-icon"><Icon name="users" size={26} /></span>
           <div>
             <h1>Сотрудники</h1>
             <p>

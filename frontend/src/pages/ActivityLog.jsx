@@ -124,7 +124,7 @@ export default function ActivityLog() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="list" size={32} /></span>
+          <span className="page-header-icon"><Icon name="list" size={26} /></span>
           <div>
             <h1>Журнал действий</h1>
             <p>История всех действий в системе</p>

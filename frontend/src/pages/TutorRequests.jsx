@@ -182,7 +182,7 @@ export default function TutorRequests() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="handshake" size={32} /></span>
+          <span className="page-header-icon"><Icon name="handshake" size={26} /></span>
           <div>
             <h1>Запросы на тьюторов</h1>
             <p>

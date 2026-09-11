@@ -164,7 +164,7 @@ export default function AchievementsCategories() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span className="page-header-icon"><Icon name="flag" size={28} /></span>
+          <span className="page-header-icon"><Icon name="trophy" size={28} /></span>
           <div>
             <h1>Категории достижений</h1>
             <p>Управление категориями и баллами достижений</p>

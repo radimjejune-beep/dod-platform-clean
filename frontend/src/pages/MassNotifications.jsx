@@ -228,7 +228,7 @@ export default function MassNotifications() {
       <div className="container-page">
         {/* ЗАГОЛОВОК */}
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="mail" size={32} /></span>
+          <span className="page-header-icon"><Icon name="megaphone" size={26} /></span>
           <div>
             <h1>Массовые уведомления</h1>
             <p>Отправка уведомлений группам пользователей</p>
@@ -512,17 +512,6 @@ export default function MassNotifications() {
         }
 
         /* ===== ЗАГОЛОВОК ===== */
-        .page-header {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          margin-bottom: 28px;
-          padding: 20px 28px;
-          background: white;
-          border-radius: 12px;
-          border: 1px solid var(--color-gray-200);
-          box-shadow: 0 2px 12px rgba(10,22,40,0.04);
-        }
 
         .page-header h1 {
           font-family: 'Playfair Display', serif;
@@ -962,10 +951,6 @@ export default function MassNotifications() {
             padding: 16px;
           }
 
-          .page-header {
-            padding: 16px 20px;
-            flex-wrap: wrap;
-          }
 
           .notification-form {
             padding: 20px;

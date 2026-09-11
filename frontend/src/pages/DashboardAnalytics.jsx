@@ -117,7 +117,7 @@ export default function DashboardAnalytics() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="chart" size={32} /></span>
+          <span className="page-header-icon"><Icon name="chart" size={26} /></span>
           <div>
             <h1>Аналитика движения</h1>
             <p>Статистика и показатели ДОД «Дипломаты будущего»</p>

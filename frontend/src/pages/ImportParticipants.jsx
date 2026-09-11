@@ -242,7 +242,7 @@ export default function ImportParticipants() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="download" size={32} /></span>
+          <span className="page-header-icon"><Icon name="upload" size={26} /></span>
           <div>
             <h1>Импорт участников</h1>
             <p>Загрузите Excel-файл с данными участников для массового добавления</p>

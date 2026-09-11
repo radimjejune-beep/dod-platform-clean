@@ -197,7 +197,7 @@ export default function EventManagement() {
         </button>
 
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="calendar" size={32} /></span>
+          <span className="page-header-icon"><Icon name="calendar" size={26} /></span>
           <div>
             <h1>{event?.title || 'Управление мероприятием'}</h1>
             <p>

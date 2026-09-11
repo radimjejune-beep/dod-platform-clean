@@ -191,7 +191,7 @@ export default function TutorJournal() {
         </button>
 
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="journal" size={32} /></span>
+          <span className="page-header-icon"><Icon name="journal" size={26} /></span>
           <div>
             <h1>{event?.title || 'Журнал мероприятия'}</h1>
             <p>

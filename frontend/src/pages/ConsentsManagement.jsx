@@ -171,7 +171,7 @@ export default function ConsentsManagement() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="edit" size={32} /></span>
+          <span className="page-header-icon"><Icon name="consent" size={26} /></span>
           <div>
             <h1>Управление согласиями</h1>
             <p>Статус согласий участников движения</p>

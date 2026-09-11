@@ -164,7 +164,7 @@ ${window.location.origin}/login
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="flag" size={32} /></span>
+          <span className="page-header-icon"><Icon name="mail" size={26} /></span>
           <div>
             <h1>Приглашения</h1>
             <p>Создавайте приглашения для сотрудников</p>

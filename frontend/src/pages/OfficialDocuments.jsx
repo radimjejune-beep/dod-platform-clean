@@ -314,7 +314,7 @@ export default function OfficialDocuments() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="document" size={32} /></span>
+          <span className="page-header-icon"><Icon name="document" size={26} /></span>
           <div>
             <h1>Официальные документы ДОД</h1>
             <p>Распоряжения, регламенты и официальные объявления движения</p>

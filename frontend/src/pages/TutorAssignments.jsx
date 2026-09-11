@@ -88,7 +88,7 @@ export default function TutorAssignments() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="calendar" size={32} /></span>
+          <span className="page-header-icon"><Icon name="calendar" size={26} /></span>
           <div>
             <h1>Мои назначения</h1>
             <p>Назначения на мероприятия</p>

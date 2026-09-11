@@ -83,7 +83,7 @@ export default function MyClubEvents() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="calendar" size={32} /></span>
+          <span className="page-header-icon"><Icon name="calendar" size={26} /></span>
           <div>
             <h1>Мероприятия моего клуба</h1>
             <p>

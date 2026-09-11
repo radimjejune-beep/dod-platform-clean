@@ -115,7 +115,7 @@ export default function ClubAnalytics() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="chart" size={32} /></span>
+          <span className="page-header-icon"><Icon name="chart" size={26} /></span>
           <div>
             <h1>{isClubCoordinator ? 'Аналитика моего клуба' : 'Аналитика КЮДов'}</h1>
             <p>{isClubCoordinator ? 'Статистика вашего клуба' : 'Статистика всех КЮДов'}</p>

@@ -217,7 +217,7 @@ export default function GoalsAndKPI() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="target" size={32} /></span>
+          <span className="page-header-icon"><Icon name="target" size={26} /></span>
           <div>
             <h1>Цели и KPI</h1>
             <p>Управление целями движения</p>

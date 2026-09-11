@@ -184,7 +184,7 @@ export default function TutorInvitations() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="mail" size={32} /></span>
+          <span className="page-header-icon"><Icon name="mail" size={26} /></span>
           <div>
             <h1>{isTutor ? 'Мои приглашения' : 'Приглашения тьюторов'}</h1>
             <p>

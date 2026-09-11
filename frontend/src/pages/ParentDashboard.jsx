@@ -153,7 +153,7 @@ export default function ParentDashboard() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="family" size={32} /></span>
+          <span className="page-header-icon"><Icon name="family" size={26} /></span>
           <div>
             <h1>Родительский кабинет</h1>
             <p>

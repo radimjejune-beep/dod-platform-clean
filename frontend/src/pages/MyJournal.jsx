@@ -56,7 +56,7 @@ export default function MyJournal() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="journal" size={32} /></span>
+          <span className="page-header-icon"><Icon name="journal" size={26} /></span>
           <div>
             <h1>Мой журнал</h1>
             <p>Ваши мероприятия для оценки участников</p>

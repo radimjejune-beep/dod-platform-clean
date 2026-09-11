@@ -232,7 +232,7 @@ export default function TasksPlanner() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}><Icon name="calendar" size={32} /></span>
+          <span className="page-header-icon"><Icon name="tasks" size={26} /></span>
           <div>
             <h1>Планировщик задач</h1>
             <p>Управление задачами и дедлайнами</p>

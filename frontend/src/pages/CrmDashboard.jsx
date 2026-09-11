@@ -377,51 +377,7 @@ export default function CrmDashboard() {
         }
 
         /* ===== КНОПКИ ===== */
-        .btn-primary {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 10px 24px;
-          background: var(--color-primary-dark);
-          color: white;
-          border: none;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          text-decoration: none;
-          transition: all 0.3s ease;
-          font-family: 'Inter', sans-serif;
-          min-height: 44px;
-        }
-        .btn-primary:hover {
-          background: var(--color-primary-light);
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(10,22,40,0.25);
-        }
 
-        .btn-gold {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 10px 24px;
-          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
-          color: var(--color-primary-dark);
-          border: none;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          text-decoration: none;
-          transition: all 0.3s ease;
-          box-shadow: 0 2px 16px rgba(201,162,39,0.25);
-          font-family: 'Inter', sans-serif;
-          min-height: 44px;
-        }
-        .btn-gold:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(201,162,39,0.35);
-        }
 
         /* ===== СТАТИСТИКА ===== */
         .crm-stats {

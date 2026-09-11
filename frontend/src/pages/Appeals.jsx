@@ -625,75 +625,12 @@ export default function Appeals() {
           min-width: 80px;
         }
 
-        .btn-gold {
-          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
-          color: var(--color-primary-dark);
-          box-shadow: 0 2px 16px rgba(201,162,39,0.25);
-        }
-        .btn-gold:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(201,162,39,0.35);
-        }
 
-        .btn-primary {
-          background: var(--color-primary-dark);
-          color: white;
-          box-shadow: 0 4px 16px rgba(10,22,40,0.15);
-        }
-        .btn-primary:hover {
-          background: var(--color-primary-light);
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(10,22,40,0.25);
-        }
 
-        .btn-success {
-          background: var(--color-success);
-          color: white;
-          box-shadow: 0 4px 16px rgba(26,122,76,0.2);
-        }
-        .btn-success:hover {
-          background: #13663E;
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(26,122,76,0.3);
-        }
 
-        .btn-danger {
-          background: var(--color-error);
-          color: white;
-          box-shadow: 0 4px 16px rgba(179,38,46,0.2);
-        }
-        .btn-danger:hover {
-          background: #8A1C22;
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(179,38,46,0.3);
-        }
 
-        .btn-outline {
-          background: transparent;
-          color: var(--color-primary-dark);
-          border: 1.5px solid var(--color-gray-200);
-          box-shadow: none;
-        }
-        .btn-outline:hover {
-          background: var(--color-gray-50);
-          border-color: var(--color-gold);
-          transform: translateY(-2px);
-        }
 
-        .btn-secondary {
-          background: var(--color-gray-100);
-          color: var(--color-primary-dark);
-        }
-        .btn-secondary:hover {
-          background: var(--color-gray-200);
-        }
 
-        .btn-sm {
-          padding: 6px 14px;
-          font-size: 12px;
-          min-height: 32px;
-          min-width: 60px;
-        }
 
         /* ============================================================
            ФОРМА ОБРАЩЕНИЯ
@@ -1135,12 +1072,6 @@ export default function Appeals() {
             min-height: 36px;
           }
 
-          .btn-sm {
-            padding: 4px 10px;
-            font-size: 11px;
-            min-height: 28px;
-            min-width: 40px;
-          }
 
           .modal {
             padding: 16px;

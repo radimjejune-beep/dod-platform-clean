@@ -213,28 +213,6 @@ export default function Navigation({ profile }) {
             color: var(--color-primary-dark);
           }
           .nav-logo img { height: 34px; width: auto; }
-          .btn-gold {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 10px 28px;
-            background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
-            color: var(--color-primary-dark);
-            border: none;
-            border-radius: 8px;
-            font-family: 'Inter', sans-serif;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            box-shadow: 0 2px 16px rgba(201, 162, 39, 0.25);
-          }
-          .btn-gold:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
-          }
           @media (max-width: 768px) {
             .nav { padding: 0 16px; }
             .nav-logo span { display: none; }

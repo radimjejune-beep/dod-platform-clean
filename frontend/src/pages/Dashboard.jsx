@@ -638,33 +638,8 @@ export default function Dashboard() {
           white-space: nowrap;
         }
 
-        .btn-primary {
-          background: var(--color-primary-dark);
-          color: white;
-          box-shadow: 0 4px 16px rgba(10,22,40,0.15);
-        }
-        .btn-primary:hover {
-          background: var(--color-primary-light);
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(10,22,40,0.25);
-        }
 
-        .btn-gold {
-          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
-          color: var(--color-primary-dark);
-          box-shadow: 0 2px 16px rgba(201, 162, 39, 0.25);
-        }
-        .btn-gold:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
-        }
 
-        .btn-sm {
-          padding: 6px 14px;
-          font-size: 12px;
-          min-height: 32px;
-          min-width: 60px;
-        }
 
         /* ============================================================
            СПИННЕР
@@ -809,12 +784,6 @@ export default function Dashboard() {
             font-size: 12px;
             min-height: 32px;
             min-width: 50px;
-          }
-          .btn-sm {
-            padding: 4px 10px;
-            font-size: 11px;
-            min-height: 26px;
-            min-width: 40px;
           }
           .tab-header .btn {
             width: 100%;

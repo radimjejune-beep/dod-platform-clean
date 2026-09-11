@@ -27,6 +27,7 @@ export function useMenuItems(profile) {
     if (role === 'admin') {
       return [
         ...commonItems,
+        { id: 'attention', path: '/attention', icon: 'warning', label: 'Требует внимания' },
         { id: 'crm', path: '/crm', icon: 'building', label: 'CRM' },
         { id: 'admin-users', path: '/admin/users', icon: 'users', label: 'Пользователи' },
         { id: 'admin-invite', path: '/admin/invite', icon: 'mail', label: 'Пригласить' },
@@ -58,6 +59,7 @@ export function useMenuItems(profile) {
     if (role === 'movement_coordinator') {
       return [
         ...commonItems,
+        { id: 'attention', path: '/attention', icon: 'warning', label: 'Требует внимания' },
         { id: 'crm', path: '/crm', icon: 'building', label: 'CRM' },
         { id: 'coordinator-dashboard', path: '/coordinator-dashboard', icon: 'dashboard', label: 'Дашборд координатора' },
         { id: 'clubs-management', path: '/clubs-management', icon: 'club', label: 'Управление КЮДами' },
@@ -91,6 +93,7 @@ export function useMenuItems(profile) {
     if (role === 'club_coordinator') {
       return [
         ...commonItems,
+        { id: 'attention', path: '/attention', icon: 'warning', label: 'Требует внимания' },
         { id: 'clubs', path: '/clubs', icon: 'club', label: 'Мой КЮД' },
         { id: 'my-invitations', path: '/my-invitations', icon: 'megaphone', label: 'Приглашения на форумы' },
         { id: 'participants', path: '/participants', icon: 'user', label: 'Участники' },

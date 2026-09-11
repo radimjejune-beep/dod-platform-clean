@@ -38,6 +38,7 @@ import ParentDashboard from './pages/ParentDashboard';
 import ParentConsents from './pages/ParentConsents';
 import IssueCredentials from './pages/IssueCredentials';
 import ClubSessions from './pages/ClubSessions';
+import Attention from './pages/Attention';
 import ParticipantDashboard from './pages/ParticipantDashboard';
 import ClubCoordinatorDashboard from './pages/ClubCoordinatorDashboard';
 import TutorDashboard from './pages/TutorDashboard';
@@ -154,6 +155,7 @@ function App() {
         <Route path="/parent-consents" element={<ParentConsents />} />
         <Route path="/issue-credentials" element={<IssueCredentials />} />
         <Route path="/club-sessions" element={<ClubSessions />} />
+        <Route path="/attention" element={<Attention />} />
         <Route path="/clubs/:clubId/sessions" element={<ClubSessions />} />
 
         {/* ============================================================

@@ -8563,6 +8563,228 @@ app.get('/api/clubs/:clubId/report-draft', authenticate, async (req, res) => {
   }
 });
 
+
+// ============================================================
+// ТРЕБУЕТ ВНИМАНИЯ
+// ============================================================
+// Раньше, чтобы понять состояние дел, нужно было обойти десяток
+// разделов: согласия, КЮДы, отчёты, команды, журнал занятий. Никто
+// этого не делает — поэтому 42 клуба из 44 живут без руководителя в
+// системе, и никого это не беспокоит, пока не понадобится собрать
+// команду на форум.
+//
+// Экран отвечает на один вопрос: что сломается ближайшим, если не
+// вмешаться. Координатор движения видит всё движение, руководитель
+// КЮДа — только свои клубы.
+app.get('/api/attention', authenticate, async (req, res) => {
+  try {
+    const { role, userId } = req.user;
+    if (!STAFF_ROLES.includes(role)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    const isMovement = MOVEMENT_ROLES.includes(role);
+    let clubIds = null;
+    if (!isMovement) {
+      clubIds = await getCoordinatorClubIds(userId);
+      if (clubIds.length === 0) {
+        return res.json({ scope: 'club', sections: [], generated_at: new Date().toISOString() });
+      }
+    }
+
+    const clubFilter = isMovement ? '' : ' AND u.club_id = ANY($1)';
+    const clubFilterC = isMovement ? '' : ' AND c.id = ANY($1)';
+    const params = isMovement ? [] : [clubIds];
+
+    // Прошлый месяц: отчёт за него уже должен быть сдан
+    const now = new Date();
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonth = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+
+    const [noConsent, noParent, noHead, noReport, faded, waitingTeams, pendingInvites] = await Promise.all([
+      // Участники без обязательных согласий — без них нельзя на мероприятия
+      pool.query(
+        `SELECT u.id, u.full_name, c.name AS club_name
+         FROM users u
+         LEFT JOIN clubs c ON c.id = u.club_id
+         WHERE u.role = 'participant' AND u.status = 'active'${clubFilter}
+           AND EXISTS (
+             SELECT 1 FROM consent_documents d
+             WHERE d.is_current = true AND d.is_required = true
+               AND NOT EXISTS (
+                 SELECT 1 FROM user_consents uc
+                 WHERE uc.user_id = u.id AND uc.consent_type = d.code AND uc.revoked_at IS NULL
+               )
+           )
+         ORDER BY c.name NULLS LAST, u.full_name`,
+        params
+      ),
+
+      // Участники, к которым не привязан законный представитель:
+      // согласие за них оформлять некому в принципе
+      pool.query(
+        `SELECT u.id, u.full_name, c.name AS club_name
+         FROM users u
+         LEFT JOIN clubs c ON c.id = u.club_id
+         WHERE u.role = 'participant' AND u.status = 'active'${clubFilter}
+           AND NOT EXISTS (
+             SELECT 1 FROM child_parent cp WHERE cp.child_id = u.id AND cp.status = 'active'
+           )
+         ORDER BY c.name NULLS LAST, u.full_name`,
+        params
+      ),
+
+      // КЮДы без руководителя: некому отмечать занятия, сдавать отчёт и
+      // собирать команду
+      pool.query(
+        `SELECT c.id, c.name, c.city
+         FROM clubs c
+         WHERE COALESCE(c.status, 'active') <> 'archived'${clubFilterC}
+           AND NOT EXISTS (
+             SELECT 1 FROM club_staff cs
+             WHERE cs.club_id = c.id AND cs.removed_at IS NULL AND cs.position = 'head'
+           )
+         ORDER BY c.name`,
+        params
+      ),
+
+      // Не сдан отчёт за прошлый месяц
+      pool.query(
+        `SELECT c.id, c.name
+         FROM clubs c
+         WHERE COALESCE(c.status, 'active') <> 'archived'${clubFilterC}
+           AND NOT EXISTS (
+             SELECT 1 FROM reports r
+             WHERE r.club_id = c.id AND r.report_month = $${params.length + 1}
+               AND r.status IN ('submitted', 'approved')
+           )
+         ORDER BY c.name`,
+        [...params, prevMonth]
+      ),
+
+      // Перестали ходить: были отметки, но последние три занятия подряд
+      // пропущены без уважительной причины
+      pool.query(
+        `WITH last_marks AS (
+           SELECT a.participant_id, a.status,
+                  ROW_NUMBER() OVER (PARTITION BY a.participant_id ORDER BY s.session_date DESC) AS rn
+           FROM session_attendance a
+           JOIN club_sessions s ON s.id = a.session_id AND s.status = 'held'
+         )
+         SELECT u.id, u.full_name, c.name AS club_name
+         FROM users u
+         LEFT JOIN clubs c ON c.id = u.club_id
+         WHERE u.role = 'participant' AND u.status = 'active'${clubFilter}
+           AND (SELECT COUNT(*) FROM last_marks m WHERE m.participant_id = u.id AND m.rn <= 3) = 3
+           AND (SELECT COUNT(*) FROM last_marks m
+                 WHERE m.participant_id = u.id AND m.rn <= 3 AND m.status = 'absent') = 3
+         ORDER BY c.name NULLS LAST, u.full_name`,
+        params
+      ),
+
+      // Команды, отправленные на утверждение и ждущие ответа движения
+      pool.query(
+        `SELECT ts.id, ts.event_id, e.title AS event_title, c.name AS club_name, ts.submitted_at
+         FROM team_submissions ts
+         LEFT JOIN events e ON e.id = ts.event_id
+         LEFT JOIN clubs c ON c.id = ts.club_id
+         WHERE ts.status = 'submitted'
+         ORDER BY ts.submitted_at`,
+        []
+      ),
+
+      // Приглашения клубам на форум, по которым команда так и не собрана
+      pool.query(
+        `SELECT t.event_id, e.title AS event_title, c.name AS club_name, e.event_date
+         FROM event_club_targets t
+         LEFT JOIN events e ON e.id = t.event_id
+         LEFT JOIN clubs c ON c.id = t.club_id
+         WHERE NOT EXISTS (
+                 SELECT 1 FROM team_submissions ts
+                 WHERE ts.event_id = t.event_id AND ts.club_id = t.club_id
+                   AND ts.status IN ('submitted', 'approved')
+               )
+           AND (e.event_date IS NULL OR e.event_date >= CURRENT_DATE)
+         ORDER BY e.event_date NULLS LAST`,
+        []
+      )
+    ]);
+
+    const sections = [
+      {
+        key: 'no_parent',
+        title: 'Участники без законного представителя',
+        why: 'Согласие за них оформлять некому: сначала нужно пригласить родителя.',
+        action: 'Пригласить родителей',
+        link: '/participants',
+        items: noParent.rows
+      },
+      {
+        key: 'no_consent',
+        title: 'Участники без обязательных согласий',
+        why: 'Без согласий участие в мероприятиях движения невозможно.',
+        action: 'Открыть согласия',
+        link: '/consents-management',
+        items: noConsent.rows
+      },
+      {
+        key: 'no_head',
+        title: 'КЮДы без руководителя',
+        why: 'Некому вести занятия, сдавать отчёт и собирать команду на форум.',
+        action: 'Назначить руководителя',
+        link: '/clubs',
+        items: noHead.rows
+      },
+      {
+        key: 'no_report',
+        title: `Не сдан отчёт за ${prevMonth}`,
+        why: 'Отчёт за прошлый месяц уже должен быть сдан.',
+        action: 'Открыть отчёты',
+        link: '/reports',
+        items: noReport.rows
+      },
+      {
+        key: 'faded',
+        title: 'Перестали ходить на занятия',
+        why: 'Три пропуска подряд без уважительной причины. Обычно это значит, что участник уже ушёл.',
+        action: 'Открыть журнал занятий',
+        link: '/club-sessions',
+        items: faded.rows
+      }
+    ];
+
+    if (isMovement) {
+      sections.push({
+        key: 'teams_waiting',
+        title: 'Команды ждут утверждения',
+        why: 'Клуб отправил список и ждёт ответа движения.',
+        action: 'Открыть команды',
+        link: '/event-teams',
+        items: waitingTeams.rows
+      });
+      sections.push({
+        key: 'teams_not_formed',
+        title: 'Клубы приглашены, но команду не собрали',
+        why: 'Мероприятие впереди, а список участников ещё не отправлен.',
+        action: 'Открыть команды',
+        link: '/event-teams',
+        items: pendingInvites.rows
+      });
+    }
+
+    res.json({
+      scope: isMovement ? 'movement' : 'club',
+      previous_month: prevMonth,
+      sections: sections.filter((s) => s.items.length > 0),
+      all_clear: sections.every((s) => s.items.length === 0),
+      generated_at: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Ошибка сбора сводки «Требует внимания»:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
 // ============================================================
 // ОБРАБОТКА ОШИБОК CORS
 // ============================================================

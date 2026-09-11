@@ -1317,6 +1317,16 @@ export const getParticipantAttendance = async (participantId, params = {}) => {
 // Заготовка отчёта: ничего не сохраняет, только считает по базе.
 // Что писать в отчёте — решает человек, но вспоминать числа по памяти
 // ему больше не нужно.
+// Сводка «что сломается ближайшим, если не вмешаться».
+export const getAttention = async () => {
+  const response = await fetch(`${API_URL}/attention`, {
+    method: 'GET',
+    headers: headers()
+  });
+  if (!response.ok) return { sections: [], all_clear: false };
+  return response.json();
+};
+
 export const getReportDraft = async (clubId, month) => {
   const response = await fetch(`${API_URL}/clubs/${clubId}/report-draft?month=${encodeURIComponent(month)}`, {
     method: 'GET',
@@ -1639,6 +1649,7 @@ const api = {
   getParticipantAttendance,
   getClubAttendanceSummary,
   getReportDraft,
+  getAttention,
   issueCredentials,
   createParentInvitation,
   createClubParentInvitations,

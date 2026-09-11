@@ -1013,6 +1013,148 @@ export const revokeConsent = async (subjectId, code, reason) => {
 };
 
 // ============================================================
+// 21b. СОТРУДНИКИ КЮДА
+// ============================================================
+export const getMyClubs = async () => {
+  const response = await fetch(`${API_URL}/my-clubs`, { method: 'GET', headers: headers() });
+  if (!response.ok) return { movement_wide: false, clubs: [] };
+  return response.json();
+};
+
+export const getClubStaff = async (clubId) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/staff`, { method: 'GET', headers: headers() });
+  if (!response.ok) return [];
+  return response.json();
+};
+
+export const addClubStaff = async (clubId, data) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/staff`, {
+    method: 'POST', headers: headers(), body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateClubStaff = async (clubId, userId, position) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/staff/${userId}`, {
+    method: 'PATCH', headers: headers(), body: JSON.stringify({ position })
+  });
+  return response.json();
+};
+
+export const removeClubStaff = async (clubId, userId) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/staff/${userId}`, {
+    method: 'DELETE', headers: headers()
+  });
+  return response.json();
+};
+
+export const transferClubHead = async (clubId, data) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/transfer-head`, {
+    method: 'POST', headers: headers(), body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+// ============================================================
+// 21c. КОМАНДЫ НА ФОРУМЫ И ВЫЕЗДЫ
+// ============================================================
+export const getMyClubInvitations = async () => {
+  const response = await fetch(`${API_URL}/my-club-invitations`, { method: 'GET', headers: headers() });
+  if (!response.ok) return [];
+  return response.json();
+};
+
+export const inviteClubsToEvent = async (eventId, data) => {
+  const response = await fetch(`${API_URL}/events/${eventId}/invite-clubs`, {
+    method: 'POST', headers: headers(), body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const createTeamSubmission = async (eventId, clubId) => {
+  const response = await fetch(`${API_URL}/team-submissions`, {
+    method: 'POST', headers: headers(), body: JSON.stringify({ event_id: eventId, club_id: clubId })
+  });
+  return response.json();
+};
+
+export const getTeamSubmission = async (id) => {
+  const response = await fetch(`${API_URL}/team-submissions/${id}`, { method: 'GET', headers: headers() });
+  return response.json();
+};
+
+export const addTeamMember = async (id, data) => {
+  const response = await fetch(`${API_URL}/team-submissions/${id}/members`, {
+    method: 'POST', headers: headers(), body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateTeamMember = async (id, memberId, data) => {
+  const response = await fetch(`${API_URL}/team-submissions/${id}/members/${memberId}`, {
+    method: 'PATCH', headers: headers(), body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteTeamMember = async (id, memberId) => {
+  const response = await fetch(`${API_URL}/team-submissions/${id}/members/${memberId}`, {
+    method: 'DELETE', headers: headers()
+  });
+  return response.json();
+};
+
+export const submitTeam = async (id) => {
+  const response = await fetch(`${API_URL}/team-submissions/${id}/submit`, {
+    method: 'POST', headers: headers()
+  });
+  return response.json();
+};
+
+export const reviewTeam = async (id, decision, comment) => {
+  const response = await fetch(`${API_URL}/team-submissions/${id}/review`, {
+    method: 'PATCH', headers: headers(), body: JSON.stringify({ decision, comment })
+  });
+  return response.json();
+};
+
+export const getEventTeams = async (eventId) => {
+  const response = await fetch(`${API_URL}/events/${eventId}/teams`, { method: 'GET', headers: headers() });
+  if (!response.ok) return { clubs: [] };
+  return response.json();
+};
+
+export const saveTeamMemberDocument = async (id, memberId, data) => {
+  const response = await fetch(`${API_URL}/team-submissions/${id}/members/${memberId}/document`, {
+    method: 'PUT', headers: headers(), body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+// Данные документа запрашиваются отдельно и только теми, кому положено
+export const getTeamMemberDocument = async (id, memberId) => {
+  const response = await fetch(`${API_URL}/team-submissions/${id}/members/${memberId}/document`, {
+    method: 'GET', headers: headers()
+  });
+  return response.json();
+};
+
+// Выгрузка идёт файлом, поэтому не через response.json()
+export const exportEventTeams = async (eventId, withDocuments = false) => {
+  const url = `${API_URL}/events/${eventId}/teams/export${withDocuments ? '?documents=true' : ''}`;
+  const response = await fetch(url, { method: 'GET', headers: headers() });
+  if (!response.ok) throw new Error('Не удалось выгрузить список');
+  const blob = await response.blob();
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `komandy_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+};
+
+// ============================================================
 // 22. ДЕТИ РОДИТЕЛЯ
 // ============================================================
 export const getParentChildren = async (params = {}) => {
@@ -1171,6 +1313,29 @@ const api = {
   // Активность
   getActivityLog,
   
+  // Сотрудники КЮДа
+  getMyClubs,
+  getClubStaff,
+  addClubStaff,
+  updateClubStaff,
+  removeClubStaff,
+  transferClubHead,
+
+  // Команды на форумы
+  getMyClubInvitations,
+  inviteClubsToEvent,
+  createTeamSubmission,
+  getTeamSubmission,
+  addTeamMember,
+  updateTeamMember,
+  deleteTeamMember,
+  submitTeam,
+  reviewTeam,
+  getEventTeams,
+  getTeamMemberDocument,
+  saveTeamMemberDocument,
+  exportEventTeams,
+
   // Согласия
   getConsentsStats,
   getConsentsMissing,

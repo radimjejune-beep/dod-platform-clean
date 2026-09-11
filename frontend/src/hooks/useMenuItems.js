@@ -30,6 +30,7 @@ export function useMenuItems(profile) {
         { id: 'crm', path: '/crm', icon: '🏢', label: 'CRM' },
         { id: 'admin-users', path: '/admin/users', icon: '👥', label: 'Пользователи' },
         { id: 'admin-invite', path: '/admin/invite', icon: '✉️', label: 'Пригласить' },
+        { id: 'event-teams', path: '/event-teams', icon: '📣', label: 'Команды на форумы' },
         { id: 'clubs', path: '/clubs', icon: '🏫', label: 'КЮДы' },
         { id: 'participants', path: '/participants', icon: '👤', label: 'Участники' },
         { id: 'achievements', path: '/achievements', icon: '🏆', label: 'Достижения' },
@@ -61,6 +62,7 @@ export function useMenuItems(profile) {
         { id: 'clubs-management', path: '/clubs-management', icon: '🏫', label: 'Управление КЮДами' },
         { id: 'admin-users', path: '/admin/users', icon: '👥', label: 'Пользователи' },
         { id: 'admin-invite', path: '/admin/invite', icon: '✉️', label: 'Пригласить' },
+        { id: 'event-teams', path: '/event-teams', icon: '📣', label: 'Команды на форумы' },
         { id: 'participants', path: '/participants', icon: '👤', label: 'Участники' },
         { id: 'achievements', path: '/achievements', icon: '🏆', label: 'Достижения' },
         { id: 'reports', path: '/reports', icon: '📋', label: 'Отчёты' },
@@ -89,6 +91,7 @@ export function useMenuItems(profile) {
       return [
         ...commonItems,
         { id: 'clubs', path: '/clubs', icon: '🏫', label: 'Мой КЮД' },
+        { id: 'my-invitations', path: '/my-invitations', icon: '📣', label: 'Приглашения на форумы' },
         { id: 'participants', path: '/participants', icon: '👤', label: 'Участники' },
         { id: 'manage-achievements', path: '/manage-achievements', icon: '🏆', label: 'Достижения' },
         { id: 'reports', path: '/reports', icon: '📋', label: 'Отчёты' },

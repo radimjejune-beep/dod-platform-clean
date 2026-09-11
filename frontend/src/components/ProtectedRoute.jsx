@@ -37,6 +37,8 @@ const routeRoles = {
   '/tutor-invitations': ['tutor', 'admin', 'movement_coordinator', 'president', 'vice_president'],
   // ===== НОВЫЕ МАРШРУТЫ =====
   '/my-club-events': ['club_coordinator', 'participant', 'tutor'],
+  '/my-invitations': ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'],
+  '/event-teams': ['admin', 'movement_coordinator', 'president', 'vice_president'],
   '/club-calendar': ['club_coordinator', 'participant', 'tutor'],
 };
 

@@ -6655,6 +6655,61 @@ app.get('/api/team-submissions/:id/members/:memberId/document', authenticate, as
   }
 });
 
+// Заполнить или изменить данные документа участника команды.
+// Отдельным адресом и отдельной проверкой прав: паспортные данные детей
+// не должны попадать в общие запросы состава.
+app.put('/api/team-submissions/:id/members/:memberId/document', authenticate, async (req, res) => {
+  try {
+    const { id, memberId } = req.params;
+    const { document_type, series_number, issued_by, issued_at } = req.body;
+
+    const sub = await pool.query('SELECT club_id, status FROM team_submissions WHERE id = $1', [id]);
+    if (sub.rows.length === 0) return res.status(404).json({ error: 'Команда не найдена' });
+
+    const position = await getClubPosition(req.user.userId, sub.rows[0].club_id);
+    const allowed = MOVEMENT_ROLES.includes(req.user.role) || position === 'head' || position === 'deputy';
+    if (!allowed) {
+      return res.status(403).json({
+        error: 'Заполнять данные документов может руководитель КЮДа или его заместитель',
+        code: 'DOCUMENT_ACCESS_DENIED'
+      });
+    }
+    if (!submissionIsEditable(sub.rows[0].status)) {
+      return res.status(400).json({ error: 'Команда уже отправлена', code: 'NOT_EDITABLE' });
+    }
+    if (!['passport', 'birth_certificate'].includes(document_type)) {
+      return res.status(400).json({ error: 'document_type: passport или birth_certificate' });
+    }
+
+    const member = await pool.query(
+      'SELECT id FROM team_members WHERE id = $1 AND submission_id = $2',
+      [memberId, id]
+    );
+    if (member.rows.length === 0) return res.status(404).json({ error: 'Участник команды не найден' });
+
+    await pool.query(
+      `INSERT INTO team_member_documents (member_id, document_type, series_number, issued_by, issued_at, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (member_id) DO UPDATE
+       SET document_type = EXCLUDED.document_type,
+           series_number = EXCLUDED.series_number,
+           issued_by = EXCLUDED.issued_by,
+           issued_at = EXCLUDED.issued_at,
+           purged_at = NULL,
+           updated_at = NOW()`,
+      [memberId, document_type, series_number || null, issued_by || null,
+       nullableDate(issued_at), req.user.userId]
+    );
+
+    await logActivity(req.user.userId, 'TEAM_DOCUMENT_SAVED', 'team_member', memberId, { document_type });
+
+    res.json({ message: 'Данные документа сохранены' });
+  } catch (error) {
+    console.error('❌ Ошибка сохранения документа:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
 // ============================================================
 // ОТПРАВКА КОМАНДЫ НА УТВЕРЖДЕНИЕ
 // ============================================================

@@ -1169,6 +1169,20 @@ export const exportEventTeams = async (eventId, withDocuments = false) => {
 };
 
 // ============================================================
+// 21c. МАССОВАЯ ВЫДАЧА ВРЕМЕННЫХ ПАРОЛЕЙ
+// ============================================================
+// Пароли приходят в ответе один раз и нигде не сохраняются: в базе лежит
+// только хеш. Экран сразу предлагает выгрузить их в файл.
+export const issueCredentials = async (userIds) => {
+  const response = await fetch(`${API_URL}/users/issue-credentials`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ user_ids: userIds })
+  });
+  return response.json();
+};
+
+// ============================================================
 // 21b. ПРИГЛАШЕНИЯ РОДИТЕЛЕЙ
 // ============================================================
 // Пароль ребёнка в этих вызовах не участвует. Ссылку собираем из адреса,
@@ -1432,6 +1446,7 @@ const api = {
   revokeConsent,
   
   // Дети
+  issueCredentials,
   createParentInvitation,
   getParentInvitations,
   revokeParentInvitation,

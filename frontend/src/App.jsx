@@ -36,6 +36,7 @@ import Settings from './pages/Settings';
 import ImportParticipants from './pages/ImportParticipants';
 import ParentDashboard from './pages/ParentDashboard';
 import ParentConsents from './pages/ParentConsents';
+import IssueCredentials from './pages/IssueCredentials';
 import ParticipantDashboard from './pages/ParticipantDashboard';
 import ClubCoordinatorDashboard from './pages/ClubCoordinatorDashboard';
 import TutorDashboard from './pages/TutorDashboard';
@@ -150,6 +151,7 @@ function App() {
         <Route path="/participant-dashboard" element={<ParticipantDashboard />} />
         <Route path="/parent-dashboard" element={<ParentDashboard />} />
         <Route path="/parent-consents" element={<ParentConsents />} />
+        <Route path="/issue-credentials" element={<IssueCredentials />} />
 
         {/* ============================================================
            ПРОФИЛЬ И ПОЛЬЗОВАТЕЛИ

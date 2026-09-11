@@ -12,6 +12,8 @@ const routeRoles = {
   // Согласия за ребёнка оформляет законный представитель; администрация
   // должна видеть тот же экран, чтобы помочь родителю по телефону
   '/parent-consents': ['parent', 'admin', 'movement_coordinator'],
+  // Выдача временных паролей — только администратор: это сброс доступа
+  '/issue-credentials': ['admin'],
   '/club-coordinator-dashboard': ['club_coordinator'],
   '/tutor-dashboard': ['tutor'],
   '/profile': ['all'],

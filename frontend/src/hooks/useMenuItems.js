@@ -30,6 +30,7 @@ export function useMenuItems(profile) {
         { id: 'crm', path: '/crm', icon: 'building', label: 'CRM' },
         { id: 'admin-users', path: '/admin/users', icon: 'users', label: 'Пользователи' },
         { id: 'admin-invite', path: '/admin/invite', icon: 'mail', label: 'Пригласить' },
+        { id: 'issue-credentials', path: '/issue-credentials', icon: 'key', label: 'Выдача доступов' },
         { id: 'event-teams', path: '/event-teams', icon: 'megaphone', label: 'Команды на форумы' },
         { id: 'clubs', path: '/clubs', icon: 'club', label: 'КЮДы' },
         { id: 'participants', path: '/participants', icon: 'user', label: 'Участники' },

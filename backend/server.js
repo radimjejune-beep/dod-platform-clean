@@ -7487,6 +7487,106 @@ app.post('/api/parent-invitations/accept', linkChildLimiter, async (req, res) =>
   }
 });
 
+
+// ============================================================
+// МАССОВАЯ ВЫДАЧА ВРЕМЕННЫХ ПАРОЛЕЙ
+// ============================================================
+// Почты у движения нет, поэтому доступы раздаются списком: координатор
+// выгружает файл и передаёт логины руководителям КЮДов, те — участникам.
+//
+// Безопасность держится на трёх вещах, и все три уже есть в платформе:
+// пароль генерируется crypto.randomBytes, в базе лежит только его bcrypt-хеш,
+// а флаг must_change_password заставляет сменить пароль при первом входе —
+// то есть выданный пароль одноразовый и после первого входа бесполезен.
+//
+// Сам пароль возвращается ровно один раз, в ответе на этот запрос.
+// Повторно его не покажет никто, включая администратора: восстановить
+// его из базы невозможно. Потерялся — выдать заново.
+app.post('/api/users/issue-credentials', authenticate, requireAdmin, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const ids = Array.isArray(req.body?.user_ids) ? req.body.user_ids : [];
+
+    if (ids.length === 0) {
+      return res.status(400).json({ error: 'Не выбран ни один пользователь' });
+    }
+    // Ограничение сверху, чтобы одним запросом нельзя было сбросить пароли
+    // всей платформе по ошибке или по злому умыслу
+    if (ids.length > 300) {
+      return res.status(400).json({
+        error: 'За один раз можно выдать не больше 300 доступов',
+        code: 'TOO_MANY_USERS'
+      });
+    }
+
+    const found = await pool.query(
+      `SELECT u.id, u.full_name, u.email, u.role, u.status, u.must_change_password,
+              c.name AS club_name
+       FROM users u
+       LEFT JOIN clubs c ON c.id = u.club_id
+       WHERE u.id = ANY($1)`,
+      [ids]
+    );
+    if (found.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователи не найдены' });
+    }
+
+    // Себе пароль не сбрасываем: администратор выйдет из системы и не
+    // сможет вернуться, потому что новый пароль он увидит в ответе, но
+    // текущая сессия уже будет считаться временной
+    const targets = found.rows.filter((u) => u.id !== req.user.userId);
+    if (targets.length === 0) {
+      return res.status(400).json({ error: 'Нельзя выдать временный пароль самому себе' });
+    }
+
+    await client.query('BEGIN');
+
+    const issued = [];
+    for (const user of targets) {
+      const password = generatePassword();
+      const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+      await client.query(
+        `UPDATE users
+         SET password_hash = $1, must_change_password = true,
+             last_password_change = NOW(), login_attempts = 0, locked_until = NULL
+         WHERE id = $2`,
+        [hash, user.id]
+      );
+      issued.push({
+        id: user.id,
+        full_name: user.full_name,
+        email: user.email,
+        role: user.role,
+        club_name: user.club_name,
+        status: user.status,
+        password
+      });
+    }
+
+    await client.query('COMMIT');
+
+    // Пароли в журнал не попадают — только кому и сколько выдали
+    await logActivity(req.user.userId, 'CREDENTIALS_ISSUED', 'user', null, {
+      count: issued.length,
+      user_ids: issued.map((u) => u.id)
+    });
+
+    // Кэш профилей в middleware/auth держит роль и статус до 30 секунд;
+    // пароля он не касается, поэтому сбрасывать его здесь не нужно.
+    res.status(201).json({
+      message: `Временные пароли выданы: ${issued.length}`,
+      issued,
+      skipped_self: found.rows.length - targets.length
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Ошибка выдачи временных паролей:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  } finally {
+    client.release();
+  }
+});
+
 // ============================================================
 // ОБРАБОТКА ОШИБОК CORS
 // ============================================================

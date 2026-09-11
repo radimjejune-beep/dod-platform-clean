@@ -193,12 +193,19 @@ export default function Profile() {
     );
   }
 
+  // Согласия и сведения о родителях относятся только к участнику:
+  // за него их даёт законный представитель. Взрослому сотруднику эти
+  // вкладки показывать незачем.
+  const isParticipant = profile?.role === 'participant';
+
   const tabs = [
     { id: 'main', label: 'Основное' },
     { id: 'contacts', label: 'Контакты' },
     { id: 'interests', label: 'Интересы' },
-    { id: 'parents', label: 'Родители' },
-    { id: 'consents', label: 'Согласия' },
+    ...(isParticipant ? [
+      { id: 'parents', label: 'Родители' },
+      { id: 'consents', label: 'Согласия' },
+    ] : []),
     { id: 'extra', label: 'Дополнительно' },
   ];
 
@@ -241,6 +248,8 @@ export default function Profile() {
                 currentAvatar={profile?.avatar_url}
                 onAvatarUpdated={handleAvatarUpdated}
                 userId={profile?.id}
+                size={104}
+                hint={false}
               />
             </div>
             <div className="profile-info-section">
@@ -268,7 +277,8 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Статус согласий */}
+          {/* Статус согласий — только у участника */}
+          {isParticipant && (
           <div className="profile-consent-status">
             <div className="consent-status-label">
               <span>Согласия</span>
@@ -286,6 +296,7 @@ export default function Profile() {
               />
             </div>
           </div>
+          )}
         </div>
 
         {/* ============================================================
@@ -1391,10 +1402,6 @@ export default function Profile() {
             font-size: 18px;
           }
 
-          .profile-avatar-section {
-            width: 80px;
-            height: 80px;
-          }
 
           .form-container {
             padding: 16px;

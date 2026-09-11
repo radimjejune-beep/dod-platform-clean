@@ -4,7 +4,11 @@ import { useState, useRef } from 'react';
 import api from '../lib/api';
 import Icon from './Icon';
 
-export default function AvatarUpload({ currentAvatar, onAvatarUpdated, userId }) {
+// size — диаметр кружка, hint — показывать ли подпись о размере файла.
+// В шапке профиля подпись не нужна: она серая по тёмно-синему и налезала
+// на имя, потому что размер аватара там ограничивали снаружи, а
+// содержимое об этом не знало.
+export default function AvatarUpload({ currentAvatar, onAvatarUpdated, userId, size = 120, hint = true }) {
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(currentAvatar || null);
   const [error, setError] = useState('');
@@ -123,9 +127,10 @@ export default function AvatarUpload({ currentAvatar, onAvatarUpdated, userId })
       <div
         onClick={handleClick}
         style={{
-          width: '120px',
-          height: '120px',
+          width: `${size}px`,
+          height: `${size}px`,
           borderRadius: '50%',
+          flexShrink: 0,
           cursor: 'pointer',
           overflow: 'hidden',
           border: '3px solid var(--color-gold)',
@@ -152,7 +157,7 @@ export default function AvatarUpload({ currentAvatar, onAvatarUpdated, userId })
             }}
           />
         ) : (
-          <span style={{ fontSize: '40px', color: 'var(--color-gray-400)' }}><Icon name="document" size={40} /></span>
+          <Icon name="user" size={Math.round(size * 0.4)} style={{ color: 'var(--color-gray-400)' }} />
         )}
         <div
           style={{
@@ -185,10 +190,12 @@ export default function AvatarUpload({ currentAvatar, onAvatarUpdated, userId })
         </div>
       )}
 
-      <div style={{ fontSize: '11px', color: 'var(--color-gray-400)', textAlign: 'center' }}>
-        Максимум 500KB<br />
-        Рекомендуемый размер: 200×200
-      </div>
+      {hint && (
+        <div style={{ fontSize: '11px', color: 'var(--color-gray-400)', textAlign: 'center' }}>
+          Максимум 500KB<br />
+          Рекомендуемый размер: 200×200
+        </div>
+      )}
     </div>
   );
 }

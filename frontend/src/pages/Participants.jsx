@@ -6,6 +6,7 @@ import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import FilterBar from '../components/FilterBar';
 import Footer from '../components/Footer';
+import Icon from '../components/Icon';
 
 export default function Participants() {
   const [profile, setProfile] = useState(null);
@@ -272,7 +273,7 @@ export default function Participants() {
         <Navigation profile={profile} />
         <div className="container-page">
           <div className="empty-state">
-            <div className="empty-icon">⛔</div>
+            <div className="empty-icon"><Icon name="lock" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
           </div>
         </div>
@@ -351,7 +352,7 @@ export default function Participants() {
                 {filtered.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="empty-table">
-                      <div className="empty-icon">👀</div>
+                      <div className="empty-icon"><Icon name="eye" /></div>
                       <p>{isClubCoordinator ? 'В вашем клубе пока нет участников' : 'Участников не найдено'}</p>
                     </td>
                   </tr>
@@ -385,7 +386,7 @@ export default function Participants() {
                             onClick={() => navigate(`/participant/${p.id}`)}
                             title="Просмотр"
                           >
-                            👁️
+                            <Icon name="eye" />
                           </button>
                           {canEdit && (
                             <button
@@ -393,7 +394,7 @@ export default function Participants() {
                               onClick={() => navigate(`/participant/${p.id}/edit`)}
                               title="Редактировать"
                             >
-                              ✏️
+                              <Icon name="edit" />
                             </button>
                           )}
                           {canDelete && (
@@ -402,7 +403,7 @@ export default function Participants() {
                               onClick={() => handleDelete(p.id, p.full_name)}
                               title="Удалить"
                             >
-                              🗑️
+                              <Icon name="trash" />
                             </button>
                           )}
                         </div>
@@ -422,7 +423,7 @@ export default function Participants() {
           <div className="cards-grid">
             {filtered.length === 0 ? (
               <div className="empty-state full-width">
-                <div className="empty-icon">👀</div>
+                <div className="empty-icon"><Icon name="eye" /></div>
                 <p>{isClubCoordinator ? 'В вашем клубе пока нет участников' : 'Участников не найдено'}</p>
               </div>
             ) : (
@@ -468,7 +469,7 @@ export default function Participants() {
                             onClick={() => navigate(`/participant/${p.id}/edit`)}
                             title="Редактировать"
                           >
-                            ✏️
+                            <Icon name="edit" />
                           </button>
                         )}
                         {canDelete && (
@@ -477,7 +478,7 @@ export default function Participants() {
                             onClick={() => handleDelete(p.id, p.full_name)}
                             title="Удалить"
                           >
-                            🗑️
+                            <Icon name="trash" />
                           </button>
                         )}
                       </div>

@@ -5,6 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import ClubEvents from '../components/ClubEvents';
+import Icon from '../components/Icon';
 
 export default function ClubDetail() {
   const { id } = useParams();
@@ -112,7 +113,7 @@ export default function ClubDetail() {
         <Navigation profile={profile} />
         <div className="container-page">
           <div className="empty-state">
-            <div className="icon">❌</div>
+            <div className="icon"><Icon name="error" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>КЮД не найден</p>
           </div>
         </div>
@@ -121,9 +122,9 @@ export default function ClubDetail() {
   }
 
   const tabs = [
-    { id: 'info', label: '📋 Информация', icon: '📋' },
-    { id: 'events', label: '📅 Мероприятия', icon: '📅' },
-    { id: 'members', label: '👥 Участники', icon: '👥' },
+    { id: 'info', label: 'Информация', icon: 'list' },
+    { id: 'events', label: 'Мероприятия', icon: 'calendar' },
+    { id: 'members', label: 'Участники', icon: 'users' },
   ];
 
   return (
@@ -283,6 +284,7 @@ export default function ClubDetail() {
                 transition: 'all 0.3s ease'
               }}
             >
+              <Icon name={tab.icon} size={15} />
               {tab.label}
             </button>
           ))}
@@ -348,7 +350,7 @@ export default function ClubDetail() {
             </h3>
             {participants.length === 0 ? (
               <div className="empty-state">
-                <div className="icon">👀</div>
+                <div className="icon"><Icon name="eye" /></div>
                 <p>В этом КЮДе пока нет участников</p>
               </div>
             ) : (

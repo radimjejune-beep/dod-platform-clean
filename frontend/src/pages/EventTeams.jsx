@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 const STATUS = {
   not_started: { label: 'Не начата', color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)' },
@@ -111,7 +112,7 @@ export default function EventTeams() {
       setInvite({ club_ids: [], deadline: '', quota: '', allow_escorts: false, message: '' });
       loadSummary(eventId);
     } catch (err) {
-      show('❌ ' + err.message, 'error');
+      show(err.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -126,7 +127,7 @@ export default function EventTeams() {
       show('Команда утверждена');
       loadSummary(eventId);
     } catch (err) {
-      show('❌ ' + err.message, 'error');
+      show(err.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -147,7 +148,7 @@ export default function EventTeams() {
       setReturnComment('');
       loadSummary(eventId);
     } catch (err) {
-      show('❌ ' + err.message, 'error');
+      show(err.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -159,7 +160,7 @@ export default function EventTeams() {
       await api.exportEventTeams(eventId, withDocuments);
       show('Файл выгружен');
     } catch (err) {
-      show('❌ ' + err.message, 'error');
+      show(err.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -379,7 +380,7 @@ export default function EventTeams() {
 
         {summary && summary.clubs?.length === 0 && (
           <div className="empty-state">
-            <div className="empty-state-icon">📣</div>
+            <div className="empty-state-icon"><Icon name="megaphone" /></div>
             <div>На это мероприятие ещё никого не приглашали</div>
             <div style={{ fontSize: '14px', color: 'var(--color-gray-500)', marginTop: '8px' }}>
               Нажмите «Пригласить КЮДы», чтобы начать сбор команд
@@ -393,7 +394,7 @@ export default function EventTeams() {
             <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
               <div className="modal-header">
                 <h3 className="modal-title">Вернуть команду «{returning.club_name}»</h3>
-                <button className="modal-close" onClick={() => setReturning(null)}>✖</button>
+                <button className="modal-close" onClick={() => setReturning(null)}><Icon name="close" /></button>
               </div>
 
               <form onSubmit={sendBack}>

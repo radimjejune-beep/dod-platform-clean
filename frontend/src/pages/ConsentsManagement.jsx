@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function ConsentsManagement() {
   const [profile, setProfile] = useState(null);
@@ -139,9 +140,9 @@ export default function ConsentsManagement() {
       'Клуб': p.club_name || '—',
       'Класс': p.class_name || '—',
       'Школа': p.school || '—',
-      'Согласие на обработку данных': p.consent_personal_data ? '✅' : '❌',
-      'Согласие на публикацию фото': p.consent_photo_publication ? '✅' : '❌',
-      'Согласие на участие в мероприятиях': p.consent_event_participation ? '✅' : '❌',
+      'Согласие на обработку данных': p.consent_personal_data ? 'Да' : 'Нет',
+      'Согласие на публикацию фото': p.consent_photo_publication ? 'Да' : 'Нет',
+      'Согласие на участие в мероприятиях': p.consent_event_participation ? 'Да' : 'Нет',
       'Статус согласий': getConsentPercentage(p) + '%'
     }));
 
@@ -170,7 +171,7 @@ export default function ConsentsManagement() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📝</span>
+          <span style={{ fontSize: '32px' }}><Icon name="edit" size={32} /></span>
           <div>
             <h1>Управление согласиями</h1>
             <p>Статус согласий участников движения</p>
@@ -285,7 +286,7 @@ export default function ConsentsManagement() {
 
           {filteredParticipants.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">👀</div>
+              <div className="icon"><Icon name="eye" /></div>
               <p>Участников не найдено</p>
             </div>
           ) : (
@@ -313,13 +314,13 @@ export default function ConsentsManagement() {
                         <td style={{ color: 'var(--color-gray-500)' }}>{p.club_name || '—'}</td>
                         <td style={{ color: 'var(--color-gray-500)' }}>{p.class_name || '—'}</td>
                         <td style={{ textAlign: 'center' }}>
-                          {p.consent_personal_data ? '✅' : '❌'}
+                          {p.consent_personal_data ? <Icon name="success" /> : <Icon name="error" />}
                         </td>
                         <td style={{ textAlign: 'center' }}>
-                          {p.consent_photo_publication ? '✅' : '❌'}
+                          {p.consent_photo_publication ? <Icon name="success" /> : <Icon name="error" />}
                         </td>
                         <td style={{ textAlign: 'center' }}>
-                          {p.consent_event_participation ? '✅' : '❌'}
+                          {p.consent_event_participation ? <Icon name="success" /> : <Icon name="error" />}
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           <span className="tag" style={{ background: status.bg, color: status.color, fontSize: '11px' }}>

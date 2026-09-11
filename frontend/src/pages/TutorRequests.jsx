@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function TutorRequests() {
   const [profile, setProfile] = useState(null);
@@ -167,7 +168,7 @@ export default function TutorRequests() {
         <Navigation profile={profile} />
         <div className="container-page">
           <div className="empty-state">
-            <div className="icon">⛔</div>
+            <div className="icon"><Icon name="lock" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
             <p style={{ color: 'var(--color-gray-500)' }}>Только координаторы КЮДа и администраторы</p>
           </div>
@@ -181,7 +182,7 @@ export default function TutorRequests() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>🤝</span>
+          <span style={{ fontSize: '32px' }}><Icon name="handshake" size={32} /></span>
           <div>
             <h1>Запросы на тьюторов</h1>
             <p>
@@ -324,7 +325,7 @@ export default function TutorRequests() {
 
         {requests.length === 0 ? (
           <div className="empty-state">
-            <div className="icon">📭</div>
+            <div className="icon"><Icon name="archive" /></div>
             <p>Запросов пока нет</p>
           </div>
         ) : (
@@ -397,7 +398,7 @@ export default function TutorRequests() {
                       )}
                       {req.reviewed_by_name && req.status !== 'pending' && (
                         <div style={{ fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
-                          {req.status === 'approved' ? '✅' : '❌'} Рассмотрел: {req.reviewed_by_name}
+                          {req.status === 'approved' ? <Icon name="success" /> : <Icon name="error" />} Рассмотрел: {req.reviewed_by_name}
                           {req.reviewed_at && ` • ${new Date(req.reviewed_at).toLocaleString('ru-RU')}`}
                         </div>
                       )}

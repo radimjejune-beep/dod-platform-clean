@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function AdminInvite() {
   const [profile, setProfile] = useState(null);
@@ -110,7 +111,7 @@ export default function AdminInvite() {
   Email: ${result.user?.email || form.email}
   Пароль: ${password}
   Роль: ${getRoleLabel(form.role)}
-  ${form.club_id ? `🏫 Клуб: ${clubs.find(c => c.id === form.club_id)?.name || '—'}` : ''}
+  ${form.club_id ? `Клуб: ${clubs.find(c => c.id === form.club_id)?.name || '—'}` : ''}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Для входа перейдите по ссылке:
@@ -163,7 +164,7 @@ ${window.location.origin}/login
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>🎫</span>
+          <span style={{ fontSize: '32px' }}><Icon name="flag" size={32} /></span>
           <div>
             <h1>Приглашения</h1>
             <p>Создавайте приглашения для сотрудников</p>

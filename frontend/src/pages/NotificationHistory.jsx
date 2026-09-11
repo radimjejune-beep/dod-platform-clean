@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function NotificationHistory() {
   const [profile, setProfile] = useState(null);
@@ -100,7 +101,7 @@ export default function NotificationHistory() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📨</span>
+          <span style={{ fontSize: '32px' }}><Icon name="mail" size={32} /></span>
           <div>
             <h1>История уведомлений</h1>
             <p>Все отправленные массовые уведомления</p>
@@ -122,7 +123,7 @@ export default function NotificationHistory() {
 
         {notifications.length === 0 ? (
           <div className="empty-state">
-            <div className="icon">📭</div>
+            <div className="icon"><Icon name="archive" /></div>
             <p>Уведомлений пока нет</p>
           </div>
         ) : (

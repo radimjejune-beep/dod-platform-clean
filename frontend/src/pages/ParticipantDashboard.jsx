@@ -5,6 +5,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import PresidentSection from '../components/PresidentSection';
+import Icon from '../components/Icon';
 
 export default function ParticipantDashboard() {
   const [profile, setProfile] = useState(null);
@@ -83,17 +84,18 @@ export default function ParticipantDashboard() {
     return names[level] || 'Дипломат';
   };
 
-  const getLevelEmoji = (level) => {
-    const emojis = {
-      1: '🌱',
-      2: '🌟',
-      3: '⭐',
-      4: '👔',
-      5: '🏛️',
-      6: '👑',
-      7: '💎'
+  // Иконка уровня: от первой звезды до короны
+  const getLevelIcon = (level) => {
+    const icons = {
+      1: 'star',
+      2: 'star',
+      3: 'trophy',
+      4: 'briefcase',
+      5: 'building',
+      6: 'crown',
+      7: 'crown'
     };
-    return emojis[level] || '⭐';
+    return icons[level] || 'star';
   };
 
   const getInitials = (name) => {
@@ -159,7 +161,7 @@ export default function ParticipantDashboard() {
               </p>
               <div style={{ display: 'flex', gap: '12px', marginTop: '8px', flexWrap: 'wrap' }}>
                 <span style={{ background: 'rgba(255,255,255,0.15)', padding: '4px 12px', borderRadius: '20px', fontSize: '13px' }}>
-                  {getLevelEmoji(stats.level)} {getLevelName(stats.level)}
+                  <Icon name={getLevelIcon(stats.level)} size={16} /> {getLevelName(stats.level)}
                 </span>
                 <span style={{ background: 'rgba(255,255,255,0.15)', padding: '4px 12px', borderRadius: '20px', fontSize: '13px' }}>
                   {stats.achievements_count} достижений
@@ -347,7 +349,7 @@ export default function ParticipantDashboard() {
           <div className="card">
             {stats.achievements_count === 0 ? (
               <div className="empty-state">
-                <div className="icon">🌟</div>
+                <div className="icon"><Icon name="star" /></div>
                 <p style={{ color: 'var(--color-gray-500)' }}>У вас пока нет достижений</p>
                 <p style={{ fontSize: '13px', color: 'var(--color-gray-400)' }}>
                   Участвуйте в мероприятиях и получайте награды!
@@ -361,7 +363,7 @@ export default function ParticipantDashboard() {
                     borderLeft: '4px solid var(--color-gold)',
                     marginBottom: '0'
                   }}>
-                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>🏆</div>
+                    <div style={{ fontSize: '32px', marginBottom: '8px' }}><Icon name="trophy" size={32} /></div>
                     <div style={{ fontWeight: '600', color: 'var(--color-primary)' }}>{a.title}</div>
                     {a.description && (
                       <div style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>{a.description}</div>
@@ -392,7 +394,7 @@ export default function ParticipantDashboard() {
             </div>
             {stats.total_events === 0 ? (
               <div className="empty-state">
-                <div className="icon">📭</div>
+                <div className="icon"><Icon name="archive" /></div>
                 <p>Вы ещё не участвовали в мероприятиях</p>
               </div>
             ) : (

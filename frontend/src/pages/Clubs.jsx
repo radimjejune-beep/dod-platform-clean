@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
+import Icon from '../components/Icon';
 
 export default function Clubs() {
   const [clubs, setClubs] = useState([]);
@@ -129,7 +130,7 @@ export default function Clubs() {
            ============================================================ */}
         {clubs.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-icon">🏫</div>
+            <div className="empty-icon"><Icon name="club" /></div>
             <h3>Нет клубов</h3>
             <p>Клубы юных дипломатов пока не созданы</p>
           </div>
@@ -141,7 +142,7 @@ export default function Clubs() {
                 className="club-card"
                 onClick={() => navigate(`/club/${club.id}`)}
               >
-                <div className="club-card-icon">🏫</div>
+                <div className="club-card-icon"><Icon name="club" /></div>
                 <h3 className="club-card-title">{club.name}</h3>
                 <p className="club-card-location">{club.city || 'Город не указан'}</p>
                 <div className="club-card-stats">

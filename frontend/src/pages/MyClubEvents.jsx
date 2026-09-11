@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function MyClubEvents() {
   const [profile, setProfile] = useState(null);
@@ -82,7 +83,7 @@ export default function MyClubEvents() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📅</span>
+          <span style={{ fontSize: '32px' }}><Icon name="calendar" size={32} /></span>
           <div>
             <h1>Мероприятия моего клуба</h1>
             <p>
@@ -110,7 +111,7 @@ export default function MyClubEvents() {
 
         {events.length === 0 ? (
           <div className="empty-state">
-            <div className="icon">📭</div>
+            <div className="icon"><Icon name="archive" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>
               В вашем клубе пока нет внутренних мероприятий
             </p>

@@ -72,10 +72,10 @@ export default function ClubCoordinatorDashboard() {
       <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
         <h1>Дашборд координатора КЮДа</h1>
         <div style={{ background: 'var(--color-gray-50)', padding: '20px', borderRadius: '8px', marginTop: '20px' }}>
-          <p><strong>👤:</strong> {profile?.full_name}</p>
-          <p><strong>📧:</strong> {profile?.email}</p>
-          <p><strong>🎭:</strong> {profile?.role}</p>
-          <p><strong>🏫:</strong> {profile?.club_id || 'Не указан'}</p>
+          <p><strong>ФИО:</strong> {profile?.full_name}</p>
+          <p><strong>Почта:</strong> {profile?.email}</p>
+          <p><strong>Роль:</strong> {profile?.role}</p>
+          <p><strong>КЮД:</strong> {profile?.club_id || 'Не указан'}</p>
         </div>
         <div style={{ marginTop: '20px' }}>
           <button 

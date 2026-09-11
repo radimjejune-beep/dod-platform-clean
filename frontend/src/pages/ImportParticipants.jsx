@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import * as XLSX from 'xlsx';
+import Icon from '../components/Icon';
 
 export default function ImportParticipants() {
   const [profile, setProfile] = useState(null);
@@ -241,7 +242,7 @@ export default function ImportParticipants() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📥</span>
+          <span style={{ fontSize: '32px' }}><Icon name="download" size={32} /></span>
           <div>
             <h1>Импорт участников</h1>
             <p>Загрузите Excel-файл с данными участников для массового добавления</p>
@@ -367,7 +368,7 @@ export default function ImportParticipants() {
             }
           }}
           >
-            <div style={{ fontSize: '48px', marginBottom: '8px' }}>📂</div>
+            <div style={{ fontSize: '48px', marginBottom: '8px' }}><Icon name="folder" size={48} /></div>
             <p style={{ color: 'var(--color-gray-500)', marginBottom: '8px' }}>
               Перетащите файл сюда или нажмите для выбора
             </p>

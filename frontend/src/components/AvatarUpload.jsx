@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import api from '../lib/api';
+import Icon from './Icon';
 
 export default function AvatarUpload({ currentAvatar, onAvatarUpdated, userId }) {
   const [loading, setLoading] = useState(false);
@@ -151,7 +152,7 @@ export default function AvatarUpload({ currentAvatar, onAvatarUpdated, userId })
             }}
           />
         ) : (
-          <span style={{ fontSize: '40px', color: 'var(--color-gray-400)' }}>📷</span>
+          <span style={{ fontSize: '40px', color: 'var(--color-gray-400)' }}><Icon name="document" size={40} /></span>
         )}
         <div
           style={{

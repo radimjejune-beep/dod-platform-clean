@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function OfficialDocuments() {
   const [profile, setProfile] = useState(null);
@@ -299,7 +300,7 @@ export default function OfficialDocuments() {
         <Navigation profile={profile} />
         <div className="container-page">
           <div className="empty-state">
-            <div className="icon">⛔</div>
+            <div className="icon"><Icon name="lock" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
             <p style={{ color: 'var(--color-gray-500)' }}>Только сотрудники движения</p>
           </div>
@@ -313,7 +314,7 @@ export default function OfficialDocuments() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📜</span>
+          <span style={{ fontSize: '32px' }}><Icon name="document" size={32} /></span>
           <div>
             <h1>Официальные документы ДОД</h1>
             <p>Распоряжения, регламенты и официальные объявления движения</p>
@@ -446,7 +447,7 @@ export default function OfficialDocuments() {
 
           {documents.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">📜</div>
+              <div className="icon"><Icon name="document" /></div>
               <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>
                 Официальных документов пока нет
               </p>
@@ -633,14 +634,16 @@ export default function OfficialDocuments() {
                 cursor: 'pointer'
               }}
             >
-              ✕
+              <Icon name="close" />
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-              <span style={{ fontSize: '28px' }}>
-                {selectedDocument.document_type === 'decree' ? '📜' :
-                 selectedDocument.document_type === 'invitation' ? '📩' :
-                 selectedDocument.document_type === 'regulation' ? '📋' : '📢'}
+              <span style={{ display: 'inline-flex', color: 'var(--color-gold-dark)' }}>
+                <Icon size={24} name={
+                  selectedDocument.document_type === 'decree' ? 'document' :
+                  selectedDocument.document_type === 'invitation' ? 'mail' :
+                  selectedDocument.document_type === 'regulation' ? 'list' : 'megaphone'
+                } />
               </span>
               <h2 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--color-primary)' }}>
                 {selectedDocument.title}

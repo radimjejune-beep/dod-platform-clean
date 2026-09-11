@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 const STATUS = {
   not_started: { label: 'Команда не собрана', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
@@ -68,7 +69,7 @@ export default function MyInvitations() {
 
       navigate(`/team/${submissionId}`);
     } catch (err) {
-      setMessage('❌ ' + err.message);
+      setMessage(err.message);
       setMessageType('error');
       setBusyKey(null);
     }
@@ -111,7 +112,7 @@ export default function MyInvitations() {
 
         {invitations.length === 0 && (
           <div className="empty-state">
-            <div className="empty-state-icon">📭</div>
+            <div className="empty-state-icon"><Icon name="archive" /></div>
             <div>Приглашений пока нет</div>
             <div style={{ fontSize: '14px', color: 'var(--color-gray-500)', marginTop: '8px' }}>
               Когда координатор движения пригласит ваш КЮД на форум, приглашение появится здесь

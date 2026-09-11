@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function ParentDashboard() {
   const [profile, setProfile] = useState(null);
@@ -151,7 +152,7 @@ export default function ParentDashboard() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>👨‍👩‍👦</span>
+          <span style={{ fontSize: '32px' }}><Icon name="family" size={32} /></span>
           <div>
             <h1>Родительский кабинет</h1>
             <p>
@@ -210,9 +211,9 @@ export default function ParentDashboard() {
                   {child.full_name}
                   {child.class_name && ` (${child.class_name})`}
                   {allConsents ? (
-                    <span style={{ color: 'var(--color-success)', fontSize: '14px' }}>✅</span>
+                    <span style={{ color: 'var(--color-success)', fontSize: '14px' }}><Icon name="success" size={14} /></span>
                   ) : (
-                    <span style={{ color: 'var(--color-gold)', fontSize: '14px' }}>⚠️</span>
+                    <span style={{ color: 'var(--color-gold)', fontSize: '14px' }}><Icon name="warning" size={14} /></span>
                   )}
                 </button>
               );
@@ -222,7 +223,7 @@ export default function ParentDashboard() {
 
         {children.length === 0 ? (
           <div className="empty-state">
-            <div className="icon">👨‍👩‍👦</div>
+            <div className="icon"><Icon name="family" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>У вас пока нет привязанных детей</p>
             <p style={{ color: 'var(--color-gray-500)', marginBottom: '16px' }}>
               Нажмите кнопку <strong>"Привязать ребёнка"</strong> и введите логин и пароль ребёнка.
@@ -322,19 +323,19 @@ export default function ParentDashboard() {
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ color: selectedChild.consent_personal_data ? 'var(--color-success)' : 'var(--color-error)' }}>
-                    {selectedChild.consent_personal_data ? '✅' : '❌'}
+                    {selectedChild.consent_personal_data ? <Icon name="success" /> : <Icon name="error" />}
                   </span>
                   <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>Персональные данные</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ color: selectedChild.consent_photo_publication ? 'var(--color-success)' : 'var(--color-error)' }}>
-                    {selectedChild.consent_photo_publication ? '✅' : '❌'}
+                    {selectedChild.consent_photo_publication ? <Icon name="success" /> : <Icon name="error" />}
                   </span>
                   <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>Публикация фото</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ color: selectedChild.consent_event_participation ? 'var(--color-success)' : 'var(--color-error)' }}>
-                    {selectedChild.consent_event_participation ? '✅' : '❌'}
+                    {selectedChild.consent_event_participation ? <Icon name="success" /> : <Icon name="error" />}
                   </span>
                   <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>Участие в мероприятиях</span>
                 </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon, { DataIcon } from '../components/Icon';
 
 export default function MyAchievements() {
   const [profile, setProfile] = useState(null);
@@ -52,15 +53,15 @@ export default function MyAchievements() {
 
   const getCategoryIcon = (category) => {
     const icons = {
-      'Участие': '🎯',
-      'Организация': '🤝',
-      'Особое': '⭐',
-      'Спорт': '⚽',
-      'Творчество': '🎨',
-      'Наука': '🔬',
-      'Волонтерство': '❤️'
+      'Участие': 'target',
+      'Организация': 'handshake',
+      'Особое': 'star',
+      'Спорт': 'trophy',
+      'Творчество': 'star',
+      'Наука': 'book',
+      'Волонтерство': 'handshake'
     };
-    return icons[category] || '🏅';
+    return icons[category] || 'trophy';
   };
 
   if (loading) {
@@ -104,7 +105,7 @@ export default function MyAchievements() {
 
         {achievements.length === 0 ? (
           <div className="empty-state">
-            <div className="icon">🌟</div>
+            <div className="icon"><Icon name="star" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>У вас пока нет достижений</p>
             <p style={{ color: 'var(--color-gray-500)' }}>Участвуйте в мероприятиях и получайте награды!</p>
           </div>
@@ -133,7 +134,7 @@ export default function MyAchievements() {
                     borderRadius: '12px',
                     flexShrink: 0
                   }}>
-                    {item.icon || '🏅'}
+                    <DataIcon value={item.icon} fallback="trophy" size={22} />
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>

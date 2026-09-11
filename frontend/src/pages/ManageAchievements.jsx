@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function ManageAchievements() {
   const [profile, setProfile] = useState(null);
@@ -289,7 +290,7 @@ export default function ManageAchievements() {
             </div>
             <div style={{ fontSize: '14px', color: 'var(--color-gray-500)' }}>
               {selectedClubId ? (
-                <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
+                <span><Icon name="filter" size={14} /> Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
               ) : (
                 <span>Все достижения</span>
               )}
@@ -392,7 +393,7 @@ export default function ManageAchievements() {
                         setForm({ ...form, participant_id: '' });
                       }}
                     >
-                      ✕
+                      <Icon name="close" />
                     </button>
                   </div>
                 )}
@@ -452,7 +453,7 @@ export default function ManageAchievements() {
 
           {achievements.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">🏆</div>
+              <div className="icon"><Icon name="trophy" /></div>
               <p>Достижений пока нет</p>
             </div>
           ) : (
@@ -468,7 +469,7 @@ export default function ManageAchievements() {
                 >
                   <div className="title">
                     <span style={{ marginRight: '8px' }}>
-                      {a.is_club_award ? '🏫' : a.is_tutor_award ? '📚' : '🏅'}
+                      <Icon name={a.is_club_award ? 'club' : a.is_tutor_award ? 'book' : 'trophy'} size={20} />
                     </span>
                     {a.title}
                     {a.is_club_award && (

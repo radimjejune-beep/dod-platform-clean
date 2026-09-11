@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function PresidentTasks() {
   const [profile, setProfile] = useState(null);
@@ -510,7 +511,7 @@ export default function PresidentTasks() {
                         setForm({ ...form, assigned_to: '', club_id: '' });
                       }}
                     >
-                      ✕
+                      <Icon name="close" />
                     </button>
                   </div>
                 )}
@@ -547,7 +548,7 @@ export default function PresidentTasks() {
 
         {tasks.length === 0 ? (
           <div className="empty-state">
-            <div className="icon">📋</div>
+            <div className="icon"><Icon name="list" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>
               {isPresident ? 'У вас пока нет заданий' : 'Заданий пока нет'}
             </p>
@@ -684,7 +685,7 @@ export default function PresidentTasks() {
                             }
                           }}
                         >
-                          🗑️
+                          <Icon name="trash" />
                         </button>
                       )}
                     </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function TutorDashboard() {
   const [profile, setProfile] = useState(null);
@@ -106,7 +107,7 @@ export default function TutorDashboard() {
                   <div key={inv.id} className="list-item" style={{ borderLeftColor: 'var(--color-gold)' }}>
                     <div className="title">{inv.event_title || 'Мероприятие'}</div>
                     <div className="subtitle">
-                      📅 {inv.event_date ? new Date(inv.event_date).toLocaleDateString('ru-RU') : ''}
+                      <Icon name="calendar" size={14} /> {inv.event_date ? new Date(inv.event_date).toLocaleDateString('ru-RU') : ''}
                       {inv.location && ` • ${inv.location}`}
                     </div>
                     <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
@@ -150,7 +151,7 @@ export default function TutorDashboard() {
                   <div key={assignment.id} className="list-item" style={{ borderLeftColor: 'var(--color-primary-light)' }}>
                     <div className="title">{assignment.event_title || 'Мероприятие'}</div>
                     <div className="subtitle">
-                      📅 {assignment.event_date ? new Date(assignment.event_date).toLocaleDateString('ru-RU') : ''}
+                      <Icon name="calendar" size={14} /> {assignment.event_date ? new Date(assignment.event_date).toLocaleDateString('ru-RU') : ''}
                       {assignment.location && ` • ${assignment.location}`}
                     </div>
                     <div className="meta">

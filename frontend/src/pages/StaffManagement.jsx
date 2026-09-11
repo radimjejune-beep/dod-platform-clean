@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function StaffManagement() {
   const [profile, setProfile] = useState(null);
@@ -298,7 +299,7 @@ export default function StaffManagement() {
         <Navigation profile={profile} />
         <div className="container-page">
           <div className="page-header">
-            <span style={{ fontSize: '32px' }}>📨</span>
+            <span style={{ fontSize: '32px' }}><Icon name="mail" size={32} /></span>
             <div>
               <h1>Мои приглашения</h1>
               <p>Приглашения на мероприятия от координаторов</p>
@@ -319,7 +320,7 @@ export default function StaffManagement() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>👥</span>
+          <span style={{ fontSize: '32px' }}><Icon name="users" size={32} /></span>
           <div>
             <h1>Сотрудники</h1>
             <p>
@@ -387,7 +388,7 @@ export default function StaffManagement() {
             </div>
             <div style={{ fontSize: '14px', color: 'var(--color-gray-500)' }}>
               {selectedClubId ? (
-                <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
+                <span><Icon name="filter" size={14} /> Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
               ) : (
                 <span>Все сотрудники</span>
               )}
@@ -577,7 +578,7 @@ export default function StaffManagement() {
                           setStaffResults([]);
                         }}
                       >
-                        ✕
+                        <Icon name="close" />
                       </button>
                     </div>
                   )}
@@ -654,7 +655,7 @@ export default function StaffManagement() {
                               {e.title}
                             </div>
                             <div style={{ fontSize: '12px', color: 'var(--color-gray-500)' }}>
-                              📅 {e.event_date ? new Date(e.event_date).toLocaleDateString('ru-RU') : ''}
+                              <Icon name="calendar" size={14} /> {e.event_date ? new Date(e.event_date).toLocaleDateString('ru-RU') : ''}
                             </div>
                           </div>
                         ))}
@@ -682,7 +683,7 @@ export default function StaffManagement() {
                             setEventResults([]);
                           }}
                         >
-                          ✕
+                          <Icon name="close" />
                         </button>
                       </div>
                     )}
@@ -814,7 +815,7 @@ export default function StaffManagement() {
 
           {filteredStaff.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">👤</div>
+              <div className="icon"><Icon name="user" /></div>
               <p>Сотрудников не найдено</p>
             </div>
           ) : (

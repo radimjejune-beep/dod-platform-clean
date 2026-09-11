@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function TutorAssignments() {
   const [profile, setProfile] = useState(null);
@@ -87,7 +88,7 @@ export default function TutorAssignments() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📅</span>
+          <span style={{ fontSize: '32px' }}><Icon name="calendar" size={32} /></span>
           <div>
             <h1>Мои назначения</h1>
             <p>Назначения на мероприятия</p>
@@ -102,7 +103,7 @@ export default function TutorAssignments() {
 
         {assignments.length === 0 ? (
           <div className="empty-state">
-            <div className="icon">📭</div>
+            <div className="icon"><Icon name="archive" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>
               У вас пока нет назначений на мероприятия
             </p>

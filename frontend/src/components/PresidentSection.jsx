@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import Icon from './Icon';
 
 export default function PresidentSection({ profile }) {
   const [tasks, setTasks] = useState([]);
@@ -65,7 +66,7 @@ export default function PresidentSection({ profile }) {
     <div className="president-section">
       <div className="president-section-header">
         <div className="president-section-title">
-          <span className="president-section-icon">👑</span>
+          <span className="president-section-icon"><Icon name="crown" /></span>
           <div>
             <h3>Задания для президента</h3>
             <p>Ваши поручения и задачи от руководства движения</p>
@@ -85,7 +86,7 @@ export default function PresidentSection({ profile }) {
         </div>
       ) : tasks.length === 0 ? (
         <div className="president-section-empty">
-          <div className="president-section-empty-icon">🎉</div>
+          <div className="president-section-empty-icon"><Icon name="success" /></div>
           <h4>У вас пока нет заданий</h4>
           <p>Когда руководство назначит вам задачу, она появится здесь</p>
         </div>
@@ -126,7 +127,7 @@ export default function PresidentSection({ profile }) {
                 {task.status !== 'completed' ? (
                   <div className="president-section-task-arrow">→</div>
                 ) : (
-                  <div className="president-section-task-done">✅</div>
+                  <div className="president-section-task-done"><Icon name="success" /></div>
                 )}
               </div>
             );

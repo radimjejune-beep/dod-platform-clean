@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 const STATUS = {
   draft: { label: 'Черновик', color: 'var(--color-gray-600)', bg: 'var(--color-gray-100)' },
@@ -87,7 +88,7 @@ export default function TeamBuilder() {
       setCandidates(list);
     } catch (err) {
       console.error('❌ Ошибка загрузки команды:', err);
-      setMessage('❌ ' + err.message);
+      setMessage(err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -115,7 +116,7 @@ export default function TeamBuilder() {
       show(`${participant.full_name} добавлен в команду`);
       loadData();
     } catch (err) {
-      show('❌ ' + err.message, 'error');
+      show(err.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -136,7 +137,7 @@ export default function TeamBuilder() {
       setShowEscortForm(false);
       loadData();
     } catch (err) {
-      show('❌ ' + err.message, 'error');
+      show(err.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -151,7 +152,7 @@ export default function TeamBuilder() {
       show('Участник убран из команды');
       loadData();
     } catch (err) {
-      show('❌ ' + err.message, 'error');
+      show(err.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -164,7 +165,7 @@ export default function TeamBuilder() {
       if (result?.error) throw new Error(api.describeApiError(result));
       loadData();
     } catch (err) {
-      show('❌ ' + err.message, 'error');
+      show(err.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -198,7 +199,7 @@ export default function TeamBuilder() {
       setDocFor(null);
       loadData();
     } catch (err) {
-      show('❌ ' + err.message, 'error');
+      show(err.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -220,7 +221,7 @@ export default function TeamBuilder() {
       show('Команда отправлена на утверждение');
       loadData();
     } catch (err) {
-      show('❌ ' + err.message, 'error');
+      show(err.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -240,7 +241,7 @@ export default function TeamBuilder() {
         <Navigation profile={profile} />
         <div className="container-page">
           <div className="empty-state">
-            <div className="empty-state-icon">🚫</div>
+            <div className="empty-state-icon"><Icon name="lock" /></div>
             <div>Команда не найдена или нет доступа</div>
             <button className="btn-secondary" style={{ marginTop: '16px' }} onClick={() => navigate('/my-invitations')}>
               ← К приглашениям
@@ -388,7 +389,7 @@ export default function TeamBuilder() {
                             : quotaFull ? 'Квота исчерпана' : 'Добавить в команду'
                         }
                       >
-                        ➕
+                        <Icon name="plus" />
                       </button>
                     </div>
                   );
@@ -432,7 +433,7 @@ export default function TeamBuilder() {
 
             {team.members.length === 0 && (
               <div className="empty-state" style={{ padding: '24px' }}>
-                <div className="empty-state-icon">👥</div>
+                <div className="empty-state-icon"><Icon name="users" /></div>
                 <div>Команда пока пуста</div>
               </div>
             )}
@@ -471,7 +472,7 @@ export default function TeamBuilder() {
 
                   {editable && (
                     <button className="btn-danger btn-sm" onClick={() => removeMember(m)} disabled={busy} title="Убрать из команды">
-                      🗑
+                      <Icon name="trash" />
                     </button>
                   )}
                 </div>
@@ -522,7 +523,7 @@ export default function TeamBuilder() {
             <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
               <div className="modal-header">
                 <h3 className="modal-title">Документ: {docFor.full_name}</h3>
-                <button className="modal-close" onClick={() => setDocFor(null)}>✖</button>
+                <button className="modal-close" onClick={() => setDocFor(null)}><Icon name="close" /></button>
               </div>
 
               <div style={{

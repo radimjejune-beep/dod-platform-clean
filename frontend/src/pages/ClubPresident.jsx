@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function ClubPresident() {
   const { clubId } = useParams();
@@ -252,9 +253,7 @@ export default function ClubPresident() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '24px'
-              }}>
-                👑
-              </div>
+              }}><Icon name="crown" size={24} /></div>
               <div>
                 <div style={{ fontWeight: '600', color: 'var(--color-primary)' }}>
                   {currentPresident.full_name}
@@ -276,7 +275,7 @@ export default function ClubPresident() {
 
           {!hasParticipants ? (
             <div className="empty-state">
-              <div className="icon">👀</div>
+              <div className="icon"><Icon name="eye" /></div>
               <p style={{ fontSize: '16px', color: 'var(--color-primary)' }}>
                 В вашем клубе пока нет участников
               </p>
@@ -337,10 +336,10 @@ export default function ClubPresident() {
                       </div>
                     </div>
                     {selectedParticipant === p.id && !isCurrentPresident && (
-                      <span style={{ color: 'var(--color-gold)', fontSize: '20px' }}>✓</span>
+                      <span style={{ color: 'var(--color-gold)', fontSize: '20px' }}><Icon name="check" size={20} /></span>
                     )}
                     {isCurrentPresident && (
-                      <span style={{ color: 'var(--color-gold)', fontSize: '20px' }}>👑</span>
+                      <span style={{ color: 'var(--color-gold)', fontSize: '20px' }}><Icon name="crown" size={20} /></span>
                     )}
                   </div>
                 );

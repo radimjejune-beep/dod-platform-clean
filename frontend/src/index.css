@@ -1389,3 +1389,47 @@ select.form-control {
   .detail-row { flex-direction: column; gap: 2px; }
   .detail-row dt, .detail-row .label { flex: none; font-size: 12px; }
 }
+
+/* ============================================================
+   ИКОНКИ В СТАРЫХ ОБЁРТКАХ
+   ============================================================
+   Раньше в этих местах стояла эмодзи, и размер задавался
+   font-size. Теперь внутри SVG, которому font-size ничего не
+   говорит — задаём размер явно и наследуем цвет от обёртки.
+   ============================================================ */
+[class*="-icon"] > svg,
+.icon > svg,
+.empty-icon > svg {
+  width: 1em;
+  height: 1em;
+  min-width: 20px;
+  min-height: 20px;
+}
+
+.empty-icon,
+.empty-state-icon,
+.notifications-empty-icon,
+.president-section-empty-icon {
+  color: var(--color-gray-400);
+}
+
+.empty-icon > svg,
+.empty-state-icon > svg,
+.notifications-empty-icon > svg,
+.president-section-empty-icon > svg {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+/* Иконка в круглой плашке — карточки быстрых действий и разделов */
+.quick-icon,
+.club-card-icon,
+.home-contacts-card-icon,
+.home-about-value-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gold-dark);
+}

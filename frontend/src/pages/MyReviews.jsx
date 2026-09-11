@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function MyReviews() {
   const [profile, setProfile] = useState(null);
@@ -231,7 +232,7 @@ export default function MyReviews() {
             </div>
             <div style={{ fontSize: '14px', color: 'var(--color-gray-500)' }}>
               {selectedClubId ? (
-                <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
+                <span><Icon name="filter" size={14} /> Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
               ) : (
                 <span>Все оценки</span>
               )}
@@ -257,7 +258,7 @@ export default function MyReviews() {
 
         {reviews.length === 0 ? (
           <div className="empty-state">
-            <div className="icon">📝</div>
+            <div className="icon"><Icon name="edit" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>
               {profile?.role === 'participant' && 'У вас пока нет оценок'}
               {profile?.role === 'parent' && 'У вашего ребёнка пока нет оценок'}
@@ -307,7 +308,7 @@ export default function MyReviews() {
                               {review.event_title || 'Мероприятие'}
                             </div>
                             <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
-                              📅 {review.event_date ? new Date(review.event_date).toLocaleDateString('ru-RU') : ''}
+                              <Icon name="calendar" size={14} /> {review.event_date ? new Date(review.event_date).toLocaleDateString('ru-RU') : ''}
                             </div>
                           </td>
                           <td style={{ textAlign: 'center' }}>
@@ -383,7 +384,7 @@ export default function MyReviews() {
                             {review.club_name || 'Без клуба'}
                           </div>
                           <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
-                            📅 {review.event_date ? new Date(review.event_date).toLocaleDateString('ru-RU') : ''}
+                            <Icon name="calendar" size={14} /> {review.event_date ? new Date(review.event_date).toLocaleDateString('ru-RU') : ''}
                           </div>
                         </div>
                         <span className="tag" style={{ background: status.bg, color: status.color }}>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function TutorInvitations() {
   const [profile, setProfile] = useState(null);
@@ -169,7 +170,7 @@ export default function TutorInvitations() {
         <Navigation profile={profile} />
         <div className="container-page">
           <div className="empty-state">
-            <div className="icon">⛔</div>
+            <div className="icon"><Icon name="lock" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
             <p style={{ color: 'var(--color-gray-500)' }}>Только тьюторы и администраторы</p>
           </div>
@@ -183,7 +184,7 @@ export default function TutorInvitations() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📨</span>
+          <span style={{ fontSize: '32px' }}><Icon name="mail" size={32} /></span>
           <div>
             <h1>{isTutor ? 'Мои приглашения' : 'Приглашения тьюторов'}</h1>
             <p>
@@ -296,7 +297,7 @@ export default function TutorInvitations() {
                           setTutorResults([]);
                         }}
                       >
-                        ✕
+                        <Icon name="close" />
                       </button>
                     </div>
                   )}
@@ -401,7 +402,7 @@ export default function TutorInvitations() {
 
         {invitations.length === 0 ? (
           <div className="empty-state">
-            <div className="icon">📭</div>
+            <div className="icon"><Icon name="archive" /></div>
             <p>{isTutor ? 'У вас пока нет приглашений' : 'Приглашений пока нет'}</p>
           </div>
         ) : (

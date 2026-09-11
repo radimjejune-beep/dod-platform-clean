@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function AdminNews() {
   const [profile, setProfile] = useState(null);
@@ -338,7 +339,7 @@ export default function AdminNews() {
                     </div>
                   ) : (
                     <div>
-                      <span style={{ fontSize: '40px', display: 'block' }}>🖼️</span>
+                      <span style={{ fontSize: '40px', display: 'block' }}><Icon name="document" size={40} /></span>
                       <p style={{ color: 'var(--color-gray-400)' }}>
                         Нажмите или перетащите фото для новости
                       </p>
@@ -376,7 +377,7 @@ export default function AdminNews() {
           
           {news.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">📭</div>
+              <div className="icon"><Icon name="archive" /></div>
               <p>Новостей пока нет</p>
             </div>
           ) : (
@@ -422,14 +423,14 @@ export default function AdminNews() {
                       style={{ padding: '4px 12px', fontSize: '12px' }}
                       onClick={() => handleEdit(item)}
                     >
-                      ✏️
+                      <Icon name="edit" />
                     </button>
                     <button
                       className="btn-danger"
                       style={{ padding: '4px 12px', fontSize: '12px' }}
                       onClick={() => handleDelete(item.id)}
                     >
-                      🗑️
+                      <Icon name="trash" />
                     </button>
                   </div>
                 </div>

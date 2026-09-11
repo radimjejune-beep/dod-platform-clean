@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Icon from './Icon';
 
 export default function ClubEvents({ clubId, profile }) {
   const [events, setEvents] = useState([]);
@@ -334,7 +335,7 @@ export default function ClubEvents({ clubId, profile }) {
       {/* СПИСОК МЕРОПРИЯТИЙ */}
       {events.length === 0 ? (
         <div className="empty-state">
-          <div className="icon">📭</div>
+          <div className="icon"><Icon name="archive" /></div>
           <p>В клубе пока нет внутренних мероприятий</p>
           {canCreate && <p style={{ color: 'var(--color-gray-400)', fontSize: '13px' }}>Создайте первое мероприятие для участников клуба!</p>}
         </div>

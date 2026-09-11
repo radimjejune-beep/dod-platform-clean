@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Icon from './Icon';
 
 export default function Notifications({ profile }) {
   const [notifications, setNotifications] = useState([]);
@@ -96,20 +97,20 @@ export default function Notifications({ profile }) {
   // ============================================================
   const getIcon = (type) => {
     const icons = {
-      'event': '📅',
-      'achievement': '🏆',
-      'assignment': '📋',
-      'appeal': '📨',
-      'system': '⚙️',
-      'club': '🏫',
-      'review': '📊',
-      'president': '👑',
-      'invitation': '📨',
-      'report': '📋',
-      'deadline': '⏰',
-      'mention': '💬',
+      'event': 'calendar',
+      'achievement': 'trophy',
+      'assignment': 'list',
+      'appeal': 'chat',
+      'system': 'settings',
+      'club': 'club',
+      'review': 'chart',
+      'president': 'crown',
+      'invitation': 'mail',
+      'report': 'report',
+      'deadline': 'clock',
+      'mention': 'chat',
     };
-    return icons[type] || '📌';
+    return icons[type] || 'flag';
   };
 
   // ============================================================
@@ -172,7 +173,7 @@ export default function Notifications({ profile }) {
         onClick={() => setIsOpen(!isOpen)}
         title="Уведомления"
       >
-        <span className="notifications-icon">🔔</span>
+        <span className="notifications-icon"><Icon name="bell" /></span>
         {unreadCount > 0 && (
           <span className="notifications-badge">{unreadCount}</span>
         )}
@@ -193,7 +194,7 @@ export default function Notifications({ profile }) {
             <div className="notifications-loading">Загрузка...</div>
           ) : notifications.length === 0 ? (
             <div className="notifications-empty">
-              <span className="notifications-empty-icon">📭</span>
+              <span className="notifications-empty-icon"><Icon name="archive" /></span>
               <p>Нет уведомлений</p>
             </div>
           ) : (
@@ -210,7 +211,7 @@ export default function Notifications({ profile }) {
                       onClick={() => handleNotificationClick(n)}
                       style={{ borderLeftColor: getColor(n.type) }}
                     >
-                      <div className="notification-icon">{getIcon(n.type)}</div>
+                      <div className="notification-icon"><Icon name={getIcon(n.type)} size={18} /></div>
                       <div className="notification-content">
                         <div className="notification-title">{n.title}</div>
                         <div className="notification-message">{n.message}</div>
@@ -234,7 +235,7 @@ export default function Notifications({ profile }) {
                       onClick={() => handleNotificationClick(n)}
                       style={{ borderLeftColor: getColor(n.type) }}
                     >
-                      <div className="notification-icon">{getIcon(n.type)}</div>
+                      <div className="notification-icon"><Icon name={getIcon(n.type)} size={18} /></div>
                       <div className="notification-content">
                         <div className="notification-title">{n.title}</div>
                         <div className="notification-message">{n.message}</div>

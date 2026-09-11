@@ -7,6 +7,7 @@ import Navigation from '../components/Navigation';
 import AvatarUpload from '../components/AvatarUpload';
 import PresidentSection from '../components/PresidentSection';
 import Footer from '../components/Footer';
+import Icon from '../components/Icon';
 
 export default function Profile() {
   const [profile, setProfile] = useState(null);
@@ -480,7 +481,7 @@ export default function Profile() {
             {activeTab === 'parents' && (
               <div className="tab-content">
                 <div className="info-box">
-                  ℹ️ <strong>Для чего это нужно?</strong><br />
+                  <Icon name="info" size={16} /> <strong>Для чего это нужно?</strong><br />
                   Данные родителя используются для связи в экстренных случаях и получения согласия на участие в мероприятиях.
                 </div>
                 <div className="form-grid">
@@ -530,7 +531,7 @@ export default function Profile() {
                 <div className="consents-info">
                   <div className="consents-status-large">
                     <span className="consents-icon">
-                      {consentStatus.percentage === 100 ? '✅' : '⚠️'}
+                      <Icon name={consentStatus.percentage === 100 ? 'success' : 'warning'} size={22} />
                     </span>
                     <div>
                       <div className="consents-title">Статус согласий</div>
@@ -574,7 +575,7 @@ export default function Profile() {
 
                 {consentDocs.length === 0 && (
                   <div className="empty-state">
-                    <div className="empty-state-icon">📄</div>
+                    <div className="empty-state-icon"><Icon name="document" /></div>
                     <div>Тексты согласий ещё не опубликованы администрацией</div>
                   </div>
                 )}
@@ -586,8 +587,14 @@ export default function Profile() {
                   return (
                     <div className="consent-item" key={doc.code}>
                       <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                        <span style={{ fontSize: '20px', lineHeight: 1.2 }}>
-                          {given ? '✅' : revoked ? '🚫' : doc.is_required ? '⚠️' : '○'}
+                        <span style={{
+                          display: 'inline-flex',
+                          lineHeight: 1.2,
+                          color: given ? 'var(--color-success)'
+                            : revoked ? 'var(--color-error)'
+                            : doc.is_required ? 'var(--color-warning)' : 'var(--color-gray-400)'
+                        }}>
+                          <Icon name={given ? 'success' : revoked ? 'lock' : doc.is_required ? 'warning' : 'info'} size={20} />
                         </span>
                         <div style={{ flex: 1 }}>
                           <strong>{doc.title}</strong>

@@ -6,6 +6,7 @@ import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
+import Icon from '../components/Icon';
 
 export default function CalendarPage() {
   const [profile, setProfile] = useState(null);
@@ -178,7 +179,7 @@ export default function CalendarPage() {
         <Navigation profile={profile} />
         <div className="container-page">
           <div className="empty-state">
-            <div className="icon">❌</div>
+            <div className="icon"><Icon name="error" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-error)' }}>{error}</p>
             <button className="btn-primary" onClick={() => { setError(''); loadData(); }}>
               Попробовать снова
@@ -286,7 +287,7 @@ export default function CalendarPage() {
 
           {eventsForSelectedDate.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">📭</div>
+              <div className="icon"><Icon name="archive" /></div>
               <p>На этот день мероприятий нет</p>
             </div>
           ) : (
@@ -347,13 +348,15 @@ export default function CalendarPage() {
               onMouseEnter={(e) => e.target.style.color = 'var(--color-primary)'}
               onMouseLeave={(e) => e.target.style.color = 'var(--color-gray-400)'}
             >
-              ✕
+              <Icon name="close" />
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-              <span style={{ fontSize: '28px' }}>
-                {selectedEvent.type === 'internal' ? '📌' : 
-                 selectedEvent.type === 'outgoing' ? '🌍' : '🏛️'}
+              <span style={{ display: 'inline-flex', color: 'var(--color-gold-dark)' }}>
+                <Icon size={24} name={
+                  selectedEvent.type === 'internal' ? 'flag' :
+                  selectedEvent.type === 'outgoing' ? 'location' : 'building'
+                } />
               </span>
               <h2 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--color-primary)' }}>
                 {selectedEvent.title}

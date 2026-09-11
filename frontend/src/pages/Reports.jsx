@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
+import Icon from '../components/Icon';
 
 export default function Reports() {
   const [profile, setProfile] = useState(null);
@@ -518,7 +519,7 @@ export default function Reports() {
         <Navigation profile={profile} />
         <div className="container-page">
           <div className="empty-state">
-            <div className="empty-icon">⛔</div>
+            <div className="empty-icon"><Icon name="lock" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
             <p style={{ color: 'var(--color-gray-500)' }}>Только координаторы и администраторы</p>
           </div>
@@ -584,7 +585,7 @@ export default function Reports() {
             </select>
             <span className="filter-info">
               {selectedClubId ? (
-                <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
+                <span><Icon name="filter" size={14} /> Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
               ) : (
                 <span>Все отчёты</span>
               )}
@@ -693,7 +694,7 @@ export default function Reports() {
 
           {reports.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-icon">📄</div>
+              <div className="empty-icon"><Icon name="document" /></div>
               <p>{isClubCoordinator ? 'У вашего клуба пока нет отчётов' : 'Отчётов пока нет'}</p>
               {canCreate && (
                 <p className="empty-hint">Создайте первый отчёт</p>
@@ -823,7 +824,7 @@ export default function Reports() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{selectedReport.title || `Отчёт за ${selectedReport.report_month || 'неизвестный месяц'}`}</h3>
-              <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
+              <button className="modal-close" onClick={() => setShowModal(false)}><Icon name="close" /></button>
             </div>
 
             <div className="modal-tags">

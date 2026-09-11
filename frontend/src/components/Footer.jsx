@@ -3,6 +3,7 @@
 import { Link } from 'react-router-dom';
 import logo from '../assets/Image.png';
 import ardLogo from '../assets/АРДЛОГО.png';
+import Icon from './Icon';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -28,19 +29,19 @@ export default function Footer() {
         <div className="footer-contacts">
           <h4>Контакты</h4>
           <div className="footer-contact-item">
-            <span className="footer-contact-icon">📍</span>
+            <span className="footer-contact-icon"><Icon name="location" /></span>
             <span>119454, Москва, проспект Вернадского, д. 76, корп. Г, эт/пом/ком 1/IV/22</span>
           </div>
           <div className="footer-contact-item">
-            <span className="footer-contact-icon">📞</span>
+            <span className="footer-contact-icon"><Icon name="phone" /></span>
             <a href="tel:+74992443285">+7 (499) 244-32-85</a>
           </div>
           <div className="footer-contact-item">
-            <span className="footer-contact-icon">✉️</span>
+            <span className="footer-contact-icon"><Icon name="mail" /></span>
             <a href="mailto:diplomatsofthefuture@mail.ru">diplomatsofthefuture@mail.ru</a>
           </div>
           <div className="footer-contact-item">
-            <span className="footer-contact-icon">🌐</span>
+            <span className="footer-contact-icon"><Icon name="link" /></span>
             <a href="https://www.diplomatsofthefuture.ru" target="_blank" rel="noopener noreferrer">
               www.diplomatsofthefuture.ru
             </a>

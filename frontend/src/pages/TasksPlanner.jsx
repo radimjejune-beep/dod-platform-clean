@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function TasksPlanner() {
   const [profile, setProfile] = useState(null);
@@ -231,7 +232,7 @@ export default function TasksPlanner() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📅</span>
+          <span style={{ fontSize: '32px' }}><Icon name="calendar" size={32} /></span>
           <div>
             <h1>Планировщик задач</h1>
             <p>Управление задачами и дедлайнами</p>
@@ -446,7 +447,7 @@ export default function TasksPlanner() {
 
           {filteredTasks.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">📋</div>
+              <div className="icon"><Icon name="list" /></div>
               <p>Задач пока нет</p>
             </div>
           ) : (

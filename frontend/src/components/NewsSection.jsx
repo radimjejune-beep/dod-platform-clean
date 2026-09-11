@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import Icon from './Icon';
 
 export default function NewsSection({ limit = 3 }) {
   const [news, setNews] = useState([]);
@@ -246,7 +247,7 @@ export default function NewsSection({ limit = 3 }) {
   if (error) {
     return (
       <div className="news-error">
-        <span>📭</span>
+        <span><Icon name="archive" /></span>
         <p>{error}</p>
       </div>
     );
@@ -255,7 +256,7 @@ export default function NewsSection({ limit = 3 }) {
   if (news.length === 0) {
     return (
       <div className="news-empty">
-        <span>📰</span>
+        <span><Icon name="news" /></span>
         <p>Новостей пока нет</p>
         {canManage && (
           <Link to="/admin/news" className="news-add-link">
@@ -318,14 +319,14 @@ export default function NewsSection({ limit = 3 }) {
                       onClick={() => handleEditClick(item)}
                       title="Редактировать"
                     >
-                      ✏️
+                      <Icon name="edit" />
                     </button>
                     <button 
                       className="news-delete-btn"
                       onClick={() => handleDelete(item.id)}
                       title="Удалить"
                     >
-                      🗑️
+                      <Icon name="trash" />
                     </button>
                   </div>
                 )}
@@ -341,7 +342,7 @@ export default function NewsSection({ limit = 3 }) {
           <div className="news-modal" onClick={(e) => e.stopPropagation()}>
             <div className="news-modal-header">
               <h3>Редактировать новость</h3>
-              <button className="news-modal-close" onClick={() => setShowEditModal(false)}>✕</button>
+              <button className="news-modal-close" onClick={() => setShowEditModal(false)}><Icon name="close" /></button>
             </div>
             <form onSubmit={handleSaveEdit}>
               <div className="news-modal-body">
@@ -395,7 +396,7 @@ export default function NewsSection({ limit = 3 }) {
                       </div>
                     ) : (
                       <div className="news-upload-placeholder">
-                        <span>🖼️</span>
+                        <span><Icon name="document" /></span>
                         <p>Нажмите для выбора фото</p>
                       </div>
                     )}

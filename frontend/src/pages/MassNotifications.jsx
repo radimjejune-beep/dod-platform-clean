@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function MassNotifications() {
   const [profile, setProfile] = useState(null);
@@ -227,7 +228,7 @@ export default function MassNotifications() {
       <div className="container-page">
         {/* ЗАГОЛОВОК */}
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📨</span>
+          <span style={{ fontSize: '32px' }}><Icon name="mail" size={32} /></span>
           <div>
             <h1>Массовые уведомления</h1>
             <p>Отправка уведомлений группам пользователей</p>
@@ -461,7 +462,7 @@ export default function MassNotifications() {
                 return (
                   <div key={n.id} className="notification-item">
                     <div className="notification-icon">
-                      {n.priority === 'urgent' ? '🔥' : '📨'}
+                      <Icon name={n.priority === 'urgent' ? 'warning' : 'mail'} size={18} />
                     </div>
                     <div className="notification-content">
                       <div className="notification-title">{n.title}</div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function DashboardAnalytics() {
   const [profile, setProfile] = useState(null);
@@ -116,7 +117,7 @@ export default function DashboardAnalytics() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📊</span>
+          <span style={{ fontSize: '32px' }}><Icon name="chart" size={32} /></span>
           <div>
             <h1>Аналитика движения</h1>
             <p>Статистика и показатели ДОД «Дипломаты будущего»</p>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon, { DataIcon } from '../components/Icon';
 
 export default function AchievementsCategories() {
   const [profile, setProfile] = useState(null);
@@ -16,7 +17,7 @@ export default function AchievementsCategories() {
   const [form, setForm] = useState({
     name: '',
     description: '',
-    icon: '🏆',
+    icon: 'trophy',
     color: '#C9A227',
     points: 10,
     is_active: true
@@ -90,7 +91,7 @@ export default function AchievementsCategories() {
     setForm({
       name: '',
       description: '',
-      icon: '🏆',
+      icon: 'trophy',
       color: '#C9A227',
       points: 10,
       is_active: true
@@ -104,7 +105,7 @@ export default function AchievementsCategories() {
     setForm({
       name: category.name || '',
       description: category.description || '',
-      icon: category.icon || '🏆',
+      icon: category.icon || 'trophy',
       color: category.color || 'var(--color-gold)',
       points: category.points || 10,
       is_active: category.is_active !== undefined ? category.is_active : true
@@ -122,7 +123,7 @@ export default function AchievementsCategories() {
 
       if (result.archived) {
         // Категорию уже присвоили достижениям — сервер её скрыл, а не удалил
-        setMessage('⚠️ ' + result.message);
+        setMessage(result.message);
         setMessageType('success');
         loadData();
         setTimeout(() => setMessage(''), 6000);
@@ -139,7 +140,11 @@ export default function AchievementsCategories() {
     }
   };
 
-  const commonIcons = ['🏆', '🎯', '🌟', '⭐', '🏅', '📚', '🌍', '🎨', '⚽', '❤️', '💪', '🎭', '🎵', '📝', '🔬'];
+  // Иконка категории хранится в базе строкой. Раньше туда писали эмодзи,
+  // теперь — имя иконки из components/Icon.jsx. Старые записи с эмодзи
+  // продолжают показываться как есть (см. DataIcon).
+  const commonIcons = ['trophy', 'target', 'star', 'book', 'flag', 'handshake',
+                       'megaphone', 'crown', 'club', 'chart', 'consent', 'shield'];
 
   // Цвет категории хранится в базе и проверяется сервером по формату
   // #RRGGBB — здесь это данные, а не оформление, поэтому переменные CSS
@@ -159,7 +164,7 @@ export default function AchievementsCategories() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>🏷️</span>
+          <span className="page-header-icon"><Icon name="flag" size={28} /></span>
           <div>
             <h1>Категории достижений</h1>
             <p>Управление категориями и баллами достижений</p>
@@ -207,10 +212,10 @@ export default function AchievementsCategories() {
                       value={form.icon}
                       onChange={(e) => setForm({ ...form, icon: e.target.value })}
                       style={{ flex: 1, minWidth: '60px' }}
-                      placeholder="🏆"
+                      placeholder="trophy"
                     />
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                      {commonIcons.slice(0, 8).map((icon) => (
+                      {commonIcons.map((icon) => (
                         <button
                           key={icon}
                           type="button"
@@ -220,11 +225,14 @@ export default function AchievementsCategories() {
                             borderRadius: '6px',
                             background: form.icon === icon ? 'var(--color-gold-pale)' : 'transparent',
                             cursor: 'pointer',
-                            fontSize: '18px'
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            color: form.icon === icon ? 'var(--color-gold-dark)' : 'var(--color-gray-500)'
                           }}
+                          title={icon}
                           onClick={() => setForm({ ...form, icon })}
                         >
-                          {icon}
+                          <Icon name={icon} size={18} />
                         </button>
                       ))}
                     </div>
@@ -317,7 +325,7 @@ export default function AchievementsCategories() {
 
           {categories.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">🏷️</div>
+              <div className="icon"><Icon name="flag" /></div>
               <p>Категорий пока нет</p>
             </div>
           ) : (
@@ -333,7 +341,9 @@ export default function AchievementsCategories() {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '32px' }}>{category.icon || '🏆'}</span>
+                    <span style={{ display: 'inline-flex', color: category.color || 'var(--color-gold-dark)' }}>
+                      <DataIcon value={category.icon} fallback="trophy" size={28} />
+                    </span>
                     <div>
                       <h4 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-primary)', margin: 0 }}>
                         {category.name}
@@ -366,14 +376,14 @@ export default function AchievementsCategories() {
                         style={{ padding: '2px 8px', fontSize: '11px' }}
                         onClick={() => handleEdit(category)}
                       >
-                        ✏️
+                        <Icon name="edit" />
                       </button>
                       <button
                         className="btn-danger"
                         style={{ padding: '2px 8px', fontSize: '11px' }}
                         onClick={() => handleDelete(category.id)}
                       >
-                        🗑️
+                        <Icon name="trash" />
                       </button>
                     </div>
                   </div>

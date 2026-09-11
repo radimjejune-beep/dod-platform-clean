@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function ClubAnalytics() {
   const [profile, setProfile] = useState(null);
@@ -114,7 +115,7 @@ export default function ClubAnalytics() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📊</span>
+          <span style={{ fontSize: '32px' }}><Icon name="chart" size={32} /></span>
           <div>
             <h1>{isClubCoordinator ? 'Аналитика моего клуба' : 'Аналитика КЮДов'}</h1>
             <p>{isClubCoordinator ? 'Статистика вашего клуба' : 'Статистика всех КЮДов'}</p>
@@ -142,7 +143,7 @@ export default function ClubAnalytics() {
 
         {clubStats.length === 0 ? (
           <div className="empty-state">
-            <div className="icon">📊</div>
+            <div className="icon"><Icon name="chart" /></div>
             <p>Нет данных для отображения</p>
           </div>
         ) : (
@@ -159,7 +160,7 @@ export default function ClubAnalytics() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
-                      {index === 0 && '🏆 '}
+                      {index === 0 && <Icon name="trophy" size={14} />}
                       {club.name}
                     </div>
                     <div style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>

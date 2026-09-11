@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function Appeals() {
   const [profile, setProfile] = useState(null);
@@ -277,7 +278,7 @@ export default function Appeals() {
         <Navigation profile={profile} />
         <div className="container-page">
           <div className="empty-state">
-            <div className="icon">⛔</div>
+            <div className="icon"><Icon name="lock" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
             <p style={{ color: 'var(--color-gray-500)' }}>Только координаторы и администраторы</p>
           </div>
@@ -390,7 +391,7 @@ export default function Appeals() {
            ============================================================ */}
         {appeals.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">📭</div>
+            <div className="empty-state-icon"><Icon name="archive" /></div>
             <h3>Нет обращений</h3>
             <p>{isClubCoordinator ? 'У вас пока нет обращений' : 'Обращений пока нет'}</p>
             {canCreate && (
@@ -457,7 +458,7 @@ export default function Appeals() {
                           className="btn btn-danger btn-sm"
                           onClick={() => handleDelete(appeal.id)}
                         >
-                          🗑️
+                          <Icon name="trash" />
                         </button>
                       )}
                     </div>
@@ -523,7 +524,7 @@ export default function Appeals() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Ответ на обращение</h3>
-              <button className="modal-close" onClick={() => setShowReplyModal(false)}>✕</button>
+              <button className="modal-close" onClick={() => setShowReplyModal(false)}><Icon name="close" /></button>
             </div>
 
             <p className="modal-subtitle">

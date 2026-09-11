@@ -114,4 +114,19 @@ export default function Icon({ name, size = 18, stroke = 1.5, className = '', st
   );
 }
 
+/**
+ * Иконка из данных: в базе у старых записей лежит эмодзи, у новых —
+ * имя иконки. Если имя известно — рисуем SVG, если нет — показываем
+ * то, что лежит в базе, как есть. Так старые строки не пропадают.
+ */
+export function DataIcon({ value, fallback = 'star', size = 20, ...rest }) {
+  if (value && PATHS[value]) return <Icon name={value} size={size} {...rest} />;
+  if (value) return <span style={{ fontSize: size, lineHeight: 1 }}>{value}</span>;
+  return <Icon name={fallback} size={size} {...rest} />;
+}
+
+export function hasIcon(name) {
+  return Boolean(name && PATHS[name]);
+}
+
 export const ICON_NAMES = Object.keys(PATHS);

@@ -6,6 +6,7 @@ import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import FilterBar from '../components/FilterBar';
 import Footer from '../components/Footer';
+import Icon from '../components/Icon';
 
 export default function Events() {
   const [profile, setProfile] = useState(null);
@@ -274,7 +275,7 @@ export default function Events() {
       }
 
       if (data.error) {
-        setMessage('❌ ' + data.error);
+        setMessage(data.error);
         setMessageType('error');
       } else {
         setMessage(data.message || 'Заявка отправлена!');
@@ -307,7 +308,7 @@ export default function Events() {
       );
       const data = await response.json();
       if (data.error) {
-        setMessage('❌ ' + data.error);
+        setMessage(data.error);
         setMessageType('error');
       } else {
         setMessage('Вы отписались от мероприятия');
@@ -340,7 +341,7 @@ export default function Events() {
       );
       const data = await response.json();
       if (data.error) {
-        setMessage('❌ ' + data.error);
+        setMessage(data.error);
         setMessageType('error');
       } else {
         setMessage(`Заявка ${status === 'confirmed' ? 'подтверждена' : 'отклонена'}`);
@@ -1099,7 +1100,7 @@ export default function Events() {
               
               <div className="form-actions">
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳' : form.id ? '💾 Обновить' : '✅ Создать'}
+                  {loading ? 'Сохранение...' : form.id ? 'Обновить' : 'Создать'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={resetForm}>Отмена</button>
               </div>
@@ -1114,7 +1115,7 @@ export default function Events() {
           <h3>Все мероприятия</h3>
           {filteredEvents.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-icon">📭</div>
+              <div className="empty-icon"><Icon name="archive" /></div>
               <p>Мероприятий не найдено</p>
             </div>
           ) : (
@@ -1233,7 +1234,7 @@ export default function Events() {
                                 onClick={() => handleRegister(event.id)}
                                 disabled={registering}
                               >
-                                {registering ? '⏳' : '📝 Записаться'}
+                                {registering ? 'Отправляем...' : 'Записаться'}
                               </button>
                             )}
                             {isPending && (
@@ -1278,7 +1279,7 @@ export default function Events() {
                                 onClick={() => handleRegister(event.id)}
                                 disabled={registering}
                               >
-                                {registering ? '⏳' : '📝 Подать заявку от клуба'}
+                                {registering ? 'Отправляем...' : 'Подать заявку от клуба'}
                               </button>
                             )}
                             {clubRegistration?.status === 'pending' && (
@@ -1346,7 +1347,7 @@ export default function Events() {
                             onClick={() => handleExport(event.id, event.title)}
                             disabled={exporting}
                           >
-                            {exporting ? '⏳' : '📊 Excel'}
+                            {exporting ? 'Готовим файл...' : 'Выгрузить в Excel'}
                           </button>
                         </>
                       )}
@@ -1387,7 +1388,7 @@ export default function Events() {
           <div className="modal modal-large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Участники мероприятия</h3>
-              <button className="modal-close" onClick={() => setShowRegistrationsModal(false)}>✕</button>
+              <button className="modal-close" onClick={() => setShowRegistrationsModal(false)}><Icon name="close" /></button>
             </div>
 
             <p className="modal-subtitle">
@@ -1400,7 +1401,7 @@ export default function Events() {
             {loadingRegistrations ? (
               <div className="modal-loading"><div className="spinner" /></div>
             ) : registrations.length === 0 ? (
-              <div className="empty-state"><div className="empty-icon">👀</div><p>Пока нет зарегистрированных участников</p></div>
+              <div className="empty-state"><div className="empty-icon"><Icon name="eye" /></div><p>Пока нет зарегистрированных участников</p></div>
             ) : (
               <>
                 <div className="registrations-stats">
@@ -1445,7 +1446,7 @@ export default function Events() {
                                   background: isClubRegistration ? 'linear-gradient(135deg, var(--color-gold), var(--color-gold-light))' : 'linear-gradient(135deg, var(--color-primary), var(--color-primary-light))',
                                   color: isClubRegistration ? 'var(--color-primary)' : 'white'
                                 }}>
-                                  {isClubRegistration ? '🏫' : (reg.full_name?.charAt(0) || '?')}
+                                  {isClubRegistration ? <Icon name="club" size={18} /> : (reg.full_name?.charAt(0) || '?')}
                                 </div>
                                 <div>
                                   <div className="participant-name">
@@ -1498,13 +1499,13 @@ export default function Events() {
                                     className="btn-success btn-sm"
                                     onClick={() => handleRegistrationStatus(reg.id, 'confirmed')}
                                   >
-                                    ✅
+                                    <Icon name="success" />
                                   </button>
                                   <button
                                     className="btn-danger btn-sm"
                                     onClick={() => handleRegistrationStatus(reg.id, 'rejected')}
                                   >
-                                    ❌
+                                    <Icon name="error" />
                                   </button>
                                 </div>
                               )}
@@ -1554,10 +1555,10 @@ export default function Events() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Модерация</h3>
-              <button className="modal-close" onClick={() => setShowModerationModal(false)}>✕</button>
+              <button className="modal-close" onClick={() => setShowModerationModal(false)}><Icon name="close" /></button>
             </div>
 
-            <p><strong>{selectedEvent.title}</strong><br />🏫 {selectedEvent.club_name || 'Без клуба'}</p>
+            <p><strong>{selectedEvent.title}</strong><br /><Icon name="club" size={14} /> {selectedEvent.club_name || 'Без клуба'}</p>
 
             <div className="form-group">
               <label>Комментарий</label>
@@ -1590,7 +1591,7 @@ export default function Events() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Назначить тьютора</h3>
-              <button className="modal-close" onClick={() => setShowTutorModal(false)}>✕</button>
+              <button className="modal-close" onClick={() => setShowTutorModal(false)}><Icon name="close" /></button>
             </div>
 
             <p className="modal-subtitle">

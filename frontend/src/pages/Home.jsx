@@ -7,6 +7,7 @@ import Footer from '../components/Footer';
 import NewsSection from '../components/NewsSection';
 import logo from '../assets/Image.png';
 import ardLogo from '../assets/АРДЛОГО.png';
+import Icon from '../components/Icon';
 
 export default function Home() {
   const [profile, setProfile] = useState(null);
@@ -144,28 +145,28 @@ export default function Home() {
               </p>
               <div className="home-about-values">
                 <div className="home-about-value">
-                  <div className="home-about-value-icon">🤝</div>
+                  <div className="home-about-value-icon"><Icon name="handshake" /></div>
                   <div>
                     <h4>Дипломатия</h4>
                     <p>Развитие навыков переговоров и международного общения</p>
                   </div>
                 </div>
                 <div className="home-about-value">
-                  <div className="home-about-value-icon">🎯</div>
+                  <div className="home-about-value-icon"><Icon name="target" /></div>
                   <div>
                     <h4>Лидерство</h4>
                     <p>Формирование активной гражданской позиции</p>
                   </div>
                 </div>
                 <div className="home-about-value">
-                  <div className="home-about-value-icon">🌐</div>
+                  <div className="home-about-value-icon"><Icon name="link" /></div>
                   <div>
                     <h4>Международное общение</h4>
                     <p>Участие в международных проектах и программах</p>
                   </div>
                 </div>
                 <div className="home-about-value">
-                  <div className="home-about-value-icon">⭐</div>
+                  <div className="home-about-value-icon"><Icon name="star" /></div>
                   <div>
                     <h4>Гражданская позиция</h4>
                     <p>Воспитание ответственности и патриотизма</p>
@@ -175,7 +176,7 @@ export default function Home() {
             </div>
             <div className="home-about-image">
               <div className="home-about-image-placeholder">
-                <span>🕊️</span>
+                <span><Icon name="flag" /></span>
               </div>
             </div>
           </div>
@@ -223,22 +224,22 @@ export default function Home() {
           </div>
           <div className="home-contacts-grid">
             <div className="home-contacts-card">
-              <div className="home-contacts-card-icon">📍</div>
+              <div className="home-contacts-card-icon"><Icon name="location" /></div>
               <h4>Адрес</h4>
               <p>119454, Москва,<br />проспект Вернадского, д. 76, корп. Г,<br />эт/пом/ком 1/IV/22</p>
             </div>
             <div className="home-contacts-card">
-              <div className="home-contacts-card-icon">📞</div>
+              <div className="home-contacts-card-icon"><Icon name="phone" /></div>
               <h4>Телефон</h4>
               <p><a href="tel:+74992443285">+7 (499) 244-32-85</a></p>
             </div>
             <div className="home-contacts-card">
-              <div className="home-contacts-card-icon">✉️</div>
+              <div className="home-contacts-card-icon"><Icon name="mail" /></div>
               <h4>Email</h4>
               <p><a href="mailto:diplomatsofthefuture@mail.ru">diplomatsofthefuture@mail.ru</a></p>
             </div>
             <div className="home-contacts-card">
-              <div className="home-contacts-card-icon">🌐</div>
+              <div className="home-contacts-card-icon"><Icon name="link" /></div>
               <h4>Сайт</h4>
               <p><a href="https://www.diplomatsofthefuture.ru" target="_blank" rel="noopener noreferrer">diplomatsofthefuture.ru</a></p>
             </div>

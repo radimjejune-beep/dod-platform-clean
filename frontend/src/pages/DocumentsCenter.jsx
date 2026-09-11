@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function DocumentsCenter() {
   const [documents, setDocuments] = useState([]);
@@ -343,7 +344,7 @@ export default function DocumentsCenter() {
            ============================================================ */}
         {filteredDocuments.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">📄</div>
+            <div className="empty-state-icon"><Icon name="document" /></div>
             <h3>{activeCategory === 'all' ? 'Нет документов' : `Нет документов в категории «${categoryLabels[activeCategory] || activeCategory}»`}</h3>
             <p>{activeCategory === 'all' ? 'Документы пока не добавлены' : 'Попробуйте выбрать другую категорию'}</p>
             {canCreate && (
@@ -438,7 +439,7 @@ export default function DocumentsCenter() {
               <h3 className="modal-title">
                 {editingDoc ? 'Редактировать документ' : 'Создать документ'}
               </h3>
-              <button className="modal-close" onClick={closeModal}>✕</button>
+              <button className="modal-close" onClick={closeModal}><Icon name="close" /></button>
             </div>
 
             <div className="form-group">

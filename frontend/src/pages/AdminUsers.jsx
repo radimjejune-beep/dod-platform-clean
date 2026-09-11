@@ -7,6 +7,7 @@ import Navigation from '../components/Navigation';
 import FilterBar from '../components/FilterBar';
 import AssignClubModal from '../components/AssignClubModal';
 import * as XLSX from 'xlsx';
+import Icon from '../components/Icon';
 
 export default function AdminUsers() {
   const [profile, setProfile] = useState(null);
@@ -959,7 +960,7 @@ export default function AdminUsers() {
                           onClick={() => navigate(`/participant/${u.id}`)}
                           title="Просмотр профиля"
                         >
-                          👁️
+                          <Icon name="eye" />
                         </button>
                         
                         {isAdmin && (
@@ -969,7 +970,7 @@ export default function AdminUsers() {
                               onClick={() => handleResetPassword(u.id, u.full_name)}
                               title="Сбросить пароль"
                             >
-                              🔑
+                              <Icon name="key" />
                             </button>
 
                             <button
@@ -981,7 +982,7 @@ export default function AdminUsers() {
                               }}
                               title="Прикрепить к КЮДу"
                             >
-                              📌
+                              <Icon name="flag" />
                             </button>
 
                             <button
@@ -1000,7 +1001,7 @@ export default function AdminUsers() {
                               onClick={() => handleDeleteUser(u.id, u.full_name)}
                               title="Удалить пользователя"
                             >
-                              🗑️
+                              <Icon name="trash" />
                             </button>
                           </>
                         )}

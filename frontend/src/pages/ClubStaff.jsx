@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 const POSITIONS = [
   { code: 'head', label: 'Руководитель КЮДа', hint: 'Отвечает за клуб целиком. Один на клуб.' },
@@ -114,7 +115,7 @@ export default function ClubStaff() {
       setShowAdd(false);
       loadData();
     } catch (err) {
-      show('❌ ' + err.message, 'error');
+      show(err.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -128,7 +129,7 @@ export default function ClubStaff() {
       show(`${member.full_name}: должность изменена`);
       loadData();
     } catch (err) {
-      show('❌ ' + err.message, 'error');
+      show(err.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -143,7 +144,7 @@ export default function ClubStaff() {
       show('Сотрудник снят с должности');
       loadData();
     } catch (err) {
-      show('❌ ' + err.message, 'error');
+      show(err.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -164,7 +165,7 @@ export default function ClubStaff() {
       setShowTransfer(false);
       loadData();
     } catch (err) {
-      show('❌ ' + err.message, 'error');
+      show(err.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -331,7 +332,7 @@ export default function ClubStaff() {
         {/* ===== СОСТАВ ===== */}
         {staff.length === 0 && (
           <div className="empty-state">
-            <div className="empty-state-icon">👥</div>
+            <div className="empty-state-icon"><Icon name="users" /></div>
             <div>В клубе пока нет сотрудников</div>
           </div>
         )}
@@ -345,7 +346,7 @@ export default function ClubStaff() {
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: '16px' }}>
                   {s.full_name}
-                  {s.position === 'head' && <span style={{ marginLeft: '8px' }}>👑</span>}
+                  {s.position === 'head' && <span style={{ marginLeft: '8px' }}><Icon name="crown" /></span>}
                 </div>
                 <div style={{ fontSize: '14px', color: 'var(--color-gray-500)' }}>
                   {s.email}{s.phone ? ` · ${s.phone}` : ''}
@@ -376,7 +377,7 @@ export default function ClubStaff() {
                       ))}
                     </select>
                     <button className="btn-danger btn-sm" onClick={() => removeStaff(s)} disabled={busy} title="Снять с должности">
-                      🗑
+                      <Icon name="trash" />
                     </button>
                   </>
                 ) : (

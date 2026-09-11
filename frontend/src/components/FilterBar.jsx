@@ -1,6 +1,7 @@
 // frontend/src/components/FilterBar.jsx
 
 import { useState } from 'react';
+import Icon from './Icon';
 
 export default function FilterBar({ 
   filters = [], 
@@ -75,7 +76,7 @@ export default function FilterBar({
               transform: 'translateY(-50%)',
               fontSize: '16px',
               color: 'var(--color-gray-400)'
-            }}>🔍</span>
+            }}><Icon name="search" size={16} /></span>
             <input
               type="text"
               value={search}
@@ -119,7 +120,7 @@ export default function FilterBar({
                   padding: '4px'
                 }}
               >
-                ✕
+                <Icon name="close" />
               </button>
             )}
           </div>
@@ -376,7 +377,7 @@ export default function FilterBar({
                   padding: '0 2px'
                 }}
               >
-                ✕
+                <Icon name="close" />
               </button>
             </span>
           )}
@@ -408,7 +409,7 @@ export default function FilterBar({
                     padding: '0 2px'
                   }}
                 >
-                  ✕
+                  <Icon name="close" />
                 </button>
               </span>
             );

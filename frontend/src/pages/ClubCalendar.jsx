@@ -6,6 +6,7 @@ import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
+import Icon from '../components/Icon';
 
 export default function ClubCalendar() {
   const [profile, setProfile] = useState(null);
@@ -136,7 +137,7 @@ export default function ClubCalendar() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📆</span>
+          <span style={{ fontSize: '32px' }}><Icon name="calendar" size={32} /></span>
           <div>
             <h1>Календарь клуба</h1>
             <p>Внутренние мероприятия вашего КЮДа</p>
@@ -241,7 +242,7 @@ export default function ClubCalendar() {
 
           {eventsForSelectedDate.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">📭</div>
+              <div className="icon"><Icon name="archive" /></div>
               <p>На этот день мероприятий нет</p>
             </div>
           ) : (
@@ -308,11 +309,11 @@ export default function ClubCalendar() {
               onMouseEnter={(e) => e.target.style.color = 'var(--color-primary)'}
               onMouseLeave={(e) => e.target.style.color = 'var(--color-gray-400)'}
             >
-              ✕
+              <Icon name="close" />
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-              <span style={{ fontSize: '28px' }}>📌</span>
+              <span style={{ fontSize: '28px' }}><Icon name="flag" size={28} /></span>
               <h2 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--color-primary)' }}>
                 {selectedEvent.title}
               </h2>

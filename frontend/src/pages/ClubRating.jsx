@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function ClubRating() {
   const [profile, setProfile] = useState(null);
@@ -83,7 +84,7 @@ export default function ClubRating() {
 
           {rating.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">📊</div>
+              <div className="icon"><Icon name="chart" /></div>
               <p>Нет данных для рейтинга</p>
             </div>
           ) : (
@@ -117,7 +118,7 @@ export default function ClubRating() {
                     fontSize: index < 3 ? '20px' : '13px',
                     flexShrink: 0
                   }}>
-                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                    {`#${index + 1}`}
                   </div>
 
                   <div style={{

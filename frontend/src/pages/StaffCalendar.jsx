@@ -6,6 +6,7 @@ import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
+import Icon from '../components/Icon';
 
 export default function StaffCalendar() {
   const [profile, setProfile] = useState(null);
@@ -135,7 +136,7 @@ export default function StaffCalendar() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📅</span>
+          <span style={{ fontSize: '32px' }}><Icon name="calendar" size={32} /></span>
           <div>
             <h1>Календарь сотрудников</h1>
             <p>Назначения сотрудников на мероприятия</p>
@@ -233,7 +234,7 @@ export default function StaffCalendar() {
 
           {getAssignmentsForDate(selectedDate).length === 0 ? (
             <div className="empty-state">
-              <div className="icon">📅</div>
+              <div className="icon"><Icon name="calendar" /></div>
               <p>На этот день назначений нет</p>
             </div>
           ) : (
@@ -293,7 +294,7 @@ export default function StaffCalendar() {
               onMouseEnter={(e) => e.target.style.color = 'var(--color-primary)'}
               onMouseLeave={(e) => e.target.style.color = 'var(--color-gray-400)'}
             >
-              ✕
+              <Icon name="close" />
             </button>
 
             <h2 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '4px' }}>

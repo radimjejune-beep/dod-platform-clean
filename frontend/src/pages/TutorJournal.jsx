@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function TutorJournal() {
   const { eventId } = useParams();
@@ -190,7 +191,7 @@ export default function TutorJournal() {
         </button>
 
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>📓</span>
+          <span style={{ fontSize: '32px' }}><Icon name="journal" size={32} /></span>
           <div>
             <h1>{event?.title || 'Журнал мероприятия'}</h1>
             <p>
@@ -224,7 +225,7 @@ export default function TutorJournal() {
 
           {participants.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">👀</div>
+              <div className="icon"><Icon name="eye" /></div>
               <p>Участников пока нет</p>
             </div>
           ) : (
@@ -341,7 +342,7 @@ export default function TutorJournal() {
                 cursor: 'pointer'
               }}
             >
-              ✕
+              <Icon name="close" />
             </button>
 
             <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '4px' }}>

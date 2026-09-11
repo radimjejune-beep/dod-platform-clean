@@ -5,6 +5,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
+import Icon from '../components/Icon';
 
 export default function CrmDashboard() {
   const [profile, setProfile] = useState(null);
@@ -96,21 +97,21 @@ export default function CrmDashboard() {
           type: 'new_participant',
           message: `${p.full_name} присоединился к движению`,
           date: p.created_at,
-          icon: '👤',
+          icon: 'user',
           color: 'var(--color-success)'
         })),
         ...upcoming.slice(0, 3).map(e => ({
           type: 'event',
           message: `Мероприятие "${e.title}" скоро начнётся`,
           date: e.event_date,
-          icon: '📅',
+          icon: 'calendar',
           color: 'var(--color-primary-light)'
         })),
         ...achievements.slice(0, 2).map(a => ({
           type: 'achievement',
           message: `Новое достижение: ${a.title}`,
           date: a.created_at,
-          icon: '🏆',
+          icon: 'trophy',
           color: 'var(--color-gold)'
         }))
       ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8);
@@ -240,7 +241,7 @@ export default function CrmDashboard() {
                   {recentActivity.map((item, index) => (
                     <div key={index} className="activity-item">
                       <span className="activity-icon" style={{ background: item.color + '20', color: item.color }}>
-                        {item.icon}
+                        <Icon name={item.icon} size={18} />
                       </span>
                       <div className="activity-content">
                         <div className="activity-message">{item.message}</div>
@@ -275,7 +276,7 @@ export default function CrmDashboard() {
                                    index === 2 ? '#CD7F32' : 'var(--color-gray-100)',
                         color: index < 3 ? 'var(--color-primary-dark)' : 'var(--color-gray-500)'
                       }}>
-                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                        {`#${index + 1}`}
                       </div>
                       <div className="top-info">
                         <div className="top-name">{p.full_name}</div>
@@ -297,27 +298,27 @@ export default function CrmDashboard() {
               </div>
               <div className="quick-actions">
                 <Link to="/participants" className="quick-action">
-                  <span className="quick-icon">👤</span>
+                  <span className="quick-icon"><Icon name="user" /></span>
                   <span className="quick-label">Добавить участника</span>
                 </Link>
                 <Link to="/events" className="quick-action">
-                  <span className="quick-icon">📅</span>
+                  <span className="quick-icon"><Icon name="calendar" /></span>
                   <span className="quick-label">Создать мероприятие</span>
                 </Link>
                 <Link to="/mass-notifications" className="quick-action">
-                  <span className="quick-icon">📨</span>
+                  <span className="quick-icon"><Icon name="mail" /></span>
                   <span className="quick-label">Сделать рассылку</span>
                 </Link>
                 <Link to="/reports" className="quick-action">
-                  <span className="quick-icon">📊</span>
+                  <span className="quick-icon"><Icon name="chart" /></span>
                   <span className="quick-label">Создать отчёт</span>
                 </Link>
                 <Link to="/clubs-management" className="quick-action">
-                  <span className="quick-icon">🏫</span>
+                  <span className="quick-icon"><Icon name="club" /></span>
                   <span className="quick-label">Управление КЮДами</span>
                 </Link>
                 <Link to="/tasks-planner" className="quick-action">
-                  <span className="quick-icon">📋</span>
+                  <span className="quick-icon"><Icon name="list" /></span>
                   <span className="quick-label">Задачи</span>
                 </Link>
               </div>

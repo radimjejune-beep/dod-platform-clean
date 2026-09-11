@@ -6,6 +6,7 @@ import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import FilterBar from '../components/FilterBar';
 import Footer from '../components/Footer';
+import Icon from '../components/Icon';
 
 export default function Achievements() {
   const [profile, setProfile] = useState(null);
@@ -443,7 +444,7 @@ export default function Achievements() {
             </select>
             <span className="filter-info">
               {selectedClubId ? (
-                <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
+                <span><Icon name="filter" size={14} /> Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
               ) : (
                 <span>Все достижения</span>
               )}
@@ -517,7 +518,7 @@ export default function Achievements() {
                         setForm({ ...form, participant_id: '' });
                       }}
                     >
-                      ✕
+                      <Icon name="close" />
                     </button>
                   </div>
                 )}
@@ -573,7 +574,7 @@ export default function Achievements() {
 
           {filteredAchievements.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-icon">🏆</div>
+              <div className="empty-icon"><Icon name="trophy" /></div>
               <p>Достижений пока нет</p>
             </div>
           ) : (
@@ -593,7 +594,7 @@ export default function Achievements() {
                   >
                     <div className="achievement-title">
                       <span className="achievement-icon">
-                        {a.is_club_award ? '🏫' : a.is_tutor_award ? '📚' : '🏅'}
+                        <Icon name={a.is_club_award ? 'club' : a.is_tutor_award ? 'book' : 'trophy'} size={20} />
                       </span>
                       {a.title}
                       {a.is_club_award && (

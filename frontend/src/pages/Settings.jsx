@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function Settings() {
   const [profile, setProfile] = useState(null);
@@ -16,6 +17,7 @@ export default function Settings() {
   const [newsForm, setNewsForm] = useState({ title: '', content: '', image_url: '' });
   const [editingNewsId, setEditingNewsId] = useState(null);
   const [newsMessage, setNewsMessage] = useState('');
+  const [newsMessageOk, setNewsMessageOk] = useState(false);
 
   const [settings, setSettings] = useState({
     heroTitle: 'Добро пожаловать в ДОД «Дипломаты будущего»',
@@ -25,6 +27,7 @@ export default function Settings() {
     siteName: 'Дипломаты будущего',
   });
   const [settingsMessage, setSettingsMessage] = useState('');
+  const [settingsMessageOk, setSettingsMessageOk] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
@@ -65,11 +68,13 @@ export default function Settings() {
     setNewsMessage('');
 
     try {
+      setNewsMessageOk(true);
       setNewsMessage(editingNewsId ? 'Новость обновлена!' : 'Новость создана!');
       resetNewsForm();
       loadNews();
       setTimeout(() => setNewsMessage(''), 3000);
     } catch (err) {
+      setNewsMessageOk(false);
       setNewsMessage('Ошибка: ' + err.message);
     }
     setNewsLoading(false);
@@ -103,9 +108,11 @@ export default function Settings() {
     setSettingsMessage('');
 
     try {
+      setSettingsMessageOk(true);
       setSettingsMessage('Настройки сохранены!');
       setTimeout(() => setSettingsMessage(''), 3000);
     } catch (err) {
+      setSettingsMessageOk(false);
       setSettingsMessage('Ошибка: ' + err.message);
     }
     setSavingSettings(false);
@@ -127,7 +134,7 @@ export default function Settings() {
         <Navigation profile={profile} />
         <div className="container-page">
           <div className="empty-state">
-            <div className="icon">⛔</div>
+            <div className="icon"><Icon name="lock" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
             <p style={{ color: 'var(--color-gray-500)' }}>Только администратор или координатор движения</p>
           </div>
@@ -190,14 +197,7 @@ export default function Settings() {
               </h3>
 
               {newsMessage && (
-                <div style={{
-                  padding: '12px',
-                  borderRadius: '8px',
-                  marginBottom: '16px',
-                  textAlign: 'center',
-                  background: newsMessage.includes('✅') ? '#C6F6D5' : '#FED7D7',
-                  color: newsMessage.includes('✅') ? '#276749' : '#9B2C2C'
-                }}>
+                <div className={`message ${newsMessageOk ? 'message-success' : 'message-error'}`}>
                   {newsMessage}
                 </div>
               )}
@@ -279,14 +279,14 @@ export default function Settings() {
                         onClick={() => handleEditNews(item)}
                         style={{ padding: '6px 12px', fontSize: '12px' }}
                       >
-                        ✏️
+                        <Icon name="edit" />
                       </button>
                       <button
                         className="btn-danger"
                         onClick={() => handleDeleteNews(item.id)}
                         style={{ padding: '6px 12px', fontSize: '12px' }}
                       >
-                        🗑️
+                        <Icon name="trash" />
                       </button>
                     </div>
                   </div>
@@ -301,14 +301,7 @@ export default function Settings() {
             <h3 style={{ marginBottom: '16px' }}>Общие настройки сайта</h3>
 
             {settingsMessage && (
-              <div style={{
-                padding: '12px',
-                borderRadius: '8px',
-                marginBottom: '16px',
-                textAlign: 'center',
-                background: settingsMessage.includes('✅') ? '#C6F6D5' : '#FED7D7',
-                color: settingsMessage.includes('✅') ? '#276749' : '#9B2C2C'
-              }}>
+              <div className={`message ${settingsMessageOk ? 'message-success' : 'message-error'}`}>
                 {settingsMessage}
               </div>
             )}

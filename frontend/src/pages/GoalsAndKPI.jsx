@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function GoalsAndKPI() {
   const [profile, setProfile] = useState(null);
@@ -216,7 +217,7 @@ export default function GoalsAndKPI() {
       <Navigation profile={profile} />
       <div className="container-page">
         <div className="page-header">
-          <span style={{ fontSize: '32px' }}>🎯</span>
+          <span style={{ fontSize: '32px' }}><Icon name="target" size={32} /></span>
           <div>
             <h1>Цели и KPI</h1>
             <p>Управление целями движения</p>
@@ -387,7 +388,7 @@ export default function GoalsAndKPI() {
 
           {goals.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">🎯</div>
+              <div className="icon"><Icon name="target" /></div>
               <p>Целей пока нет</p>
             </div>
           ) : (

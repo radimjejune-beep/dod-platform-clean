@@ -5,6 +5,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useMenuItems } from '../hooks/useMenuItems';
 import api from '../lib/api';
 import Footer from '../components/Footer';
+import Icon from '../components/Icon';
 
 export default function Dashboard() {
   const [profile, setProfile] = useState(null);
@@ -144,67 +145,67 @@ export default function Dashboard() {
     // ИСПРАВЛЕНО: добавлен CRM для админа и координатора движения
     if (role === 'admin' || role === 'movement_coordinator') {
       actions.push(
-        { path: '/crm', label: '🏢 CRM', icon: '🏢' },
-        { path: '/admin/users', label: '👥 Пользователи', icon: '👥' },
-        { path: '/clubs', label: '🏫 КЮДы', icon: '🏫' },
-        { path: '/events', label: '📅 Мероприятия', icon: '📅' },
-        { path: '/participants', label: '👤 Участники', icon: '👤' },
-        { path: '/achievements', label: '🏆 Достижения', icon: '🏆' },
-        { path: '/reports', label: '📋 Отчёты', icon: '📋' },
-        { path: '/analytics', label: '📊 Аналитика', icon: '📊' },
-        { path: '/appeals', label: '📨 Обращения', icon: '📨' },
+        { path: '/crm', label: 'CRM', icon: 'building' },
+        { path: '/admin/users', label: 'Пользователи', icon: 'users' },
+        { path: '/clubs', label: 'КЮДы', icon: 'club' },
+        { path: '/events', label: 'Мероприятия', icon: 'calendar' },
+        { path: '/participants', label: 'Участники', icon: 'user' },
+        { path: '/achievements', label: 'Достижения', icon: 'trophy' },
+        { path: '/reports', label: 'Отчёты', icon: 'list' },
+        { path: '/analytics', label: 'Аналитика', icon: 'chart' },
+        { path: '/appeals', label: 'Обращения', icon: 'mail' },
       );
     }
 
     if (role === 'club_coordinator') {
       actions.push(
-        { path: '/clubs', label: 'Мой КЮД', icon: '🏫' },
-        { path: '/events', label: 'Мероприятия', icon: '📅' },
-        { path: '/participants', label: 'Участники', icon: '👤' },
-        { path: '/manage-achievements', label: 'Достижения', icon: '🏆' },
-        { path: '/reports', label: 'Отчёты', icon: '📋' },
-        { path: '/appeals', label: 'Обращения', icon: '📨' },
+        { path: '/clubs', label: 'Мой КЮД', icon: 'club' },
+        { path: '/events', label: 'Мероприятия', icon: 'calendar' },
+        { path: '/participants', label: 'Участники', icon: 'user' },
+        { path: '/manage-achievements', label: 'Достижения', icon: 'trophy' },
+        { path: '/reports', label: 'Отчёты', icon: 'list' },
+        { path: '/appeals', label: 'Обращения', icon: 'mail' },
       );
       if (club) {
         actions.push(
-          { path: `/club/${club.id}/president`, label: 'Назначить президента', icon: '👑' },
+          { path: `/club/${club.id}/president`, label: 'Назначить президента', icon: 'crown' },
         );
       }
     }
 
     if (role === 'participant') {
       actions.push(
-        { path: '/events', label: 'Мероприятия', icon: '📅' },
-        { path: '/calendar', label: 'Календарь', icon: '📆' },
-        { path: '/my-achievements', label: 'Достижения', icon: '🏆' },
-        { path: '/my-reviews', label: 'Оценки', icon: '📊' },
+        { path: '/events', label: 'Мероприятия', icon: 'calendar' },
+        { path: '/calendar', label: 'Календарь', icon: 'calendar' },
+        { path: '/my-achievements', label: 'Достижения', icon: 'trophy' },
+        { path: '/my-reviews', label: 'Оценки', icon: 'chart' },
       );
     }
 
     if (role === 'tutor') {
       actions.push(
-        { path: '/events', label: 'Мероприятия', icon: '📅' },
-        { path: '/participants', label: 'Участники', icon: '👤' },
-        { path: '/achievements', label: 'Достижения', icon: '🏆' },
-        { path: '/my-reviews', label: 'Оценки', icon: '📊' },
-        { path: '/my-journal', label: 'Журнал', icon: '📓' },
+        { path: '/events', label: 'Мероприятия', icon: 'calendar' },
+        { path: '/participants', label: 'Участники', icon: 'user' },
+        { path: '/achievements', label: 'Достижения', icon: 'trophy' },
+        { path: '/my-reviews', label: 'Оценки', icon: 'chart' },
+        { path: '/my-journal', label: 'Журнал', icon: 'journal' },
       );
     }
 
     if (role === 'president' || role === 'vice_president') {
       actions.push(
-        { path: '/clubs', label: 'КЮДы', icon: '🏫' },
-        { path: '/events', label: 'Мероприятия', icon: '📅' },
-        { path: '/participants', label: 'Участники', icon: '👤' },
-        { path: '/president-tasks', label: 'Задания', icon: '👑' },
+        { path: '/clubs', label: 'КЮДы', icon: 'club' },
+        { path: '/events', label: 'Мероприятия', icon: 'calendar' },
+        { path: '/participants', label: 'Участники', icon: 'user' },
+        { path: '/president-tasks', label: 'Задания', icon: 'crown' },
       );
     }
 
     if (role === 'parent') {
       actions.push(
-        { path: '/events', label: 'Мероприятия', icon: '📅' },
-        { path: '/calendar', label: 'Календарь', icon: '📆' },
-        { path: '/my-achievements', label: 'Достижения детей', icon: '🏆' },
+        { path: '/events', label: 'Мероприятия', icon: 'calendar' },
+        { path: '/calendar', label: 'Календарь', icon: 'calendar' },
+        { path: '/my-achievements', label: 'Достижения детей', icon: 'trophy' },
       );
     }
 
@@ -302,7 +303,7 @@ export default function Dashboard() {
           <div className="quick-actions-grid">
             {quickActions.slice(0, 8).map((action) => (
               <Link key={action.path} to={action.path} className="quick-action-card">
-                <span className="quick-icon">{action.icon}</span>
+                <span className="quick-icon"><Icon name={action.icon} size={22} /></span>
                 <span className="quick-label">{action.label}</span>
               </Link>
             ))}

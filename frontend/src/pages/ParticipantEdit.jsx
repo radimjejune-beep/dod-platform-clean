@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function ParticipantEdit() {
   const { id } = useParams();
@@ -117,7 +118,7 @@ export default function ParticipantEdit() {
         <Navigation profile={profile} />
         <div className="container-page">
           <div className="empty-state">
-            <div className="icon">❌</div>
+            <div className="icon"><Icon name="error" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Участник не найден</p>
           </div>
         </div>
@@ -131,7 +132,7 @@ export default function ParticipantEdit() {
         <Navigation profile={profile} />
         <div className="container-page">
           <div className="empty-state">
-            <div className="icon">⛔</div>
+            <div className="icon"><Icon name="lock" /></div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>Доступ запрещён</p>
             <p style={{ color: 'var(--color-gray-500)' }}>У вас нет прав для редактирования этого участника</p>
           </div>

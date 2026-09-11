@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import Icon from '../components/Icon';
 
 export default function CoordinatorDashboard() {
   const [profile, setProfile] = useState(null);
@@ -96,21 +97,21 @@ export default function CoordinatorDashboard() {
           type: 'join',
           title: `${p.full_name} присоединился к движению`,
           date: p.created_at,
-          icon: '👤',
+          icon: 'user',
           color: 'var(--color-success)'
         })),
         ...eventsThisMonth.slice(0, 3).map(e => ({
           type: 'event',
           title: `Создано мероприятие: ${e.title}`,
           date: e.event_date,
-          icon: '📅',
+          icon: 'calendar',
           color: 'var(--color-primary-light)'
         })),
         ...achievements.slice(0, 2).map(a => ({
           type: 'achievement',
           title: `Новое достижение: ${a.title}`,
           date: a.created_at,
-          icon: '🏆',
+          icon: 'trophy',
           color: 'var(--color-gold)'
         }))
       ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8);
@@ -284,7 +285,7 @@ export default function CoordinatorDashboard() {
                   borderRadius: index === 0 ? '8px' : '0'
                 }}>
                   <span style={{ fontWeight: index === 0 ? '600' : '400' }}>
-                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                    {`#${index + 1}`}
                     {' '}
                     {club.name}
                   </span>
@@ -321,7 +322,7 @@ export default function CoordinatorDashboard() {
                     borderRadius: '8px',
                     borderLeft: `3px solid ${activity.color}`
                   }}>
-                    <span style={{ fontSize: '20px' }}>{activity.icon}</span>
+                    <span style={{ display: 'inline-flex', color: activity.color }}><Icon name={activity.icon} size={18} /></span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '13px', color: 'var(--color-primary)' }}>{activity.title}</div>
                       <div style={{ fontSize: '11px', color: 'var(--color-gray-400)' }}>

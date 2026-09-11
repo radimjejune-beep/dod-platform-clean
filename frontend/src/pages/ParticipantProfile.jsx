@@ -6,6 +6,7 @@ import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import AssignClubModal from '../components/AssignClubModal';
 import Icon from '../components/Icon';
+import ParentInviteCard from '../components/ParentInviteCard';
 
 export default function ParticipantProfile() {
   const { id } = useParams();
@@ -418,6 +419,13 @@ export default function ParticipantProfile() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Без привязанного родителя согласий у участника не будет, а без
+            согласий он не поедет на мероприятия — поэтому блок стоит прямо
+            в основной вкладке карточки, а не спрятан отдельной вкладкой */}
+        {activeTab === 'info' && (
+          <ParentInviteCard participantId={participant.id} participantName={participant.full_name} />
         )}
 
         {activeTab === 'interests' && (

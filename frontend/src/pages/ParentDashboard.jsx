@@ -24,7 +24,11 @@ export default function ParentDashboard() {
   
   // ===== ДЛЯ ПРИВЯЗКИ РЕБЁНКА =====
   const [showLinkModal, setShowLinkModal] = useState(false);
-  const [linkForm, setLinkForm] = useState({ child_email: '', child_password: '' });
+  // Ребёнок привязывается кодом приглашения. Пароль ребёнка больше не
+  // участвует: раньше он требовался здесь, и это приучало семью жить
+  // под одной учётной записью — тогда запись «согласие дал законный
+  // представитель» переставала что-либо значить.
+  const [linkCode, setLinkCode] = useState('');
   const [linking, setLinking] = useState(false);
   
   const navigate = useNavigate();
@@ -106,18 +110,15 @@ export default function ParentDashboard() {
     setMessage('');
 
     try {
-      const result = await api.parentLinkChild({
-        child_email: linkForm.child_email.trim(),
-        child_password: linkForm.child_password
-      });
+      const result = await api.claimParentInvitation(linkCode.trim());
 
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result, 'Не удалось привязать участника'));
       }
 
-      setMessage(`Ребёнок "${result.child.full_name}" успешно привязан!`);
+      setMessage(`Участник «${result.child_name}» привязан`);
       setMessageType('success');
-      setLinkForm({ child_email: '', child_password: '' });
+      setLinkCode('');
       setShowLinkModal(false);
       await loadData(); // Обновляем список детей
       setTimeout(() => setMessage(''), 5000);
@@ -406,53 +407,34 @@ export default function ParentDashboard() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '4px' }}>
-              Привязать ребёнка
+              Привязать участника
             </h3>
-            <p style={{ color: 'var(--color-gray-500)', marginBottom: '20px', fontSize: '14px' }}>
-              Введите email и пароль ребёнка для привязки.
-              <br />
-              <span style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
-                Данные ребёнка должны соответствовать его учётной записи в системе.
-              </span>
+            <p style={{ color: 'var(--color-gray-500)', marginBottom: '20px', fontSize: '14px', lineHeight: 1.6 }}>
+              Введите код приглашения. Его присылает руководитель КЮДа — или его
+              можно взять у ребёнка: код показан в его профиле.
             </p>
 
             <form onSubmit={handleLinkChild}>
               <div className="form-group">
-                <label>Email ребёнка *</label>
+                <label className="form-label">Код приглашения<span className="required">*</span></label>
                 <input
-                  type="email"
-                  value={linkForm.child_email}
-                  onChange={(e) => setLinkForm({ ...linkForm, child_email: e.target.value })}
+                  className="form-control"
+                  value={linkCode}
+                  onChange={(e) => setLinkCode(e.target.value)}
                   required
-                  placeholder="child@example.com"
+                  placeholder="Например, ABCD-2345"
+                  autoFocus
                 />
+                <span className="form-hint">
+                  Пароль ребёнка вводить не нужно — он здесь не используется.
+                </span>
               </div>
 
-              <div className="form-group">
-                <label>Пароль ребёнка *</label>
-                <input
-                  type="password"
-                  value={linkForm.child_password}
-                  onChange={(e) => setLinkForm({ ...linkForm, child_password: e.target.value })}
-                  required
-                  placeholder="Введите пароль ребёнка"
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                <button
-                  type="submit"
-                  className="btn-success"
-                  disabled={linking}
-                  style={{ flex: 1 }}
-                >
-                  {linking ? 'Проверка...' : 'Привязать'}
+              <div className="btn-group" style={{ marginTop: '8px' }}>
+                <button type="submit" className="btn-primary" disabled={linking} style={{ flex: 1 }}>
+                  {linking ? 'Проверяем...' : 'Привязать'}
                 </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setShowLinkModal(false)}
-                >
+                <button type="button" className="btn-outline" onClick={() => setShowLinkModal(false)}>
                   Отмена
                 </button>
               </div>

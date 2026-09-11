@@ -8,6 +8,7 @@ import AvatarUpload from '../components/AvatarUpload';
 import PresidentSection from '../components/PresidentSection';
 import Footer from '../components/Footer';
 import Icon from '../components/Icon';
+import ParentCodeCard from '../components/ParentCodeCard';
 
 export default function Profile() {
   const [profile, setProfile] = useState(null);
@@ -484,6 +485,11 @@ export default function Profile() {
                   <Icon name="info" size={16} /> <strong>Для чего это нужно?</strong><br />
                   Данные родителя используются для связи в экстренных случаях и получения согласия на участие в мероприятиях.
                 </div>
+
+                {/* Заполненные поля — это ещё не законный представитель в
+                    системе. Чтобы он смог дать согласия, у него должен быть
+                    свой кабинет: код ниже как раз для этого. */}
+                {profile?.role === 'participant' && <ParentCodeCard />}
                 <div className="form-grid">
                   <div className="form-group">
                     <label>ФИО родителя</label>

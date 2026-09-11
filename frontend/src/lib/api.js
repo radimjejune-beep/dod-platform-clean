@@ -1155,6 +1155,88 @@ export const exportEventTeams = async (eventId, withDocuments = false) => {
 };
 
 // ============================================================
+// 21b. ПРИГЛАШЕНИЯ РОДИТЕЛЕЙ
+// ============================================================
+// Пароль ребёнка в этих вызовах не участвует. Ссылку собираем из адреса,
+// на котором открыт фронтенд, — сервер не знает, где он опубликован.
+export const createParentInvitation = async (participantId) => {
+  const response = await fetch(`${API_URL}/participants/${participantId}/parent-invitation`, {
+    method: 'POST',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const getParentInvitations = async (participantId) => {
+  const response = await fetch(`${API_URL}/participants/${participantId}/parent-invitations`, {
+    method: 'GET',
+    headers: headers()
+  });
+  if (!response.ok) return { invitations: [], parents: [] };
+  return response.json();
+};
+
+export const revokeParentInvitation = async (invitationId) => {
+  const response = await fetch(`${API_URL}/parent-invitations/${invitationId}/revoke`, {
+    method: 'POST',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// Код, который участник передаёт родителю голосом или в сообщении
+export const createMyParentCode = async () => {
+  const response = await fetch(`${API_URL}/my-parent-code`, {
+    method: 'POST',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const getMyParentCode = async () => {
+  const response = await fetch(`${API_URL}/my-parent-code`, {
+    method: 'GET',
+    headers: headers()
+  });
+  if (!response.ok) return { active: null, parent_name: null };
+  return response.json();
+};
+
+// Проверка приглашения до регистрации — без токена авторизации
+export const checkParentInvitation = async (token) => {
+  const response = await fetch(`${API_URL}/parent-invitations/check?token=${encodeURIComponent(token)}`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' }
+  });
+  return response.json();
+};
+
+export const acceptParentInvitation = async (payload) => {
+  const response = await fetch(`${API_URL}/parent-invitations/accept`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json();
+  // Сервер сразу отдаёт токен — родителю не нужно входить повторно
+  if (response.ok && data.token) {
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+  }
+  return data;
+};
+
+// Родитель уже в системе и добавляет второго ребёнка
+export const claimParentInvitation = async (token) => {
+  const response = await fetch(`${API_URL}/parent-invitations/claim`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ token })
+  });
+  return response.json();
+};
+
+// ============================================================
 // 22. ДЕТИ РОДИТЕЛЯ
 // ============================================================
 export const getParentChildren = async (params = {}) => {
@@ -1171,15 +1253,6 @@ export const getParentChildren = async (params = {}) => {
   
   if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   
-  return response.json();
-};
-
-export const parentLinkChild = async (data) => {
-  const response = await fetch(`${API_URL}/parent-link-child`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify(data)
-  });
   return response.json();
 };
 
@@ -1345,8 +1418,15 @@ const api = {
   revokeConsent,
   
   // Дети
+  createParentInvitation,
+  getParentInvitations,
+  revokeParentInvitation,
+  createMyParentCode,
+  getMyParentCode,
+  checkParentInvitation,
+  acceptParentInvitation,
+  claimParentInvitation,
   getParentChildren,
-  parentLinkChild,
   
   // Аватар
   uploadAvatar,

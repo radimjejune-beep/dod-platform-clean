@@ -2454,103 +2454,25 @@ app.get('/api/parent-children', authenticate, async (req, res) => {
 });
 
 // ============================================================
-// ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ
+// ПРИВЯЗКА РЕБЁНКА К РОДИТЕЛЮ — УБРАНА
 // ============================================================
-app.post('/api/parent-link-child', authenticate, linkChildLimiter, async (req, res) => {
-  try {
-    const parentId = req.user.userId;
-    const parentRole = req.user.role;
-
-    if (parentRole !== 'parent') {
-      return res.status(403).json({ error: 'Только родители могут привязывать детей' });
-    }
-
-    const { child_email, child_password } = req.body;
-
-    if (!child_email || !child_password) {
-      return res.status(400).json({ error: 'Email и пароль ребёнка обязательны' });
-    }
-
-    // ⚠️ Раньше этот эндпоинт был оракулом для подбора паролей: 404 означало
-    // «такого email нет», 401 — «email есть, пароль неверный», 200 — «угадал».
-    // Ни лимитов, ни счётчика попыток, ни блокировки здесь не было — вся
-    // защита стояла только на /api/login. Теперь: единый ответ на все случаи,
-    // общий счётчик неудачных попыток и уважение к блокировке аккаунта.
-    const childResult = await pool.query(
-      `SELECT id, email, full_name, role, password_hash, login_attempts, locked_until
-       FROM users WHERE email = $1`,
-      [child_email]
-    );
-
-    const child = childResult.rows[0] || null;
-
-    // Сравниваем всегда, даже если пользователя нет, — чтобы время ответа
-    // не выдавало существование email.
-    const DUMMY_HASH = '$2b$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalidinv';
-    const validPassword = await bcrypt.compare(
-      child_password,
-      child ? child.password_hash : DUMMY_HASH
-    );
-
-    const INVALID = { error: 'Неверный email или пароль ребёнка', code: 'INVALID_CHILD_CREDENTIALS' };
-
-    if (child && child.locked_until && new Date(child.locked_until) > new Date()) {
-      return res.status(403).json({
-        error: 'Учётная запись ребёнка временно заблокирована. Попробуйте позже.',
-        code: 'ACCOUNT_LOCKED'
-      });
-    }
-
-    if (!child || child.role !== 'participant' || !validPassword) {
-      // Неудачные попытки идут в тот же счётчик, что и вход
-      if (child) {
-        const attempts = (child.login_attempts || 0) + 1;
-        if (attempts >= 5) {
-          await pool.query(
-            'UPDATE users SET login_attempts = $1, locked_until = $2 WHERE id = $3',
-            [attempts, new Date(Date.now() + 30 * 60 * 1000), child.id]
-          );
-          await logActivity(child.id, 'ACCOUNT_LOCKED', 'user', child.id, {
-            reason: 'Неудачные попытки привязки родителем',
-            parent_id: parentId
-          });
-        } else {
-          await pool.query('UPDATE users SET login_attempts = $1 WHERE id = $2', [attempts, child.id]);
-        }
-      }
-      return res.status(401).json(INVALID);
-    }
-
-    await pool.query('UPDATE users SET login_attempts = 0 WHERE id = $1', [child.id]);
-
-    const existingLink = await pool.query('SELECT id FROM child_parent WHERE child_id = $1 AND status = $2', [child.id, 'active']);
-    if (existingLink.rows.length > 0) {
-      const sameParent = await pool.query('SELECT id FROM child_parent WHERE child_id = $1 AND parent_id = $2 AND status = $3', [child.id, parentId, 'active']);
-      if (sameParent.rows.length > 0) {
-        return res.status(400).json({ error: 'Этот ребёнок уже привязан к вам' });
-      }
-      return res.status(400).json({ error: 'Этот ребёнок уже привязан к другому родителю' });
-    }
-
-    await pool.query(
-      `INSERT INTO child_parent (parent_id, child_id, status, created_at)
-       VALUES ($1, $2, 'active', NOW()) RETURNING *`,
-      [parentId, child.id]
-    );
-
-    await logActivity(parentId, 'PARENT_LINKED_CHILD', 'user', child.id, {
-      child: child.full_name
-    });
-
-    res.json({
-      message: 'Ребёнок успешно привязан!',
-      child: { id: child.id, full_name: child.full_name, email: child.email }
-    });
-
-  } catch (error) {
-    console.error('❌ Ошибка привязки ребёнка:', error);
-    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
-  }
+// Раньше родитель привязывал ребёнка, вводя email и пароль ребёнка.
+// Схема была плоха дважды. Во-первых, эндпоинт подсказывал, существует
+// ли такой email, — это чинилось, но сама идея осталась: чтобы стать
+// «законным представителем» в системе, достаточно было знать пароль
+// ребёнка. Во-вторых, на практике это учит семью пользоваться одной
+// учётной записью, и тогда запись «согласие дал законный представитель»
+// не доказывает ничего — а ради этой записи всё и затевалось.
+//
+// Теперь приглашение выпускает руководитель КЮДа или сам участник, а
+// родитель заводит собственный пароль: см. /api/parent-invitations/*.
+// Маршрут оставлен, чтобы старые вкладки в браузере получали объяснение,
+// а не молчаливую ошибку.
+app.post('/api/parent-link-child', authenticate, (req, res) => {
+  res.status(410).json({
+    error: 'Привязка по паролю ребёнка больше не используется. Попросите руководителя КЮДа прислать ссылку-приглашение или введите код, который ребёнок видит в своём профиле.',
+    code: 'LINK_BY_CHILD_PASSWORD_REMOVED'
+  });
 });
 
 // ============================================================
@@ -7026,6 +6948,542 @@ app.post('/api/events/:eventId/teams/purge-documents', authenticate, requireAdmi
   } catch (error) {
     console.error('❌ Ошибка удаления документов:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+
+// ============================================================
+// ПРИГЛАШЕНИЯ РОДИТЕЛЕЙ
+// ============================================================
+// Согласие за несовершеннолетнего даёт законный представитель, значит у
+// родителя должна быть своя учётная запись. Раньше родитель привязывал
+// ребёнка, вводя пароль ребёнка — то есть пароль ребёнка гулял по семье,
+// а чаще родитель просто заходил под учёткой ребёнка, и запись «согласие
+// дал законный представитель» ничего не значила.
+//
+// Теперь приглашение выпускает руководитель КЮДа из карточки участника
+// либо сам участник — коротким кодом для родителя. Родитель заводит свой
+// пароль. Пароль ребёнка не участвует нигде.
+//
+// Токен в базе лежит только хешем: утечка таблицы не даёт принять
+// приглашение. Ссылку собирает фронтенд из своего адреса — серверу не
+// нужно знать, на каком домене он опубликован.
+
+const PARENT_INVITE_TTL_HOURS = 72;   // приглашение от сотрудника
+const PARENT_CODE_TTL_HOURS = 24;     // код, выданный самим участником
+
+function hashInviteToken(token) {
+  return crypto.createHash('sha256').update(String(token)).digest('hex');
+}
+
+// Токен для ссылки: длинный, из него нельзя угадать соседний
+function generateInviteToken() {
+  return crypto.randomBytes(24).toString('base64url');
+}
+
+// Код для диктовки голосом: без похожих символов, группами по 4
+function generateParentCode() {
+  const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const bytes = crypto.randomBytes(8);
+  let out = '';
+  for (let i = 0; i < 8; i++) {
+    out += ALPHABET[bytes[i] % ALPHABET.length];
+    if (i === 3) out += '-';
+  }
+  return out;
+}
+
+// Приглашение выпускает тот, кто вправе вести участников этого КЮДа
+async function canInviteParentFor(requester, childId) {
+  const child = await pool.query(
+    'SELECT id, full_name, role, club_id, birth_date FROM users WHERE id = $1',
+    [childId]
+  );
+  if (child.rows.length === 0) return { ok: false, status: 404, error: 'Участник не найден' };
+  const row = child.rows[0];
+  if (row.role !== 'participant') {
+    return { ok: false, status: 400, error: 'Приглашать родителя можно только для участника' };
+  }
+  if (MOVEMENT_ROLES.includes(requester.role)) return { ok: true, child: row };
+  if (!row.club_id) {
+    return { ok: false, status: 403, error: 'Участник не привязан к КЮДу' };
+  }
+  if (await canInClub(requester, row.club_id, 'manage_participants')) return { ok: true, child: row };
+  return { ok: false, status: 403, error: 'Нет права приглашать родителей этого участника' };
+}
+
+// Выпуск приглашения. Прежнее действующее приглашение того же вида
+// отзывается: две живые ссылки на одного ребёнка — это лишний риск.
+async function issueParentInvitation({ childId, source, token, ttlHours, createdBy, hints = {} }) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `UPDATE parent_invitations
+       SET revoked_at = NOW(), revoked_by = $3
+       WHERE child_id = $1 AND source = $2 AND used_at IS NULL AND revoked_at IS NULL`,
+      [childId, source, createdBy]
+    );
+    const result = await client.query(
+      `INSERT INTO parent_invitations
+         (child_id, token_hash, source, parent_full_name, parent_email, parent_phone,
+          created_by, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW() + ($8 || ' hours')::interval)
+       RETURNING id, created_at, expires_at`,
+      [childId, hashInviteToken(token), source,
+       hints.full_name || null, hints.email || null, hints.phone || null,
+       createdBy, String(ttlHours)]
+    );
+    await client.query('COMMIT');
+    return result.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+// ===== Сотрудник КЮДа выпускает приглашение из карточки участника =====
+app.post('/api/participants/:id/parent-invitation', authenticate, async (req, res) => {
+  try {
+    const childId = req.params.id;
+    const access = await canInviteParentFor(req.user, childId);
+    if (!access.ok) return res.status(access.status).json({ error: access.error });
+
+    const existingLink = await pool.query(
+      `SELECT u.full_name FROM child_parent cp
+       JOIN users u ON u.id = cp.parent_id
+       WHERE cp.child_id = $1 AND cp.status = 'active'`,
+      [childId]
+    );
+    if (existingLink.rows.length > 0) {
+      return res.status(400).json({
+        error: `К участнику уже привязан законный представитель: ${existingLink.rows[0].full_name}`,
+        code: 'PARENT_ALREADY_LINKED'
+      });
+    }
+
+    // Подсказки из карточки — чтобы родителю не пришлось вводить ФИО заново
+    const card = await pool.query(
+      'SELECT parent_full_name, parent_email, parent_phone FROM users WHERE id = $1',
+      [childId]
+    );
+
+    const token = generateInviteToken();
+    const invitation = await issueParentInvitation({
+      childId,
+      source: 'staff',
+      token,
+      ttlHours: PARENT_INVITE_TTL_HOURS,
+      createdBy: req.user.userId,
+      hints: {
+        full_name: card.rows[0]?.parent_full_name,
+        email: card.rows[0]?.parent_email,
+        phone: card.rows[0]?.parent_phone
+      }
+    });
+
+    await logActivity(req.user.userId, 'PARENT_INVITATION_CREATED', 'user', childId, {
+      invitation_id: invitation.id,
+      source: 'staff'
+    });
+
+    res.status(201).json({
+      message: 'Приглашение создано',
+      invitation_id: invitation.id,
+      token,                                   // показывается один раз
+      path: `/parent-join?token=${token}`,     // ссылку собирает фронтенд
+      expires_at: invitation.expires_at,
+      child_name: access.child.full_name,
+      parent_hint: card.rows[0] || null
+    });
+  } catch (error) {
+    console.error('❌ Ошибка создания приглашения родителя:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== Состояние приглашений по участнику (без токенов) =====
+app.get('/api/participants/:id/parent-invitations', authenticate, async (req, res) => {
+  try {
+    const childId = req.params.id;
+    if (!(await canViewParticipant(req.user, childId))) {
+      return res.status(403).json({ error: 'Нет доступа к данным этого участника' });
+    }
+
+    const result = await pool.query(
+      `SELECT pi.id, pi.source, pi.created_at, pi.expires_at, pi.used_at, pi.revoked_at,
+              c.full_name AS created_by_name, p.full_name AS used_by_name,
+              (pi.used_at IS NULL AND pi.revoked_at IS NULL AND pi.expires_at > NOW()) AS is_active
+       FROM parent_invitations pi
+       LEFT JOIN users c ON c.id = pi.created_by
+       LEFT JOIN users p ON p.id = pi.used_by
+       WHERE pi.child_id = $1
+       ORDER BY pi.created_at DESC`,
+      [childId]
+    );
+
+    const parents = await pool.query(
+      `SELECT u.id, u.full_name, u.email, cp.created_at
+       FROM child_parent cp JOIN users u ON u.id = cp.parent_id
+       WHERE cp.child_id = $1 AND cp.status = 'active'`,
+      [childId]
+    );
+
+    res.json({ invitations: result.rows, parents: parents.rows });
+  } catch (error) {
+    console.error('❌ Ошибка получения приглашений родителя:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== Отзыв приглашения =====
+app.post('/api/parent-invitations/:id/revoke', authenticate, async (req, res) => {
+  try {
+    const found = await pool.query('SELECT id, child_id, used_at FROM parent_invitations WHERE id = $1', [req.params.id]);
+    if (found.rows.length === 0) return res.status(404).json({ error: 'Приглашение не найдено' });
+    if (found.rows[0].used_at) {
+      return res.status(400).json({ error: 'Приглашение уже использовано — отзывать нечего' });
+    }
+
+    const access = await canInviteParentFor(req.user, found.rows[0].child_id);
+    if (!access.ok) return res.status(access.status).json({ error: access.error });
+
+    await pool.query(
+      'UPDATE parent_invitations SET revoked_at = NOW(), revoked_by = $2 WHERE id = $1 AND revoked_at IS NULL',
+      [req.params.id, req.user.userId]
+    );
+    await logActivity(req.user.userId, 'PARENT_INVITATION_REVOKED', 'user', found.rows[0].child_id, {
+      invitation_id: req.params.id
+    });
+    res.json({ message: 'Приглашение отозвано' });
+  } catch (error) {
+    console.error('❌ Ошибка отзыва приглашения:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== Участник получает код для своего родителя =====
+// Запасной путь на случай, когда руководитель КЮДа недоступен.
+app.post('/api/my-parent-code', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'participant') {
+      return res.status(403).json({ error: 'Код для родителя выдаётся участнику' });
+    }
+
+    const linked = await pool.query(
+      `SELECT 1 FROM child_parent WHERE child_id = $1 AND status = 'active'`,
+      [req.user.userId]
+    );
+    if (linked.rows.length > 0) {
+      return res.status(400).json({
+        error: 'К вам уже привязан законный представитель',
+        code: 'PARENT_ALREADY_LINKED'
+      });
+    }
+
+    const code = generateParentCode();
+    const invitation = await issueParentInvitation({
+      childId: req.user.userId,
+      source: 'child',
+      token: code,
+      ttlHours: PARENT_CODE_TTL_HOURS,
+      createdBy: req.user.userId
+    });
+
+    await logActivity(req.user.userId, 'PARENT_CODE_CREATED', 'user', req.user.userId, {
+      invitation_id: invitation.id
+    });
+
+    res.status(201).json({
+      message: 'Код для родителя создан',
+      code,
+      expires_at: invitation.expires_at
+    });
+  } catch (error) {
+    console.error('❌ Ошибка выдачи кода для родителя:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Действующий код, если он уже выдан (сам код не возвращаем — его знает
+// только тот, кому он показался при выпуске)
+app.get('/api/my-parent-code', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'participant') {
+      return res.status(403).json({ error: 'Код для родителя выдаётся участнику' });
+    }
+    const result = await pool.query(
+      `SELECT created_at, expires_at FROM parent_invitations
+       WHERE child_id = $1 AND source = 'child' AND used_at IS NULL
+         AND revoked_at IS NULL AND expires_at > NOW()`,
+      [req.user.userId]
+    );
+    const parent = await pool.query(
+      `SELECT u.full_name FROM child_parent cp JOIN users u ON u.id = cp.parent_id
+       WHERE cp.child_id = $1 AND cp.status = 'active'`,
+      [req.user.userId]
+    );
+    res.json({
+      active: result.rows[0] || null,
+      parent_name: parent.rows[0]?.full_name || null
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения кода для родителя:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== Проверка приглашения родителем (без авторизации) =====
+// Родитель должен увидеть, чьё приглашение открыл, до того как заведёт
+// пароль. Возвращаем имя ребёнка и подсказки — ничего больше.
+app.get('/api/parent-invitations/check', linkChildLimiter, async (req, res) => {
+  try {
+    const token = String(req.query.token || '').trim();
+    if (!token) return res.status(400).json({ error: 'Код приглашения не указан', code: 'INVALID_INVITATION' });
+
+    const result = await pool.query(
+      `SELECT pi.id, pi.expires_at, pi.used_at, pi.revoked_at,
+              pi.parent_full_name, pi.parent_email, pi.parent_phone,
+              u.full_name AS child_name, cl.name AS club_name
+       FROM parent_invitations pi
+       JOIN users u ON u.id = pi.child_id
+       LEFT JOIN clubs cl ON cl.id = u.club_id
+       WHERE pi.token_hash = $1`,
+      [hashInviteToken(token)]
+    );
+
+    const row = result.rows[0];
+    if (!row || row.revoked_at || row.used_at || new Date(row.expires_at) <= new Date()) {
+      // Один ответ на все случаи: перебирать коды бессмысленно
+      return res.status(404).json({
+        error: 'Приглашение не найдено, уже использовано или истекло',
+        code: 'INVALID_INVITATION'
+      });
+    }
+
+    res.json({
+      child_name: row.child_name,
+      club_name: row.club_name,
+      expires_at: row.expires_at,
+      parent_hint: {
+        full_name: row.parent_full_name,
+        email: row.parent_email,
+        phone: row.parent_phone
+      }
+    });
+  } catch (error) {
+    console.error('❌ Ошибка проверки приглашения:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== Родитель уже в системе и добавляет второго ребёнка =====
+app.post('/api/parent-invitations/claim', authenticate, linkChildLimiter, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    if (req.user.role !== 'parent') {
+      return res.status(403).json({ error: 'Принять приглашение может только родитель' });
+    }
+    const cleanToken = String(req.body?.token || '').trim();
+    if (!cleanToken) return res.status(400).json({ error: 'Код приглашения не указан' });
+
+    const invitation = await pool.query(
+      `SELECT pi.id, pi.child_id, pi.expires_at, pi.used_at, pi.revoked_at, pi.source,
+              u.full_name AS child_name
+       FROM parent_invitations pi
+       JOIN users u ON u.id = pi.child_id
+       WHERE pi.token_hash = $1`,
+      [hashInviteToken(cleanToken)]
+    );
+    const inv = invitation.rows[0];
+    if (!inv || inv.revoked_at || inv.used_at || new Date(inv.expires_at) <= new Date()) {
+      return res.status(404).json({
+        error: 'Приглашение не найдено, уже использовано или истекло',
+        code: 'INVALID_INVITATION'
+      });
+    }
+
+    const linked = await pool.query(
+      `SELECT parent_id FROM child_parent WHERE child_id = $1 AND status = 'active'`,
+      [inv.child_id]
+    );
+    if (linked.rows.length > 0) {
+      const mine = linked.rows[0].parent_id === req.user.userId;
+      return res.status(400).json({
+        error: mine ? 'Этот ребёнок уже привязан к вам' : 'К участнику уже привязан законный представитель',
+        code: 'PARENT_ALREADY_LINKED'
+      });
+    }
+
+    await client.query('BEGIN');
+    await client.query(
+      `INSERT INTO child_parent (parent_id, child_id, status, created_at)
+       VALUES ($1, $2, 'active', NOW())`,
+      [req.user.userId, inv.child_id]
+    );
+    const marked = await client.query(
+      `UPDATE parent_invitations SET used_at = NOW(), used_by = $2
+       WHERE id = $1 AND used_at IS NULL AND revoked_at IS NULL
+       RETURNING id`,
+      [inv.id, req.user.userId]
+    );
+    if (marked.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Приглашение только что было использовано', code: 'INVALID_INVITATION' });
+    }
+    await client.query('COMMIT');
+
+    await logActivity(req.user.userId, 'PARENT_INVITATION_ACCEPTED', 'user', inv.child_id, {
+      invitation_id: inv.id,
+      source: inv.source
+    });
+
+    res.status(201).json({ message: `Участник ${inv.child_name} привязан`, child_name: inv.child_name });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Ошибка приёма приглашения:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  } finally {
+    client.release();
+  }
+});
+
+// ===== Приём приглашения: родитель заводит себе учётную запись =====
+app.post('/api/parent-invitations/accept', linkChildLimiter, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { token, full_name, email, password, phone } = req.body || {};
+    const cleanToken = String(token || '').trim();
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const cleanName = String(full_name || '').trim();
+
+    if (!cleanToken || !cleanName || !cleanEmail || !password) {
+      return res.status(400).json({ error: 'Заполните ФИО, электронную почту и пароль' });
+    }
+    if (String(password).length < 8) {
+      return res.status(400).json({ error: 'Пароль должен быть не короче 8 символов', code: 'WEAK_PASSWORD' });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({ error: 'Проверьте адрес электронной почты' });
+    }
+
+    const invitation = await pool.query(
+      `SELECT pi.id, pi.child_id, pi.expires_at, pi.used_at, pi.revoked_at, pi.source,
+              u.full_name AS child_name
+       FROM parent_invitations pi
+       JOIN users u ON u.id = pi.child_id
+       WHERE pi.token_hash = $1`,
+      [hashInviteToken(cleanToken)]
+    );
+    const inv = invitation.rows[0];
+    if (!inv || inv.revoked_at || inv.used_at || new Date(inv.expires_at) <= new Date()) {
+      return res.status(404).json({
+        error: 'Приглашение не найдено, уже использовано или истекло',
+        code: 'INVALID_INVITATION'
+      });
+    }
+
+    // Ребёнок мог получить представителя, пока приглашение лежало в чате
+    const linked = await pool.query(
+      `SELECT 1 FROM child_parent WHERE child_id = $1 AND status = 'active'`,
+      [inv.child_id]
+    );
+    if (linked.rows.length > 0) {
+      return res.status(400).json({
+        error: 'К участнику уже привязан законный представитель',
+        code: 'PARENT_ALREADY_LINKED'
+      });
+    }
+
+    const existing = await pool.query(
+      'SELECT id, role, password_hash FROM users WHERE LOWER(email) = $1',
+      [cleanEmail]
+    );
+
+    await client.query('BEGIN');
+
+    let parentId;
+    if (existing.rows.length > 0) {
+      // Такой адрес уже есть. Привязываем только если это учётная запись
+      // родителя и пароль от неё введён верно — иначе приглашение стало бы
+      // способом захватить чужой аккаунт.
+      const account = existing.rows[0];
+      const samePassword = await bcrypt.compare(String(password), account.password_hash);
+      if (account.role !== 'parent' || !samePassword) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({
+          error: 'Этот адрес уже зарегистрирован. Войдите под ним и примите приглашение из личного кабинета.',
+          code: 'EMAIL_ALREADY_USED'
+        });
+      }
+      parentId = account.id;
+      await client.query(
+        'UPDATE users SET full_name = $2, phone = COALESCE(NULLIF($3, \'\'), phone) WHERE id = $1',
+        [parentId, cleanName, String(phone || '').trim()]
+      );
+    } else {
+      const passwordHash = await bcrypt.hash(String(password), BCRYPT_ROUNDS);
+      const created = await client.query(
+        `INSERT INTO users (email, password_hash, full_name, role, phone, status,
+                            must_change_password, created_at)
+         VALUES ($1, $2, $3, 'parent', $4, 'active', false, NOW())
+         RETURNING id`,
+        [cleanEmail, passwordHash, cleanName, String(phone || '').trim()]
+      );
+      parentId = created.rows[0].id;
+    }
+
+    await client.query(
+      `INSERT INTO child_parent (parent_id, child_id, status, created_at)
+       VALUES ($1, $2, 'active', NOW())`,
+      [parentId, inv.child_id]
+    );
+
+    const marked = await client.query(
+      `UPDATE parent_invitations SET used_at = NOW(), used_by = $2
+       WHERE id = $1 AND used_at IS NULL AND revoked_at IS NULL
+       RETURNING id`,
+      [inv.id, parentId]
+    );
+    if (marked.rows.length === 0) {
+      // Кто-то принял это же приглашение, пока шла транзакция
+      await client.query('ROLLBACK');
+      return res.status(409).json({
+        error: 'Приглашение только что было использовано',
+        code: 'INVALID_INVITATION'
+      });
+    }
+
+    await client.query('COMMIT');
+
+    await logActivity(parentId, 'PARENT_INVITATION_ACCEPTED', 'user', inv.child_id, {
+      invitation_id: inv.id,
+      source: inv.source
+    });
+
+    const token_jwt = jwt.sign(
+      { userId: parentId, email: cleanEmail, role: 'parent' },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    res.status(201).json({
+      message: 'Учётная запись создана',
+      token: token_jwt,
+      user: { id: parentId, email: cleanEmail, full_name: cleanName, role: 'parent' },
+      child_name: inv.child_name
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    if (error && error.code === '23505') {
+      return res.status(409).json({ error: 'Этот адрес уже зарегистрирован', code: 'EMAIL_ALREADY_USED' });
+    }
+    console.error('❌ Ошибка приёма приглашения родителя:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  } finally {
+    client.release();
   }
 });
 

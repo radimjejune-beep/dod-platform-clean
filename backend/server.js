@@ -8600,6 +8600,12 @@ app.get('/api/attention', authenticate, async (req, res) => {
     const now = new Date();
     const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const prevMonth = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+    const monthName = (ym) => {
+      const [y, m] = String(ym).split('-').map(Number);
+      const names = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
+                     'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+      return `${names[m - 1] || ym} ${y}`;
+    };
 
     const [noConsent, noParent, noHead, noReport, faded, waitingTeams, pendingInvites] = await Promise.all([
       // Участники без обязательных согласий — без них нельзя на мероприятия
@@ -8648,11 +8654,18 @@ app.get('/api/attention', authenticate, async (req, res) => {
         params
       ),
 
-      // Не сдан отчёт за прошлый месяц
+      // Не сдан отчёт за прошлый месяц.
+      // Клубы без руководителя сюда не попадают: им отчёт сдавать
+      // некому, и это уже сказано разделом выше. Показать те же сорок
+      // два клуба дважды — верный способ научить не смотреть на список.
       pool.query(
         `SELECT c.id, c.name
          FROM clubs c
          WHERE COALESCE(c.status, 'active') <> 'archived'${clubFilterC}
+           AND EXISTS (
+             SELECT 1 FROM club_staff cs
+             WHERE cs.club_id = c.id AND cs.removed_at IS NULL AND cs.position = 'head'
+           )
            AND NOT EXISTS (
              SELECT 1 FROM reports r
              WHERE r.club_id = c.id AND r.report_month = $${params.length + 1}
@@ -8737,7 +8750,7 @@ app.get('/api/attention', authenticate, async (req, res) => {
       },
       {
         key: 'no_report',
-        title: `Не сдан отчёт за ${prevMonth}`,
+        title: `Не сдан отчёт за ${monthName(prevMonth)}`,
         why: 'Отчёт за прошлый месяц уже должен быть сдан.',
         action: 'Открыть отчёты',
         link: '/reports',

@@ -18,15 +18,23 @@ export default function CookieBanner() {
     setVisible(false);
   };
 
+  // Пока баннер виден, освобождаем под него место в конце страницы:
+  // иначе он просто ложится поверх последних строк и кнопок, и до них
+  // нельзя добраться ни прокруткой, ни нажатием.
+  useEffect(() => {
+    if (!visible) return undefined;
+    document.body.classList.add('has-cookie-banner');
+    return () => document.body.classList.remove('has-cookie-banner');
+  }, [visible]);
+
   if (!visible) return null;
 
   return (
     <div className="cookie-banner">
       <div className="cookie-banner-content">
         <p>
-          Мы используем файлы cookie для обеспечения работы платформы. 
-          Продолжая использовать сайт, вы соглашаетесь с 
-          <Link to="/privacy-policy"> Политикой конфиденциальности</Link>.
+          Платформа использует файлы cookie.{' '}
+          <Link to="/privacy-policy">Политика конфиденциальности</Link>.
         </p>
         <div className="cookie-banner-actions">
           <button className="cookie-accept" onClick={acceptCookies}>
@@ -43,11 +51,12 @@ export default function CookieBanner() {
           right: 0;
           background: var(--color-primary-dark);
           color: rgba(255, 255, 255, 0.9);
-          padding: 16px 24px;
+          padding: 10px 24px;
           z-index: 9999;
-          border-top: 2px solid var(--color-gold);
+          border-top: 1px solid var(--color-gold);
           box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
         }
+
 
         .cookie-banner-content {
           max-width: 1200px;
@@ -84,7 +93,7 @@ export default function CookieBanner() {
         }
 
         .cookie-accept {
-          padding: 8px 28px;
+          padding: 6px 22px;
           background: var(--color-gold);
           color: var(--color-primary-dark);
           border: none;
@@ -102,12 +111,13 @@ export default function CookieBanner() {
 
         @media (max-width: 768px) {
           .cookie-banner {
-            padding: 14px 16px;
+            padding: 10px 16px;
           }
 
           .cookie-banner-content {
-            flex-direction: column;
-            text-align: center;
+            flex-direction: row;
+            text-align: left;
+            gap: 12px;
           }
 
           .cookie-banner-content p {
@@ -115,29 +125,21 @@ export default function CookieBanner() {
           }
 
           .cookie-banner-actions {
-            width: 100%;
-            justify-content: center;
-          }
-
-          .cookie-accept {
-            flex: 1;
-            max-width: 200px;
+            flex-shrink: 0;
           }
         }
 
         @media (max-width: 480px) {
           .cookie-banner {
-            padding: 12px 12px;
+            padding: 10px 12px;
           }
 
-          .cookie-banner-actions {
-            flex-direction: column;
-            align-items: center;
+          .cookie-banner-content p {
+            font-size: 11px;
           }
 
           .cookie-accept {
-            max-width: 100%;
-            width: 100%;
+            padding: 6px 16px;
           }
         }
       `}</style>

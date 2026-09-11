@@ -72,8 +72,11 @@ export default function ClubSessions() {
       setClubs(list);
 
       if (!clubId) {
-        // Руководителю показываем его клуб сразу, без лишнего выбора
-        const mine = me.club_id || (list.length === 1 ? list[0].id : null);
+        // Руководителю показываем его клуб сразу; администратору и
+        // координатору — первый по списку, потому что именно он и так
+        // виден в поле выбора. Пустое значение при непустом списке
+        // выглядит как «в этом клубе нет занятий», а это неправда.
+        const mine = me.club_id || list[0]?.id || null;
         if (mine) setClubId(mine);
         else setLoading(false);
       }

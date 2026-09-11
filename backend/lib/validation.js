@@ -176,6 +176,27 @@ export const taskSchema = Joi.object({
 });
 
 // 10a. КАТЕГОРИЯ ДОСТИЖЕНИЙ
+// КЮД: название обязательно, остальное — по мере заполнения.
+// Названия клубов в движении вида «КЮД Владивосток», поэтому ограничение
+// сверху щедрое, а снизу — два символа, чтобы не завели клуб «а».
+export const clubSchema = Joi.object({
+  name: Joi.string().trim().min(2).max(255).required().messages({
+    'string.min': 'Название КЮДа слишком короткое',
+    'string.max': 'Название КЮДа длиннее 255 символов',
+    'any.required': 'Название КЮДа обязательно',
+    'string.empty': 'Название КЮДа обязательно'
+  }),
+  description: Joi.string().max(2000).allow('', null),
+  city: Joi.string().max(100).allow('', null),
+  school: Joi.string().max(500).allow('', null),
+  leader_name: Joi.string().max(255).allow('', null),
+  contact_email: Joi.string().email().max(255).allow('', null).messages({
+    'string.email': 'Проверьте адрес электронной почты'
+  }),
+  contact_phone: Joi.string().max(50).allow('', null),
+  status: Joi.string().valid('active', 'archived').default('active')
+});
+
 export const achievementCategorySchema = Joi.object({
   name: Joi.string().min(2).max(100).required().messages({
     'string.empty': 'Название категории обязательно',
@@ -255,6 +276,7 @@ export default {
   newsSchema,
   goalSchema,
   taskSchema,
+  clubSchema,
   achievementCategorySchema,
   tutorInvitationSchema,
   presidentTaskSchema,

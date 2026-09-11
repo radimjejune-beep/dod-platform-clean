@@ -38,6 +38,7 @@ import {
   taskSchema,
   presidentTaskSchema,
   massNotificationSchema,
+  clubSchema,
   achievementCategorySchema,
   tutorInvitationSchema
 } from './lib/validation.js';
@@ -1258,11 +1259,15 @@ app.delete('/api/users/:id', authenticate, requireAdmin, async (req, res) => {
 // ============================================================
 app.get('/api/clubs', authenticate, async (req, res) => {
   try {
+    // Архивные клубы в списках не показываем: они остаются в базе, чтобы
+    // не осиротить историю участников и мероприятий, но в работе мешают.
+    const includeArchived = req.query.include_archived === 'true';
     const result = await pool.query(
       `SELECT c.*, 
               COUNT(DISTINCT cp.profile_id) as participants_count
        FROM clubs c
        LEFT JOIN club_participants cp ON c.id = cp.club_id AND cp.status = 'active'
+       ${includeArchived ? '' : "WHERE COALESCE(c.status, 'active') <> 'archived'"}
        GROUP BY c.id
        ORDER BY c.name`
     );
@@ -4621,32 +4626,47 @@ app.get('/api/bulk-actions/:id', authenticate, async (req, res) => {
 });
 
 // Асинхронная обработка массового действия
+// Раньше внутри цикла стояли пустые комментарии: «Присвоить клуб»,
+// «Отправить уведомление», «Экспорт данных». Функция исправно считала
+// обработанные записи, писала статус «выполнено» и не делала ничего.
+// Массовое действие сообщало об успехе, которого не было.
 async function processBulkAction(actionId) {
   try {
-    const action = await pool.query(
-      'SELECT * FROM bulk_actions WHERE id = $1',
-      [actionId]
-    );
-
+    const action = await pool.query('SELECT * FROM bulk_actions WHERE id = $1', [actionId]);
     if (action.rows.length === 0) return;
 
-    const { action_type, target_ids } = action.rows[0];
+    const { action_type, target_ids, data, created_by } = action.rows[0];
 
-    await pool.query(
-      'UPDATE bulk_actions SET status = $1 WHERE id = $2',
-      ['processing', actionId]
-    );
+    await pool.query('UPDATE bulk_actions SET status = $1 WHERE id = $2', ['processing', actionId]);
 
-    let result = { processed: 0, failed: 0, details: [] };
+    const result = { processed: 0, failed: 0, details: [] };
+    const payload = data || {};
 
     for (const targetId of target_ids) {
       try {
         if (action_type === 'assign_club') {
-          // Присвоить клуб
+          if (!payload.club_id) throw new Error('Не указан клуб');
+          const upd = await pool.query(
+            `UPDATE users SET club_id = $1, updated_at = NOW()
+             WHERE id = $2 AND role IN ('participant', 'club_coordinator', 'tutor')
+             RETURNING id`,
+            [payload.club_id, targetId]
+          );
+          if (upd.rows.length === 0) throw new Error('Пользователь не найден или роль не допускает привязку к клубу');
+          invalidateUserCache(targetId);
         } else if (action_type === 'send_notification') {
-          // Отправить уведомление
-        } else if (action_type === 'export') {
-          // Экспорт данных
+          if (!payload.title || !payload.message) throw new Error('Не указан заголовок или текст');
+          await createNotification(
+            targetId,
+            payload.type || 'system',
+            payload.title,
+            payload.message,
+            payload.link || null,
+            payload.priority || 'normal'
+          );
+        } else {
+          // Неизвестное действие — это ошибка, а не повод отчитаться об успехе
+          throw new Error(`Неизвестный вид массового действия: ${action_type}`);
         }
         result.processed++;
       } catch (err) {
@@ -4656,17 +4676,18 @@ async function processBulkAction(actionId) {
     }
 
     await pool.query(
-      `UPDATE bulk_actions 
-       SET status = $1, result = $2, completed_at = NOW()
-       WHERE id = $3`,
-      ['completed', result, actionId]
+      `UPDATE bulk_actions SET status = $1, result = $2, completed_at = NOW() WHERE id = $3`,
+      [result.failed > 0 && result.processed === 0 ? 'failed' : 'completed', result, actionId]
     );
+
+    await logActivity(created_by, 'BULK_ACTION_DONE', 'user', null, {
+      action_type,
+      processed: result.processed,
+      failed: result.failed
+    });
   } catch (error) {
     console.error('❌ Ошибка обработки массового действия:', error);
-    await pool.query(
-      `UPDATE bulk_actions SET status = 'failed' WHERE id = $1`,
-      [actionId]
-    );
+    await pool.query(`UPDATE bulk_actions SET status = 'failed' WHERE id = $1`, [actionId]);
   }
 }
 
@@ -7584,6 +7605,398 @@ app.post('/api/users/issue-credentials', authenticate, requireAdmin, async (req,
     res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   } finally {
     client.release();
+  }
+});
+
+
+// ============================================================
+// СОЗДАНИЕ, ПРАВКА И АРХИВАЦИЯ КЮДА
+// ============================================================
+// Экран «Управление КЮДами» до этого только делал вид, что работает:
+// внутри стоял setTimeout на полсекунды, после которого клуб появлялся
+// в списке на экране и исчезал при первом же обновлении страницы.
+// Ни создания, ни правки, ни удаления на сервере не существовало —
+// все сорок четыре клуба заводились напрямую в базе.
+
+app.post('/api/clubs', authenticate, requireAdminOrCoordinator, validateBody(clubSchema), async (req, res) => {
+  try {
+    const { name, description, city, school, leader_name, contact_email, contact_phone } = req.body;
+
+    // Клубы называются по городу, и одинаковые имена в списке из сорока
+    // четырёх строк означают, что кто-то завёл второй по ошибке
+    const clash = await pool.query(
+      'SELECT id FROM clubs WHERE LOWER(TRIM(name)) = LOWER(TRIM($1))',
+      [name]
+    );
+    if (clash.rows.length > 0) {
+      return res.status(409).json({
+        error: 'КЮД с таким названием уже есть',
+        code: 'CLUB_NAME_TAKEN'
+      });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO clubs (name, description, city, school, leader_name,
+                          contact_email, contact_phone, status, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', NOW(), NOW())
+       RETURNING *`,
+      [String(name).trim(), description || '', city || '', school || '',
+       leader_name || '', contact_email || '', contact_phone || '']
+    );
+
+    const club = result.rows[0];
+    await logActivity(req.user.userId, 'CLUB_CREATED', 'club', club.id, { name: club.name });
+
+    res.status(201).json({ message: 'КЮД создан', club });
+  } catch (error) {
+    console.error('❌ Ошибка создания КЮДа:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.patch('/api/clubs/:id', authenticate, requireAdminOrCoordinator, validateBody(clubSchema), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, city, school, leader_name, contact_email, contact_phone } = req.body;
+
+    const existing = await pool.query('SELECT id, name FROM clubs WHERE id = $1', [id]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'КЮД не найден' });
+    }
+
+    const clash = await pool.query(
+      'SELECT id FROM clubs WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) AND id <> $2',
+      [name, id]
+    );
+    if (clash.rows.length > 0) {
+      return res.status(409).json({ error: 'КЮД с таким названием уже есть', code: 'CLUB_NAME_TAKEN' });
+    }
+
+    const result = await pool.query(
+      `UPDATE clubs
+       SET name = $1, description = $2, city = $3, school = $4,
+           leader_name = $5, contact_email = $6, contact_phone = $7, updated_at = NOW()
+       WHERE id = $8
+       RETURNING *`,
+      [String(name).trim(), description || '', city || '', school || '',
+       leader_name || '', contact_email || '', contact_phone || '', id]
+    );
+
+    await logActivity(req.user.userId, 'CLUB_UPDATED', 'club', id, {
+      name: result.rows[0].name,
+      previous_name: existing.rows[0].name
+    });
+
+    res.json({ message: 'КЮД обновлён', club: result.rows[0] });
+  } catch (error) {
+    console.error('❌ Ошибка обновления КЮДа:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Удаления как такового нет: на клуб ссылаются участники, мероприятия,
+// отчёты и достижения. Удалить строку — значит осиротить их историю.
+// Клуб уходит в архив: пропадает из списков, но всё, что было, остаётся.
+app.delete('/api/clubs/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const club = await pool.query('SELECT id, name, status FROM clubs WHERE id = $1', [id]);
+    if (club.rows.length === 0) {
+      return res.status(404).json({ error: 'КЮД не найден' });
+    }
+    if (club.rows[0].status === 'archived') {
+      return res.status(400).json({ error: 'КЮД уже в архиве' });
+    }
+
+    const members = await pool.query(
+      `SELECT COUNT(*)::int AS n FROM users WHERE club_id = $1 AND status = 'active'`,
+      [id]
+    );
+    if (members.rows[0].n > 0 && req.query.force !== 'true') {
+      return res.status(409).json({
+        error: `В КЮДе ещё числится людей: ${members.rows[0].n}. Переведите их в другой клуб или подтвердите архивацию.`,
+        code: 'CLUB_NOT_EMPTY',
+        members_count: members.rows[0].n
+      });
+    }
+
+    await pool.query(
+      `UPDATE clubs SET status = 'archived', archived_at = NOW(), updated_at = NOW() WHERE id = $1`,
+      [id]
+    );
+
+    await logActivity(req.user.userId, 'CLUB_ARCHIVED', 'club', id, {
+      name: club.rows[0].name,
+      members_count: members.rows[0].n
+    });
+
+    res.json({ message: 'КЮД перенесён в архив', archived: true });
+  } catch (error) {
+    console.error('❌ Ошибка архивации КЮДа:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Вернуть из архива
+app.post('/api/clubs/:id/restore', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      `UPDATE clubs SET status = 'active', archived_at = NULL, updated_at = NOW()
+       WHERE id = $1 AND status = 'archived'
+       RETURNING id, name`,
+      [id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'КЮД не найден или не в архиве' });
+    }
+    await logActivity(req.user.userId, 'CLUB_RESTORED', 'club', id, { name: result.rows[0].name });
+    res.json({ message: 'КЮД возвращён из архива' });
+  } catch (error) {
+    console.error('❌ Ошибка возврата КЮДа из архива:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+
+// ============================================================
+// НАПОМИНАНИЕ О НЕОФОРМЛЕННЫХ СОГЛАСИЯХ
+// ============================================================
+// Кнопка «Напомнить всем» на экране согласий раньше ждала секунду и
+// писала «напоминания отправлены». Не отправлялось ничего.
+//
+// Писем платформа не шлёт — почтового модуля нет. Поэтому напоминание
+// приходит уведомлением внутрь платформы, и адресат выбирается по смыслу:
+//   — есть законный представитель → напоминаем ему, он и оформляет;
+//   — представителя нет → напоминаем руководителю КЮДа, потому что
+//     оформлять некому и сначала нужно пригласить родителя.
+// Тем, кому напомнить некому, платформа честно говорит об этом числом.
+app.post('/api/consents/remind', authenticate, async (req, res) => {
+  try {
+    const { role, userId } = req.user;
+    if (!STAFF_ROLES.includes(role)) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    const ids = Array.isArray(req.body?.participant_ids) ? req.body.participant_ids : [];
+    if (ids.length === 0) {
+      return res.status(400).json({ error: 'Не выбран ни один участник' });
+    }
+    if (ids.length > 500) {
+      return res.status(400).json({ error: 'За один раз можно напомнить не больше чем по 500 участникам' });
+    }
+
+    // Руководитель КЮДа напоминает только по своим клубам
+    let allowed = ids;
+    if (role === 'club_coordinator') {
+      const clubIds = await getCoordinatorClubIds(userId);
+      if (clubIds.length === 0) {
+        return res.status(403).json({ error: 'К вам не привязан ни один КЮД' });
+      }
+      const mine = await pool.query(
+        `SELECT id FROM users WHERE id = ANY($1) AND club_id = ANY($2)`,
+        [ids, clubIds]
+      );
+      allowed = mine.rows.map((r) => r.id);
+      if (allowed.length === 0) {
+        return res.status(403).json({ error: 'Выбранные участники не из вашего КЮДа' });
+      }
+    }
+
+    const rows = await pool.query(
+      `SELECT u.id, u.full_name, u.club_id, c.name AS club_name,
+              (SELECT cp.parent_id FROM child_parent cp
+                WHERE cp.child_id = u.id AND cp.status = 'active' LIMIT 1) AS parent_id,
+              ARRAY(
+                SELECT d.title FROM consent_documents d
+                WHERE d.is_current = true AND d.is_required = true
+                  AND NOT EXISTS (
+                    SELECT 1 FROM user_consents uc
+                    WHERE uc.user_id = u.id AND uc.consent_type = d.code AND uc.revoked_at IS NULL
+                  )
+              ) AS missing
+       FROM users u
+       LEFT JOIN clubs c ON c.id = u.club_id
+       WHERE u.id = ANY($1) AND u.role = 'participant' AND u.status = 'active'`,
+      [allowed]
+    );
+
+    let toParents = 0;
+    let toStaff = 0;
+    let nobody = 0;
+    const staffBuckets = new Map();   // club_id -> [имена участников без представителя]
+
+    for (const p of rows.rows) {
+      if (!p.missing || p.missing.length === 0) continue;   // у этого всё оформлено
+
+      if (p.parent_id) {
+        await createNotification(
+          p.parent_id,
+          'consent',
+          'Нужно оформить согласия',
+          `Для участия ${p.full_name} в мероприятиях движения не хватает согласий: ${p.missing.join(', ')}.`,
+          '/parent-consents',
+          'high'
+        );
+        toParents++;
+      } else if (p.club_id) {
+        const list = staffBuckets.get(p.club_id) || [];
+        list.push(p.full_name);
+        staffBuckets.set(p.club_id, list);
+      } else {
+        nobody++;
+      }
+    }
+
+    // Руководителям — по одному письму на клуб, а не по одному на ребёнка
+    for (const [clubId, names] of staffBuckets.entries()) {
+      const heads = await pool.query(
+        `SELECT user_id FROM club_staff
+         WHERE club_id = $1 AND removed_at IS NULL AND position IN ('head', 'deputy')`,
+        [clubId]
+      );
+      if (heads.rows.length === 0) {
+        nobody += names.length;
+        continue;
+      }
+      for (const head of heads.rows) {
+        await createNotification(
+          head.user_id,
+          'consent',
+          'Участники без законного представителя',
+          `Согласия не оформлены, и оформить их некому — к участникам не привязан родитель: ${names.join(', ')}. ` +
+          'Пригласите родителей из карточки участника.',
+          '/participants',
+          'high'
+        );
+        toStaff++;
+      }
+    }
+
+    await logActivity(userId, 'CONSENT_REMINDERS_SENT', 'user', null, {
+      participants: rows.rows.length,
+      to_parents: toParents,
+      to_staff: toStaff,
+      nobody
+    });
+
+    res.json({
+      message: 'Напоминания отправлены',
+      to_parents: toParents,
+      to_staff: toStaff,
+      nobody
+    });
+  } catch (error) {
+    console.error('❌ Ошибка отправки напоминаний о согласиях:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+
+// ============================================================
+// НАЗНАЧЕНИЕ СОТРУДНИКА НА МЕРОПРИЯТИЕ
+// ============================================================
+// Экран «Сотрудники» писал «Сотрудник назначен!» и не делал ничего:
+// на месте запроса стоял комментарий «TODO: добавить API». Назначения
+// существовали только в таблице, куда их писали вручную.
+app.post('/api/event-tutor-assignments', authenticate, requireAdminOrCoordinator, async (req, res) => {
+  try {
+    const { event_id, tutor_id, role, notes } = req.body || {};
+
+    if (!event_id || !tutor_id) {
+      return res.status(400).json({ error: 'Нужно выбрать мероприятие и сотрудника' });
+    }
+
+    const event = await pool.query('SELECT id, title, event_date FROM events WHERE id = $1', [event_id]);
+    if (event.rows.length === 0) {
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    const staff = await pool.query(
+      `SELECT id, full_name, role, status FROM users WHERE id = $1`,
+      [tutor_id]
+    );
+    if (staff.rows.length === 0) {
+      return res.status(404).json({ error: 'Сотрудник не найден' });
+    }
+    if (BLOCKED_STATUSES.includes(staff.rows[0].status)) {
+      return res.status(400).json({ error: 'Учётная запись сотрудника заблокирована' });
+    }
+
+    const existing = await pool.query(
+      'SELECT id FROM event_tutor_assignments WHERE event_id = $1 AND tutor_id = $2',
+      [event_id, tutor_id]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(409).json({
+        error: `${staff.rows[0].full_name} уже назначен на это мероприятие`,
+        code: 'ALREADY_ASSIGNED'
+      });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO event_tutor_assignments (event_id, tutor_id, role, status, assigned_by, notes, assigned_at, updated_at)
+       VALUES ($1, $2, $3, 'pending', $4, $5, NOW(), NOW())
+       RETURNING *`,
+      [event_id, tutor_id, role || 'tutor', req.user.userId, notes || null]
+    );
+
+    // Сотрудник должен узнать о назначении, а не обнаружить его случайно
+    await createNotification(
+      tutor_id,
+      'assignment',
+      'Вас назначили на мероприятие',
+      `${event.rows[0].title}${event.rows[0].event_date ? ' — ' + new Date(event.rows[0].event_date).toLocaleDateString('ru-RU') : ''}.`,
+      '/tutor-assignments',
+      'high'
+    );
+
+    await logActivity(req.user.userId, 'TUTOR_ASSIGNED', 'event', event_id, {
+      tutor: staff.rows[0].full_name,
+      role: role || 'tutor'
+    });
+
+    res.status(201).json({ message: 'Сотрудник назначен', assignment: result.rows[0] });
+  } catch (error) {
+    console.error('❌ Ошибка назначения сотрудника:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.delete('/api/event-tutor-assignments/:id', authenticate, requireAdminOrCoordinator, async (req, res) => {
+  try {
+    const found = await pool.query(
+      `SELECT a.id, a.event_id, a.tutor_id, u.full_name, e.title
+       FROM event_tutor_assignments a
+       LEFT JOIN users u ON u.id = a.tutor_id
+       LEFT JOIN events e ON e.id = a.event_id
+       WHERE a.id = $1`,
+      [req.params.id]
+    );
+    if (found.rows.length === 0) {
+      return res.status(404).json({ error: 'Назначение не найдено' });
+    }
+
+    await pool.query('DELETE FROM event_tutor_assignments WHERE id = $1', [req.params.id]);
+
+    await createNotification(
+      found.rows[0].tutor_id,
+      'assignment',
+      'Назначение отменено',
+      `Вы больше не назначены на мероприятие «${found.rows[0].title || ''}».`,
+      '/tutor-assignments',
+      'normal'
+    );
+
+    await logActivity(req.user.userId, 'TUTOR_UNASSIGNED', 'event', found.rows[0].event_id, {
+      tutor: found.rows[0].full_name
+    });
+
+    res.json({ message: 'Назначение отменено' });
+  } catch (error) {
+    console.error('❌ Ошибка отмены назначения:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
 

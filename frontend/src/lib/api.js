@@ -746,6 +746,23 @@ export const getTutorAssignments = async (params = {}) => {
   return toArray(await response.json());
 };
 
+export const createTutorAssignment = async (data) => {
+  const response = await fetch(`${API_URL}/event-tutor-assignments`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteTutorAssignment = async (assignmentId) => {
+  const response = await fetch(`${API_URL}/event-tutor-assignments/${assignmentId}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
 export const respondToAssignment = async (assignmentId, status) => {
   const response = await fetch(`${API_URL}/event-tutor-assignments/${assignmentId}`, {
     method: 'PATCH',
@@ -1017,6 +1034,18 @@ export const giveConsent = async (subjectId, code) => {
   return response.json();
 };
 
+// Напоминание уходит уведомлением внутрь платформы: родителю, если он
+// привязан, иначе руководителю КЮДа — потому что оформлять согласие
+// пока некому и сначала нужно пригласить родителя.
+export const remindAboutConsents = async (participantIds) => {
+  const response = await fetch(`${API_URL}/consents/remind`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ participant_ids: participantIds })
+  });
+  return response.json();
+};
+
 export const revokeConsent = async (subjectId, code, reason) => {
   const response = await fetch(`${API_URL}/consents/revoke`, {
     method: 'POST',
@@ -1166,6 +1195,45 @@ export const exportEventTeams = async (eventId, withDocuments = false) => {
   link.click();
   link.remove();
   URL.revokeObjectURL(link.href);
+};
+
+// ============================================================
+// 20b. УПРАВЛЕНИЕ КЮДАМИ
+// ============================================================
+// Удаления нет: на клуб ссылаются участники, мероприятия и отчёты,
+// поэтому клуб уходит в архив и пропадает из списков, а история остаётся.
+export const createClub = async (data) => {
+  const response = await fetch(`${API_URL}/clubs`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateClub = async (id, data) => {
+  const response = await fetch(`${API_URL}/clubs/${id}`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const archiveClub = async (id, { force = false } = {}) => {
+  const response = await fetch(`${API_URL}/clubs/${id}${force ? '?force=true' : ''}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const restoreClub = async (id) => {
+  const response = await fetch(`${API_URL}/clubs/${id}/restore`, {
+    method: 'POST',
+    headers: headers()
+  });
+  return response.json();
 };
 
 // ============================================================
@@ -1388,6 +1456,8 @@ const api = {
   createTutorRequest,
   updateTutorRequest,
   getTutorAssignments,
+  createTutorAssignment,
+  deleteTutorAssignment,
   respondToAssignment,
   getTutorInvitations,
   createTutorInvitation,
@@ -1444,8 +1514,13 @@ const api = {
   getUserConsents,
   giveConsent,
   revokeConsent,
+  remindAboutConsents,
   
   // Дети
+  createClub,
+  updateClub,
+  archiveClub,
+  restoreClub,
   issueCredentials,
   createParentInvitation,
   getParentInvitations,

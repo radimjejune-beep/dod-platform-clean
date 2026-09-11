@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
+import { roleLabel } from '../lib/roles';
 import Icon from '../components/Icon';
 
 export default function StaffManagement() {
@@ -135,8 +136,10 @@ export default function StaffManagement() {
       setAllStaff(filteredStaff);
       setStaff(filteredStaff);
 
-      // TODO: добавить API для получения назначений
-      setAssignments([]);
+      // Назначения приходят с сервера: раньше здесь стоял пустой массив,
+      // и список назначений всегда был пуст, сколько бы их ни создали
+      const assignmentsData = await api.getTutorAssignments();
+      setAssignments(Array.isArray(assignmentsData) ? assignmentsData : []);
 
     } catch (err) {
       console.error('Ошибка:', err);
@@ -238,8 +241,21 @@ export default function StaffManagement() {
         return;
       }
 
-      // TODO: добавить API для создания назначения
-      setMessage('Сотрудник назначен!');
+      const result = await api.createTutorAssignment({
+        event_id: form.event_id,
+        tutor_id: form.staff_id,
+        role: form.role || 'tutor',
+        notes: form.is_lead_tutor ? 'Ответственный тьютор' : null
+      });
+
+      if (result?.error) {
+        setMessage(api.describeApiError(result, 'Не удалось назначить сотрудника'));
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
+
+      setMessage('Сотрудник назначен, уведомление ему отправлено');
       setMessageType('success');
       setForm({
         staff_id: '',
@@ -268,13 +284,28 @@ export default function StaffManagement() {
     }
   };
 
-  const handleRemoveStaff = async (staffId) => {
-    if (!confirm('Удалить сотрудника?')) return;
-    // TODO: добавить API для удаления сотрудника
-    setMessage('Сотрудник удалён');
-    setMessageType('success');
-    loadData();
-    setTimeout(() => setMessage(''), 3000);
+  // Здесь снимается назначение на мероприятие, а не удаляется человек
+  // из платформы — раньше кнопка называлась «Удалить сотрудника» и
+  // не делала ни того, ни другого.
+  const handleRemoveAssignment = async (assignmentId) => {
+    if (!confirm('Снять сотрудника с этого мероприятия?')) return;
+
+    try {
+      const result = await api.deleteTutorAssignment(assignmentId);
+      if (result?.error) {
+        setMessage(api.describeApiError(result, 'Не удалось снять назначение'));
+        setMessageType('error');
+        return;
+      }
+      setMessage('Назначение снято');
+      setMessageType('success');
+      loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      console.error('❌ Ошибка снятия назначения:', err);
+      setMessage('Не удалось снять назначение');
+      setMessageType('error');
+    }
   };
 
   const getFilteredStaff = () => {
@@ -852,11 +883,11 @@ export default function StaffManagement() {
                   {(isAdmin || isMovementCoordinator) && (
                     <div style={{ marginTop: '8px' }}>
                       <button
-                        className="btn-danger"
-                        style={{ padding: '4px 12px', fontSize: '12px' }}
-                        onClick={() => handleRemoveStaff(s.id)}
+                        className="btn-ghost btn-sm"
+                        onClick={() => navigate(`/participant/${s.id}`)}
                       >
-                        Удалить
+                        <Icon name="user" size={14} />
+                        Открыть карточку
                       </button>
                     </div>
                   )}
@@ -865,6 +896,68 @@ export default function StaffManagement() {
             </div>
           )}
         </div>
+
+        {/* ===== НАЗНАЧЕНИЯ НА МЕРОПРИЯТИЯ ===== */}
+        {(isAdmin || isMovementCoordinator) && (
+          <div className="card" style={{ marginTop: '20px' }}>
+            <div className="card-header">
+              <h3 className="card-title">Назначения на мероприятия</h3>
+              <span className="badge badge-neutral">{assignments.length}</span>
+            </div>
+
+            {assignments.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon"><Icon name="calendar" /></div>
+                <h3>Назначений пока нет</h3>
+                <p>Назначьте сотрудника на мероприятие — он получит уведомление.</p>
+              </div>
+            ) : (
+              <div className="table-wrapper">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Сотрудник</th>
+                      <th>Мероприятие</th>
+                      <th>Дата</th>
+                      <th>Роль</th>
+                      <th>Состояние</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {assignments.map((a) => (
+                      <tr key={a.id}>
+                        <td>{a.tutor_name || '—'}</td>
+                        <td>{a.event_title || '—'}</td>
+                        <td>{a.event_date ? new Date(a.event_date).toLocaleDateString('ru-RU') : '—'}</td>
+                        <td>{a.role === 'tutor' ? 'Тьютор' : roleLabel(a.role)}</td>
+                        <td>
+                          {a.status === 'accepted'
+                            ? <span className="badge badge-success badge-dot">принято</span>
+                            : a.status === 'declined'
+                              ? <span className="badge badge-error badge-dot">отказ</span>
+                              : <span className="badge badge-warning badge-dot">ждёт ответа</span>}
+                        </td>
+                        <td>
+                          <div className="row-actions">
+                            <button
+                              className="btn-ghost btn-sm btn-icon row-action-danger"
+                              onClick={() => handleRemoveAssignment(a.id)}
+                              title="Снять с мероприятия"
+                              aria-label="Снять с мероприятия"
+                            >
+                              <Icon name="trash" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

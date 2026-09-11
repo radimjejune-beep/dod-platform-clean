@@ -120,15 +120,30 @@ export default function ConsentsManagement() {
       return;
     }
 
-    if (!confirm(`Отправить напоминание ${target.length} участникам?`)) return;
+    if (!confirm(`Отправить напоминание по ${target.length} участникам?`)) return;
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setMessage(`Напоминания отправлены ${target.length} участникам`);
-      setMessageType('success');
-      setTimeout(() => setMessage(''), 3000);
+      const result = await api.remindAboutConsents(target.map((p) => p.id));
+
+      if (result?.error) {
+        setMessage(api.describeApiError(result, 'Не удалось отправить напоминания'));
+        setMessageType('error');
+        return;
+      }
+
+      // Говорим честно, кому именно ушло: родителю, руководителю КЮДа —
+      // или никому, если у участника нет ни представителя, ни клуба
+      const parts = [];
+      if (result.to_parents) parts.push(`родителям — ${result.to_parents}`);
+      if (result.to_staff) parts.push(`руководителям КЮДов — ${result.to_staff}`);
+      if (result.nobody) parts.push(`некому напомнить — ${result.nobody}`);
+
+      setMessage(parts.length ? `Напоминания отправлены: ${parts.join(', ')}` : 'Напоминать не о чем');
+      setMessageType(result.nobody && !result.to_parents && !result.to_staff ? 'error' : 'success');
+      setTimeout(() => setMessage(''), 6000);
     } catch (err) {
-      setMessage('Ошибка: ' + err.message);
+      console.error('❌ Ошибка отправки напоминаний:', err);
+      setMessage('Не удалось отправить напоминания');
       setMessageType('error');
     }
   };

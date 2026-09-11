@@ -45,7 +45,8 @@ export default function ClubsManagement() {
 
       setProfile(userData);
 
-      const clubsData = await api.getClubs();
+      // На экране управления архивные клубы нужны: иначе их некуда вернуть
+      const clubsData = await api.getClubs({ include_archived: 'true' });
       setClubs(clubsData || []);
     } catch (err) {
       console.error('Ошибка:', err);
@@ -68,26 +69,31 @@ export default function ClubsManagement() {
         return;
       }
 
-      // TODO: добавить API для создания/обновления клуба
-      // Пока имитация
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const newClub = {
-        id: editingClub?.id || `club-${Date.now()}`,
-        ...form,
-        created_at: editingClub?.created_at || new Date().toISOString()
+      const payload = {
+        name: form.name.trim(),
+        description: form.description || '',
+        city: form.city || '',
+        school: form.school || '',
+        leader_name: form.leader_name || '',
+        contact_email: form.contact_email || '',
+        contact_phone: form.contact_phone || ''
       };
 
-      if (editingClub) {
-        setClubs(clubs.map(c => c.id === editingClub.id ? newClub : c));
-        setMessage('КЮД обновлён!');
-      } else {
-        setClubs([...clubs, newClub]);
-        setMessage('КЮД создан!');
+      const result = editingClub
+        ? await api.updateClub(editingClub.id, payload)
+        : await api.createClub(payload);
+
+      if (result?.error) {
+        setMessage(api.describeApiError(result, 'Не удалось сохранить КЮД'));
+        setMessageType('error');
+        setLoading(false);
+        return;
       }
 
+      setMessage(editingClub ? 'КЮД обновлён' : 'КЮД создан');
       setMessageType('success');
       resetForm();
+      await loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       setMessage('Ошибка: ' + err.message);
@@ -128,34 +134,55 @@ export default function ClubsManagement() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Удалить этот КЮД? Все данные будут потеряны.')) return;
+  // Удаления у КЮДа нет и быть не может: на клуб ссылаются участники,
+  // мероприятия, отчёты и достижения. Клуб уходит в архив — пропадает из
+  // списков, но вся история остаётся на месте.
+  const handleArchive = async (id, { force = false } = {}) => {
+    if (!force && !confirm('Перенести этот КЮД в архив? Он исчезнет из списков, история сохранится.')) return;
 
     try {
-      // TODO: добавить API для удаления клуба
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setClubs(clubs.filter(c => c.id !== id));
-      setMessage('КЮД удалён');
+      const result = await api.archiveClub(id, { force });
+
+      if (result?.code === 'CLUB_NOT_EMPTY') {
+        const ok = confirm(
+          `${result.error}\n\nПеренести в архив вместе с ними?`
+        );
+        if (ok) return handleArchive(id, { force: true });
+        return;
+      }
+
+      if (result?.error) {
+        setMessage(api.describeApiError(result, 'Не удалось перенести КЮД в архив'));
+        setMessageType('error');
+        return;
+      }
+
+      setMessage('КЮД перенесён в архив');
       setMessageType('success');
+      await loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('Ошибка: ' + err.message);
+      console.error('❌ Ошибка архивации КЮДа:', err);
+      setMessage('Не удалось перенести КЮД в архив');
       setMessageType('error');
     }
   };
 
-  const handleArchive = async (id) => {
-    if (!confirm('Архивировать этот КЮД? Он станет неактивным.')) return;
-
+  const handleRestore = async (id) => {
     try {
-      setClubs(clubs.map(c => 
-        c.id === id ? { ...c, status: 'archived' } : c
-      ));
-      setMessage('КЮД архивирован');
+      const result = await api.restoreClub(id);
+      if (result?.error) {
+        setMessage(api.describeApiError(result, 'Не удалось вернуть КЮД из архива'));
+        setMessageType('error');
+        return;
+      }
+      setMessage('КЮД возвращён из архива');
       setMessageType('success');
+      await loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('Ошибка: ' + err.message);
+      console.error('❌ Ошибка возврата КЮДа:', err);
+      setMessage('Не удалось вернуть КЮД из архива');
       setMessageType('error');
     }
   };
@@ -352,22 +379,19 @@ export default function ClubsManagement() {
                       >
                         Просмотр
                       </button>
-                      {club.status !== 'archived' && (
+                      {club.status !== 'archived' ? (
                         <button
-                          className="btn-secondary"
-                          style={{ padding: '4px 12px', fontSize: '12px', background: 'var(--color-gray-500)', color: 'white' }}
+                          className="btn-danger-soft btn-sm"
                           onClick={() => handleArchive(club.id)}
                         >
-                          Архивировать
+                          В архив
                         </button>
-                      )}
-                      {(profile?.role === 'admin') && (
+                      ) : (
                         <button
-                          className="btn-danger"
-                          style={{ padding: '4px 12px', fontSize: '12px' }}
-                          onClick={() => handleDelete(club.id)}
+                          className="btn-outline btn-sm"
+                          onClick={() => handleRestore(club.id)}
                         >
-                          Удалить
+                          Вернуть из архива
                         </button>
                       )}
                     </div>

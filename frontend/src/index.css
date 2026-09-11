@@ -203,10 +203,13 @@ a:hover {
 }
 
 /* ============================================================
-   КНОПКИ — ПРЕМИАЛЬНЫЕ, НЕ НАЛЕЗАЮТ
+   КНОПКИ
+   ============================================================
+   Принцип: кнопка не прыгает и не светится. Премиальность даёт
+   не анимация, а точная геометрия, выдержанный контраст и
+   короткий, почти незаметный отклик на наведение (0.15s).
    ============================================================ */
 
-/* БАЗОВАЯ КНОПКА */
 button,
 .btn,
 [role="button"],
@@ -216,174 +219,197 @@ input[type="submit"] {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 22px;
-  border: none;
+  padding: 0 18px;
+  height: 40px;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   font-family: var(--font-sans);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 550;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+              color 0.15s ease, box-shadow 0.15s ease;
   text-decoration: none;
-  letter-spacing: 0.01em;
-  min-height: 40px;
-  min-width: 80px;
+  letter-spacing: 0.005em;
   max-width: 100%;
   white-space: nowrap;
   position: relative;
-  overflow: hidden;
   user-select: none;
-  line-height: 1.2;
+  line-height: 1;
   flex-shrink: 0;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ======= ЗОЛОТАЯ КНОПКА ======= */
+/* Клавиатурная навигация: видимое кольцо только при табе, не при клике мышью */
+button:focus-visible,
+.btn:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+button:disabled,
+.btn:disabled,
+.btn.disabled,
+button[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+/* ======= ЗОЛОТАЯ — главное действие на экране, ровно одна ======= */
 .btn-gold {
-  background: var(--color-gold-gradient) !important;
-  color: var(--color-white) !important;
-  box-shadow: 0 4px 16px rgba(201, 162, 39, 0.25);
+  background: var(--color-gold);
+  color: var(--color-white);
+  box-shadow: 0 1px 2px rgba(11, 31, 58, 0.08);
 }
-.btn-gold:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(201, 162, 39, 0.35);
-}
-.btn-gold:active {
-  transform: scale(0.97);
-}
+.btn-gold:hover { background: #B89421; }
+.btn-gold:active { background: #A38119; box-shadow: none; }
 
-/* ======= СИНЯЯ КНОПКА ======= */
+/* ======= СИНЯЯ — основное действие ======= */
 .btn-primary {
   background: var(--color-primary);
   color: var(--color-white);
-  box-shadow: 0 4px 16px rgba(10, 22, 40, 0.15);
+  box-shadow: 0 1px 2px rgba(11, 31, 58, 0.10);
 }
-.btn-primary:hover {
-  background: var(--color-primary-light);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(10, 22, 40, 0.25);
-}
-.btn-primary:active {
-  transform: scale(0.97);
-}
+.btn-primary:hover { background: var(--color-primary-light); }
+.btn-primary:active { background: var(--color-primary-dark); box-shadow: none; }
 
-/* ======= ОБВОДНАЯ КНОПКА ======= */
+/* ======= ОБВОДНАЯ — вторичное действие ======= */
 .btn-outline {
-  background: transparent;
+  background: var(--color-white);
   color: var(--color-primary);
-  border: 1.5px solid var(--color-gold);
-  box-shadow: none;
+  border-color: var(--color-gray-300);
+  box-shadow: 0 1px 2px rgba(11, 31, 58, 0.04);
 }
 .btn-outline:hover {
-  background: var(--color-gold-pale);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(201, 162, 39, 0.12);
+  background: var(--color-gray-50);
+  border-color: var(--color-gray-400);
 }
-.btn-outline:active {
-  transform: scale(0.97);
-}
+.btn-outline:active { background: var(--color-gray-100); box-shadow: none; }
 
-/* ======= БЕЛАЯ КНОПКА ======= */
+/* ======= ПРОЗРАЧНАЯ — третьестепенное, в плотных списках ======= */
+.btn-ghost {
+  background: transparent;
+  color: var(--color-gray-600);
+  box-shadow: none;
+}
+.btn-ghost:hover { background: var(--color-gray-100); color: var(--color-primary); }
+.btn-ghost:active { background: var(--color-gray-200); }
+
+/* ======= БЕЛАЯ — на тёмном фоне ======= */
 .btn-white {
   background: var(--color-white);
   color: var(--color-primary);
-  box-shadow: 0 4px 16px rgba(10, 22, 40, 0.04);
+  box-shadow: 0 1px 2px rgba(11, 31, 58, 0.06);
 }
-.btn-white:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(10, 22, 40, 0.10);
-}
-.btn-white:active {
-  transform: scale(0.97);
-}
+.btn-white:hover { background: var(--color-gray-50); }
+.btn-white:active { background: var(--color-gray-100); box-shadow: none; }
 
-/* ======= ЗЕЛЕНАЯ КНОПКА ======= */
+/* ======= СТАТУСНЫЕ ======= */
 .btn-success {
   background: var(--color-success);
   color: var(--color-white);
-  box-shadow: 0 4px 16px rgba(26, 122, 76, 0.2);
+  box-shadow: 0 1px 2px rgba(22, 132, 91, 0.12);
 }
-.btn-success:hover {
-  background: #13663E;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(26, 122, 76, 0.3);
-}
-.btn-success:active {
-  transform: scale(0.97);
-}
+.btn-success:hover { background: #13704E; }
+.btn-success:active { background: #0F5C40; box-shadow: none; }
 
-/* ======= КРАСНАЯ КНОПКА ======= */
 .btn-danger {
   background: var(--color-error);
   color: var(--color-white);
-  box-shadow: 0 4px 16px rgba(179, 38, 46, 0.2);
+  box-shadow: 0 1px 2px rgba(179, 38, 46, 0.12);
 }
-.btn-danger:hover {
-  background: #8A1C22;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(179, 38, 46, 0.3);
-}
-.btn-danger:active {
-  transform: scale(0.97);
-}
+.btn-danger:hover { background: #9A2027; }
+.btn-danger:active { background: #821A20; box-shadow: none; }
 
-/* ======= ОРАНЖЕВАЯ КНОПКА ======= */
 .btn-warning {
   background: var(--color-warning);
   color: var(--color-white);
-  box-shadow: 0 4px 16px rgba(184, 146, 31, 0.2);
+  box-shadow: 0 1px 2px rgba(184, 146, 31, 0.12);
 }
-.btn-warning:hover {
-  background: #A07D1A;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(184, 146, 31, 0.3);
+.btn-warning:hover { background: #A0801B; }
+.btn-warning:active { background: #8A6E17; box-shadow: none; }
+
+/* Опасное действие вторым планом: красным только текст, пока не наведёшь */
+.btn-danger-soft {
+  background: transparent;
+  color: var(--color-error);
+  border-color: var(--color-gray-300);
+  box-shadow: none;
 }
-.btn-warning:active {
-  transform: scale(0.97);
+.btn-danger-soft:hover {
+  background: var(--color-error-bg);
+  border-color: var(--color-error);
 }
 
 /* ======= РАЗМЕРЫ ======= */
-.btn-sm {
-  padding: 6px 14px;
-  font-size: 12px;
-  min-height: 32px;
-  min-width: 60px;
-}
-.btn-lg {
-  padding: 14px 36px;
-  font-size: 16px;
-  min-height: 52px;
-  min-width: 100px;
-}
+.btn-sm { height: 32px; padding: 0 12px; font-size: 13px; gap: 6px; }
+.btn-lg { height: 48px; padding: 0 28px; font-size: 15px; }
 
-/* ======= КНОПКИ С ИКОНКАМИ ======= */
-.btn svg,
-.btn img {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
+/* Квадратная кнопка под одну иконку — без лишней ширины */
+.btn-icon { width: 40px; padding: 0; }
+.btn-icon.btn-sm { width: 32px; }
+.btn-icon.btn-lg { width: 48px; }
+
+/* Кнопка, которая выглядит ссылкой */
+.btn-link {
+  background: none;
+  border: none;
+  box-shadow: none;
+  height: auto;
+  padding: 0;
+  color: var(--color-primary-light);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-gray-300);
 }
-.btn-sm svg,
-.btn-sm img {
-  width: 12px;
-  height: 12px;
-}
-.btn-lg svg,
-.btn-lg img {
-  width: 20px;
-  height: 20px;
-}
+.btn-link:hover { color: var(--color-primary); text-decoration-color: currentColor; }
+
+/* ======= ИКОНКИ ВНУТРИ КНОПОК ======= */
+.btn svg, .btn img { width: 16px; height: 16px; flex-shrink: 0; }
+.btn-sm svg, .btn-sm img { width: 14px; height: 14px; }
+.btn-lg svg, .btn-lg img { width: 18px; height: 18px; }
 
 /* ======= ГРУППЫ КНОПОК ======= */
 .btn-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
-
 .btn-group .btn,
-.btn-group button {
-  flex-shrink: 0;
+.btn-group button { flex-shrink: 0; }
+
+/* Сегментированный переключатель: вкладки-фильтры одной плашкой */
+.btn-segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--color-gray-100);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-sm);
+}
+.btn-segmented button {
+  height: 30px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--color-gray-600);
+  box-shadow: none;
+}
+.btn-segmented button:hover { color: var(--color-primary); }
+.btn-segmented button.active {
+  background: var(--color-white);
+  color: var(--color-primary);
+  box-shadow: 0 1px 2px rgba(11, 31, 58, 0.08);
 }
 
 /* ============================================================
@@ -400,8 +426,15 @@ input[type="submit"] {
 }
 
 .card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-3px);
+  border-color: var(--color-gray-300);
+  box-shadow: var(--shadow-md);
+}
+
+/* Карточка, которая действительно кликабельна — помечается явно */
+.card-clickable { cursor: pointer; }
+.card-clickable:hover {
+  border-color: var(--color-gold-light);
+  box-shadow: var(--shadow-md);
 }
 
 .card-gold {
@@ -452,8 +485,8 @@ input[type="submit"] {
 }
 
 .stat-card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
+  border-color: var(--color-gray-300);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-card:hover::before {
@@ -462,6 +495,7 @@ input[type="submit"] {
 
 .stat-number {
   font-family: var(--font-serif);
+  font-variant-numeric: tabular-nums;
   font-size: 34px;
   font-weight: 700;
   color: var(--color-primary);
@@ -501,34 +535,62 @@ input[type="submit"] {
    БЕЙДЖИ
    ============================================================ */
 .badge {
-  display: inline-block;
-  padding: 4px 16px;
-  border-radius: 50px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  line-height: 18px;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Точка-индикатор внутри статуса — вместо цветного кружка-эмодзи */
+.badge-dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
 .badge-gold {
-  background: var(--color-gold-gradient);
-  color: var(--color-white);
+  background: var(--color-gold-pale);
+  color: var(--color-gold-dark);
+  border-color: var(--color-gold-light);
 }
-.badge-active {
+.badge-active,
+.badge-success {
   background: var(--color-success-bg);
   color: var(--color-success);
+  border-color: rgba(22, 132, 91, 0.20);
 }
-.badge-inactive {
+.badge-inactive,
+.badge-error {
   background: var(--color-error-bg);
   color: var(--color-error);
+  border-color: rgba(179, 38, 46, 0.20);
 }
-.badge-pending {
+.badge-pending,
+.badge-warning {
   background: var(--color-warning-bg);
   color: var(--color-warning);
+  border-color: rgba(184, 146, 31, 0.25);
 }
 .badge-info {
   background: var(--color-info-bg);
   color: var(--color-info);
+  border-color: rgba(23, 74, 126, 0.18);
+}
+.badge-neutral {
+  background: var(--color-gray-100);
+  color: var(--color-gray-600);
+  border-color: var(--color-gray-200);
 }
 
 /* ============================================================
@@ -550,8 +612,8 @@ input[type="submit"] {
 
 .form-control {
   width: 100%;
-  padding: 11px 16px;
-  border: 1.5px solid var(--color-gray-200);
+  padding: 11px 14px;
+  border: 1px solid var(--color-gray-300);
   border-radius: var(--radius-sm);
   font-family: var(--font-sans);
   font-size: 14px;
@@ -563,9 +625,42 @@ input[type="submit"] {
 }
 
 .form-control:focus {
-  border-color: var(--color-gold);
-  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.08);
+  border-color: var(--color-primary-light);
+  box-shadow: 0 0 0 3px rgba(23, 74, 126, 0.10);
 }
+
+.form-control:hover:not(:focus):not(:disabled) {
+  border-color: var(--color-gray-400);
+}
+
+/* Поле с ошибкой */
+.form-control.is-invalid,
+.form-control[aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+.form-control.is-invalid:focus,
+.form-control[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px rgba(179, 38, 46, 0.10);
+}
+
+/* Подпись под полем: подсказка или текст ошибки */
+.form-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-gray-500);
+  line-height: 1.5;
+}
+.form-error {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-error);
+  line-height: 1.5;
+}
+
+/* Обязательное поле */
+.form-label .required { color: var(--color-error); margin-left: 2px; }
 
 .form-control::placeholder {
   color: var(--color-gray-400);
@@ -659,8 +754,13 @@ select.form-control {
 .table tbody td {
   padding: 13px 18px;
   border-bottom: 1px solid var(--color-gray-100);
-  color: var(--color-gray-600);
+  color: var(--color-gray-700);
+  vertical-align: middle;
 }
+
+/* Числа и даты в таблицах — моноширинные цифры, колонки не пляшут */
+.table td.num,
+.table th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 .table tbody tr:hover td {
   background: var(--color-gray-50);
@@ -679,10 +779,17 @@ select.form-control {
 }
 
 .empty-state-icon {
-  font-size: 42px;
-  color: var(--color-gray-300);
-  margin-bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  background: var(--color-gray-100);
+  color: var(--color-gray-400);
 }
+.empty-state-icon svg { width: 26px; height: 26px; }
 
 .empty-state h3 {
   font-family: var(--font-serif);
@@ -856,15 +963,19 @@ select.form-control {
 }
 
 .quick-action-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--color-gold);
+  background: var(--color-gray-50);
+  border-color: var(--color-gold-light);
+  box-shadow: var(--shadow-md);
 }
 
 .quick-action-card .icon {
-  font-size: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gold-dark);
   line-height: 1;
 }
+.quick-action-card .icon svg { width: 24px; height: 24px; }
 
 .quick-action-card .label {
   font-size: 13px;
@@ -1182,4 +1293,99 @@ select.form-control {
   .container-page {
     padding: 8px 8px 16px;
   }
+}
+
+/* ============================================================
+   ШАПКА ЭКРАНА И ПАНЕЛЬ ДЕЙСТВИЙ
+   ============================================================
+   Одинаковая шапка на всех экранах: заголовок слева, действия
+   справа, тонкая линия снизу. Без этого каждый экран выглядит
+   как отдельный сайт.
+   ============================================================ */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.page-header h1,
+.page-title {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--color-primary);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.page-subtitle {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--color-gray-500);
+  line-height: 1.55;
+  max-width: 70ch;
+}
+
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Панель фильтров и поиска над списком */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.toolbar .form-control { min-height: 40px; padding: 9px 14px; width: auto; }
+.toolbar-spacer { flex: 1 1 auto; }
+
+/* Поле поиска с иконкой внутри */
+.search-field { position: relative; flex: 0 1 280px; }
+.search-field .form-control { padding-left: 38px; width: 100%; }
+.search-field svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-gray-400);
+  pointer-events: none;
+}
+
+/* Строка «ключ — значение» в карточках и профилях */
+.detail-row {
+  display: flex;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-gray-100);
+  font-size: 14px;
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-row dt,
+.detail-row .label {
+  flex: 0 0 200px;
+  color: var(--color-gray-500);
+}
+.detail-row dd,
+.detail-row .value {
+  flex: 1;
+  margin: 0;
+  color: var(--color-gray-800);
+}
+
+@media (max-width: 640px) {
+  .page-header h1, .page-title { font-size: 22px; }
+  .search-field { flex: 1 1 100%; }
+  .detail-row { flex-direction: column; gap: 2px; }
+  .detail-row dt, .detail-row .label { flex: none; font-size: 12px; }
 }

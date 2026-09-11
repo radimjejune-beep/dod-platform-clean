@@ -9,6 +9,9 @@ const routeRoles = {
   '/dashboard': ['admin', 'movement_coordinator', 'president', 'vice_president'],
   '/participant-dashboard': ['participant'],
   '/parent-dashboard': ['parent'],
+  // Согласия за ребёнка оформляет законный представитель; администрация
+  // должна видеть тот же экран, чтобы помочь родителю по телефону
+  '/parent-consents': ['parent', 'admin', 'movement_coordinator'],
   '/club-coordinator-dashboard': ['club_coordinator'],
   '/tutor-dashboard': ['tutor'],
   '/profile': ['all'],

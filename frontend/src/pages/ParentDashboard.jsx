@@ -311,13 +311,20 @@ export default function ParentDashboard() {
                 <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-primary)' }}>
                   Статус согласий
                 </h3>
-                <button
-                  className="btn-secondary"
-                  style={{ padding: '4px 12px', fontSize: '12px' }}
-                  onClick={() => setShowConsentStatus(!showConsentStatus)}
-                >
-                  {showConsentStatus ? 'Скрыть' : 'Подробнее'}
-                </button>
+                <div className="btn-group">
+                  <button
+                    className="btn-ghost btn-sm"
+                    onClick={() => setShowConsentStatus(!showConsentStatus)}
+                  >
+                    {showConsentStatus ? 'Скрыть' : 'Подробнее'}
+                  </button>
+                  {/* Оформить согласие можно только здесь — за ребёнка это
+                      вправе сделать лишь законный представитель */}
+                  <button className="btn-primary btn-sm" onClick={() => navigate('/parent-consents')}>
+                    <Icon name="consent" size={14} />
+                    Оформить согласия
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>

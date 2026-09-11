@@ -162,6 +162,7 @@ export function useMenuItems(profile) {
       return [
         ...commonItems,
         { id: 'parent-dashboard', path: '/parent-dashboard', icon: 'family', label: 'Дашборд родителя' },
+        { id: 'parent-consents', path: '/parent-consents', icon: 'consent', label: 'Согласия' },
         { id: 'events', path: '/events', icon: 'calendar', label: 'Мероприятия' },
         { id: 'calendar', path: '/calendar', icon: 'grid', label: 'Календарь' },
         { id: 'my-achievements', path: '/my-achievements', icon: 'trophy', label: 'Достижения детей' },

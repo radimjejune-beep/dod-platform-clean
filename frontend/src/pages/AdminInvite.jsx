@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
+import { roleLabel } from '../lib/roles';
 
 export default function AdminInvite() {
   const [profile, setProfile] = useState(null);
@@ -110,7 +111,7 @@ export default function AdminInvite() {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Email: ${result.user?.email || form.email}
   Пароль: ${password}
-  Роль: ${getRoleLabel(form.role)}
+  Роль: ${roleLabel(form.role)}
   ${form.club_id ? `Клуб: ${clubs.find(c => c.id === form.club_id)?.name || '—'}` : ''}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -139,16 +140,6 @@ ${window.location.origin}/login
     } finally {
       setSending(false);
     }
-  };
-
-  const getRoleLabel = (role) => {
-    const labels = {
-      'club_coordinator': 'Координатор КЮДа',
-      'tutor': 'Тьютор',
-      'movement_coordinator': 'Координатор движения',
-      'admin': 'Администратор'
-    };
-    return labels[role] || role;
   };
 
   if (loading) {

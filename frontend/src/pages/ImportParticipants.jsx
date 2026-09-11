@@ -6,6 +6,7 @@ import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import * as XLSX from 'xlsx';
 import Icon from '../components/Icon';
+import { roleLabel } from '../lib/roles';
 
 export default function ImportParticipants() {
   const [profile, setProfile] = useState(null);
@@ -197,7 +198,7 @@ export default function ImportParticipants() {
   const copyPasswords = () => {
     let text = '=== ДАННЫЕ ДЛЯ ВХОДА (ИМПОРТ) ===\n\n';
     importedUsers.forEach(u => {
-      text += `ФИО: ${u.full_name}\nEmail: ${u.email}\nПароль: ${u.password}\nРоль: ${u.role}\n\n`;
+      text += `ФИО: ${u.full_name}\nEmail: ${u.email}\nПароль: ${u.password}\nРоль: ${roleLabel(u.role)}\n\n`;
     });
     navigator.clipboard.writeText(text);
     setMessage('Данные скопированы!');
@@ -303,7 +304,7 @@ export default function ImportParticipants() {
                           {u.password}
                         </code>
                       </td>
-                      <td>{u.role}</td>
+                      <td>{roleLabel(u.role)}</td>
                     </tr>
                   ))}
                 </tbody>

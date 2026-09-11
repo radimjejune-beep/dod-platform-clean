@@ -5,6 +5,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useMenuItems } from '../hooks/useMenuItems';
 import logo from '../assets/Image.png';
 import Icon from './Icon';
+import { roleLabel } from '../lib/roles';
 
 export default function Navigation({ profile }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -322,7 +323,7 @@ export default function Navigation({ profile }) {
                     </div>
                     <div>
                       <div className="nav-profile-fullname">{profile?.full_name}</div>
-                      <div className="nav-profile-role">{profile?.role}</div>
+                      <div className="nav-profile-role">{roleLabel(profile?.role)}</div>
                     </div>
                   </div>
                   <div className="nav-profile-divider" />
@@ -373,7 +374,7 @@ export default function Navigation({ profile }) {
           </div>
           <div className="sidebar-profile-info">
             <div className="sidebar-profile-name">{profile?.full_name}</div>
-            <div className="sidebar-profile-role">{profile?.role}</div>
+            <div className="sidebar-profile-role">{roleLabel(profile?.role)}</div>
           </div>
         </div>
 

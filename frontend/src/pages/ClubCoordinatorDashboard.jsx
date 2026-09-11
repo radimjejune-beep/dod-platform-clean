@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
+import { roleLabel } from '../lib/roles';
 
 export default function ClubCoordinatorDashboard() {
   const [profile, setProfile] = useState(null);
@@ -74,7 +75,7 @@ export default function ClubCoordinatorDashboard() {
         <div style={{ background: 'var(--color-gray-50)', padding: '20px', borderRadius: '8px', marginTop: '20px' }}>
           <p><strong>ФИО:</strong> {profile?.full_name}</p>
           <p><strong>Почта:</strong> {profile?.email}</p>
-          <p><strong>Роль:</strong> {profile?.role}</p>
+          <p><strong>Роль:</strong> {roleLabel(profile?.role)}</p>
           <p><strong>КЮД:</strong> {profile?.club_id || 'Не указан'}</p>
         </div>
         <div style={{ marginTop: '20px' }}>

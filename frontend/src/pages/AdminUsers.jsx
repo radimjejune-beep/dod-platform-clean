@@ -8,6 +8,7 @@ import FilterBar from '../components/FilterBar';
 import AssignClubModal from '../components/AssignClubModal';
 import * as XLSX from 'xlsx';
 import Icon from '../components/Icon';
+import { roleLabel } from '../lib/roles';
 
 export default function AdminUsers() {
   const [profile, setProfile] = useState(null);
@@ -379,7 +380,7 @@ export default function AdminUsers() {
       text += `ФИО: ${u.full_name}\n`;
       text += `Логин: ${u.email}\n`;
       text += `Пароль: ${u.password}\n`;
-      text += `Роль: ${getRoleLabel(u.role)}\n`;
+      text += `Роль: ${roleLabel(u.role)}\n`;
       if (u.club && u.club !== '—') text += `Клуб: ${u.club}\n`;
       if (u.is_auto_generated) text += `Логин сгенерирован автоматически\n`;
       text += '\n';
@@ -406,7 +407,7 @@ export default function AdminUsers() {
       'ФИО': u.full_name,
       'Логин': u.email,
       'Пароль': u.password,
-      'Роль': getRoleLabel(u.role),
+      'Роль': roleLabel(u.role),
       'Клуб': u.club || '—',
       'Примечание': u.is_auto_generated ? 'Логин сгенерирован автоматически' : ''
     }));
@@ -551,20 +552,6 @@ export default function AdminUsers() {
     XLSX.utils.book_append_sheet(wb, ws, 'Участники');
     ws['!cols'] = [{ wch: 30 }, { wch: 30 }, { wch: 20 }, { wch: 25 }, { wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 15 }];
     XLSX.writeFile(wb, 'Шаблон_импорта_участников.xlsx');
-  };
-
-  const getRoleLabel = (role) => {
-    const labels = {
-      'participant': 'Участник',
-      'parent': 'Родитель',
-      'club_coordinator': 'Координатор КЮДа',
-      'tutor': 'Тьютор',
-      'movement_coordinator': 'Координатор движения',
-      'admin': 'Администратор',
-      'president': 'Президент',
-      'vice_president': 'Вице-президент'
-    };
-    return labels[role] || role;
   };
 
   if (loading) {
@@ -712,7 +699,7 @@ export default function AdminUsers() {
                           {u.password}
                         </code>
                       </td>
-                      <td>{getRoleLabel(u.role)}</td>
+                      <td>{roleLabel(u.role)}</td>
                       <td>{u.club || '—'}</td>
                     </tr>
                   ))}
@@ -948,7 +935,7 @@ export default function AdminUsers() {
                   <tr key={u.id}>
                     <td style={{ fontWeight: '500' }}>{u.full_name}</td>
                     <td style={{ color: 'var(--color-gray-500)' }}>{u.email}</td>
-                    <td>{getRoleLabel(u.role)}</td>
+                    <td>{roleLabel(u.role)}</td>
                     <td style={{ color: 'var(--color-gray-500)' }}>{clubs.find(c => c.id === u.club_id)?.name || '—'}</td>
                     <td>
                       <span style={{

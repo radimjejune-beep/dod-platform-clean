@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
+import { roleLabel } from '../lib/roles';
 
 export default function ActivityLog() {
   const [profile, setProfile] = useState(null);
@@ -217,7 +218,7 @@ export default function ActivityLog() {
                         </div>
                         {log.user_role && (
                           <div style={{ fontSize: '11px', color: 'var(--color-gray-400)' }}>
-                            {log.user_role}
+                            {roleLabel(log.user_role)}
                           </div>
                         )}
                       </td>

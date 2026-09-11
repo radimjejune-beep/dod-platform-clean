@@ -9,6 +9,7 @@ import PresidentSection from '../components/PresidentSection';
 import Footer from '../components/Footer';
 import Icon from '../components/Icon';
 import ParentCodeCard from '../components/ParentCodeCard';
+import { roleLabel } from '../lib/roles';
 
 export default function Profile() {
   const [profile, setProfile] = useState(null);
@@ -151,20 +152,6 @@ export default function Profile() {
     return name[0];
   };
 
-  const getRoleLabel = (role) => {
-    const labels = {
-      'admin': 'Администратор',
-      'movement_coordinator': 'Координатор движения',
-      'club_coordinator': 'Координатор КЮДа',
-      'tutor': 'Тьютор',
-      'participant': 'Участник',
-      'parent': 'Родитель',
-      'president': 'Президент',
-      'vice_president': 'Вице-президент'
-    };
-    return labels[role] || role;
-  };
-
   if (loading) {
     return (
       <div className="page-loading">
@@ -255,7 +242,7 @@ export default function Profile() {
             <div className="profile-info-section">
               <h2>{profile?.full_name}</h2>
               <div className="profile-badges">
-                <span className="badge-role">{getRoleLabel(profile?.role)}</span>
+                <span className="badge-role">{roleLabel(profile?.role)}</span>
                 <span className={`badge-status ${profile?.status === 'active' ? 'active' : 'inactive'}`}>
                   {profile?.status === 'active' ? 'Активен' : 'Неактивен'}
                 </span>

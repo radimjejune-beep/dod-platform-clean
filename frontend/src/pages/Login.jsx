@@ -282,22 +282,18 @@ export default function Login() {
           }
 
           .login-logo {
-            width: 72px;
-            height: 72px;
+            width: 76px;
+            height: 76px;
             margin: 0 auto 16px;
-            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 2px solid rgba(201, 162, 39, 0.3);
-            box-shadow: 0 4px 20px rgba(11, 31, 58, 0.2);
           }
 
           .login-logo img {
-            height: 40px;
-            width: auto;
-            filter: brightness(0) invert(1);
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
           }
 
           .login-header h1 {
@@ -422,11 +418,8 @@ export default function Login() {
               font-size: 22px;
             }
             .login-logo {
-              width: 60px;
-              height: 60px;
-            }
-            .login-logo img {
-              height: 32px;
+              width: 62px;
+              height: 62px;
             }
           }
         `}</style>
@@ -549,22 +542,18 @@ export default function Login() {
         }
 
         .login-logo {
-          width: 72px;
-          height: 72px;
+          width: 76px;
+          height: 76px;
           margin: 0 auto 16px;
-          background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          border: 2px solid rgba(201, 162, 39, 0.3);
-          box-shadow: 0 4px 20px rgba(11, 31, 58, 0.2);
         }
 
         .login-logo img {
-          height: 40px;
-          width: auto;
-          filter: brightness(0) invert(1);
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
         }
 
         .login-header h1 {
@@ -689,11 +678,8 @@ export default function Login() {
             font-size: 22px;
           }
           .login-logo {
-            width: 60px;
-            height: 60px;
-          }
-          .login-logo img {
-            height: 32px;
+            width: 62px;
+            height: 62px;
           }
           .login-form .form-group input {
             padding: 12px 14px;

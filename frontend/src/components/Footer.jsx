@@ -103,10 +103,12 @@ export default function Footer() {
         }
 
         .footer-logo {
-          height: 48px;
-          width: auto;
+          height: 56px;
+          width: 56px;
           object-fit: contain;
-          filter: brightness(0) invert(1);
+          background: var(--color-white);
+          border-radius: 50%;
+          padding: 3px;
         }
 
         .footer-description {
@@ -316,7 +318,8 @@ export default function Footer() {
           }
 
           .footer-logo {
-            height: 36px;
+            height: 44px;
+            width: 44px;
           }
 
           .footer-description {

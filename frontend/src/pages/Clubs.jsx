@@ -153,6 +153,17 @@ export default function Clubs() {
                 {isClubCoordinator && (
                   <div className="club-card-badge">👑 Ваш КЮД</div>
                 )}
+
+                {/* Сотрудники КЮДа — отдельным переходом, чтобы не
+                    открывать карточку клуба ради состава */}
+                <button
+                  className="btn-secondary btn-sm"
+                  style={{ marginTop: '12px' }}
+                  onClick={(e) => { e.stopPropagation(); navigate(`/clubs/${club.id}/staff`); }}
+                >
+                  👥 Сотрудники
+                </button>
+
                 <div className="club-card-arrow">→</div>
               </div>
             ))}

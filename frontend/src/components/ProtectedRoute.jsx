@@ -39,6 +39,8 @@ const routeRoles = {
   '/my-club-events': ['club_coordinator', 'participant', 'tutor'],
   '/my-invitations': ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'],
   '/event-teams': ['admin', 'movement_coordinator', 'president', 'vice_president'],
+  // маршрут /clubs/:clubId/staff проверяется на сервере: права зависят от
+  // должности в конкретном клубе, а не от глобальной роли
   '/club-calendar': ['club_coordinator', 'participant', 'tutor'],
 };
 

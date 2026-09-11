@@ -46,6 +46,7 @@ import TutorInvitations from './pages/TutorInvitations';
 import MyInvitations from './pages/MyInvitations';
 import TeamBuilder from './pages/TeamBuilder';
 import EventTeams from './pages/EventTeams';
+import ClubStaff from './pages/ClubStaff';
 import StaffManagement from './pages/StaffManagement';
 import StaffCalendar from './pages/StaffCalendar';
 import PresidentTasks from './pages/PresidentTasks';
@@ -219,6 +220,7 @@ function App() {
         <Route path="/my-invitations" element={<MyInvitations />} />
         <Route path="/team/:id" element={<TeamBuilder />} />
         <Route path="/event-teams" element={<EventTeams />} />
+        <Route path="/clubs/:clubId/staff" element={<ClubStaff />} />
         <Route path="/tutor-assignments" element={<TutorAssignments />} />
         <Route path="/my-journal" element={<MyJournal />} />
 

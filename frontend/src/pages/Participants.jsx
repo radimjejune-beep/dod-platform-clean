@@ -14,7 +14,11 @@ export default function Participants() {
   const [allParticipants, setAllParticipants] = useState([]);
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('table');
+  // На телефоне таблица из шести колонок не помещается и уезжает вбок.
+  // Карточки для узкого экрана и сделаны — начинаем с них.
+  const [viewMode, setViewMode] = useState(
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'cards' : 'table'
+  );
   const [isClubCoordinator, setIsClubCoordinator] = useState(false);
   const [message, setMessage] = useState('');
   

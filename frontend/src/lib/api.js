@@ -44,10 +44,27 @@ export const logout = () => {
   window.location.href = '/login';
 };
 
+// Сессия кончилась — человека нужно отправить на вход, а не оставлять
+// на экране с надписью «Не удалось загрузить данные». Раньше при
+// отсутствии токена getMe просто бросал ошибку, каждый экран ловил её в
+// свой catch и показывал что-то невнятное: на экране согласий,
+// например, одновременно висели ошибка загрузки и бодрое «к вашему
+// кабинету не привязан ни один ребёнок».
+const goToLogin = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+    window.location.href = '/login';
+  }
+};
+
 export const getMe = async () => {
   const token = getToken();
-  if (!token) throw new Error('Нет токена');
-  
+  if (!token) {
+    goToLogin();
+    throw new Error('Нет токена');
+  }
+
   const response = await fetch(`${API_URL}/me`, {
     method: 'GET',
     headers: {
@@ -55,16 +72,12 @@ export const getMe = async () => {
       'Authorization': `Bearer ${token}`
     }
   });
-  
+
   if (!response.ok) {
-    if (response.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
+    if (response.status === 401) goToLogin();
     throw new Error(`Ошибка ${response.status}`);
   }
-  
+
   return response.json();
 };
 

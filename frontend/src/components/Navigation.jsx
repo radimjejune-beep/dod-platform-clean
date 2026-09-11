@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useMenuItems } from '../hooks/useMenuItems';
 import logo from '../assets/Image.png';
+import Icon from './Icon';
 
 export default function Navigation({ profile }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -136,9 +137,9 @@ export default function Navigation({ profile }) {
             className={`sidebar-group-toggle ${isActiveGroup ? 'active' : ''}`}
             onClick={() => toggleMenu(item.id)}
           >
-            <span className="sidebar-link-icon">{item.icon}</span>
+            <Icon name={item.icon} className="sidebar-link-icon" />
             <span className="sidebar-link-label">{item.label}</span>
-            <span className="sidebar-group-arrow">{isExpanded ? '▾' : '▸'}</span>
+            <span className="sidebar-group-arrow">{isExpanded ? '−' : '+'}</span>
           </button>
           {isExpanded && (
             <div className="sidebar-group-children">
@@ -149,7 +150,7 @@ export default function Navigation({ profile }) {
                   className={`sidebar-link sidebar-child ${isActive(child.path) ? 'active' : ''}`}
                   onClick={() => setIsSidebarOpen(false)}
                 >
-                  <span className="sidebar-link-icon">{child.icon}</span>
+                  <Icon name={child.icon} className="sidebar-link-icon" />
                   <span className="sidebar-link-label">{child.label}</span>
                 </Link>
               ))}
@@ -166,7 +167,7 @@ export default function Navigation({ profile }) {
         className={`sidebar-link ${isActive(item.path) ? 'active' : ''}`}
         onClick={() => setIsSidebarOpen(false)}
       >
-        <span className="sidebar-link-icon">{item.icon}</span>
+        <Icon name={item.icon} className="sidebar-link-icon" />
         <span className="sidebar-link-label">{item.label}</span>
       </Link>
     );
@@ -379,8 +380,8 @@ export default function Navigation({ profile }) {
             <img src={logo} alt="ДОД" className="sidebar-brand-logo" />
             <span className="sidebar-brand-title">Дипломаты будущего</span>
           </div>
-          <button className="sidebar-close" onClick={() => setIsSidebarOpen(false)}>
-            ✕
+          <button className="sidebar-close" onClick={() => setIsSidebarOpen(false)} aria-label="Закрыть меню">
+            <Icon name="close" size={18} />
           </button>
         </div>
 
@@ -703,7 +704,9 @@ export default function Navigation({ profile }) {
         }
         .sidebar-link:hover { background: var(--color-gray-50); color: var(--color-primary-dark); }
         .sidebar-link.active { background: var(--color-gold-pale); color: var(--color-gold); }
-        .sidebar-link-icon { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+        .sidebar-link-icon { width: 20px; height: 20px; flex-shrink: 0; opacity: 0.75; }
+        .sidebar-link:hover .sidebar-link-icon,
+        .sidebar-link.active .sidebar-link-icon { opacity: 1; }
 
         .sidebar-group { margin-bottom: 2px; }
         .sidebar-group-toggle {

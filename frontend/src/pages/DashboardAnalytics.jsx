@@ -127,19 +127,19 @@ export default function DashboardAnalytics() {
         <div className="grid-4" style={{ marginBottom: '24px' }}>
           <div className="stat-card">
             <div className="number">{stats.totalParticipants}</div>
-            <div className="label">👥 Участников</div>
+            <div className="label">Участников</div>
           </div>
           <div className="stat-card">
             <div className="number">{stats.totalClubs}</div>
-            <div className="label">🏫 КЮДов</div>
+            <div className="label">КЮДов</div>
           </div>
           <div className="stat-card">
             <div className="number">{stats.totalEvents}</div>
-            <div className="label">📅 Мероприятий</div>
+            <div className="label">Мероприятий</div>
           </div>
           <div className="stat-card" style={{ borderTop: '4px solid var(--color-gold)' }}>
             <div className="number" style={{ color: 'var(--color-gold)' }}>{stats.newParticipantsThisMonth}</div>
-            <div className="label">⭐ Новых за месяц</div>
+            <div className="label">Новых за месяц</div>
           </div>
         </div>
 
@@ -147,7 +147,7 @@ export default function DashboardAnalytics() {
         <div className="grid-2" style={{ marginBottom: '24px' }}>
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-              🏆 Топ-5 КЮДов
+              Топ-5 КЮДов
             </h3>
             {stats.topClubs.length === 0 ? (
               <p style={{ color: 'var(--color-gray-500)' }}>Нет данных</p>
@@ -161,7 +161,7 @@ export default function DashboardAnalytics() {
                     #{index + 1} {club.name}
                   </div>
                   <div className="subtitle">
-                    👥 {club.participantsCount} участников • 📅 {club.eventsCount} мероприятий
+                    {club.participantsCount} участников • {club.eventsCount} мероприятий
                   </div>
                 </div>
               ))
@@ -170,7 +170,7 @@ export default function DashboardAnalytics() {
 
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-              📈 Активность по месяцам
+              Активность по месяцам
             </h3>
             {stats.monthlyActivity.length === 0 || stats.monthlyActivity.every(v => v === 0) ? (
               <p style={{ color: 'var(--color-gray-500)' }}>Нет данных</p>
@@ -222,20 +222,20 @@ export default function DashboardAnalytics() {
         {/* БЫСТРЫЕ ДЕЙСТВИЯ */}
         <div className="card">
           <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '12px' }}>
-            🚀 Быстрые действия
+            Быстрые действия
           </h3>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <button className="btn-primary" onClick={() => navigate('/clubs')}>
-              🏫 КЮДы
+              КЮДы
             </button>
             <button className="btn-primary" onClick={() => navigate('/participants')}>
-              👥 Участники
+              Участники
             </button>
             <button className="btn-primary" onClick={() => navigate('/events')}>
-              📅 Мероприятия
+              Мероприятия
             </button>
             <button className="btn-primary" onClick={() => navigate('/reports')}>
-              📋 Отчёты
+              Отчёты
             </button>
           </div>
         </div>

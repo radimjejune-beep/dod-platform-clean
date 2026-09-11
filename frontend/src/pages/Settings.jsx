@@ -65,12 +65,12 @@ export default function Settings() {
     setNewsMessage('');
 
     try {
-      setNewsMessage(editingNewsId ? '✅ Новость обновлена!' : '✅ Новость создана!');
+      setNewsMessage(editingNewsId ? 'Новость обновлена!' : 'Новость создана!');
       resetNewsForm();
       loadNews();
       setTimeout(() => setNewsMessage(''), 3000);
     } catch (err) {
-      setNewsMessage('❌ Ошибка: ' + err.message);
+      setNewsMessage('Ошибка: ' + err.message);
     }
     setNewsLoading(false);
   };
@@ -103,10 +103,10 @@ export default function Settings() {
     setSettingsMessage('');
 
     try {
-      setSettingsMessage('✅ Настройки сохранены!');
+      setSettingsMessage('Настройки сохранены!');
       setTimeout(() => setSettingsMessage(''), 3000);
     } catch (err) {
-      setSettingsMessage('❌ Ошибка: ' + err.message);
+      setSettingsMessage('Ошибка: ' + err.message);
     }
     setSavingSettings(false);
   };
@@ -140,7 +140,7 @@ export default function Settings() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <div style={{
           display: 'flex',
@@ -163,7 +163,7 @@ export default function Settings() {
               fontSize: '14px'
             }}
           >
-            📰 Новости
+            Новости
           </button>
           <button
             onClick={() => setActiveTab('general')}
@@ -178,7 +178,7 @@ export default function Settings() {
               fontSize: '14px'
             }}
           >
-            ⚙️ Общие
+            Общие
           </button>
         </div>
 
@@ -186,7 +186,7 @@ export default function Settings() {
           <div>
             <div className="card" style={{ marginBottom: '30px', padding: '24px' }}>
               <h3 style={{ marginBottom: '16px' }}>
-                {editingNewsId ? '✏️ Редактировать новость' : '📝 Создать новость'}
+                {editingNewsId ? 'Редактировать новость' : 'Создать новость'}
               </h3>
 
               {newsMessage && (
@@ -237,22 +237,22 @@ export default function Settings() {
 
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                   <button type="submit" className="btn-primary" disabled={newsLoading}>
-                    {newsLoading ? '⏳ Сохранение...' : editingNewsId ? '💾 Обновить' : '➕ Создать'}
+                    {newsLoading ? 'Сохранение...' : editingNewsId ? 'Обновить' : 'Создать'}
                   </button>
                   {editingNewsId && (
                     <button type="button" className="btn-secondary" onClick={resetNewsForm}>
-                      ❌ Отменить
+                      Отменить
                     </button>
                   )}
                 </div>
               </form>
             </div>
 
-            <h3 style={{ marginBottom: '16px' }}>📋 Все новости</h3>
+            <h3 style={{ marginBottom: '16px' }}>Все новости</h3>
 
             {news.length === 0 ? (
               <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
-                <p>📭 Новостей пока нет</p>
+                <p>Новостей пока нет</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -270,7 +270,7 @@ export default function Settings() {
                     <div style={{ flex: 1 }}>
                       <h4 style={{ fontSize: '15px', marginBottom: '2px' }}>{item.title}</h4>
                       <p style={{ fontSize: '12px', color: 'var(--color-gray-500)' }}>
-                        📅 {new Date(item.created_at).toLocaleDateString('ru-RU')}
+                        {new Date(item.created_at).toLocaleDateString('ru-RU')}
                       </p>
                     </div>
                     <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
@@ -298,7 +298,7 @@ export default function Settings() {
 
         {activeTab === 'general' && (
           <div className="card" style={{ padding: '24px' }}>
-            <h3 style={{ marginBottom: '16px' }}>⚙️ Общие настройки сайта</h3>
+            <h3 style={{ marginBottom: '16px' }}>Общие настройки сайта</h3>
 
             {settingsMessage && (
               <div style={{
@@ -367,7 +367,7 @@ export default function Settings() {
               disabled={savingSettings}
               style={{ width: '100%', padding: '14px', marginTop: '8px' }}
             >
-              {savingSettings ? '⏳ Сохранение...' : '💾 Сохранить настройки'}
+              {savingSettings ? 'Сохранение...' : 'Сохранить настройки'}
             </button>
           </div>
         )}

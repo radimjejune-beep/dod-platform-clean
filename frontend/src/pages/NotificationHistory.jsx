@@ -46,12 +46,12 @@ export default function NotificationHistory() {
 
     try {
       await api.deleteMassNotification(id);
-      setMessage('✅ Уведомление удалено');
+      setMessage('Уведомление удалено');
       setMessageType('success');
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -59,30 +59,30 @@ export default function NotificationHistory() {
   const getRecipientLabel = (recipients) => {
     const labels = {
       'all': 'Все пользователи',
-      'participants': '👤 Участники',
-      'coordinators': '🏫 Координаторы КЮДов',
-      'tutors': '📚 Тьюторы',
-      'admins': '🔧 Администраторы'
+      'participants': 'Участники',
+      'coordinators': 'Координаторы КЮДов',
+      'tutors': 'Тьюторы',
+      'admins': 'Администраторы'
     };
     return labels[recipients] || recipients;
   };
 
   const getPriorityLabel = (priority) => {
     const labels = {
-      'low': '🟢 Низкий',
-      'normal': '🟡 Обычный',
-      'high': '🔴 Высокий',
-      'urgent': '🔥 Срочный'
+      'low': 'Низкий',
+      'normal': 'Обычный',
+      'high': 'Высокий',
+      'urgent': 'Срочный'
     };
     return labels[priority] || priority;
   };
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { label: '⏳ Ожидает', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
-      'sent': { label: '✅ Отправлено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-      'scheduled': { label: '📅 Запланировано', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
-      'failed': { label: '❌ Ошибка', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
+      'pending': { label: 'Ожидает', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'sent': { label: 'Отправлено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'scheduled': { label: 'Запланировано', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
+      'failed': { label: 'Ошибка', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
     };
     return badges[status] || badges['pending'];
   };
@@ -110,7 +110,7 @@ export default function NotificationHistory() {
             style={{ marginLeft: 'auto' }}
             onClick={() => loadData()}
           >
-            🔄 Обновить
+            Обновить
           </button>
         </div>
 
@@ -163,11 +163,11 @@ export default function NotificationHistory() {
                       </p>
 
                       <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
-                        <span>📤 {getRecipientLabel(n.recipients)} ({n.recipient_count} чел.)</span>
-                        <span>👤 {n.created_by_name || 'Система'}</span>
-                        <span>📅 {new Date(n.created_at).toLocaleString('ru-RU')}</span>
+                        <span>{getRecipientLabel(n.recipients)} ({n.recipient_count} чел.)</span>
+                        <span>{n.created_by_name || 'Система'}</span>
+                        <span>{new Date(n.created_at).toLocaleString('ru-RU')}</span>
                         {n.sent_at && (
-                          <span>✅ {new Date(n.sent_at).toLocaleString('ru-RU')}</span>
+                          <span>{new Date(n.sent_at).toLocaleString('ru-RU')}</span>
                         )}
                       </div>
                     </div>
@@ -178,7 +178,7 @@ export default function NotificationHistory() {
                         style={{ padding: '6px 12px', fontSize: '12px' }}
                         onClick={() => handleDelete(n.id)}
                       >
-                        🗑️ Удалить
+                        Удалить
                       </button>
                     </div>
                   </div>

@@ -203,7 +203,7 @@ export default function ProtectedRoute({ children }) {
         fontSize: '18px',
         color: 'var(--color-gray-500)'
       }}>
-        ⏳ Проверка сессии...
+        Проверка сессии...
       </div>
     );
   }

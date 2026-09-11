@@ -151,33 +151,33 @@ export default function CoordinatorDashboard() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <div className="grid-4" style={{ marginBottom: '24px' }}>
           <div className="stat-card" style={{ borderTop: '3px solid var(--color-primary-light)' }}>
             <div className="number">{stats.totalParticipants}</div>
-            <div className="label">👥 Участников</div>
+            <div className="label">Участников</div>
             <div style={{ fontSize: '11px', color: 'var(--color-success)' }}>
               +{stats.newParticipantsThisMonth} за месяц
             </div>
           </div>
           <div className="stat-card" style={{ borderTop: '3px solid var(--color-gold)' }}>
             <div className="number">{stats.totalClubs}</div>
-            <div className="label">🏫 КЮДов</div>
+            <div className="label">КЮДов</div>
             <div style={{ fontSize: '11px', color: 'var(--color-gray-500)' }}>
-              📊 {stats.topClubs.length} активных
+              {stats.topClubs.length} активных
             </div>
           </div>
           <div className="stat-card" style={{ borderTop: '3px solid #6B46C1' }}>
             <div className="number">{stats.eventsThisMonth}</div>
-            <div className="label">📅 Мероприятий за месяц</div>
+            <div className="label">Мероприятий за месяц</div>
             <div style={{ fontSize: '11px', color: 'var(--color-gray-500)' }}>
               Всего: {stats.totalEvents}
             </div>
           </div>
           <div className="stat-card" style={{ borderTop: '3px solid var(--color-success)' }}>
             <div className="number">{stats.totalAchievements}</div>
-            <div className="label">🏆 Достижений</div>
+            <div className="label">Достижений</div>
           </div>
         </div>
 
@@ -195,20 +195,20 @@ export default function CoordinatorDashboard() {
             gap: '8px'
           }}>
             <span>
-              ⚠️ <strong>Требуют внимания:</strong>
-              {stats.pendingAppeals > 0 && ` 📨 ${stats.pendingAppeals} обращений`}
-              {stats.consentsPending > 0 && ` 📝 ${stats.consentsPending} участников без согласий`}
-              {stats.pendingTasks > 0 && ` 📋 ${stats.pendingTasks} заданий`}
+              <strong>Требуют внимания:</strong>
+              {stats.pendingAppeals > 0 && `${stats.pendingAppeals} обращений`}
+              {stats.consentsPending > 0 && `${stats.consentsPending} участников без согласий`}
+              {stats.pendingTasks > 0 && `${stats.pendingTasks} заданий`}
             </span>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {stats.pendingAppeals > 0 && (
                 <button className="btn-primary" style={{ padding: '4px 16px', fontSize: '12px' }} onClick={() => navigate('/appeals')}>
-                  📨 Обращения
+                  Обращения
                 </button>
               )}
               {stats.consentsPending > 0 && (
                 <button className="btn-primary" style={{ padding: '4px 16px', fontSize: '12px', background: '#6B46C1', color: 'white' }} onClick={() => navigate('/consents-management')}>
-                  📝 Согласия
+                  Согласия
                 </button>
               )}
             </div>
@@ -218,7 +218,7 @@ export default function CoordinatorDashboard() {
         <div className="grid-2" style={{ marginBottom: '24px' }}>
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-              📈 Активность по месяцам
+              Активность по месяцам
             </h3>
             {stats.monthlyData.length === 0 || stats.monthlyData.every(d => d.count === 0) ? (
               <p style={{ color: 'var(--color-gray-400)', textAlign: 'center', padding: '20px' }}>Нет данных</p>
@@ -268,7 +268,7 @@ export default function CoordinatorDashboard() {
 
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-              🏆 Топ-5 КЮДов
+              Топ-5 КЮДов
             </h3>
             {stats.topClubs.length === 0 ? (
               <p style={{ color: 'var(--color-gray-400)', textAlign: 'center', padding: '20px' }}>Нет данных</p>
@@ -288,7 +288,7 @@ export default function CoordinatorDashboard() {
                     {' '}
                     {club.name}
                   </span>
-                  <span style={{ color: 'var(--color-gray-500)' }}>👥 {club.participants}</span>
+                  <span style={{ color: 'var(--color-gray-500)' }}>{club.participants}</span>
                 </div>
               ))
             )}
@@ -305,7 +305,7 @@ export default function CoordinatorDashboard() {
         <div className="grid-2">
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-              📋 Последняя активность
+              Последняя активность
             </h3>
             {stats.recentActivity.length === 0 ? (
               <p style={{ color: 'var(--color-gray-400)', textAlign: 'center', padding: '20px' }}>Активности пока нет</p>
@@ -325,7 +325,7 @@ export default function CoordinatorDashboard() {
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '13px', color: 'var(--color-primary)' }}>{activity.title}</div>
                       <div style={{ fontSize: '11px', color: 'var(--color-gray-400)' }}>
-                        📅 {new Date(activity.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                        {new Date(activity.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
                       </div>
                     </div>
                   </div>
@@ -336,23 +336,23 @@ export default function CoordinatorDashboard() {
 
           <div className="card">
             <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '12px' }}>
-              ⚡ Быстрые действия
+              Быстрые действия
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/clubs-management')}>
-                🏫 Управление КЮДами
+                Управление КЮДами
               </button>
               <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/mass-notifications')}>
-                📨 Массовые уведомления
+                Массовые уведомления
               </button>
               <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', background: '#6B46C1', color: 'white' }} onClick={() => navigate('/consents-management')}>
-                📝 Управление согласиями
+                Управление согласиями
               </button>
               <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', background: 'var(--color-gold)', color: 'var(--color-primary)' }} onClick={() => navigate('/documents-center')}>
-                📁 Центр документов
+                Центр документов
               </button>
               <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/tasks-planner')}>
-                📅 Планировщик задач
+                Планировщик задач
               </button>
             </div>
           </div>

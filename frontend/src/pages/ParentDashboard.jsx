@@ -63,7 +63,7 @@ export default function ParentDashboard() {
       }
     } catch (err) {
       console.error('Ошибка:', err);
-      setMessage('❌ Ошибка загрузки данных: ' + err.message);
+      setMessage('Ошибка загрузки данных: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -114,14 +114,14 @@ export default function ParentDashboard() {
         throw new Error(result.error);
       }
 
-      setMessage(`✅ Ребёнок "${result.child.full_name}" успешно привязан!`);
+      setMessage(`Ребёнок "${result.child.full_name}" успешно привязан!`);
       setMessageType('success');
       setLinkForm({ child_email: '', child_password: '' });
       setShowLinkModal(false);
       await loadData(); // Обновляем список детей
       setTimeout(() => setMessage(''), 5000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLinking(false);
@@ -133,7 +133,7 @@ export default function ParentDashboard() {
     setRefreshing(true);
     setMessage('');
     await loadData();
-    setMessage('🔄 Список обновлён');
+    setMessage('Список обновлён');
     setMessageType('success');
     setTimeout(() => setMessage(''), 3000);
   };
@@ -166,13 +166,13 @@ export default function ParentDashboard() {
               onClick={handleRefresh}
               disabled={refreshing}
             >
-              {refreshing ? '⏳ Обновление...' : '🔄 Обновить'}
+              {refreshing ? 'Обновление...' : 'Обновить'}
             </button>
             <button
               className="btn-primary"
               onClick={() => setShowLinkModal(true)}
             >
-              ➕ Привязать ребёнка
+              Привязать ребёнка
             </button>
           </div>
         </div>
@@ -235,7 +235,7 @@ export default function ParentDashboard() {
               className="btn-primary"
               onClick={() => setShowLinkModal(true)}
             >
-              ➕ Привязать ребёнка
+              Привязать ребёнка
             </button>
           </div>
         ) : selectedChild && (
@@ -249,11 +249,11 @@ export default function ParentDashboard() {
                   </h2>
                   <p style={{ color: 'var(--color-gray-500)' }}>
                     {selectedChild.school || 'Школа не указана'} • {selectedChild.class_name || 'Класс не указан'}
-                    {selectedChild.club_name && ` • 🏫 ${selectedChild.club_name}`}
+                    {selectedChild.club_name && ` • ${selectedChild.club_name}`}
                   </p>
                   <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <span className={selectedChild.status === 'active' ? 'status-active' : 'status-inactive'}>
-                      {selectedChild.status === 'active' ? '🟢 Активен' : '🔴 Неактивен'}
+                      {selectedChild.status === 'active' ? 'Активен' : 'Неактивен'}
                     </span>
                   </div>
                 </div>
@@ -262,7 +262,7 @@ export default function ParentDashboard() {
                   style={{ padding: '6px 16px', fontSize: '12px' }}
                   onClick={() => navigate(`/participant/${selectedChild.id}`)}
                 >
-                  👁️ Полный профиль
+                  Полный профиль
                 </button>
               </div>
             </div>
@@ -271,21 +271,21 @@ export default function ParentDashboard() {
             <div className="grid-4" style={{ marginBottom: '20px' }}>
               <div className="stat-card">
                 <div className="number">{childStats.events}</div>
-                <div className="label">📅 Мероприятий</div>
+                <div className="label">Мероприятий</div>
               </div>
               <div className="stat-card">
                 <div className="number" style={{ color: 'var(--color-gold)' }}>{childStats.achievements}</div>
-                <div className="label">🏆 Достижений</div>
+                <div className="label">Достижений</div>
               </div>
               <div className="stat-card" style={{ borderTop: '3px solid var(--color-gold)' }}>
                 <div className="number">{childStats.level}</div>
-                <div className="label">📊 Уровень</div>
+                <div className="label">Уровень</div>
               </div>
               <div className="stat-card">
                 <div className="number" style={{ fontSize: '14px', color: 'var(--color-gray-500)' }}>
                   {getConsentStatus(selectedChild).percentage}%
                 </div>
-                <div className="label">📝 Согласия</div>
+                <div className="label">Согласия</div>
                 <div style={{
                   width: '100%',
                   height: '4px',
@@ -308,7 +308,7 @@ export default function ParentDashboard() {
             <div className="card" style={{ marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-primary)' }}>
-                  📝 Статус согласий
+                  Статус согласий
                 </h3>
                 <button
                   className="btn-secondary"
@@ -340,7 +340,7 @@ export default function ParentDashboard() {
                 </div>
                 {selectedChild.consent_agreement_date && (
                   <span style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
-                    📅 Подписаны: {new Date(selectedChild.consent_agreement_date).toLocaleDateString('ru-RU')}
+                    Подписаны: {new Date(selectedChild.consent_agreement_date).toLocaleDateString('ru-RU')}
                   </span>
                 )}
               </div>
@@ -398,7 +398,7 @@ export default function ParentDashboard() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '4px' }}>
-              👨‍👩‍👦 Привязать ребёнка
+              Привязать ребёнка
             </h3>
             <p style={{ color: 'var(--color-gray-500)', marginBottom: '20px', fontSize: '14px' }}>
               Введите email и пароль ребёнка для привязки.
@@ -438,14 +438,14 @@ export default function ParentDashboard() {
                   disabled={linking}
                   style={{ flex: 1 }}
                 >
-                  {linking ? '⏳ Проверка...' : '✅ Привязать'}
+                  {linking ? 'Проверка...' : 'Привязать'}
                 </button>
                 <button
                   type="button"
                   className="btn-secondary"
                   onClick={() => setShowLinkModal(false)}
                 >
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -458,7 +458,7 @@ export default function ParentDashboard() {
               fontSize: '12px',
               color: 'var(--color-gold-dark)'
             }}>
-              💡 Если ребёнок забыл пароль — обратитесь к администратору для сброса.
+              Если ребёнок забыл пароль — обратитесь к администратору для сброса.
             </div>
           </div>
         </div>

@@ -123,7 +123,7 @@ export default function PresidentTasks() {
 
     } catch (err) {
       console.error('❌ Общая ошибка загрузки:', err);
-      setMessage('❌ Ошибка загрузки данных');
+      setMessage('Ошибка загрузки данных');
       setMessageType('error');
       setTasks([]);
     } finally {
@@ -169,14 +169,14 @@ export default function PresidentTasks() {
 
     try {
       if (!form.title || form.title.trim() === '') {
-        setMessage('❌ Введите заголовок задания');
+        setMessage('Введите заголовок задания');
         setMessageType('error');
         setLoading(false);
         return;
       }
 
       if (!form.assigned_to && !form.is_global) {
-        setMessage('❌ Выберите участника для назначения задания');
+        setMessage('Выберите участника для назначения задания');
         setMessageType('error');
         setLoading(false);
         return;
@@ -185,7 +185,7 @@ export default function PresidentTasks() {
       const token = localStorage.getItem('token');
       
       if (!token) {
-        setMessage('❌ Нет авторизации');
+        setMessage('Нет авторизации');
         setMessageType('error');
         setLoading(false);
         return;
@@ -215,7 +215,7 @@ export default function PresidentTasks() {
       console.log('📥 Статус создания задания:', response.status);
 
       if (response.status === 404) {
-        setMessage('⚠️ API создания заданий ещё не реализован. Функция временно недоступна.');
+        setMessage('API создания заданий ещё не реализован. Функция временно недоступна.');
         setMessageType('error');
         setLoading(false);
         return;
@@ -229,7 +229,7 @@ export default function PresidentTasks() {
       const result = await response.json();
       if (result.error) throw new Error(result.error);
 
-      setMessage('✅ Задание создано!');
+      setMessage('Задание создано!');
       setMessageType('success');
       setShowCreateForm(false);
       resetForm();
@@ -237,7 +237,7 @@ export default function PresidentTasks() {
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка создания задания:', err);
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -284,14 +284,14 @@ export default function PresidentTasks() {
       const result = await response.json();
       if (result.error) throw new Error(result.error);
 
-      setMessage('✅ Ответ отправлен!');
+      setMessage('Ответ отправлен!');
       setMessageType('success');
       setShowResponseModal(false);
       setResponseText('');
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -320,32 +320,32 @@ export default function PresidentTasks() {
       const result = await response.json();
       if (result.error) throw new Error(result.error);
 
-      setMessage(`✅ Статус изменён на "${status}"`);
+      setMessage(`Статус изменён на "${status}"`);
       setMessageType('success');
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { label: '⏳ Ожидает', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
-      'in_progress': { label: '🔄 В работе', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
-      'completed': { label: '✅ Выполнено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-      'rejected': { label: '❌ Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
+      'pending': { label: 'Ожидает', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'in_progress': { label: 'В работе', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
+      'completed': { label: 'Выполнено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'rejected': { label: 'Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
     };
     return badges[status] || badges['pending'];
   };
 
   const getPriorityLabel = (priority) => {
     const labels = {
-      'low': '🟢 Низкий',
-      'medium': '🟡 Средний',
-      'high': '🔴 Высокий',
-      'urgent': '🔥 Срочный'
+      'low': 'Низкий',
+      'medium': 'Средний',
+      'high': 'Высокий',
+      'urgent': 'Срочный'
     };
     return labels[priority] || priority;
   };
@@ -362,7 +362,7 @@ export default function PresidentTasks() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
@@ -373,7 +373,7 @@ export default function PresidentTasks() {
         {showCreateForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-              📝 Создать задание
+              Создать задание
             </h3>
             <form onSubmit={handleCreateTask}>
               <div className="form-group">
@@ -404,10 +404,10 @@ export default function PresidentTasks() {
                     value={form.priority}
                     onChange={(e) => setForm({ ...form, priority: e.target.value })}
                   >
-                    <option value="low">🟢 Низкий</option>
-                    <option value="medium">🟡 Средний</option>
-                    <option value="high">🔴 Высокий</option>
-                    <option value="urgent">🔥 Срочный</option>
+                    <option value="low">Низкий</option>
+                    <option value="medium">Средний</option>
+                    <option value="high">Высокий</option>
+                    <option value="urgent">Срочный</option>
                   </select>
                 </div>
 
@@ -480,7 +480,7 @@ export default function PresidentTasks() {
                           </div>
                           <div style={{ fontSize: '12px', color: 'var(--color-gray-500)' }}>
                             {u.school || 'Школа не указана'} • {u.class_name || 'Класс не указан'}
-                            {u.club_name && ` • 🏫 ${u.club_name}`}
+                            {u.club_name && ` • ${u.club_name}`}
                           </div>
                         </div>
                       ))}
@@ -499,8 +499,8 @@ export default function PresidentTasks() {
                     alignItems: 'center',
                     gap: '8px'
                   }}>
-                    ✅ Выбран: <strong>{selectedUser.full_name}</strong>
-                    {selectedUser.club_name && <span style={{ color: 'var(--color-gray-400)' }}>• 🏫 {selectedUser.club_name}</span>}
+                    Выбран: <strong>{selectedUser.full_name}</strong>
+                    {selectedUser.club_name && <span style={{ color: 'var(--color-gray-400)' }}>• {selectedUser.club_name}</span>}
                     <button
                       type="button"
                       style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', marginLeft: 'auto' }}
@@ -515,7 +515,7 @@ export default function PresidentTasks() {
                   </div>
                 )}
                 <div style={{ fontSize: '11px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
-                  💡 Начните вводить фамилию участника — система покажет подходящих
+                  Начните вводить фамилию участника — система покажет подходящих
                 </div>
               </div>
 
@@ -528,17 +528,17 @@ export default function PresidentTasks() {
                     style={{ width: '18px', height: '18px' }}
                   />
                   <span style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
-                    🌍 Глобальное задание (для всех президентов)
+                    Глобальное задание (для всех президентов)
                   </span>
                 </label>
               </div>
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Создание...' : '✅ Создать'}
+                  {loading ? 'Создание...' : 'Создать'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={resetForm}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -584,11 +584,11 @@ export default function PresidentTasks() {
                         </span>
                         {task.is_global && (
                           <span className="tag" style={{ background: '#EDE7F6', color: '#6B46C1' }}>
-                            🌍 Глобальное
+                            Глобальное
                           </span>
                         )}
                         {task.club_name && (
-                          <span className="tag tag-blue">🏫 {task.club_name}</span>
+                          <span className="tag tag-blue">{task.club_name}</span>
                         )}
                       </div>
 
@@ -600,18 +600,18 @@ export default function PresidentTasks() {
 
                       <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
                         {task.assigned_to_name && (
-                          <span>👤 Назначено: {task.assigned_to_name}</span>
+                          <span>Назначено: {task.assigned_to_name}</span>
                         )}
                         {task.created_by_name && (
-                          <span>📝 Создал: {task.created_by_name}</span>
+                          <span>Создал: {task.created_by_name}</span>
                         )}
                         {task.deadline && (
-                          <span>📅 Срок: {new Date(task.deadline).toLocaleDateString('ru-RU')}</span>
+                          <span>Срок: {new Date(task.deadline).toLocaleDateString('ru-RU')}</span>
                         )}
                         {task.completed_at && (
-                          <span>✅ Завершено: {new Date(task.completed_at).toLocaleDateString('ru-RU')}</span>
+                          <span>Завершено: {new Date(task.completed_at).toLocaleDateString('ru-RU')}</span>
                         )}
-                        <span>💬 Ответов: {task.response_count || 0}</span>
+                        <span>Ответов: {task.response_count || 0}</span>
                       </div>
                     </div>
 
@@ -625,7 +625,7 @@ export default function PresidentTasks() {
                             setShowResponseModal(true);
                           }}
                         >
-                          📝 Ответить
+                          Ответить
                         </button>
                       )}
 
@@ -636,21 +636,21 @@ export default function PresidentTasks() {
                             style={{ padding: '6px 12px', fontSize: '12px' }}
                             onClick={() => handleUpdateStatus(task.id, 'in_progress')}
                           >
-                            🔄 В работу
+                            В работу
                           </button>
                           <button
                             className="btn-success"
                             style={{ padding: '6px 12px', fontSize: '12px', background: 'var(--color-success)' }}
                             onClick={() => handleUpdateStatus(task.id, 'completed')}
                           >
-                            ✅ Завершить
+                            Завершить
                           </button>
                           <button
                             className="btn-danger"
                             style={{ padding: '6px 12px', fontSize: '12px' }}
                             onClick={() => handleUpdateStatus(task.id, 'rejected')}
                           >
-                            ❌ Отклонить
+                            Отклонить
                           </button>
                         </>
                       )}
@@ -673,12 +673,12 @@ export default function PresidentTasks() {
                                   const errorData = await response.json().catch(() => ({}));
                                   throw new Error(errorData.error || `Ошибка ${response.status}`);
                                 }
-                                setMessage('✅ Задание удалено');
+                                setMessage('Задание удалено');
                                 setMessageType('success');
                                 loadData();
                                 setTimeout(() => setMessage(''), 3000);
                               } catch (err) {
-                                setMessage('❌ Ошибка: ' + err.message);
+                                setMessage('Ошибка: ' + err.message);
                                 setMessageType('error');
                               }
                             }
@@ -720,7 +720,7 @@ export default function PresidentTasks() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '4px' }}>
-              📝 Ответ на задание
+              Ответ на задание
             </h3>
             <p style={{ color: 'var(--color-gray-500)', marginBottom: '16px' }}>
               Задание: <strong>{selectedTask.title}</strong>
@@ -741,10 +741,10 @@ export default function PresidentTasks() {
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Отправка...' : '📤 Отправить ответ'}
+                  {loading ? 'Отправка...' : 'Отправить ответ'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => setShowResponseModal(false)}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>

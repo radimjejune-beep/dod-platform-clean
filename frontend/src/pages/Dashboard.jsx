@@ -68,10 +68,10 @@ export default function Dashboard() {
         api.getAchievements().catch(() => []),
       ]);
 
-      // ✅ ИСПРАВЛЕНО: фильтруем только участников
+      // ИСПРАВЛЕНО: фильтруем только участников
       const participantsList = users.filter(u => u.role === 'participant');
 
-      // ✅ ИСПРАВЛЕНО: фильтруем ближайшие мероприятия
+      // ИСПРАВЛЕНО: фильтруем ближайшие мероприятия
       const now = new Date();
       const upcoming = events
         .filter(e => new Date(e.event_date) >= now && e.moderation_status === 'approved')
@@ -91,7 +91,7 @@ export default function Dashboard() {
       setRecentParticipants(participantsList.slice(0, 5));
       setRecentAchievements(achievements.slice(0, 5));
 
-      // ✅ ИСПРАВЛЕНО: проверка наличия tabs
+      // ИСПРАВЛЕНО: проверка наличия tabs
       if (tabs.length > 0) {
         const tabExists = tabs.some(t => t.id === activeTab);
         if (!tabExists) {
@@ -141,7 +141,7 @@ export default function Dashboard() {
     const role = profile?.role;
     const actions = [];
 
-    // ✅ ИСПРАВЛЕНО: добавлен CRM для админа и координатора движения
+    // ИСПРАВЛЕНО: добавлен CRM для админа и координатора движения
     if (role === 'admin' || role === 'movement_coordinator') {
       actions.push(
         { path: '/crm', label: '🏢 CRM', icon: '🏢' },
@@ -317,7 +317,7 @@ export default function Dashboard() {
       {/* ПРИВЕТСТВИЕ */}
       <div className="dashboard-welcome">
         <div className="dashboard-welcome-content">
-          <h1>Привет, {profile?.full_name || 'Пользователь'} 👋</h1>
+          <h1>Привет, {profile?.full_name || 'Пользователь'}</h1>
           <p>Добро пожаловать в платформу «Дипломаты будущего»</p>
         </div>
         <div className="dashboard-welcome-role">
@@ -329,19 +329,19 @@ export default function Dashboard() {
       <div className="dashboard-stats">
         <div className="stat-card">
           <div className="stat-number">{stats.participants}</div>
-          <div className="stat-label">👥 Участников</div>
+          <div className="stat-label">Участников</div>
         </div>
         <div className="stat-card">
           <div className="stat-number">{stats.clubs}</div>
-          <div className="stat-label">🏫 Клубов</div>
+          <div className="stat-label">Клубов</div>
         </div>
         <div className="stat-card">
           <div className="stat-number">{stats.events}</div>
-          <div className="stat-label">📅 Мероприятий</div>
+          <div className="stat-label">Мероприятий</div>
         </div>
         <div className="stat-card">
           <div className="stat-number">{stats.achievements}</div>
-          <div className="stat-label">🏆 Достижений</div>
+          <div className="stat-label">Достижений</div>
         </div>
       </div>
 

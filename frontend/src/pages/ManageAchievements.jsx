@@ -157,7 +157,7 @@ export default function ManageAchievements() {
 
     try {
       if (!selectedParticipant) {
-        setMessage('❌ Пожалуйста, выберите участника');
+        setMessage('Пожалуйста, выберите участника');
         setMessageType('error');
         setLoading(false);
         return;
@@ -181,13 +181,13 @@ export default function ManageAchievements() {
         throw new Error(result.error);
       }
 
-      setMessage(editingAchievement ? '✅ Достижение обновлено!' : '✅ Достижение добавлено!');
+      setMessage(editingAchievement ? 'Достижение обновлено!' : 'Достижение добавлено!');
       setMessageType('success');
       resetForm();
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -212,12 +212,12 @@ export default function ManageAchievements() {
     try {
       const result = await api.deleteAchievement(id);
       if (result.error) throw new Error(result.error);
-      setMessage('✅ Достижение удалено');
+      setMessage('Достижение удалено');
       setMessageType('success');
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -251,7 +251,7 @@ export default function ManageAchievements() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
@@ -291,7 +291,7 @@ export default function ManageAchievements() {
               {selectedClubId ? (
                 <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
               ) : (
-                <span>📋 Все достижения</span>
+                <span>Все достижения</span>
               )}
             </div>
             {selectedClubId && (
@@ -307,7 +307,7 @@ export default function ManageAchievements() {
                 }}
                 onClick={() => setSelectedClubId('')}
               >
-                ✕ Сбросить
+                Сбросить
               </button>
             )}
           </div>
@@ -316,7 +316,7 @@ export default function ManageAchievements() {
         {showForm && canManage && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-              {editingAchievement ? '✏️ Редактировать достижение' : '📝 Добавить достижение'}
+              {editingAchievement ? 'Редактировать достижение' : 'Добавить достижение'}
             </h3>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
@@ -382,7 +382,7 @@ export default function ManageAchievements() {
                     alignItems: 'center',
                     gap: '8px'
                   }}>
-                    ✅ Выбран: <strong>{selectedParticipant.full_name}</strong>
+                    Выбран: <strong>{selectedParticipant.full_name}</strong>
                     <button
                       type="button"
                       style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', marginLeft: 'auto' }}
@@ -430,10 +430,10 @@ export default function ManageAchievements() {
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="submit" className="btn-success" disabled={loading || !selectedParticipant}>
-                  {loading ? '⏳ Сохранение...' : editingAchievement ? '💾 Обновить' : '✅ Добавить'}
+                  {loading ? 'Сохранение...' : editingAchievement ? 'Обновить' : 'Добавить'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={resetForm}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -483,8 +483,8 @@ export default function ManageAchievements() {
                     )}
                   </div>
                   <div className="subtitle">
-                    👤 {a.participant_name || 'Участник'}
-                    {a.achievement_date && ` • 📅 ${new Date(a.achievement_date).toLocaleDateString('ru-RU')}`}
+                    {a.participant_name || 'Участник'}
+                    {a.achievement_date && ` • ${new Date(a.achievement_date).toLocaleDateString('ru-RU')}`}
                   </div>
                   {a.description && <div className="meta">{a.description}</div>}
                   <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
@@ -494,7 +494,7 @@ export default function ManageAchievements() {
                         style={{ padding: '4px 12px', fontSize: '12px' }}
                         onClick={() => handleEdit(a)}
                       >
-                        ✏️ Редактировать
+                        Редактировать
                       </button>
                     )}
                     {canDelete && (
@@ -503,7 +503,7 @@ export default function ManageAchievements() {
                         style={{ padding: '4px 12px', fontSize: '12px' }}
                         onClick={() => handleDelete(a.id)}
                       >
-                        🗑️ Удалить
+                        Удалить
                       </button>
                     )}
                   </div>

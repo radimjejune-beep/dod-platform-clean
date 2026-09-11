@@ -7,7 +7,7 @@ export default function FilterBar({
   onFilterChange, 
   onSearchChange,
   onReset,
-  searchPlaceholder = '🔍 Поиск...',
+  searchPlaceholder = 'Поиск...',
   showSearch = true,
   showReset = true,
   children,
@@ -253,7 +253,7 @@ export default function FilterBar({
               e.target.style.background = 'var(--color-error-bg)';
             }}
           >
-            ✕ Сбросить
+            Сбросить
           </button>
         )}
 
@@ -364,7 +364,7 @@ export default function FilterBar({
               borderRadius: '20px',
               border: '1px solid #D5E4F0'
             }}>
-              🔍 {search}
+              {search}
               <button
                 onClick={() => handleSearch('')}
                 style={{

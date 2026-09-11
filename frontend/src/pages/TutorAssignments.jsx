@@ -55,21 +55,21 @@ export default function TutorAssignments() {
         throw new Error(result.error);
       }
 
-      setMessage(status === 'accepted' ? '✅ Вы приняли назначение!' : '❌ Вы отклонили назначение');
+      setMessage(status === 'accepted' ? 'Вы приняли назначение!' : 'Вы отклонили назначение');
       setMessageType(status === 'accepted' ? 'success' : 'error');
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { label: '⏳ Ожидает', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
-      'accepted': { label: '✅ Принято', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-      'declined': { label: '❌ Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
+      'pending': { label: 'Ожидает', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'accepted': { label: 'Принято', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'declined': { label: 'Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
     };
     return badges[status] || badges['pending'];
   };
@@ -122,8 +122,8 @@ export default function TutorAssignments() {
                         {assignment.event_title || 'Мероприятие'}
                       </h3>
                       <div style={{ color: 'var(--color-gray-500)', fontSize: '14px', marginTop: '4px' }}>
-                        📅 {assignment.event_date ? new Date(assignment.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
-                        {assignment.location && ` • 📍 ${assignment.location}`}
+                        {assignment.event_date ? new Date(assignment.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
+                        {assignment.location && ` • ${assignment.location}`}
                       </div>
                       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
                         <span className="tag" style={{ background: status.bg, color: status.color }}>
@@ -131,18 +131,18 @@ export default function TutorAssignments() {
                         </span>
                         {assignment.role && (
                           <span className="tag tag-blue">
-                            🎯 {assignment.role === 'lead_tutor' ? '⭐ Старший тьютор' : 
-                                    assignment.role === 'organizer' ? '📋 Организатор' : '📚 Тьютор'}
+                            {assignment.role === 'lead_tutor' ? 'Старший тьютор' : 
+                                    assignment.role === 'organizer' ? 'Организатор' : 'Тьютор'}
                           </span>
                         )}
                         {assignment.notes && (
                           <span style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
-                            📝 {assignment.notes}
+                            {assignment.notes}
                           </span>
                         )}
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
-                        👤 Назначил: {assignment.assigned_by_name || 'Неизвестно'}
+                        Назначил: {assignment.assigned_by_name || 'Неизвестно'}
                       </div>
                     </div>
                     {assignment.status === 'pending' && (
@@ -152,14 +152,14 @@ export default function TutorAssignments() {
                           style={{ padding: '6px 16px', fontSize: '13px' }}
                           onClick={() => handleRespond(assignment.id, 'accepted')}
                         >
-                          ✅ Принять
+                          Принять
                         </button>
                         <button
                           className="btn-danger"
                           style={{ padding: '6px 16px', fontSize: '13px' }}
                           onClick={() => handleRespond(assignment.id, 'declined')}
                         >
-                          ❌ Отклонить
+                          Отклонить
                         </button>
                       </div>
                     )}

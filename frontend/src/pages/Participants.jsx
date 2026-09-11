@@ -46,7 +46,7 @@ export default function Participants() {
       setProfile(userData);
 
       // ============================================================
-      // ✅ ЗАГРУЗКА С ПАГИНАЦИЕЙ
+      // ЗАГРУЗКА С ПАГИНАЦИЕЙ
       // ============================================================
       const [participantsData, clubsData] = await Promise.all([
         api.getParticipants({ page, limit: pagination.limit }),
@@ -59,7 +59,7 @@ export default function Participants() {
       let filtered = [];
       let total = 0;
 
-      // ✅ ОБРАБОТКА ДАННЫХ С ПАГИНАЦИЕЙ
+      // ОБРАБОТКА ДАННЫХ С ПАГИНАЦИЕЙ
       const data = participantsData.data || [];
       const meta = participantsData.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
 
@@ -186,9 +186,9 @@ export default function Participants() {
       label: 'Статус',
       placeholder: 'Все статусы',
       options: [
-        { value: 'active', label: '🟢 Активен' },
-        { value: 'inactive', label: '🔴 Неактивен' },
-        { value: 'pending', label: '⏳ Ожидает' }
+        { value: 'active', label: 'Активен' },
+        { value: 'inactive', label: 'Неактивен' },
+        { value: 'pending', label: 'Ожидает' }
       ]
     }
   ];
@@ -230,11 +230,11 @@ export default function Participants() {
     if (!confirm(`Удалить участника "${fullName}"?`)) return;
     try {
       await api.deleteUser(id);
-      setMessage('✅ Участник удалён');
+      setMessage('Участник удалён');
       loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
     }
   };
 
@@ -291,7 +291,7 @@ export default function Participants() {
            ============================================================ */}
         <div className="page-header">
           <div className="page-header-left">
-            <h1>👥 Участники</h1>
+            <h1>Участники</h1>
             <p>
               {isClubCoordinator 
                 ? `Участники вашего клуба (${filtered.length})` 
@@ -303,13 +303,13 @@ export default function Participants() {
               className={`btn-view ${viewMode === 'table' ? 'active' : ''}`}
               onClick={() => setViewMode('table')}
             >
-              📋 Таблица
+              Таблица
             </button>
             <button
               className={`btn-view ${viewMode === 'cards' ? 'active' : ''}`}
               onClick={() => setViewMode('cards')}
             >
-              🃏 Карточки
+              Карточки
             </button>
           </div>
         </div>
@@ -324,7 +324,7 @@ export default function Participants() {
           filters={filterConfig}
           onFilterChange={setFilters}
           onSearchChange={setSearchQuery}
-          searchPlaceholder="🔍 Поиск по ФИО, email, школе..."
+          searchPlaceholder="Поиск по ФИО, email, школе..."
         >
           <div className="filter-count">
             Найдено: <strong>{filtered.length}</strong>
@@ -375,7 +375,7 @@ export default function Participants() {
                       <td>{p.club_name || '—'}</td>
                       <td>
                         <span className={`status-badge ${p.status === 'active' ? 'active' : 'inactive'}`}>
-                          {p.status === 'active' ? '🟢 Активен' : '🔴 Неактивен'}
+                          {p.status === 'active' ? 'Активен' : 'Неактивен'}
                         </span>
                       </td>
                       <td>
@@ -458,7 +458,7 @@ export default function Participants() {
                   </div>
                   <div className="card-footer">
                     <span className={`status-badge ${p.status === 'active' ? 'active' : 'inactive'}`}>
-                      {p.status === 'active' ? '🟢 Активен' : '🔴 Неактивен'}
+                      {p.status === 'active' ? 'Активен' : 'Неактивен'}
                     </span>
                     {(canEdit || canDelete) && (
                       <div className="card-actions" onClick={(e) => e.stopPropagation()}>

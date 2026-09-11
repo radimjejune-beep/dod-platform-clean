@@ -122,7 +122,7 @@ export default function Events() {
       const club = clubs.find(c => c.id === clubId);
       if (club) {
         setForm(prev => ({ ...prev, club_id: clubId }));
-        setMessage(`📝 Создание мероприятия для клуба: "${club.name}"`);
+        setMessage(`Создание мероприятия для клуба: "${club.name}"`);
         setMessageType('success');
         setShowForm(true);
         localStorage.removeItem('clubEventTarget');
@@ -148,7 +148,7 @@ export default function Events() {
       setProfile(userData);
 
       // ============================================================
-      // ✅ ЗАГРУЗКА КЛУБОВ И СОБЫТИЙ С ПАГИНАЦИЕЙ
+      // ЗАГРУЗКА КЛУБОВ И СОБЫТИЙ С ПАГИНАЦИЕЙ
       // ============================================================
       const [clubsData, eventsData] = await Promise.all([
         api.getClubs().catch(() => []),
@@ -157,7 +157,7 @@ export default function Events() {
 
       setClubs(clubsData || []);
       
-      // ✅ ОБРАБОТКА ДАННЫХ С ПАГИНАЦИЕЙ
+      // ОБРАБОТКА ДАННЫХ С ПАГИНАЦИЕЙ
       if (eventsData && eventsData.data) {
         setAllEvents(eventsData.data);
         setPagination(eventsData.pagination);
@@ -249,7 +249,7 @@ export default function Events() {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        setMessage('❌ Не авторизован');
+        setMessage('Не авторизован');
         setMessageType('error');
         setRegistering(false);
         return;
@@ -277,14 +277,14 @@ export default function Events() {
         setMessage('❌ ' + data.error);
         setMessageType('error');
       } else {
-        setMessage(data.message || '✅ Заявка отправлена!');
+        setMessage(data.message || 'Заявка отправлена!');
         setMessageType('success');
         await loadData(pagination.page);
       }
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setRegistering(false);
@@ -310,13 +310,13 @@ export default function Events() {
         setMessage('❌ ' + data.error);
         setMessageType('error');
       } else {
-        setMessage('✅ Вы отписались от мероприятия');
+        setMessage('Вы отписались от мероприятия');
         setMessageType('success');
         await loadData(pagination.page);
       }
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -343,14 +343,14 @@ export default function Events() {
         setMessage('❌ ' + data.error);
         setMessageType('error');
       } else {
-        setMessage(`✅ Заявка ${status === 'confirmed' ? 'подтверждена' : 'отклонена'}`);
+        setMessage(`Заявка ${status === 'confirmed' ? 'подтверждена' : 'отклонена'}`);
         setMessageType('success');
         await loadRegistrations(selectedEventForRegistrations?.id);
         await loadData(pagination.page);
       }
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -378,13 +378,13 @@ export default function Events() {
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
-      setMessage(status === 'approved' ? '✅ Заявка клуба одобрена!' : '❌ Заявка клуба отклонена');
+      setMessage(status === 'approved' ? 'Заявка клуба одобрена!' : 'Заявка клуба отклонена');
       setMessageType(status === 'approved' ? 'success' : 'error');
       await loadRegistrations(selectedEventForRegistrations?.id);
       await loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -420,11 +420,11 @@ export default function Events() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      setMessage('✅ Список участников выгружен!');
+      setMessage('Список участников выгружен!');
       setMessageType('success');
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setExporting(false);
@@ -441,9 +441,9 @@ export default function Events() {
       label: 'Тип',
       placeholder: 'Все типы',
       options: [
-        { value: 'internal', label: '📌 Внутреннее' },
-        { value: 'outgoing', label: '🌍 Выездное' },
-        { value: 'global_forum', label: '🏛️ Форум' }
+        { value: 'internal', label: 'Внутреннее' },
+        { value: 'outgoing', label: 'Выездное' },
+        { value: 'global_forum', label: 'Форум' }
       ]
     },
     {
@@ -452,20 +452,20 @@ export default function Events() {
       label: 'Статус',
       placeholder: 'Все статусы',
       options: [
-        { value: 'approved', label: '✅ Одобрено' },
-        { value: 'pending', label: '⏳ На модерации' },
-        { value: 'rejected', label: '❌ Отклонено' }
+        { value: 'approved', label: 'Одобрено' },
+        { value: 'pending', label: 'На модерации' },
+        { value: 'rejected', label: 'Отклонено' }
       ]
     },
     {
       key: 'is_global',
       type: 'checkbox',
-      label: '🌍 Глобальные'
+      label: 'Глобальные'
     },
     {
       key: 'is_club_event',
       type: 'checkbox',
-      label: '🏫 Внутренние клуба'
+      label: 'Внутренние клуба'
     }
   ];
 
@@ -634,12 +634,12 @@ export default function Events() {
       }
 
       const successMessage = form.id 
-        ? '✅ Мероприятие обновлено!' 
+        ? 'Мероприятие обновлено!' 
         : eventData.is_global 
-          ? '✅ Глобальное мероприятие создано!' 
+          ? 'Глобальное мероприятие создано!' 
           : eventData.club_id 
-            ? '✅ Внутреннее мероприятие клуба создано!' 
-            : '✅ Мероприятие создано!';
+            ? 'Внутреннее мероприятие клуба создано!' 
+            : 'Мероприятие создано!';
       
       setMessage(successMessage);
       setMessageType('success');
@@ -647,7 +647,7 @@ export default function Events() {
       loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -704,12 +704,12 @@ export default function Events() {
     try {
       const result = await api.deleteEvent(id);
       if (result.error) throw new Error(result.error);
-      setMessage('✅ Мероприятие удалено');
+      setMessage('Мероприятие удалено');
       setMessageType('success');
       loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -731,21 +731,21 @@ export default function Events() {
       });
       const result = await response.json();
       if (result.error) throw new Error(result.error);
-      setMessage(status === 'approved' ? '✅ Мероприятие одобрено!' : '❌ Мероприятие отклонено');
+      setMessage(status === 'approved' ? 'Мероприятие одобрено!' : 'Мероприятие отклонено');
       setMessageType(status === 'approved' ? 'success' : 'error');
       setShowModerationModal(false);
       setModerationComment('');
       loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
 
   const handleAssignTutor = async () => {
     if (!selectedTutor) {
-      setMessage('❌ Выберите тьютора');
+      setMessage('Выберите тьютора');
       setMessageType('error');
       return;
     }
@@ -771,7 +771,7 @@ export default function Events() {
         throw new Error(result.error);
       }
 
-      setMessage('✅ Тьютор назначен на мероприятие!');
+      setMessage('Тьютор назначен на мероприятие!');
       setMessageType('success');
       setShowTutorModal(false);
       setSelectedTutor('');
@@ -779,7 +779,7 @@ export default function Events() {
       loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -822,7 +822,7 @@ export default function Events() {
            ============================================================ */}
         <div className="page-header">
           <div className="page-header-left">
-            <h1>📅 Мероприятия</h1>
+            <h1>Мероприятия</h1>
             <p>Всего: {filteredEvents.length}</p>
           </div>
           {canCreate && (
@@ -830,7 +830,7 @@ export default function Events() {
               className="btn-gold"
               onClick={() => setShowForm(!showForm)}
             >
-              {showForm ? '✖ Закрыть' : '➕ Создать мероприятие'}
+              {showForm ? 'Закрыть' : 'Создать мероприятие'}
             </button>
           )}
         </div>
@@ -843,16 +843,16 @@ export default function Events() {
 
         {canModerate && pendingEvents.length > 0 && (
           <div className="card card-warning">
-            <h3>⏳ Ожидают модерации ({pendingEvents.length})</h3>
+            <h3>Ожидают модерации ({pendingEvents.length})</h3>
             <div className="pending-list">
               {pendingEvents.map((e) => (
                 <div key={e.id} className="pending-item">
                   <div>
                     <div className="pending-title">{e.title}</div>
-                    <div className="pending-club">🏫 {e.club_name || 'Без клуба'}</div>
+                    <div className="pending-club">{e.club_name || 'Без клуба'}</div>
                   </div>
                   <button className="btn-primary" onClick={() => { setSelectedEvent(e); setShowModerationModal(true); }}>
-                    📋 Рассмотреть
+                    Рассмотреть
                   </button>
                 </div>
               ))}
@@ -864,7 +864,7 @@ export default function Events() {
           filters={filterConfig}
           onFilterChange={setFilters}
           onSearchChange={setSearchQuery}
-          searchPlaceholder="🔍 Поиск по названию, описанию, месту..."
+          searchPlaceholder="Поиск по названию, описанию, месту..."
         >
           <div className="filter-count">
             Найдено: <strong>{filteredEvents.length}</strong>
@@ -876,17 +876,17 @@ export default function Events() {
            ============================================================ */}
         {showForm && canCreate && (
           <div className="card form-card">
-            <h3>{form.id ? '✏️ Редактировать' : '📝 Создать мероприятие'}</h3>
+            <h3>{form.id ? 'Редактировать' : 'Создать мероприятие'}</h3>
             
             {isClubCoordinator && coordinatorClubId && (
               <div className="form-club-info">
-                🏫 <strong>Мероприятие для вашего клуба:</strong> {clubs.find(c => c.id === coordinatorClubId)?.name || 'КЮД'}
+                <strong>Мероприятие для вашего клуба:</strong> {clubs.find(c => c.id === coordinatorClubId)?.name || 'КЮД'}
               </div>
             )}
 
             {isMovementCoordinator && (
               <div className="form-global-info">
-                🌍 <strong>Глобальное мероприятие</strong> — будет доступно всем участникам движения
+                <strong>Глобальное мероприятие</strong> — будет доступно всем участникам движения
               </div>
             )}
             
@@ -969,7 +969,7 @@ export default function Events() {
               {/* ВЫБОР КЛУБОВ */}
               {(isAdmin || isMovementCoordinator) && (
                 <div className="form-group">
-                  <label>🎯 Отправить мероприятие клубам</label>
+                  <label>Отправить мероприятие клубам</label>
                   
                   <div className="club-select-buttons">
                     <button
@@ -983,7 +983,7 @@ export default function Events() {
                         });
                       }}
                     >
-                      🌍 Все КЮДы
+                      Все КЮДы
                     </button>
                     
                     <button
@@ -997,12 +997,12 @@ export default function Events() {
                         });
                       }}
                     >
-                      📌 Выбрать конкретные
+                      Выбрать конкретные
                     </button>
                     
                     {!form.is_global && form.target_clubs?.length > 0 && (
                       <span className="club-count">
-                        ✅ Выбрано: {form.target_clubs.length} из {clubs.length}
+                        Выбрано: {form.target_clubs.length} из {clubs.length}
                       </span>
                     )}
                     
@@ -1012,7 +1012,7 @@ export default function Events() {
                         className="btn-clear"
                         onClick={() => setForm({ ...form, target_clubs: [] })}
                       >
-                        ✕ Сбросить
+                        Сбросить
                       </button>
                     )}
                   </div>
@@ -1022,7 +1022,7 @@ export default function Events() {
                       <div className="club-search">
                         <input
                           type="text"
-                          placeholder="🔍 Поиск клуба по названию..."
+                          placeholder="Поиск клуба по названию..."
                           value={searchClubQuery || ''}
                           onChange={(e) => setSearchClubQuery(e.target.value)}
                         />
@@ -1043,7 +1043,7 @@ export default function Events() {
                                 }
                               }}
                             />
-                            <span>🏫 {club.name}</span>
+                            <span>{club.name}</span>
                           </label>
                         ))}
                       </div>
@@ -1056,13 +1056,13 @@ export default function Events() {
                             setForm({ ...form, target_clubs: allIds });
                           }}
                         >
-                          ✅ Выбрать все
+                          Выбрать все
                         </button>
                         <button
                           type="button"
                           onClick={() => setForm({ ...form, target_clubs: [] })}
                         >
-                          ❌ Снять все
+                          Снять все
                         </button>
                         <button
                           type="button"
@@ -1072,7 +1072,7 @@ export default function Events() {
                             setForm({ ...form, target_clubs: ids });
                           }}
                         >
-                          🎯 С участниками
+                          С участниками
                         </button>
                       </div>
                     </>
@@ -1080,7 +1080,7 @@ export default function Events() {
                   
                   {form.is_global && (
                     <div className="global-info">
-                      🌍 Мероприятие увидят ВСЕ КЮДы
+                      Мероприятие увидят ВСЕ КЮДы
                     </div>
                   )}
                 </div>
@@ -1094,14 +1094,14 @@ export default function Events() {
                   onChange={(e) => setForm({ ...form, form_url: e.target.value })} 
                   placeholder="https://example.com/event-form"
                 />
-                <div className="form-hint">📎 Ссылка, которую увидят участники</div>
+                <div className="form-hint">Ссылка, которую увидят участники</div>
               </div>
               
               <div className="form-actions">
                 <button type="submit" className="btn-success" disabled={loading}>
                   {loading ? '⏳' : form.id ? '💾 Обновить' : '✅ Создать'}
                 </button>
-                <button type="button" className="btn-secondary" onClick={resetForm}>❌ Отмена</button>
+                <button type="button" className="btn-secondary" onClick={resetForm}>Отмена</button>
               </div>
             </form>
           </div>
@@ -1172,34 +1172,34 @@ export default function Events() {
                     <div className="event-title">
                       {event.title}
                       {event.is_global && (
-                        <span className="tag tag-global">🌍 Глобальное</span>
+                        <span className="tag tag-global">Глобальное</span>
                       )}
                       {event.is_club_event && (
-                        <span className="tag tag-club">🏫 Внутреннее</span>
+                        <span className="tag tag-club">Внутреннее</span>
                       )}
                       {event.type === 'outgoing' && (
-                        <span className="tag tag-outgoing">🌍 Выездное</span>
+                        <span className="tag tag-outgoing">Выездное</span>
                       )}
                       {event.moderation_status === 'pending' && (
-                        <span className="tag tag-pending">⏳ На модерации</span>
+                        <span className="tag tag-pending">На модерации</span>
                       )}
                       {event.moderation_status === 'rejected' && (
-                        <span className="tag tag-rejected">❌ Отклонено</span>
+                        <span className="tag tag-rejected">Отклонено</span>
                       )}
                       {isFull && (
-                        <span className="tag tag-full">⚠️ Мест нет</span>
+                        <span className="tag tag-full">Мест нет</span>
                       )}
                       {isDeadlinePassed && (
-                        <span className="tag tag-closed">⛔ Регистрация закрыта</span>
+                        <span className="tag tag-closed">Регистрация закрыта</span>
                       )}
                     </div>
                     <div className="event-subtitle">
-                      📅 {event.event_date ? new Date(event.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
-                      {event.location && ` 📍 ${event.location}`}
-                      {event.club_name && ` 🏫 ${event.club_name}`}
-                      {event.max_participants > 0 && ` 👥 ${event.registrations_count || 0}/${event.max_participants}`}
+                      {event.event_date ? new Date(event.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
+                      {event.location && `${event.location}`}
+                      {event.club_name && `${event.club_name}`}
+                      {event.max_participants > 0 && `${event.registrations_count || 0}/${event.max_participants}`}
                       {event.registration_deadline && (
-                        ` ⏰ Дедлайн: ${new Date(event.registration_deadline).toLocaleDateString('ru-RU')}`
+                        `Дедлайн: ${new Date(event.registration_deadline).toLocaleDateString('ru-RU')}`
                       )}
                     </div>
                     {event.description && <div className="event-description">{event.description}</div>}
@@ -1208,7 +1208,7 @@ export default function Events() {
                     {event.form_url && (
                       <div className="event-link">
                         <a href={event.form_url} target="_blank" rel="noopener noreferrer">
-                          📎 Ссылка на мероприятие
+                          Ссылка на мероприятие
                         </a>
                       </div>
                     )}
@@ -1219,13 +1219,13 @@ export default function Events() {
                         {isParticipant && !isOutgoingOrGlobal && (
                           <>
                             {isRejected && (
-                              <span className="reg-status rejected">❌ Ваша заявка отклонена</span>
+                              <span className="reg-status rejected">Ваша заявка отклонена</span>
                             )}
                             {isPending && (
-                              <span className="reg-status pending">⏳ Заявка на рассмотрении</span>
+                              <span className="reg-status pending">Заявка на рассмотрении</span>
                             )}
                             {isConfirmed && (
-                              <span className="reg-status confirmed">✅ Вы записаны</span>
+                              <span className="reg-status confirmed">Вы записаны</span>
                             )}
                             {!isRegistered && !isDeadlinePassed && !isFull && (
                               <button
@@ -1241,7 +1241,7 @@ export default function Events() {
                                 className="btn-danger btn-sm"
                                 onClick={() => handleUnregister(userRegistration.id)}
                               >
-                                ❌ Отменить заявку
+                                Отменить заявку
                               </button>
                             )}
                             {isConfirmed && (
@@ -1249,14 +1249,14 @@ export default function Events() {
                                 className="btn-secondary btn-sm"
                                 onClick={() => handleUnregister(userRegistration.id)}
                               >
-                                ❌ Отписаться
+                                Отписаться
                               </button>
                             )}
                             {isDeadlinePassed && !isRegistered && (
-                              <span className="reg-status closed">⛔ Регистрация закрыта</span>
+                              <span className="reg-status closed">Регистрация закрыта</span>
                             )}
                             {isFull && !isRegistered && (
-                              <span className="reg-status full">⚠️ Все места заняты</span>
+                              <span className="reg-status full">Все места заняты</span>
                             )}
                           </>
                         )}
@@ -1264,13 +1264,13 @@ export default function Events() {
                         {isClubCoord && isOutgoingOrGlobal && (
                           <>
                             {clubRegistration?.status === 'pending' && (
-                              <span className="reg-status pending">⏳ Заявка клуба на рассмотрении</span>
+                              <span className="reg-status pending">Заявка клуба на рассмотрении</span>
                             )}
                             {clubRegistration?.status === 'confirmed' && (
-                              <span className="reg-status confirmed">✅ Заявка клуба одобрена</span>
+                              <span className="reg-status confirmed">Заявка клуба одобрена</span>
                             )}
                             {clubRegistration?.status === 'rejected' && (
-                              <span className="reg-status rejected">❌ Заявка клуба отклонена</span>
+                              <span className="reg-status rejected">Заявка клуба отклонена</span>
                             )}
                             {!clubRegistration && !isDeadlinePassed && !isFull && (
                               <button
@@ -1286,14 +1286,14 @@ export default function Events() {
                                 className="btn-danger btn-sm"
                                 onClick={() => handleUnregister(clubRegistration.id)}
                               >
-                                ❌ Отменить заявку
+                                Отменить заявку
                               </button>
                             )}
                             {isDeadlinePassed && !clubRegistration && (
-                              <span className="reg-status closed">⛔ Регистрация закрыта</span>
+                              <span className="reg-status closed">Регистрация закрыта</span>
                             )}
                             {isFull && !clubRegistration && (
-                              <span className="reg-status full">⚠️ Все места заняты</span>
+                              <span className="reg-status full">Все места заняты</span>
                             )}
                           </>
                         )}
@@ -1303,12 +1303,12 @@ export default function Events() {
                     <div className="event-actions">
                       {userCanEdit && (
                         <button className="btn-secondary btn-sm" onClick={() => handleEdit(event)}>
-                          ✏️ Редактировать
+                          Редактировать
                         </button>
                       )}
                       {userCanDelete && (
                         <button className="btn-danger btn-sm" onClick={() => handleDelete(event.id)}>
-                          🗑️ Удалить
+                          Удалить
                         </button>
                       )}
                       {canModerate && event.moderation_status === 'pending' && (
@@ -1317,13 +1317,13 @@ export default function Events() {
                             className="btn-success btn-sm"
                             onClick={() => { setSelectedEvent(event); setShowModerationModal(true); }}
                           >
-                            ✅ Одобрить
+                            Одобрить
                           </button>
                           <button
                             className="btn-danger btn-sm"
                             onClick={() => { setSelectedEvent(event); setShowModerationModal(true); }}
                           >
-                            ❌ Отклонить
+                            Отклонить
                           </button>
                         </>
                       )}
@@ -1338,7 +1338,7 @@ export default function Events() {
                               setShowRegistrationsModal(true);
                             }}
                           >
-                            👥 Участники ({event.registrations_count || 0})
+                            Участники ({event.registrations_count || 0})
                           </button>
                           <button
                             className="btn-primary btn-sm"
@@ -1362,7 +1362,7 @@ export default function Events() {
                             setShowTutorModal(true);
                           }}
                         >
-                          🧑‍🏫 Назначить тьютора
+                          Назначить тьютора
                         </button>
                       )}
                     </div>
@@ -1386,14 +1386,14 @@ export default function Events() {
         <div className="modal-overlay" onClick={() => setShowRegistrationsModal(false)}>
           <div className="modal modal-large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>👥 Участники мероприятия</h3>
+              <h3>Участники мероприятия</h3>
               <button className="modal-close" onClick={() => setShowRegistrationsModal(false)}>✕</button>
             </div>
 
             <p className="modal-subtitle">
               <strong>{selectedEventForRegistrations.title}</strong>
               {selectedEventForRegistrations.max_participants > 0 && (
-                <span> 👥 {selectedEventForRegistrations.registrations_count || 0}/{selectedEventForRegistrations.max_participants}</span>
+                <span>{selectedEventForRegistrations.registrations_count || 0}/{selectedEventForRegistrations.max_participants}</span>
               )}
             </p>
 
@@ -1415,9 +1415,9 @@ export default function Events() {
                       padding: '4px 14px',
                       fontSize: '13px'
                     }}>
-                      {stat.status === 'confirmed' ? '✅ Подтверждено' :
-                       stat.status === 'pending' ? '⏳ Ожидает' :
-                       stat.status === 'rejected' ? '❌ Отклонено' : stat.status}: {stat.count}
+                      {stat.status === 'confirmed' ? 'Подтверждено' :
+                       stat.status === 'pending' ? 'Ожидает' :
+                       stat.status === 'rejected' ? 'Отклонено' : stat.status}: {stat.count}
                     </span>
                   ))}
                 </div>
@@ -1452,7 +1452,7 @@ export default function Events() {
                                     {reg.full_name}
                                     {isClubRegistration && (
                                       <span className="tag" style={{ marginLeft: '8px', background: 'var(--color-gold-pale)', color: 'var(--color-gold-dark)', fontSize: '9px' }}>
-                                        🏫 Заявка от клуба
+                                        Заявка от клуба
                                       </span>
                                     )}
                                   </div>
@@ -1465,7 +1465,7 @@ export default function Events() {
                             <td>
                               <div className="participant-contact">
                                 {reg.email}
-                                {reg.phone && <div>📞 {reg.phone}</div>}
+                                {reg.phone && <div>{reg.phone}</div>}
                               </div>
                             </td>
                             <td><span className="tag tag-blue">{reg.club_name || '—'}</span></td>
@@ -1478,16 +1478,16 @@ export default function Events() {
                                        reg.status === 'pending' ? 'var(--color-gold-dark)' :
                                        reg.status === 'rejected' ? 'var(--color-error)' : 'var(--color-gray-500)',
                               }}>
-                                {reg.status === 'confirmed' ? '✅ Подтверждён' :
-                                 reg.status === 'pending' ? '⏳ Ожидает' :
-                                 reg.status === 'rejected' ? '❌ Отклонён' : reg.status}
+                                {reg.status === 'confirmed' ? 'Подтверждён' :
+                                 reg.status === 'pending' ? 'Ожидает' :
+                                 reg.status === 'rejected' ? 'Отклонён' : reg.status}
                               </span>
                             </td>
                             <td>
                               {new Date(reg.registered_at).toLocaleDateString('ru-RU')}
                               {reg.confirmed_at && (
                                 <div style={{ color: 'var(--color-success)', fontSize: '11px' }}>
-                                  ✅ {new Date(reg.confirmed_at).toLocaleDateString('ru-RU')}
+                                  {new Date(reg.confirmed_at).toLocaleDateString('ru-RU')}
                                 </div>
                               )}
                             </td>
@@ -1514,21 +1514,21 @@ export default function Events() {
                                     className="btn-success btn-sm"
                                     onClick={() => handleApproveClub(reg.id, 'approved')}
                                   >
-                                    ✅ Одобрить клуб
+                                    Одобрить клуб
                                   </button>
                                   <button
                                     className="btn-danger btn-sm"
                                     onClick={() => handleApproveClub(reg.id, 'rejected')}
                                   >
-                                    ❌ Отклонить
+                                    Отклонить
                                   </button>
                                 </div>
                               )}
                               {reg.status === 'confirmed' && (
-                                <span style={{ color: 'var(--color-success)' }}>✅ Подтверждён</span>
+                                <span style={{ color: 'var(--color-success)' }}>Подтверждён</span>
                               )}
                               {reg.status === 'rejected' && (
-                                <span style={{ color: 'var(--color-error)' }}>❌ Отклонён</span>
+                                <span style={{ color: 'var(--color-error)' }}>Отклонён</span>
                               )}
                             </td>
                           </tr>
@@ -1553,7 +1553,7 @@ export default function Events() {
         <div className="modal-overlay" onClick={() => setShowModerationModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>📋 Модерация</h3>
+              <h3>Модерация</h3>
               <button className="modal-close" onClick={() => setShowModerationModal(false)}>✕</button>
             </div>
 
@@ -1572,10 +1572,10 @@ export default function Events() {
 
             <div className="modal-actions">
               <button className="btn-success" onClick={() => handleModerate(selectedEvent.id, 'approved')}>
-                ✅ Одобрить
+                Одобрить
               </button>
               <button className="btn-danger" onClick={() => handleModerate(selectedEvent.id, 'rejected')}>
-                ❌ Отклонить
+                Отклонить
               </button>
             </div>
             <button className="btn-secondary" style={{ width: '100%', marginTop: '12px' }} onClick={() => setShowModerationModal(false)}>
@@ -1589,7 +1589,7 @@ export default function Events() {
         <div className="modal-overlay" onClick={() => setShowTutorModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>🧑‍🏫 Назначить тьютора</h3>
+              <h3>Назначить тьютора</h3>
               <button className="modal-close" onClick={() => setShowTutorModal(false)}>✕</button>
             </div>
 
@@ -1620,9 +1620,9 @@ export default function Events() {
                 value={tutorRole}
                 onChange={(e) => setTutorRole(e.target.value)}
               >
-                <option value="tutor">📚 Тьютор</option>
-                <option value="lead_tutor">⭐ Старший тьютор</option>
-                <option value="organizer">📋 Организатор</option>
+                <option value="tutor">Тьютор</option>
+                <option value="lead_tutor">Старший тьютор</option>
+                <option value="organizer">Организатор</option>
               </select>
             </div>
 
@@ -1639,7 +1639,7 @@ export default function Events() {
 
             <div className="modal-actions">
               <button className="btn-success" onClick={handleAssignTutor}>
-                ✅ Назначить
+                Назначить
               </button>
               <button
                 className="btn-secondary"
@@ -1649,7 +1649,7 @@ export default function Events() {
                   setTutorNotes('');
                 }}
               >
-                ❌ Отмена
+                Отмена
               </button>
             </div>
           </div>

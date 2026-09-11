@@ -52,7 +52,7 @@ export default function ClubCoordinatorDashboard() {
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--color-gray-100)' }}>
-        <div>⏳ Загрузка...</div>
+        <div>Загрузка...</div>
       </div>
     );
   }
@@ -60,7 +60,7 @@ export default function ClubCoordinatorDashboard() {
   if (error) {
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
-        <h2>❌ {error}</h2>
+        <h2>{error}</h2>
         <button onClick={() => window.location.reload()}>Обновить</button>
       </div>
     );
@@ -70,7 +70,7 @@ export default function ClubCoordinatorDashboard() {
     <div>
       <Navigation profile={profile} />
       <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
-        <h1>🏫 Дашборд координатора КЮДа</h1>
+        <h1>Дашборд координатора КЮДа</h1>
         <div style={{ background: 'var(--color-gray-50)', padding: '20px', borderRadius: '8px', marginTop: '20px' }}>
           <p><strong>👤:</strong> {profile?.full_name}</p>
           <p><strong>📧:</strong> {profile?.email}</p>
@@ -82,19 +82,19 @@ export default function ClubCoordinatorDashboard() {
             onClick={() => navigate('/events')}
             style={{ padding: '10px 20px', background: 'var(--color-primary-light)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', marginRight: '10px' }}
           >
-            📅 Мероприятия
+            Мероприятия
           </button>
           <button 
             onClick={() => navigate('/participants')}
             style={{ padding: '10px 20px', background: 'var(--color-success)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', marginRight: '10px' }}
           >
-            👥 Участники
+            Участники
           </button>
           <button 
             onClick={() => navigate('/profile')}
             style={{ padding: '10px 20px', background: 'var(--color-gold)', color: 'var(--color-primary)', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
           >
-            👤 Профиль
+            Профиль
           </button>
         </div>
       </div>

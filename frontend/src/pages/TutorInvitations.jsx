@@ -98,7 +98,7 @@ export default function TutorInvitations() {
         throw new Error(api.describeApiError(result));
       }
 
-      setMessage('✅ Приглашение отправлено тьютору!');
+      setMessage('Приглашение отправлено тьютору!');
       setMessageType('success');
       setForm({
         tutor_id: '',
@@ -115,7 +115,7 @@ export default function TutorInvitations() {
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -131,22 +131,22 @@ export default function TutorInvitations() {
         throw new Error(api.describeApiError(result));
       }
 
-      setMessage(status === 'accepted' ? '✅ Приглашение принято!' : '❌ Приглашение отклонено');
+      setMessage(status === 'accepted' ? 'Приглашение принято!' : 'Приглашение отклонено');
       setMessageType(status === 'accepted' ? 'success' : 'error');
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { color: 'var(--color-gold-dark)', bg: 'var(--color-gold-pale)', label: '⏳ Ожидает' },
-      'accepted': { color: 'var(--color-success)', bg: 'var(--color-success-bg)', label: '✅ Принято' },
-      'declined': { color: 'var(--color-error)', bg: 'var(--color-error-bg)', label: '❌ Отклонено' },
-      'cancelled': { color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)', label: '✖ Отменено' }
+      'pending': { color: 'var(--color-gold-dark)', bg: 'var(--color-gold-pale)', label: 'Ожидает' },
+      'accepted': { color: 'var(--color-success)', bg: 'var(--color-success-bg)', label: 'Принято' },
+      'declined': { color: 'var(--color-error)', bg: 'var(--color-error-bg)', label: 'Отклонено' },
+      'cancelled': { color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)', label: 'Отменено' }
     };
     return badges[status] || badges['pending'];
   };
@@ -201,7 +201,7 @@ export default function TutorInvitations() {
                 if (!showForm) setTutorSearch('');
               }}
             >
-              {showForm ? '✖ Закрыть' : '➕ Создать приглашение'}
+              {showForm ? 'Закрыть' : 'Создать приглашение'}
             </button>
           )}
         </div>
@@ -215,7 +215,7 @@ export default function TutorInvitations() {
         {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-              📝 Создать приглашение для тьютора
+              Создать приглашение для тьютора
             </h3>
             <form onSubmit={handleSubmit}>
               <div className="grid-2">
@@ -268,7 +268,7 @@ export default function TutorInvitations() {
                             {t.full_name}
                           </div>
                           <div style={{ fontSize: '12px', color: 'var(--color-gray-500)' }}>
-                            📧 {t.email}
+                            {t.email}
                           </div>
                         </div>
                       ))}
@@ -286,7 +286,7 @@ export default function TutorInvitations() {
                       alignItems: 'center',
                       gap: '8px'
                     }}>
-                      ✅ Выбран: <strong>{tutorSearch}</strong>
+                      Выбран: <strong>{tutorSearch}</strong>
                       <button
                         type="button"
                         style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', marginLeft: 'auto' }}
@@ -337,11 +337,11 @@ export default function TutorInvitations() {
                     value={form.role}
                     onChange={(e) => setForm({ ...form, role: e.target.value })}
                   >
-                    <option value="Тьютор">📚 Тьютор</option>
-                    <option value="Старший тьютор">⭐ Старший тьютор</option>
-                    <option value="Организатор">📋 Организатор</option>
-                    <option value="Медиа">📸 Медиа</option>
-                    <option value="Сопровождение">🤝 Сопровождение</option>
+                    <option value="Тьютор">Тьютор</option>
+                    <option value="Старший тьютор">Старший тьютор</option>
+                    <option value="Организатор">Организатор</option>
+                    <option value="Медиа">Медиа</option>
+                    <option value="Сопровождение">Сопровождение</option>
                   </select>
                 </div>
 
@@ -389,10 +389,10 @@ export default function TutorInvitations() {
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Отправка...' : '📤 Отправить приглашение'}
+                  {loading ? 'Отправка...' : 'Отправить приглашение'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -426,40 +426,40 @@ export default function TutorInvitations() {
                           {status.label}
                         </span>
                         {inv.club_name && (
-                          <span className="tag tag-blue">🏫 {inv.club_name}</span>
+                          <span className="tag tag-blue">{inv.club_name}</span>
                         )}
                       </div>
                       <div style={{ fontSize: '14px', color: '#475467', marginTop: '8px' }}>
-                        👤 {inv.tutor_name || 'Тьютор'}
+                        {inv.tutor_name || 'Тьютор'}
                         {inv.tutor_email && ` (${inv.tutor_email})`}
                       </div>
                       {inv.event_date && (
                         <div style={{ fontSize: '14px', color: '#475467' }}>
-                          📅 {new Date(inv.event_date).toLocaleDateString('ru-RU')}
+                          {new Date(inv.event_date).toLocaleDateString('ru-RU')}
                           {inv.start_date && inv.end_date && (
-                            <> • 📅 Период: {new Date(inv.start_date).toLocaleDateString('ru-RU')} — {new Date(inv.end_date).toLocaleDateString('ru-RU')}</>
+                            <> • Период: {new Date(inv.start_date).toLocaleDateString('ru-RU')} — {new Date(inv.end_date).toLocaleDateString('ru-RU')}</>
                           )}
                         </div>
                       )}
                       {inv.role && (
                         <div style={{ fontSize: '14px', color: '#475467' }}>
-                          🎯 {inv.role}
+                          {inv.role}
                         </div>
                       )}
                       {inv.responsibilities && inv.responsibilities.length > 0 && (
                         <div style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
-                          📋 Обязанности: {inv.responsibilities.join(', ')}
+                          Обязанности: {inv.responsibilities.join(', ')}
                         </div>
                       )}
                       {inv.message && (
                         <div style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
-                          💬 {inv.message}
+                          {inv.message}
                         </div>
                       )}
                       <div style={{ fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
-                        👤 От: {inv.created_by_name || 'Неизвестно'}
+                        От: {inv.created_by_name || 'Неизвестно'}
                         {' • '}
-                        📅 {new Date(inv.created_at).toLocaleString('ru-RU')}
+                        {new Date(inv.created_at).toLocaleString('ru-RU')}
                       </div>
                     </div>
                     {isTutor && inv.status === 'pending' && (
@@ -469,14 +469,14 @@ export default function TutorInvitations() {
                           style={{ padding: '6px 16px', fontSize: '12px' }}
                           onClick={() => handleRespond(inv.id, 'accepted')}
                         >
-                          ✅ Принять
+                          Принять
                         </button>
                         <button
                           className="btn-danger"
                           style={{ padding: '6px 16px', fontSize: '12px' }}
                           onClick={() => handleRespond(inv.id, 'declined')}
                         >
-                          ❌ Отклонить
+                          Отклонить
                         </button>
                       </div>
                     )}
@@ -490,7 +490,7 @@ export default function TutorInvitations() {
                           }
                         }}
                       >
-                        🗑️ Отменить
+                        Отменить
                       </button>
                     )}
                   </div>

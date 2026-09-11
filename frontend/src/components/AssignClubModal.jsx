@@ -34,7 +34,7 @@ export default function AssignClubModal({
 
   const handleAssign = async () => {
     if (!selectedClubId) {
-      setMessage('❌ Выберите КЮД');
+      setMessage('Выберите КЮД');
       setMessageType('error');
       return;
     }
@@ -46,7 +46,7 @@ export default function AssignClubModal({
       const result = await api.assignUserToClub(userId, selectedClubId);
       if (result.error) throw new Error(result.error);
 
-      setMessage(`✅ ${userFullName} прикреплён к КЮДУ!`);
+      setMessage(`${userFullName} прикреплён к КЮДУ!`);
       setMessageType('success');
       
       // Обновляем данные
@@ -56,7 +56,7 @@ export default function AssignClubModal({
         onClose();
       }, 1500);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -95,7 +95,7 @@ export default function AssignClubModal({
         onClick={(e) => e.stopPropagation()}
       >
         <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '4px' }}>
-          📌 Прикрепить к КЮДу
+          Прикрепить к КЮДу
         </h3>
         <p style={{ color: 'var(--color-gray-500)', marginBottom: '16px', fontSize: '14px' }}>
           Пользователь: <strong>{userFullName}</strong>
@@ -141,20 +141,20 @@ export default function AssignClubModal({
             disabled={loading || !selectedClubId}
             style={{ flex: 1 }}
           >
-            {loading ? '⏳ Сохранение...' : '✅ Прикрепить'}
+            {loading ? 'Сохранение...' : 'Прикрепить'}
           </button>
           <button
             className="btn-secondary"
             onClick={onClose}
             style={{ background: 'var(--color-gray-100)', color: 'var(--color-primary)', border: '1px solid var(--color-gray-200)' }}
           >
-            ❌ Отмена
+            Отмена
           </button>
         </div>
 
         {currentClubId && (
           <div style={{ marginTop: '12px', padding: '8px 12px', background: 'var(--color-gold-pale)', borderRadius: '8px', fontSize: '13px', color: 'var(--color-gold-dark)' }}>
-            📌 Текущий КЮД: {clubs.find(c => c.id === currentClubId)?.name || 'Не указан'}
+            Текущий КЮД: {clubs.find(c => c.id === currentClubId)?.name || 'Не указан'}
           </div>
         )}
       </div>

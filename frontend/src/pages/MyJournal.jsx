@@ -81,16 +81,16 @@ export default function MyJournal() {
                   {a.event_title || 'Мероприятие'}
                   {a.is_lead_tutor && (
                     <span className="tag tag-gold" style={{ marginLeft: '8px', fontSize: '10px' }}>
-                      ⭐ Старший тьютор
+                      Старший тьютор
                     </span>
                   )}
                 </div>
                 <div className="subtitle">
-                  📅 {a.event_date ? new Date(a.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
-                  {a.location && ` • 📍 ${a.location}`}
+                  {a.event_date ? new Date(a.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
+                  {a.location && ` • ${a.location}`}
                 </div>
                 <div className="meta">
-                  🎯 Роль: <span className="tag tag-blue">{a.role || 'Тьютор'}</span>
+                  Роль: <span className="tag tag-blue">{a.role || 'Тьютор'}</span>
                 </div>
               </div>
             ))}

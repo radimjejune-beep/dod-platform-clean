@@ -95,13 +95,13 @@ export default function TutorJournal() {
         throw new Error(result.error || 'Ошибка сохранения');
       }
 
-      setMessage('✅ Оценка сохранена!');
+      setMessage('Оценка сохранена!');
       setMessageType('success');
       setShowScoreModal(false);
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setSaving(false);
@@ -126,12 +126,12 @@ export default function TutorJournal() {
         throw new Error(result.error || 'Ошибка отправки');
       }
 
-      setMessage('✅ Все оценки отправлены на проверку!');
+      setMessage('Все оценки отправлены на проверку!');
       setMessageType('success');
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -151,20 +151,20 @@ export default function TutorJournal() {
 
   const getScoreLabel = (value) => {
     const labels = {
-      1: '🌟 Отлично',
-      2: '👍 Хорошо',
-      3: '📊 Средне',
-      4: '📈 Развивается',
-      5: '🎯 Требует внимания'
+      1: 'Отлично',
+      2: 'Хорошо',
+      3: 'Средне',
+      4: 'Развивается',
+      5: 'Требует внимания'
     };
     return labels[value] || 'Не оценено';
   };
 
   const getStatusBadge = (status) => {
     const badges = {
-      'draft': { label: '📝 Черновик', color: '#8A9AAA', bg: 'var(--color-gray-100)' },
-      'submitted': { label: '⏳ На проверке', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
-      'approved': { label: '✅ Утверждено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' }
+      'draft': { label: 'Черновик', color: '#8A9AAA', bg: 'var(--color-gray-100)' },
+      'submitted': { label: 'На проверке', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'approved': { label: 'Утверждено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' }
     };
     return badges[status] || badges['draft'];
   };
@@ -194,8 +194,8 @@ export default function TutorJournal() {
           <div>
             <h1>{event?.title || 'Журнал мероприятия'}</h1>
             <p>
-              📅 {event?.event_date ? new Date(event.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
-              {event?.location && ` • 📍 ${event.location}`}
+              {event?.event_date ? new Date(event.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
+              {event?.location && ` • ${event.location}`}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
@@ -204,7 +204,7 @@ export default function TutorJournal() {
               style={{ background: 'var(--color-gold)', color: 'var(--color-primary)' }}
               onClick={handleSubmitAll}
             >
-              📤 Отправить все оценки
+              Отправить все оценки
             </button>
           </div>
         </div>
@@ -218,7 +218,7 @@ export default function TutorJournal() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
-              👥 Участники ({participants.length})
+              Участники ({participants.length})
             </h3>
           </div>
 
@@ -258,12 +258,12 @@ export default function TutorJournal() {
                           {p.full_name}
                           {p.score_status === 'submitted' && (
                             <span className="tag" style={{ background: 'var(--color-gold-pale)', color: 'var(--color-gold)', marginLeft: '8px', fontSize: '10px' }}>
-                              ⏳ На проверке
+                              На проверке
                             </span>
                           )}
                           {p.score_status === 'approved' && (
                             <span className="tag" style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)', marginLeft: '8px', fontSize: '10px' }}>
-                              ✅ Утверждено
+                              Утверждено
                             </span>
                           )}
                         </div>
@@ -274,7 +274,7 @@ export default function TutorJournal() {
                       <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                         {hasScore && (
                           <span style={{ fontSize: '12px', color: 'var(--color-gray-500)' }}>
-                            ⭐ {Math.round((p.engagement_score + p.teamwork_score + p.initiative_score + p.communication_score + p.responsibility_score) / 5 * 10) / 10}
+                            {Math.round((p.engagement_score + p.teamwork_score + p.initiative_score + p.communication_score + p.responsibility_score) / 5 * 10) / 10}
                           </span>
                         )}
                         <button
@@ -285,7 +285,7 @@ export default function TutorJournal() {
                             openScoreModal(p);
                           }}
                         >
-                          {hasScore ? '✏️ Оценить' : '📝 Оценить'}
+                          {hasScore ? 'Оценить' : 'Оценить'}
                         </button>
                       </div>
                     </div>
@@ -345,7 +345,7 @@ export default function TutorJournal() {
             </button>
 
             <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '4px' }}>
-              📝 Оценка участника
+              Оценка участника
             </h3>
             <p style={{ color: 'var(--color-gray-500)', marginBottom: '16px' }}>
               <strong>{selectedParticipant.full_name}</strong>
@@ -360,11 +360,11 @@ export default function TutorJournal() {
                   onChange={(e) => setScores({ ...scores, engagement: parseInt(e.target.value) || null })}
                 >
                   <option value="">Не оценено</option>
-                  <option value="5">🎯 Требует внимания</option>
-                  <option value="4">📈 Развивается</option>
-                  <option value="3">📊 Средне</option>
-                  <option value="2">👍 Хорошо</option>
-                  <option value="1">🌟 Отлично</option>
+                  <option value="5">Требует внимания</option>
+                  <option value="4">Развивается</option>
+                  <option value="3">Средне</option>
+                  <option value="2">Хорошо</option>
+                  <option value="1">Отлично</option>
                 </select>
               </div>
 
@@ -375,11 +375,11 @@ export default function TutorJournal() {
                   onChange={(e) => setScores({ ...scores, teamwork: parseInt(e.target.value) || null })}
                 >
                   <option value="">Не оценено</option>
-                  <option value="5">🎯 Требует внимания</option>
-                  <option value="4">📈 Развивается</option>
-                  <option value="3">📊 Средне</option>
-                  <option value="2">👍 Хорошо</option>
-                  <option value="1">🌟 Отлично</option>
+                  <option value="5">Требует внимания</option>
+                  <option value="4">Развивается</option>
+                  <option value="3">Средне</option>
+                  <option value="2">Хорошо</option>
+                  <option value="1">Отлично</option>
                 </select>
               </div>
 
@@ -390,11 +390,11 @@ export default function TutorJournal() {
                   onChange={(e) => setScores({ ...scores, initiative: parseInt(e.target.value) || null })}
                 >
                   <option value="">Не оценено</option>
-                  <option value="5">🎯 Требует внимания</option>
-                  <option value="4">📈 Развивается</option>
-                  <option value="3">📊 Средне</option>
-                  <option value="2">👍 Хорошо</option>
-                  <option value="1">🌟 Отлично</option>
+                  <option value="5">Требует внимания</option>
+                  <option value="4">Развивается</option>
+                  <option value="3">Средне</option>
+                  <option value="2">Хорошо</option>
+                  <option value="1">Отлично</option>
                 </select>
               </div>
 
@@ -405,11 +405,11 @@ export default function TutorJournal() {
                   onChange={(e) => setScores({ ...scores, communication: parseInt(e.target.value) || null })}
                 >
                   <option value="">Не оценено</option>
-                  <option value="5">🎯 Требует внимания</option>
-                  <option value="4">📈 Развивается</option>
-                  <option value="3">📊 Средне</option>
-                  <option value="2">👍 Хорошо</option>
-                  <option value="1">🌟 Отлично</option>
+                  <option value="5">Требует внимания</option>
+                  <option value="4">Развивается</option>
+                  <option value="3">Средне</option>
+                  <option value="2">Хорошо</option>
+                  <option value="1">Отлично</option>
                 </select>
               </div>
 
@@ -420,11 +420,11 @@ export default function TutorJournal() {
                   onChange={(e) => setScores({ ...scores, responsibility: parseInt(e.target.value) || null })}
                 >
                   <option value="">Не оценено</option>
-                  <option value="5">🎯 Требует внимания</option>
-                  <option value="4">📈 Развивается</option>
-                  <option value="3">📊 Средне</option>
-                  <option value="2">👍 Хорошо</option>
-                  <option value="1">🌟 Отлично</option>
+                  <option value="5">Требует внимания</option>
+                  <option value="4">Развивается</option>
+                  <option value="3">Средне</option>
+                  <option value="2">Хорошо</option>
+                  <option value="1">Отлично</option>
                 </select>
               </div>
 
@@ -440,14 +440,14 @@ export default function TutorJournal() {
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="submit" className="btn-success" disabled={saving} style={{ flex: 1 }}>
-                  {saving ? '⏳ Сохранение...' : '💾 Сохранить оценку'}
+                  {saving ? 'Сохранение...' : 'Сохранить оценку'}
                 </button>
                 <button
                   type="button"
                   className="btn-secondary"
                   onClick={() => setShowScoreModal(false)}
                 >
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>

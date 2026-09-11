@@ -85,13 +85,13 @@ export default function ClubDetail() {
     setLoading(true);
 
     try {
-      setMessage('✅ Информация о КЮДе обновлена!');
+      setMessage('Информация о КЮДе обновлена!');
       setMessageType('success');
       setShowEditForm(false);
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -144,23 +144,23 @@ export default function ClubDetail() {
           </div>
         )}
 
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
         <div className="card" style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <h1 style={{ fontSize: '28px', fontWeight: '700', color: 'var(--color-primary)', margin: 0 }}>
-                🏫 {club.name}
+                {club.name}
               </h1>
               {club.description && <p style={{ color: 'var(--color-gray-500)', marginTop: '8px' }}>{club.description}</p>}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '8px' }}>
-                {club.city && <span style={{ color: 'var(--color-gray-500)' }}>📍 {club.city}</span>}
-                {club.school && <span style={{ color: 'var(--color-gray-500)' }}>🏫 {club.school}</span>}
-                {club.leader_name && <span style={{ color: 'var(--color-gray-500)' }}>👤 {club.leader_name}</span>}
-                {club.contact_email && <span style={{ color: 'var(--color-gray-500)' }}>📧 {club.contact_email}</span>}
-                {club.contact_phone && <span style={{ color: 'var(--color-gray-500)' }}>📞 {club.contact_phone}</span>}
+                {club.city && <span style={{ color: 'var(--color-gray-500)' }}>{club.city}</span>}
+                {club.school && <span style={{ color: 'var(--color-gray-500)' }}>{club.school}</span>}
+                {club.leader_name && <span style={{ color: 'var(--color-gray-500)' }}>{club.leader_name}</span>}
+                {club.contact_email && <span style={{ color: 'var(--color-gray-500)' }}>{club.contact_email}</span>}
+                {club.contact_phone && <span style={{ color: 'var(--color-gray-500)' }}>{club.contact_phone}</span>}
               </div>
               <div style={{ marginTop: '12px' }}>
-                <span className="status-active">👥 {participants.length} участников</span>
+                <span className="status-active">{participants.length} участников</span>
               </div>
             </div>
             {canEditThis && (
@@ -168,7 +168,7 @@ export default function ClubDetail() {
                 className="btn-primary"
                 onClick={() => setShowEditForm(!showEditForm)}
               >
-                {showEditForm ? '✖ Закрыть' : '✏️ Редактировать'}
+                {showEditForm ? 'Закрыть' : 'Редактировать'}
               </button>
             )}
           </div>
@@ -177,7 +177,7 @@ export default function ClubDetail() {
         {showEditForm && canEditThis && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-              ✏️ Редактировать КЮД
+              Редактировать КЮД
             </h3>
             <form onSubmit={handleSave}>
               <div className="grid-2">
@@ -249,10 +249,10 @@ export default function ClubDetail() {
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Сохранение...' : '💾 Сохранить'}
+                  {loading ? 'Сохранение...' : 'Сохранить'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => setShowEditForm(false)}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -344,7 +344,7 @@ export default function ClubDetail() {
         {activeTab === 'members' && (
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-              👥 Участники КЮДа ({participants.length})
+              Участники КЮДа ({participants.length})
             </h3>
             {participants.length === 0 ? (
               <div className="empty-state">
@@ -364,11 +364,11 @@ export default function ClubDetail() {
                       {p.full_name}
                       {p.status === 'active' ? (
                         <span className="status-active" style={{ marginLeft: '8px', fontSize: '11px' }}>
-                          🟢 Активен
+                          Активен
                         </span>
                       ) : (
                         <span className="status-inactive" style={{ marginLeft: '8px', fontSize: '11px' }}>
-                          🔴 Неактивен
+                          Неактивен
                         </span>
                       )}
                     </div>

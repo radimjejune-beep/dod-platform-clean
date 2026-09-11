@@ -114,7 +114,7 @@ export default function ConsentsManagement() {
   const handleRemindAll = async () => {
     const target = filteredParticipants.filter(p => p.consentStatus !== 'full');
     if (target.length === 0) {
-      setMessage('✅ Все участники уже имеют полные согласия');
+      setMessage('Все участники уже имеют полные согласия');
       setMessageType('success');
       return;
     }
@@ -123,11 +123,11 @@ export default function ConsentsManagement() {
 
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      setMessage(`✅ Напоминания отправлены ${target.length} участникам`);
+      setMessage(`Напоминания отправлены ${target.length} участникам`);
       setMessageType('success');
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -145,14 +145,14 @@ export default function ConsentsManagement() {
       'Статус согласий': getConsentPercentage(p) + '%'
     }));
 
-    alert('📊 Экспорт в Excel будет доступен после интеграции библиотеки xlsx');
+    alert('Экспорт в Excel будет доступен после интеграции библиотеки xlsx');
   };
 
   const getStatusBadge = (status) => {
     const badges = {
-      'full': { label: '✅ Все согласия', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-      'partial': { label: '⚠️ Частично', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
-      'none': { label: '❌ Нет согласий', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
+      'full': { label: 'Все согласия', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'partial': { label: 'Частично', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'none': { label: 'Нет согласий', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
     };
     return badges[status] || badges['none'];
   };
@@ -177,10 +177,10 @@ export default function ConsentsManagement() {
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button className="btn-primary" onClick={handleRemindAll} style={{ background: 'var(--color-gold)', color: 'var(--color-primary)' }}>
-              📨 Напомнить всем
+              Напомнить всем
             </button>
             <button className="btn-secondary" onClick={handleExport}>
-              📊 Экспорт
+              Экспорт
             </button>
           </div>
         </div>
@@ -195,19 +195,19 @@ export default function ConsentsManagement() {
         <div className="grid-4" style={{ marginBottom: '24px' }}>
           <div className="stat-card" style={{ borderTop: '3px solid var(--color-primary-light)' }}>
             <div className="number">{stats.total}</div>
-            <div className="label">👥 Всего участников</div>
+            <div className="label">Всего участников</div>
           </div>
           <div className="stat-card" style={{ borderTop: '3px solid var(--color-success)' }}>
             <div className="number">{stats.allConsents}</div>
-            <div className="label">✅ Полные согласия</div>
+            <div className="label">Полные согласия</div>
           </div>
           <div className="stat-card" style={{ borderTop: '3px solid var(--color-gold)' }}>
             <div className="number">{stats.partialConsents}</div>
-            <div className="label">⚠️ Частичные согласия</div>
+            <div className="label">Частичные согласия</div>
           </div>
           <div className="stat-card" style={{ borderTop: '3px solid var(--color-error)' }}>
             <div className="number">{stats.noConsents}</div>
-            <div className="label">❌ Нет согласий</div>
+            <div className="label">Нет согласий</div>
           </div>
         </div>
 
@@ -232,21 +232,21 @@ export default function ConsentsManagement() {
               style={{ padding: '6px 16px', fontSize: '12px' }}
               onClick={() => setFilterType('full')}
             >
-              ✅ Полные ({stats.allConsents})
+              Полные ({stats.allConsents})
             </button>
             <button
               className={filterType === 'partial' ? 'btn-primary' : 'btn-secondary'}
               style={{ padding: '6px 16px', fontSize: '12px' }}
               onClick={() => setFilterType('partial')}
             >
-              ⚠️ Частичные ({stats.partialConsents})
+              Частичные ({stats.partialConsents})
             </button>
             <button
               className={filterType === 'none' ? 'btn-primary' : 'btn-secondary'}
               style={{ padding: '6px 16px', fontSize: '12px' }}
               onClick={() => setFilterType('none')}
             >
-              ❌ Нет ({stats.noConsents})
+              Нет ({stats.noConsents})
             </button>
           </div>
 
@@ -276,7 +276,7 @@ export default function ConsentsManagement() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
-              📋 Участники
+              Участники
             </h3>
             <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               {filteredParticipants.length} участников

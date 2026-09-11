@@ -50,12 +50,12 @@ export default function Profile() {
 
   const handleAvatarUpdated = (newAvatarUrl) => {
     setProfile({ ...profile, avatar_url: newAvatarUrl });
-    setMessage('✅ Аватар обновлён!');
+    setMessage('Аватар обновлён!');
     setMessageType('success');
     setTimeout(() => setMessage(''), 3000);
   };
 
-  // ✅ ИСПРАВЛЕННАЯ ФУНКЦИЯ СОХРАНЕНИЯ
+  // ИСПРАВЛЕННАЯ ФУНКЦИЯ СОХРАНЕНИЯ
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -66,7 +66,7 @@ export default function Profile() {
       let phone = profile.phone || '';
       phone = phone.replace(/[^0-9+]/g, '');
 
-      // ✅ Безопасная обработка дат
+      // Безопасная обработка дат
       const formatDate = (val) => {
         if (!val || val === '' || val === 'Invalid Date') return null;
         const d = new Date(val);
@@ -103,12 +103,12 @@ export default function Profile() {
         throw new Error(result.error);
       }
 
-      setMessage('✅ Профиль успешно обновлён!');
+      setMessage('Профиль успешно обновлён!');
       setProfile(result);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setSaving(false);
@@ -123,7 +123,7 @@ export default function Profile() {
     });
   };
 
-  // ⚠️ Раньше состояние согласий бралось из галочек в карточке самого
+  // Раньше состояние согласий бралось из галочек в карточке самого
   // участника. Участники несовершеннолетние, а согласие за них вправе дать
   // только законный представитель — такие галочки юридической силы не
   // имели. Теперь состояние приходит с сервера и здесь только показывается.
@@ -151,14 +151,14 @@ export default function Profile() {
 
   const getRoleLabel = (role) => {
     const labels = {
-      'admin': '🔧 Администратор',
-      'movement_coordinator': '⭐ Координатор движения',
-      'club_coordinator': '🏫 Координатор КЮДа',
-      'tutor': '📚 Тьютор',
-      'participant': '👤 Участник',
-      'parent': '👨‍👩‍👦 Родитель',
-      'president': '👑 Президент',
-      'vice_president': '⭐ Вице-президент'
+      'admin': 'Администратор',
+      'movement_coordinator': 'Координатор движения',
+      'club_coordinator': 'Координатор КЮДа',
+      'tutor': 'Тьютор',
+      'participant': 'Участник',
+      'parent': 'Родитель',
+      'president': 'Президент',
+      'vice_president': 'Вице-президент'
     };
     return labels[role] || role;
   };
@@ -192,12 +192,12 @@ export default function Profile() {
   }
 
   const tabs = [
-    { id: 'main', label: '📋 Основное' },
-    { id: 'contacts', label: '📞 Контакты' },
-    { id: 'interests', label: '🎯 Интересы' },
-    { id: 'parents', label: '👨‍👩‍👦 Родители' },
-    { id: 'consents', label: '📝 Согласия' },
-    { id: 'extra', label: '🌟 Дополнительно' },
+    { id: 'main', label: 'Основное' },
+    { id: 'contacts', label: 'Контакты' },
+    { id: 'interests', label: 'Интересы' },
+    { id: 'parents', label: 'Родители' },
+    { id: 'consents', label: 'Согласия' },
+    { id: 'extra', label: 'Дополнительно' },
   ];
 
   return (
@@ -210,7 +210,7 @@ export default function Profile() {
            ============================================================ */}
         <div className="page-header">
           <div className="page-header-left">
-            <h1>👤 Профиль</h1>
+            <h1>Профиль</h1>
             <p>Управление вашими данными и настройками</p>
           </div>
           <button
@@ -219,7 +219,7 @@ export default function Profile() {
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? '⏳ Сохранение...' : '💾 Сохранить'}
+            {saving ? 'Сохранение...' : 'Сохранить'}
           </button>
         </div>
 
@@ -246,21 +246,21 @@ export default function Profile() {
               <div className="profile-badges">
                 <span className="badge-role">{getRoleLabel(profile?.role)}</span>
                 <span className={`badge-status ${profile?.status === 'active' ? 'active' : 'inactive'}`}>
-                  {profile?.status === 'active' ? '🟢 Активен' : '🔴 Неактивен'}
+                  {profile?.status === 'active' ? 'Активен' : 'Неактивен'}
                 </span>
                 {profile?.club_name && (
-                  <span className="badge-club">🏫 {profile.club_name}</span>
+                  <span className="badge-club">{profile.club_name}</span>
                 )}
               </div>
               <div className="profile-contact-info">
                 {profile?.email && (
-                  <span className="contact-item">📧 {profile.email}</span>
+                  <span className="contact-item">{profile.email}</span>
                 )}
                 {profile?.phone && (
-                  <span className="contact-item">📞 {profile.phone}</span>
+                  <span className="contact-item">{profile.phone}</span>
                 )}
                 {profile?.city && (
-                  <span className="contact-item">📍 {profile.city}</span>
+                  <span className="contact-item">{profile.city}</span>
                 )}
               </div>
             </div>
@@ -269,7 +269,7 @@ export default function Profile() {
           {/* Статус согласий */}
           <div className="profile-consent-status">
             <div className="consent-status-label">
-              <span>📝 Согласия</span>
+              <span>Согласия</span>
               <span className="consent-count">{consentStatus.given} из {consentStatus.total}</span>
             </div>
             <div className="consent-progress-bar">
@@ -339,7 +339,7 @@ export default function Profile() {
                       onChange={handleChange}
                       className="form-input"
                     />
-                    <div className="form-hint">📅 Используется для определения возраста</div>
+                    <div className="form-hint">Используется для определения возраста</div>
                   </div>
                   <div className="form-group">
                     <label>Город</label>
@@ -392,7 +392,7 @@ export default function Profile() {
                       placeholder="+7 999 123 45 67"
                       className="form-input"
                     />
-                    <div className="form-hint">📞 Номер для экстренной связи</div>
+                    <div className="form-hint">Номер для экстренной связи</div>
                   </div>
                   <div className="form-group">
                     <label>Telegram</label>
@@ -404,7 +404,7 @@ export default function Profile() {
                       placeholder="@username"
                       className="form-input"
                     />
-                    <div className="form-hint">💬 Основной мессенджер</div>
+                    <div className="form-hint">Основной мессенджер</div>
                   </div>
                   <div className="form-group">
                     <label>VK</label>
@@ -446,7 +446,7 @@ export default function Profile() {
                       placeholder="Дипломатия, история, иностранные языки, спорт"
                       className="form-input"
                     />
-                    <div className="form-hint">🎯 Расскажите, что вам интересно</div>
+                    <div className="form-hint">Расскажите, что вам интересно</div>
                   </div>
                   <div className="form-group">
                     <label>Навыки</label>
@@ -458,7 +458,7 @@ export default function Profile() {
                       placeholder="Публичные выступления, переговоры, английский язык"
                       className="form-input"
                     />
-                    <div className="form-hint">💪 Навыки, которыми вы владеете</div>
+                    <div className="form-hint">Навыки, которыми вы владеете</div>
                   </div>
                   <div className="form-group">
                     <label>О себе</label>
@@ -470,7 +470,7 @@ export default function Profile() {
                       placeholder="Расскажите о себе..."
                       className="form-textarea"
                     />
-                    <div className="form-hint">📝 Эта информация будет видна другим участникам</div>
+                    <div className="form-hint">Эта информация будет видна другим участникам</div>
                   </div>
                 </div>
               </div>
@@ -519,7 +519,7 @@ export default function Profile() {
                   </div>
                 </div>
                 <div className="warning-box">
-                  ⚠️ Для участников младше 18 лет обязательно указание родителя
+                  Для участников младше 18 лет обязательно указание родителя
                 </div>
               </div>
             )}
@@ -554,7 +554,7 @@ export default function Profile() {
                   </div>
                 </div>
 
-                {/* ⚠️ Галочки убраны намеренно. Согласие на обработку
+                {/* Галочки убраны намеренно. Согласие на обработку
                     персональных данных несовершеннолетнего вправе дать
                     только законный представитель — родитель или опекун.
                     Участник видит состояние своих согласий, но подтвердить
@@ -630,7 +630,7 @@ export default function Profile() {
                 </div>
 
                 <div className="consents-footer">
-                  ✅ <strong>Все согласия обязательны для участия в деятельности ДОД</strong>
+                  <strong>Все согласия обязательны для участия в деятельности ДОД</strong>
                 </div>
               </div>
             )}
@@ -649,7 +649,7 @@ export default function Profile() {
                       placeholder="Курсы, кружки, секции..."
                       className="form-textarea"
                     />
-                    <div className="form-hint">📚 Расскажите о своём дополнительном образовании</div>
+                    <div className="form-hint">Расскажите о своём дополнительном образовании</div>
                   </div>
                   <div className="form-group">
                     <label>Личные достижения</label>
@@ -661,7 +661,7 @@ export default function Profile() {
                       placeholder="Ваши основные достижения..."
                       className="form-textarea"
                     />
-                    <div className="form-hint">🏆 Достижения, которыми вы гордитесь</div>
+                    <div className="form-hint">Достижения, которыми вы гордитесь</div>
                   </div>
                 </div>
               </div>
@@ -674,7 +674,7 @@ export default function Profile() {
                 className="btn-save-full"
                 disabled={saving}
               >
-                {saving ? '⏳ Сохранение...' : '💾 Сохранить изменения'}
+                {saving ? 'Сохранение...' : 'Сохранить изменения'}
               </button>
             </div>
           </form>

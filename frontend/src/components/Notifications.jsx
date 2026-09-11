@@ -181,7 +181,7 @@ export default function Notifications({ profile }) {
       {isOpen && (
         <div className="notifications-dropdown">
           <div className="notifications-header">
-            <span className="notifications-title">🔔 Уведомления</span>
+            <span className="notifications-title">Уведомления</span>
             {unreadCount > 0 && (
               <button className="notifications-mark-all" onClick={markAllAsRead}>
                 Все прочитаны
@@ -190,7 +190,7 @@ export default function Notifications({ profile }) {
           </div>
 
           {loading ? (
-            <div className="notifications-loading">⏳ Загрузка...</div>
+            <div className="notifications-loading">Загрузка...</div>
           ) : notifications.length === 0 ? (
             <div className="notifications-empty">
               <span className="notifications-empty-icon">📭</span>

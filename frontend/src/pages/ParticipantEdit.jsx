@@ -33,7 +33,7 @@ export default function ParticipantEdit() {
       
       if (!found) {
         setLoading(false);
-        setMessage('❌ Участник не найден');
+        setMessage('Участник не найден');
         setMessageType('error');
         return;
       }
@@ -41,7 +41,7 @@ export default function ParticipantEdit() {
       setParticipant(found);
     } catch (err) {
       console.error('Ошибка:', err);
-      setMessage('❌ Ошибка загрузки: ' + err.message);
+      setMessage('Ошибка загрузки: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -69,7 +69,7 @@ export default function ParticipantEdit() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!canEditThis()) {
-      setMessage('❌ У вас нет прав для редактирования этого участника');
+      setMessage('У вас нет прав для редактирования этого участника');
       setMessageType('error');
       return;
     }
@@ -92,11 +92,11 @@ export default function ParticipantEdit() {
         throw new Error(result.error);
       }
 
-      setMessage('✅ Профиль участника обновлён!');
+      setMessage('Профиль участника обновлён!');
       setMessageType('success');
       setTimeout(() => navigate(`/participant/${id}`), 1500);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setSaving(false);
@@ -152,7 +152,7 @@ export default function ParticipantEdit() {
           ← Назад
         </button>
 
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
@@ -219,23 +219,23 @@ export default function ParticipantEdit() {
                   value={participant.status || 'active'}
                   onChange={handleChange}
                 >
-                  <option value="active">🟢 Активен</option>
-                  <option value="inactive">🔴 Неактивен</option>
-                  <option value="pending">⏳ Ожидает</option>
+                  <option value="active">Активен</option>
+                  <option value="inactive">Неактивен</option>
+                  <option value="pending">Ожидает</option>
                 </select>
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
               <button type="submit" className="btn-success" disabled={saving}>
-                {saving ? '⏳ Сохранение...' : '💾 Сохранить изменения'}
+                {saving ? 'Сохранение...' : 'Сохранить изменения'}
               </button>
               <button
                 type="button"
                 className="btn-secondary"
                 onClick={() => navigate(`/participant/${id}`)}
               >
-                ❌ Отмена
+                Отмена
               </button>
             </div>
           </form>

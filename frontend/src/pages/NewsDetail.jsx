@@ -44,7 +44,7 @@ export default function NewsDetail() {
         <button onClick={() => navigate('/')} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid var(--color-gray-200)', borderRadius: '8px', cursor: 'pointer', marginBottom: '20px' }}>
           ← Назад
         </button>
-        <h1 style={{ fontSize: '28px', fontWeight: '700', color: 'var(--color-primary)' }}>📰 Новость #{id}</h1>
+        <h1 style={{ fontSize: '28px', fontWeight: '700', color: 'var(--color-primary)' }}>Новость #{id}</h1>
         <div style={{ background: 'white', borderRadius: '16px', padding: '40px', textAlign: 'center', border: '1px solid var(--color-gray-200)', marginTop: '20px' }}>
           <p style={{ color: 'var(--color-gray-500)' }}>Новость в разработке</p>
         </div>

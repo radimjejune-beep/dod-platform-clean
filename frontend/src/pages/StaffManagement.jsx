@@ -203,7 +203,7 @@ export default function StaffManagement() {
         throw new Error(result.error);
       }
 
-      setMessage(`✅ Сотрудник "${staffForm.full_name}" создан! Временный пароль: ${tempPassword}`);
+      setMessage(`Сотрудник "${staffForm.full_name}" создан! Временный пароль: ${tempPassword}`);
       setMessageType('success');
       setStaffForm({
         full_name: '',
@@ -217,7 +217,7 @@ export default function StaffManagement() {
       loadData();
       setTimeout(() => setMessage(''), 5000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -231,14 +231,14 @@ export default function StaffManagement() {
 
     try {
       if (!form.staff_id) {
-        setMessage('❌ Пожалуйста, выберите сотрудника');
+        setMessage('Пожалуйста, выберите сотрудника');
         setMessageType('error');
         setLoading(false);
         return;
       }
 
       // TODO: добавить API для создания назначения
-      setMessage('✅ Сотрудник назначен!');
+      setMessage('Сотрудник назначен!');
       setMessageType('success');
       setForm({
         staff_id: '',
@@ -260,7 +260,7 @@ export default function StaffManagement() {
       loadData();
       setTimeout(() => setMessage(''), 5000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -270,7 +270,7 @@ export default function StaffManagement() {
   const handleRemoveStaff = async (staffId) => {
     if (!confirm('Удалить сотрудника?')) return;
     // TODO: добавить API для удаления сотрудника
-    setMessage('✅ Сотрудник удалён');
+    setMessage('Сотрудник удалён');
     setMessageType('success');
     loadData();
     setTimeout(() => setMessage(''), 3000);
@@ -336,7 +336,7 @@ export default function StaffManagement() {
                   className="btn-primary"
                   onClick={() => setShowStaffForm(!showStaffForm)}
                 >
-                  {showStaffForm ? '✖ Закрыть' : '➕ Добавить сотрудника'}
+                  {showStaffForm ? 'Закрыть' : 'Добавить сотрудника'}
                 </button>
               )}
               <button
@@ -344,7 +344,7 @@ export default function StaffManagement() {
                 style={{ background: 'var(--color-gold)', color: 'var(--color-primary)' }}
                 onClick={() => setShowAssignmentForm(!showAssignmentForm)}
               >
-                {showAssignmentForm ? '✖ Закрыть' : '📋 Назначить'}
+                {showAssignmentForm ? 'Закрыть' : 'Назначить'}
               </button>
             </div>
           )}
@@ -389,7 +389,7 @@ export default function StaffManagement() {
               {selectedClubId ? (
                 <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
               ) : (
-                <span>📋 Все сотрудники</span>
+                <span>Все сотрудники</span>
               )}
             </div>
             {selectedClubId && (
@@ -405,7 +405,7 @@ export default function StaffManagement() {
                 }}
                 onClick={() => setSelectedClubId('')}
               >
-                ✕ Сбросить
+                Сбросить
               </button>
             )}
           </div>
@@ -415,7 +415,7 @@ export default function StaffManagement() {
         {showStaffForm && canCreateStaff && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-              📝 Добавить сотрудника
+              Добавить сотрудника
             </h3>
             <form onSubmit={handleCreateStaff}>
               <div className="grid-2">
@@ -448,10 +448,10 @@ export default function StaffManagement() {
                     onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}
                     required
                   >
-                    <option value="tutor">📚 Тьютор</option>
-                    <option value="club_coordinator">🏫 Координатор КЮДа</option>
-                    <option value="movement_coordinator">⭐ Координатор движения</option>
-                    <option value="admin">🔧 Администратор</option>
+                    <option value="tutor">Тьютор</option>
+                    <option value="club_coordinator">Координатор КЮДа</option>
+                    <option value="movement_coordinator">Координатор движения</option>
+                    <option value="admin">Администратор</option>
                   </select>
                 </div>
 
@@ -478,10 +478,10 @@ export default function StaffManagement() {
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Создание...' : '✅ Создать сотрудника'}
+                  {loading ? 'Создание...' : 'Создать сотрудника'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => setShowStaffForm(false)}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -492,7 +492,7 @@ export default function StaffManagement() {
         {showAssignmentForm && canAssign && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-              {profile?.role === 'club_coordinator' ? '📝 Запросить тьютора' : '📋 Назначить сотрудника'}
+              {profile?.role === 'club_coordinator' ? 'Запросить тьютора' : 'Назначить сотрудника'}
             </h3>
             <form onSubmit={handleAssign}>
               <div className="grid-2">
@@ -567,7 +567,7 @@ export default function StaffManagement() {
                       alignItems: 'center',
                       gap: '8px'
                     }}>
-                      ✅ Выбран: <strong>{form.staff_name}</strong>
+                      Выбран: <strong>{form.staff_name}</strong>
                       <button
                         type="button"
                         style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', marginLeft: 'auto' }}
@@ -591,12 +591,12 @@ export default function StaffManagement() {
                     onChange={(e) => setForm({ ...form, assignment_type: e.target.value })}
                     required
                   >
-                    <option value="event">📅 Мероприятие</option>
-                    <option value="social">📱 Социальные сети</option>
-                    <option value="content">✍️ Контент</option>
-                    <option value="logistics">📦 Логистика</option>
-                    <option value="photo">📸 Фото/Видео</option>
-                    <option value="other">📌 Другое</option>
+                    <option value="event">Мероприятие</option>
+                    <option value="social">Социальные сети</option>
+                    <option value="content">Контент</option>
+                    <option value="logistics">Логистика</option>
+                    <option value="photo">Фото/Видео</option>
+                    <option value="other">Другое</option>
                   </select>
                 </div>
 
@@ -672,7 +672,7 @@ export default function StaffManagement() {
                         alignItems: 'center',
                         gap: '8px'
                       }}>
-                        ✅ Выбрано: <strong>{form.event_title}</strong>
+                        Выбрано: <strong>{form.event_title}</strong>
                         <button
                           type="button"
                           style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', marginLeft: 'auto' }}
@@ -753,7 +753,7 @@ export default function StaffManagement() {
                         style={{ width: '18px', height: '18px' }}
                       />
                       <span style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
-                        ⭐ Назначить старшим тьютором
+                        Назначить старшим тьютором
                       </span>
                     </label>
                   </div>
@@ -762,10 +762,10 @@ export default function StaffManagement() {
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Отправка...' : profile?.role === 'club_coordinator' ? '📤 Отправить запрос' : '📤 Назначить'}
+                  {loading ? 'Отправка...' : profile?.role === 'club_coordinator' ? 'Отправить запрос' : 'Назначить'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => setShowAssignmentForm(false)}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -791,14 +791,14 @@ export default function StaffManagement() {
                 style={{ padding: '4px 14px', fontSize: '12px' }}
                 onClick={() => setActiveTab('tutor')}
               >
-                📚 Тьюторы
+                Тьюторы
               </button>
               <button
                 className={activeTab === 'club_coordinator' ? 'btn-primary' : 'btn-secondary'}
                 style={{ padding: '4px 14px', fontSize: '12px' }}
                 onClick={() => setActiveTab('club_coordinator')}
               >
-                🏫 Координаторы
+                Координаторы
               </button>
               {(isAdmin || isMovementCoordinator) && (
                 <button
@@ -806,7 +806,7 @@ export default function StaffManagement() {
                   style={{ padding: '4px 14px', fontSize: '12px' }}
                   onClick={() => setActiveTab('admin')}
                 >
-                  🔧 Админы
+                  Админы
                 </button>
               )}
             </div>
@@ -836,10 +836,10 @@ export default function StaffManagement() {
                              s.role === 'movement_coordinator' ? '#6B46C1' : 
                              s.role === 'club_coordinator' ? 'var(--color-gold-dark)' : 'var(--color-primary-light)'
                     }}>
-                      {s.role === 'tutor' ? '📚 Тьютор' :
-                       s.role === 'club_coordinator' ? '🏫 Координатор' :
-                       s.role === 'movement_coordinator' ? '⭐ Координатор движения' :
-                       '🔧 Администратор'}
+                      {s.role === 'tutor' ? 'Тьютор' :
+                       s.role === 'club_coordinator' ? 'Координатор' :
+                       s.role === 'movement_coordinator' ? 'Координатор движения' :
+                       'Администратор'}
                     </span>
                   </div>
                   <div className="subtitle">
@@ -855,7 +855,7 @@ export default function StaffManagement() {
                         style={{ padding: '4px 12px', fontSize: '12px' }}
                         onClick={() => handleRemoveStaff(s.id)}
                       >
-                        🗑️ Удалить
+                        Удалить
                       </button>
                     </div>
                   )}

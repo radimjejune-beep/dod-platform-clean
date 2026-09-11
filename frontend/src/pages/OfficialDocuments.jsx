@@ -69,30 +69,30 @@ export default function OfficialDocuments() {
 
   const getDocumentTypeLabel = (type) => {
     const labels = {
-      'decree': '📜 Распоряжение',
-      'invitation': '📩 Приглашение',
-      'regulation': '📋 Регламент',
-      'announcement': '📢 Объявление'
+      'decree': 'Распоряжение',
+      'invitation': 'Приглашение',
+      'regulation': 'Регламент',
+      'announcement': 'Объявление'
     };
     return labels[type] || type;
   };
 
   const getStatusBadge = (status) => {
     const badges = {
-      'draft': { label: '📝 Черновик', color: '#8A9AAA', bg: 'var(--color-gray-100)' },
-      'pending_approval': { label: '⏳ На согласовании', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
-      'approved': { label: '✅ Одобрено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-      'published': { label: '📢 Опубликовано', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
-      'rejected': { label: '❌ Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
+      'draft': { label: 'Черновик', color: '#8A9AAA', bg: 'var(--color-gray-100)' },
+      'pending_approval': { label: 'На согласовании', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'approved': { label: 'Одобрено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'published': { label: 'Опубликовано', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
+      'rejected': { label: 'Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
     };
     return badges[status] || badges['draft'];
   };
 
   const getPriorityLabel = (priority) => {
     const labels = {
-      'normal': '🟢 Обычный',
-      'high': '🔴 Высокий',
-      'urgent': '🔥 Срочный'
+      'normal': 'Обычный',
+      'high': 'Высокий',
+      'urgent': 'Срочный'
     };
     return labels[priority] || priority;
   };
@@ -134,7 +134,7 @@ export default function OfficialDocuments() {
 
       await submitResponse.json();
 
-      setMessage('✅ Документ создан и отправлен на согласование президенту движения!');
+      setMessage('Документ создан и отправлен на согласование президенту движения!');
       setMessageType('success');
       setShowForm(false);
       setForm({
@@ -147,7 +147,7 @@ export default function OfficialDocuments() {
       loadData();
       setTimeout(() => setMessage(''), 4000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -170,19 +170,19 @@ export default function OfficialDocuments() {
         throw new Error(result.error);
       }
 
-      setMessage('✅ Документ одобрен!');
+      setMessage('Документ одобрен!');
       setMessageType('success');
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
 
   const handleReject = async (id) => {
     if (!rejectReason.trim()) {
-      setMessage('❌ Укажите причину отклонения');
+      setMessage('Укажите причину отклонения');
       setMessageType('error');
       return;
     }
@@ -204,14 +204,14 @@ export default function OfficialDocuments() {
         throw new Error(result.error);
       }
 
-      setMessage('❌ Документ отклонён');
+      setMessage('Документ отклонён');
       setMessageType('error');
       setShowRejectModal(false);
       setRejectReason('');
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -232,12 +232,12 @@ export default function OfficialDocuments() {
         throw new Error(result.error);
       }
 
-      setMessage('📢 Документ опубликован!');
+      setMessage('Документ опубликован!');
       setMessageType('success');
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -260,12 +260,12 @@ export default function OfficialDocuments() {
         throw new Error(result.error);
       }
 
-      setMessage('✅ Документ удалён');
+      setMessage('Документ удалён');
       setMessageType('success');
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -335,7 +335,7 @@ export default function OfficialDocuments() {
                 }
               }}
             >
-              {showForm ? '✖ Закрыть' : '➕ Создать документ'}
+              {showForm ? 'Закрыть' : 'Создать документ'}
             </button>
           )}
         </div>
@@ -349,7 +349,7 @@ export default function OfficialDocuments() {
         {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px', borderLeft: '4px solid var(--color-gold)' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-              📝 Создать официальный документ
+              Создать официальный документ
             </h3>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
@@ -359,10 +359,10 @@ export default function OfficialDocuments() {
                   onChange={(e) => setForm({ ...form, document_type: e.target.value })}
                   required
                 >
-                  <option value="decree">📜 Распоряжение</option>
-                  <option value="invitation">📩 Приглашение</option>
-                  <option value="regulation">📋 Регламент</option>
-                  <option value="announcement">📢 Объявление</option>
+                  <option value="decree">Распоряжение</option>
+                  <option value="invitation">Приглашение</option>
+                  <option value="regulation">Регламент</option>
+                  <option value="announcement">Объявление</option>
                 </select>
               </div>
 
@@ -396,9 +396,9 @@ export default function OfficialDocuments() {
                     value={form.priority}
                     onChange={(e) => setForm({ ...form, priority: e.target.value })}
                   >
-                    <option value="normal">🟢 Обычный</option>
-                    <option value="high">🔴 Высокий</option>
-                    <option value="urgent">🔥 Срочный</option>
+                    <option value="normal">Обычный</option>
+                    <option value="high">Высокий</option>
+                    <option value="urgent">Срочный</option>
                   </select>
                 </div>
 
@@ -411,7 +411,7 @@ export default function OfficialDocuments() {
                       style={{ width: '18px', height: '18px' }}
                     />
                     <span style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
-                      🔥 Срочный документ
+                      Срочный документ
                     </span>
                   </label>
                 </div>
@@ -419,15 +419,15 @@ export default function OfficialDocuments() {
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Создание...' : '✅ Создать и отправить на согласование'}
+                  {loading ? 'Создание...' : 'Создать и отправить на согласование'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
 
               <div style={{ marginTop: '12px', padding: '12px 16px', background: 'var(--color-gold-pale)', borderRadius: '8px', fontSize: '13px', color: 'var(--color-gold-dark)' }}>
-                📌 После создания документ будет отправлен на согласование <strong>президенту движения</strong>.
+                После создания документ будет отправлен на согласование <strong>президенту движения</strong>.
                 После одобрения он станет доступен всем сотрудникам движения.
               </div>
             </form>
@@ -437,7 +437,7 @@ export default function OfficialDocuments() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
-              📋 Все документы
+              Все документы
             </h3>
             <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               {documents.length} документов
@@ -488,7 +488,7 @@ export default function OfficialDocuments() {
                       {doc.title}
                       {isUrgent && (
                         <span className="tag tag-danger" style={{ marginLeft: '8px', fontSize: '10px' }}>
-                          🔥 Срочно
+                          Срочно
                         </span>
                       )}
                       {doc.priority === 'high' && (
@@ -501,15 +501,15 @@ export default function OfficialDocuments() {
                       </span>
                       {!isRead && doc.status === 'published' && (
                         <span className="tag" style={{ marginLeft: '8px', background: 'var(--color-info-bg)', color: 'var(--color-primary-light)', fontSize: '10px' }}>
-                          🔵 Новое
+                          Новое
                         </span>
                       )}
                     </div>
                     <div className="subtitle">
-                      👤 {doc.created_by_name || 'Неизвестно'}
-                      {doc.approved_by_name && ` • ✅ Одобрено: ${doc.approved_by_name}`}
-                      {doc.published_at && ` • 📅 ${new Date(doc.published_at).toLocaleDateString('ru-RU')}`}
-                      {doc.read_count > 0 && ` • 👁️ ${doc.read_count} прочитали`}
+                      {doc.created_by_name || 'Неизвестно'}
+                      {doc.approved_by_name && ` • Одобрено: ${doc.approved_by_name}`}
+                      {doc.published_at && ` • ${new Date(doc.published_at).toLocaleDateString('ru-RU')}`}
+                      {doc.read_count > 0 && ` • ${doc.read_count} прочитали`}
                     </div>
                     {doc.content && (
                       <div className="meta">
@@ -527,7 +527,7 @@ export default function OfficialDocuments() {
                               handleApprove(doc.id);
                             }}
                           >
-                            ✅ Одобрить
+                            Одобрить
                           </button>
                           <button
                             className="btn-danger"
@@ -538,7 +538,7 @@ export default function OfficialDocuments() {
                               setShowRejectModal(true);
                             }}
                           >
-                            ❌ Отклонить
+                            Отклонить
                           </button>
                         </>
                       )}
@@ -551,7 +551,7 @@ export default function OfficialDocuments() {
                             handlePublish(doc.id);
                           }}
                         >
-                          📢 Опубликовать
+                          Опубликовать
                         </button>
                       )}
                       {isAdmin && (
@@ -563,7 +563,7 @@ export default function OfficialDocuments() {
                             handleDelete(doc.id, doc.title);
                           }}
                         >
-                          🗑️ Удалить
+                          Удалить
                         </button>
                       )}
                       <button
@@ -578,7 +578,7 @@ export default function OfficialDocuments() {
                           }
                         }}
                       >
-                        📖 Подробнее
+                        Подробнее
                       </button>
                     </div>
                   </div>
@@ -671,7 +671,7 @@ export default function OfficialDocuments() {
                 </span>
               )}
               {selectedDocument.is_urgent && (
-                <span className="tag tag-danger">🔥 Срочно</span>
+                <span className="tag tag-danger">Срочно</span>
               )}
             </div>
 
@@ -745,7 +745,7 @@ export default function OfficialDocuments() {
                   setShowModal(false);
                 }}
               >
-                🗑️ Удалить документ
+                Удалить документ
               </button>
             )}
 
@@ -759,7 +759,7 @@ export default function OfficialDocuments() {
                     setShowModal(false);
                   }}
                 >
-                  ✅ Одобрить
+                  Одобрить
                 </button>
                 <button
                   className="btn-danger"
@@ -769,7 +769,7 @@ export default function OfficialDocuments() {
                     setShowRejectModal(true);
                   }}
                 >
-                  ❌ Отклонить
+                  Отклонить
                 </button>
               </div>
             )}
@@ -783,7 +783,7 @@ export default function OfficialDocuments() {
                   setShowModal(false);
                 }}
               >
-                📢 Опубликовать документ
+                Опубликовать документ
               </button>
             )}
 
@@ -827,7 +827,7 @@ export default function OfficialDocuments() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-              ❌ Отклонить документ
+              Отклонить документ
             </h3>
             <p style={{ color: 'var(--color-gray-500)', marginBottom: '16px' }}>
               Документ: <strong>{selectedDocument.title}</strong>
@@ -850,7 +850,7 @@ export default function OfficialDocuments() {
                 style={{ flex: 1 }}
                 onClick={() => handleReject(selectedDocument.id)}
               >
-                ❌ Отклонить
+                Отклонить
               </button>
               <button
                 className="btn-secondary"

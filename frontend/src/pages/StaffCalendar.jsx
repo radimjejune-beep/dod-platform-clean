@@ -224,7 +224,7 @@ export default function StaffCalendar() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
-              📋 {selectedDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
+              {selectedDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
             </h3>
             <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               {getAssignmentsForDate(selectedDate).length} назначений
@@ -250,12 +250,12 @@ export default function StaffCalendar() {
                 >
                   <div className="title">{a.event_title || 'Мероприятие'}</div>
                   <div className="subtitle">
-                    👤 {getStaffName(a.staff_id)}
+                    {getStaffName(a.staff_id)}
                     <span className="tag tag-blue" style={{ marginLeft: '8px', fontSize: '10px' }}>
                       {a.role}
                     </span>
                   </div>
-                  {a.notes && <div className="meta">📝 {a.notes}</div>}
+                  {a.notes && <div className="meta">{a.notes}</div>}
                 </div>
               ))}
             </div>
@@ -322,7 +322,7 @@ export default function StaffCalendar() {
               )}
               {selectedAssignment.notes && (
                 <div style={{ marginTop: '8px', padding: '12px', background: 'var(--color-gray-100)', borderRadius: '8px' }}>
-                  <span style={{ fontWeight: '500', color: 'var(--color-primary)' }}>📝 Примечание:</span>
+                  <span style={{ fontWeight: '500', color: 'var(--color-primary)' }}>Примечание:</span>
                   <span style={{ color: 'var(--color-gray-500)', marginLeft: '4px' }}>{selectedAssignment.notes}</span>
                 </div>
               )}

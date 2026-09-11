@@ -131,27 +131,27 @@ export default function MyReviews() {
 
   const getEngagementLabel = (value) => {
     const labels = {
-      'active': '🟢 Активно',
-      'moderate': '🟡 Умеренно',
-      'passive': '🔴 Пассивно'
+      'active': 'Активно',
+      'moderate': 'Умеренно',
+      'passive': 'Пассивно'
     };
     return labels[value] || value;
   };
 
   const getTeamworkLabel = (value) => {
     const labels = {
-      'excellent': '⭐ Отлично',
-      'good': '👍 Хорошо',
-      'developing': '📈 Развивается'
+      'excellent': 'Отлично',
+      'good': 'Хорошо',
+      'developing': 'Развивается'
     };
     return labels[value] || value;
   };
 
   const getInitiativeLabel = (value) => {
     const labels = {
-      'high': '🚀 Высокая',
-      'average': '📊 Средняя',
-      'low': '📉 Низкая'
+      'high': 'Высокая',
+      'average': 'Средняя',
+      'low': 'Низкая'
     };
     return labels[value] || value;
   };
@@ -198,7 +198,7 @@ export default function MyReviews() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {canFilterByClub && clubs.length > 0 && (
           <div style={{
@@ -233,7 +233,7 @@ export default function MyReviews() {
               {selectedClubId ? (
                 <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
               ) : (
-                <span>📋 Все оценки</span>
+                <span>Все оценки</span>
               )}
             </div>
             {selectedClubId && (
@@ -249,7 +249,7 @@ export default function MyReviews() {
                 }}
                 onClick={() => setSelectedClubId('')}
               >
-                ✕ Сбросить
+                Сбросить
               </button>
             )}
           </div>
@@ -380,7 +380,7 @@ export default function MyReviews() {
                             {review.participant_name || 'Неизвестно'}
                           </div>
                           <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
-                            🏫 {review.club_name || 'Без клуба'}
+                            {review.club_name || 'Без клуба'}
                           </div>
                           <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
                             📅 {review.event_date ? new Date(review.event_date).toLocaleDateString('ru-RU') : ''}
@@ -420,12 +420,12 @@ export default function MyReviews() {
 
                       {review.comment && (
                         <div style={{ fontSize: '12px', color: 'var(--color-gray-500)', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--color-gray-100)' }}>
-                          💬 {review.comment}
+                          {review.comment}
                         </div>
                       )}
                       {review.reviewer_name && (
                         <div style={{ fontSize: '11px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
-                          👤 {review.reviewer_name}
+                          {review.reviewer_name}
                         </div>
                       )}
                     </div>

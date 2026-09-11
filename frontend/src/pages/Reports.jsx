@@ -89,7 +89,7 @@ export default function Reports() {
       }
 
       // ============================================================
-      // ✅ ЗАГРУЗКА С ПАГИНАЦИЕЙ
+      // ЗАГРУЗКА С ПАГИНАЦИЕЙ
       // ============================================================
       const [clubsData, reportsData] = await Promise.all([
         api.getClubs(),
@@ -156,7 +156,7 @@ export default function Reports() {
 
     } catch (err) {
       console.error('Ошибка загрузки:', err);
-      setMessage('❌ Ошибка загрузки отчётов');
+      setMessage('Ошибка загрузки отчётов');
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -238,7 +238,7 @@ export default function Reports() {
         if (coordinatorClubId) {
           clubId = coordinatorClubId;
         } else {
-          setMessage('❌ Вы не привязаны ни к одному КЮДу');
+          setMessage('Вы не привязаны ни к одному КЮДу');
           setMessageType('error');
           setLoading(false);
           return;
@@ -246,14 +246,14 @@ export default function Reports() {
       }
 
       if (!clubId) {
-        setMessage('❌ Выберите клуб');
+        setMessage('Выберите клуб');
         setMessageType('error');
         setLoading(false);
         return;
       }
 
       if (!form.report_month) {
-        setMessage('❌ Выберите месяц отчёта');
+        setMessage('Выберите месяц отчёта');
         setMessageType('error');
         setLoading(false);
         return;
@@ -301,7 +301,7 @@ export default function Reports() {
         throw new Error(result.error || 'Ошибка сохранения отчёта');
       }
 
-      setMessage(form.id ? '✅ Отчёт обновлён!' : '✅ Отчёт создан!');
+      setMessage(form.id ? 'Отчёт обновлён!' : 'Отчёт создан!');
       setMessageType('success');
       setForm({
         id: null,
@@ -316,7 +316,7 @@ export default function Reports() {
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -366,13 +366,13 @@ export default function Reports() {
         throw new Error(result.error || 'Ошибка удаления');
       }
 
-      setMessage('✅ Отчёт удалён');
+      setMessage('Отчёт удалён');
       setMessageType('success');
       loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -395,13 +395,13 @@ export default function Reports() {
         throw new Error(result.error || 'Ошибка отправки');
       }
 
-      setMessage('✅ Отчёт отправлен на проверку!');
+      setMessage('Отчёт отправлен на проверку!');
       setMessageType('success');
       loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -424,13 +424,13 @@ export default function Reports() {
         throw new Error(result.error || 'Ошибка утверждения');
       }
 
-      setMessage('✅ Отчёт утверждён!');
+      setMessage('Отчёт утверждён!');
       setMessageType('success');
       loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -456,23 +456,23 @@ export default function Reports() {
         throw new Error(result.error || 'Ошибка отклонения');
       }
 
-      setMessage('❌ Отчёт отклонён');
+      setMessage('Отчёт отклонён');
       setMessageType('error');
       loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
 
   const getStatusBadge = (status) => {
     const badges = {
-      'draft': { color: '#8A9AAA', bg: 'var(--color-gray-100)', label: '📝 Черновик' },
-      'submitted': { color: 'var(--color-gold)', bg: 'var(--color-gold-pale)', label: '⏳ На проверке' },
-      'approved': { color: 'var(--color-success)', bg: 'var(--color-success-bg)', label: '✅ Утверждён' },
-      'rejected': { color: 'var(--color-error)', bg: 'var(--color-error-bg)', label: '❌ Отклонён' }
+      'draft': { color: '#8A9AAA', bg: 'var(--color-gray-100)', label: 'Черновик' },
+      'submitted': { color: 'var(--color-gold)', bg: 'var(--color-gold-pale)', label: 'На проверке' },
+      'approved': { color: 'var(--color-success)', bg: 'var(--color-success-bg)', label: 'Утверждён' },
+      'rejected': { color: 'var(--color-error)', bg: 'var(--color-error-bg)', label: 'Отклонён' }
     };
     return badges[status] || badges['draft'];
   };
@@ -538,7 +538,7 @@ export default function Reports() {
            ============================================================ */}
         <div className="page-header">
           <div className="page-header-left">
-            <h1>📋 Отчёты</h1>
+            <h1>Отчёты</h1>
             <p>
               {isClubCoordinator 
                 ? `Ежемесячные отчёты вашего клуба (${reports.length})` 
@@ -560,7 +560,7 @@ export default function Reports() {
                 setShowForm(!showForm);
               }}
             >
-              {showForm ? '✖ Закрыть' : '➕ Создать отчёт'}
+              {showForm ? 'Закрыть' : 'Создать отчёт'}
             </button>
           )}
         </div>
@@ -586,7 +586,7 @@ export default function Reports() {
               {selectedClubId ? (
                 <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
               ) : (
-                <span>📋 Все отчёты</span>
+                <span>Все отчёты</span>
               )}
             </span>
             {selectedClubId && (
@@ -594,7 +594,7 @@ export default function Reports() {
                 className="filter-clear"
                 onClick={() => setSelectedClubId('')}
               >
-                ✕ Сбросить
+                Сбросить
               </button>
             )}
           </div>
@@ -602,11 +602,11 @@ export default function Reports() {
 
         {showForm && canCreate && (
           <div className="card form-card">
-            <h3>{form.id ? '✏️ Редактировать отчёт' : '📝 Новый отчёт'}</h3>
+            <h3>{form.id ? 'Редактировать отчёт' : 'Новый отчёт'}</h3>
             
             {isClubCoordinator && coordinatorClubId && (
               <div className="form-club-info">
-                🏫 <strong>Отчёт для вашего клуба:</strong> {clubs.find(c => c.id === coordinatorClubId)?.name || 'КЮД'}
+                <strong>Отчёт для вашего клуба:</strong> {clubs.find(c => c.id === coordinatorClubId)?.name || 'КЮД'}
               </div>
             )}
 
@@ -625,7 +625,7 @@ export default function Reports() {
                   ))}
                 </select>
                 {isClubCoordinator && (
-                  <div className="form-hint">🔒 Вы можете создавать отчёты только для своего клуба</div>
+                  <div className="form-hint">Вы можете создавать отчёты только для своего клуба</div>
                 )}
               </div>
 
@@ -672,10 +672,10 @@ export default function Reports() {
 
               <div className="form-actions">
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Сохранение...' : form.id ? '💾 Обновить' : '✅ Создать'}
+                  {loading ? 'Сохранение...' : form.id ? 'Обновить' : 'Создать'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -723,13 +723,13 @@ export default function Reports() {
                       </span>
                     </div>
                     <div className="report-subtitle">
-                      🏫 {report.club_name || 'Клуб'} 
-                      {report.report_month && ` • 📅 ${report.report_month}`}
-                      {report.events_count !== undefined && ` • 📊 ${report.events_count} мероприятий`}
-                      {report.participants_count !== undefined && ` • 👥 ${report.participants_count} участников`}
+                      {report.club_name || 'Клуб'} 
+                      {report.report_month && ` • ${report.report_month}`}
+                      {report.events_count !== undefined && ` • ${report.events_count} мероприятий`}
+                      {report.participants_count !== undefined && ` • ${report.participants_count} участников`}
                     </div>
                     {report.created_by_name && (
-                      <div className="report-meta">👤 Создал: {report.created_by_name}</div>
+                      <div className="report-meta">Создал: {report.created_by_name}</div>
                     )}
                     <div className="report-actions">
                       <button
@@ -740,7 +740,7 @@ export default function Reports() {
                           setShowModal(true);
                         }}
                       >
-                        👁️ Открыть
+                        Открыть
                       </button>
                       
                       {canCreate && isDraft && (
@@ -752,7 +752,7 @@ export default function Reports() {
                               handleEdit(report);
                             }}
                           >
-                            ✏️ Редактировать
+                            Редактировать
                           </button>
                           <button
                             className="btn-gold btn-sm"
@@ -761,7 +761,7 @@ export default function Reports() {
                               handleSubmitReport(report.id);
                             }}
                           >
-                            📤 Отправить
+                            Отправить
                           </button>
                         </>
                       )}
@@ -776,7 +776,7 @@ export default function Reports() {
                               handleApproveReport(report.id);
                             }}
                           >
-                            ✅ Утвердить
+                            Утвердить
                           </button>
                           <button
                             className="btn-danger btn-sm"
@@ -785,7 +785,7 @@ export default function Reports() {
                               handleRejectReport(report.id);
                             }}
                           >
-                            ❌ Отклонить
+                            Отклонить
                           </button>
                         </>
                       )}
@@ -798,7 +798,7 @@ export default function Reports() {
                             handleDelete(report.id);
                           }}
                         >
-                          🗑️ Удалить
+                          Удалить
                         </button>
                       )}
                     </div>
@@ -822,17 +822,17 @@ export default function Reports() {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>📄 {selectedReport.title || `Отчёт за ${selectedReport.report_month || 'неизвестный месяц'}`}</h3>
+              <h3>{selectedReport.title || `Отчёт за ${selectedReport.report_month || 'неизвестный месяц'}`}</h3>
               <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
             </div>
 
             <div className="modal-tags">
               <span className="tag" style={{ background: 'var(--color-gray-100)', color: 'var(--color-gray-500)' }}>
-                🏫 {selectedReport.club_name || 'Клуб'}
+                {selectedReport.club_name || 'Клуб'}
               </span>
               {selectedReport.report_month && (
                 <span className="tag" style={{ background: 'var(--color-gray-100)', color: 'var(--color-gray-500)' }}>
-                  📅 {selectedReport.report_month}
+                  {selectedReport.report_month}
                 </span>
               )}
               <span className="tag" style={{ 
@@ -862,14 +862,14 @@ export default function Reports() {
 
             {selectedReport.created_by_name && (
               <div className="modal-meta">
-                👤 Создал: {selectedReport.created_by_name}
-                {selectedReport.created_at && ` • 📅 ${new Date(selectedReport.created_at).toLocaleDateString('ru-RU')}`}
+                Создал: {selectedReport.created_by_name}
+                {selectedReport.created_at && ` • ${new Date(selectedReport.created_at).toLocaleDateString('ru-RU')}`}
               </div>
             )}
 
             {selectedReport.reviewer_comment && (
               <div className="modal-comment">
-                <strong>💬 Причина отклонения:</strong>
+                <strong>Причина отклонения:</strong>
                 <p>{selectedReport.reviewer_comment}</p>
               </div>
             )}

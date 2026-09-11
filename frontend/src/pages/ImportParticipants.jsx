@@ -70,7 +70,7 @@ export default function ImportParticipants() {
         const missingColumns = requiredColumns.filter(col => !(col in firstRow));
 
         if (missingColumns.length > 0) {
-          setMessage(`❌ В файле отсутствуют колонки: ${missingColumns.join(', ')}`);
+          setMessage(`В файле отсутствуют колонки: ${missingColumns.join(', ')}`);
           setMessageType('error');
           return;
         }
@@ -88,10 +88,10 @@ export default function ImportParticipants() {
         }));
 
         setPreviewData(formattedData);
-        setMessage(`✅ Загружено ${formattedData.length} записей. Проверьте данные и нажмите "Импортировать".`);
+        setMessage(`Загружено ${formattedData.length} записей. Проверьте данные и нажмите "Импортировать".`);
         setMessageType('success');
       } catch (err) {
-        setMessage('❌ Ошибка чтения файла: ' + err.message);
+        setMessage('Ошибка чтения файла: ' + err.message);
         setMessageType('error');
       }
     };
@@ -100,7 +100,7 @@ export default function ImportParticipants() {
 
   const handleImport = async () => {
     if (previewData.length === 0) {
-      setMessage('❌ Нет данных для импорта');
+      setMessage('Нет данных для импорта');
       setMessageType('error');
       return;
     }
@@ -126,7 +126,7 @@ export default function ImportParticipants() {
         const existing = existingUsers.find(u => u.email === row.email);
 
         if (existing) {
-          errorList.push(`⚠️ ${row.full_name} (${row.email}) — уже существует`);
+          errorList.push(`${row.full_name} (${row.email}) — уже существует`);
           continue;
         }
 
@@ -159,7 +159,7 @@ export default function ImportParticipants() {
         });
 
         if (result.error) {
-          errorList.push(`❌ ${row.full_name} (${row.email}) — ${result.error}`);
+          errorList.push(`${row.full_name} (${row.email}) — ${result.error}`);
           continue;
         }
 
@@ -172,7 +172,7 @@ export default function ImportParticipants() {
 
         successCount++;
       } catch (err) {
-        errorList.push(`❌ ${row.full_name} (${row.email}) — ${err.message}`);
+        errorList.push(`${row.full_name} (${row.email}) — ${err.message}`);
       }
     }
 
@@ -183,10 +183,10 @@ export default function ImportParticipants() {
     }
 
     if (errorList.length === 0) {
-      setMessage(`✅ Успешно импортировано ${successCount} участников!`);
+      setMessage(`Успешно импортировано ${successCount} участников!`);
       setMessageType('success');
     } else {
-      setMessage(`⚠️ Импортировано: ${successCount}, Ошибок: ${errorList.length}`);
+      setMessage(`Импортировано: ${successCount}, Ошибок: ${errorList.length}`);
       setMessageType('error');
     }
 
@@ -199,7 +199,7 @@ export default function ImportParticipants() {
       text += `ФИО: ${u.full_name}\nEmail: ${u.email}\nПароль: ${u.password}\nРоль: ${u.role}\n\n`;
     });
     navigator.clipboard.writeText(text);
-    setMessage('✅ Данные скопированы!');
+    setMessage('Данные скопированы!');
     setMessageType('success');
     setTimeout(() => setMessage(''), 3000);
   };
@@ -263,14 +263,14 @@ export default function ImportParticipants() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--color-primary)' }}>
-                🔑 Данные для входа (Импорт)
+                Данные для входа (Импорт)
               </h3>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button className="btn-primary" onClick={copyPasswords}>
-                  📋 Скопировать все
+                  Скопировать все
                 </button>
                 <button className="btn-secondary" onClick={() => setShowPasswordList(false)}>
-                  ✖ Закрыть
+                  Закрыть
                 </button>
               </div>
             </div>
@@ -310,7 +310,7 @@ export default function ImportParticipants() {
             </div>
 
             <div style={{ marginTop: '12px', padding: '12px', background: 'var(--color-info-bg)', borderRadius: '8px', fontSize: '13px', color: 'var(--color-primary-light)' }}>
-              💡 Скопируйте данные и разошлите пользователям. Пароли можно изменить при первом входе.
+              Скопируйте данные и разошлите пользователям. Пароли можно изменить при первом входе.
             </div>
           </div>
         )}
@@ -318,20 +318,20 @@ export default function ImportParticipants() {
         {/* ШАГ 1: СКАЧАТЬ ШАБЛОН */}
         <div className="card" style={{ marginBottom: '16px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '8px' }}>
-            📋 Шаг 1: Скачайте шаблон
+            Шаг 1: Скачайте шаблон
           </h3>
           <p style={{ color: 'var(--color-gray-500)', marginBottom: '12px' }}>
             Скачайте шаблон Excel-файла с правильной структурой колонок
           </p>
           <button className="btn-primary" onClick={downloadTemplate}>
-            📥 Скачать шаблон
+            Скачать шаблон
           </button>
         </div>
 
         {/* ШАГ 2: ЗАГРУЗИТЬ ФАЙЛ */}
         <div className="card" style={{ marginBottom: '16px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '8px' }}>
-            📤 Шаг 2: Загрузите файл
+            Шаг 2: Загрузите файл
           </h3>
           <p style={{ color: 'var(--color-gray-500)', marginBottom: '12px' }}>
             Загрузите заполненный Excel-файл (.xlsx или .xls)
@@ -386,7 +386,7 @@ export default function ImportParticipants() {
             </button>
             {file && (
               <div style={{ marginTop: '12px', color: 'var(--color-success)' }}>
-                ✅ Файл выбран: <strong>{file.name}</strong> ({Math.round(file.size / 1024)} KB)
+                Файл выбран: <strong>{file.name}</strong> ({Math.round(file.size / 1024)} KB)
               </div>
             )}
           </div>
@@ -397,7 +397,7 @@ export default function ImportParticipants() {
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
-                📊 Шаг 3: Проверка данных
+                Шаг 3: Проверка данных
               </h3>
               <span style={{ fontSize: '14px', color: 'var(--color-gray-500)' }}>
                 {previewData.length} записей
@@ -442,7 +442,7 @@ export default function ImportParticipants() {
                 onClick={handleImport}
                 disabled={loading}
               >
-                {loading ? '⏳ Импорт...' : '✅ Импортировать всех'}
+                {loading ? 'Импорт...' : 'Импортировать всех'}
               </button>
               <button
                 className="btn-secondary"
@@ -455,7 +455,7 @@ export default function ImportParticipants() {
                   setShowPasswordList(false);
                 }}
               >
-                ❌ Очистить
+                Очистить
               </button>
             </div>
           </div>

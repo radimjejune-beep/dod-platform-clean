@@ -66,7 +66,7 @@ export default function EventManagement() {
 
     } catch (err) {
       console.error('Ошибка загрузки:', err);
-      setMessage('❌ Ошибка загрузки данных');
+      setMessage('Ошибка загрузки данных');
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -75,7 +75,7 @@ export default function EventManagement() {
 
   const handleAddParticipants = async () => {
     if (selectedParticipants.length === 0) {
-      setMessage('❌ Выберите хотя бы одного участника');
+      setMessage('Выберите хотя бы одного участника');
       setMessageType('error');
       return;
     }
@@ -133,12 +133,12 @@ export default function EventManagement() {
         throw new Error('Ошибка удаления');
       }
 
-      setMessage(`✅ ${fullName} удалён с мероприятия`);
+      setMessage(`${fullName} удалён с мероприятия`);
       setMessageType('success');
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка удаления: ' + err.message);
+      setMessage('Ошибка удаления: ' + err.message);
       setMessageType('error');
     }
   };
@@ -200,9 +200,9 @@ export default function EventManagement() {
           <div>
             <h1>{event?.title || 'Управление мероприятием'}</h1>
             <p>
-              📅 {event?.event_date ? new Date(event.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
-              {event?.location && ` • 📍 ${event.location}`}
-              {event?.is_global && <span className="tag" style={{ marginLeft: '8px', background: '#EDE7F6', color: '#6B46C1' }}>🌍 Глобальное</span>}
+              {event?.event_date ? new Date(event.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
+              {event?.location && ` • ${event.location}`}
+              {event?.is_global && <span className="tag" style={{ marginLeft: '8px', background: '#EDE7F6', color: '#6B46C1' }}>Глобальное</span>}
             </p>
           </div>
           {canManage && (
@@ -211,7 +211,7 @@ export default function EventManagement() {
               style={{ marginLeft: 'auto' }}
               onClick={() => setShowAddModal(true)}
             >
-              ➕ Добавить участников
+              Добавить участников
             </button>
           )}
         </div>
@@ -225,7 +225,7 @@ export default function EventManagement() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
-              👥 Участники ({participants.length})
+              Участники ({participants.length})
             </h3>
             {isTutor && (
               <button
@@ -233,7 +233,7 @@ export default function EventManagement() {
                 style={{ padding: '6px 16px', fontSize: '12px' }}
                 onClick={() => navigate(`/tutor-journal/${eventId}`)}
               >
-                📓 Журнал оценок
+                Журнал оценок
               </button>
             )}
           </div>
@@ -262,12 +262,12 @@ export default function EventManagement() {
                         {p.full_name}
                         {p.club_name && (
                           <span className="tag" style={{ marginLeft: '8px', background: 'var(--color-info-bg)', color: 'var(--color-primary-light)', fontSize: '10px' }}>
-                            🏫 {p.club_name}
+                            {p.club_name}
                           </span>
                         )}
                         {p.status === 'attended' && (
                           <span className="tag" style={{ marginLeft: '8px', background: 'var(--color-success-bg)', color: 'var(--color-success)', fontSize: '10px' }}>
-                            ✅ Присутствовал
+                            Присутствовал
                           </span>
                         )}
                       </div>
@@ -284,8 +284,8 @@ export default function EventManagement() {
                                  p.score_status === 'submitted' ? 'var(--color-gold)' : 'var(--color-gray-500)',
                           fontSize: '10px'
                         }}>
-                          {p.score_status === 'approved' ? '✅ Оценено' :
-                           p.score_status === 'submitted' ? '⏳ На проверке' : '📝 Не оценено'}
+                          {p.score_status === 'approved' ? 'Оценено' :
+                           p.score_status === 'submitted' ? 'На проверке' : 'Не оценено'}
                         </span>
                       )}
                       {canManage && (
@@ -354,7 +354,7 @@ export default function EventManagement() {
             </button>
 
             <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '4px' }}>
-              ➕ Добавить участников
+              Добавить участников
             </h3>
             <p style={{ color: 'var(--color-gray-500)', marginBottom: '16px' }}>
               Выберите участников для добавления на мероприятие
@@ -365,7 +365,7 @@ export default function EventManagement() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="🔍 Поиск по имени, школе, классу..."
+                placeholder="Поиск по имени, школе, классу..."
                 style={{
                   width: '100%',
                   padding: '8px 14px',
@@ -432,7 +432,7 @@ export default function EventManagement() {
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
                         {p.school || 'Школа не указана'} • {p.class_name || 'Класс не указан'}
-                        {p.club_name && ` • 🏫 ${p.club_name}`}
+                        {p.club_name && ` • ${p.club_name}`}
                       </div>
                     </div>
                   </div>
@@ -447,14 +447,14 @@ export default function EventManagement() {
                 disabled={selectedParticipants.length === 0 || loading}
                 style={{ flex: 1 }}
               >
-                {loading ? '⏳ Добавление...' : `✅ Добавить (${selectedParticipants.length})`}
+                {loading ? 'Добавление...' : `Добавить (${selectedParticipants.length})`}
               </button>
               <button
                 type="button"
                 className="btn-secondary"
                 onClick={() => setShowAddModal(false)}
               >
-                ❌ Отмена
+                Отмена
               </button>
             </div>
           </div>

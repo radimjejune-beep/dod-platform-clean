@@ -79,7 +79,7 @@ export default function Achievements() {
       setProfile(userData);
 
       // ============================================================
-      // ✅ ЗАГРУЗКА С ПАГИНАЦИЕЙ
+      // ЗАГРУЗКА С ПАГИНАЦИЕЙ
       // ============================================================
       const [participantsData, clubsData, achievementsData] = await Promise.all([
         api.getParticipants(),
@@ -195,12 +195,12 @@ export default function Achievements() {
     {
       key: 'is_club_award',
       type: 'checkbox',
-      label: '🏫 Клубные награды'
+      label: 'Клубные награды'
     },
     {
       key: 'is_tutor_award',
       type: 'checkbox',
-      label: '📚 Награды тьютора'
+      label: 'Награды тьютора'
     }
   ];
 
@@ -270,7 +270,7 @@ export default function Achievements() {
 
     try {
       if (!selectedParticipant) {
-        setMessage('❌ Пожалуйста, выберите участника');
+        setMessage('Пожалуйста, выберите участника');
         setMessageType('error');
         setLoading(false);
         return;
@@ -305,13 +305,13 @@ export default function Achievements() {
         throw new Error(result.error);
       }
 
-      setMessage(editingAchievement ? '✅ Достижение обновлено!' : '✅ Достижение добавлено!');
+      setMessage(editingAchievement ? 'Достижение обновлено!' : 'Достижение добавлено!');
       setMessageType('success');
       resetForm();
       loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -333,7 +333,7 @@ export default function Achievements() {
 
   const handleEdit = (achievement) => {
     if (!canEdit) {
-      setMessage('❌ У вас нет прав для редактирования');
+      setMessage('У вас нет прав для редактирования');
       setMessageType('error');
       return;
     }
@@ -355,7 +355,7 @@ export default function Achievements() {
 
   const handleDelete = async (id) => {
     if (!canDelete) {
-      setMessage('❌ У вас нет прав для удаления');
+      setMessage('У вас нет прав для удаления');
       setMessageType('error');
       return;
     }
@@ -363,12 +363,12 @@ export default function Achievements() {
     try {
       const result = await api.deleteAchievement(id);
       if (result.error) throw new Error(result.error);
-      setMessage('✅ Достижение удалено');
+      setMessage('Достижение удалено');
       setMessageType('success');
       loadData(pagination.page);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -411,7 +411,7 @@ export default function Achievements() {
            ============================================================ */}
         <div className="page-header">
           <div className="page-header-left">
-            <h1>🏆 Достижения</h1>
+            <h1>Достижения</h1>
             <p>Всего: {filteredAchievements.length}</p>
           </div>
           {canManage && (
@@ -419,7 +419,7 @@ export default function Achievements() {
               className="btn-gold"
               onClick={() => setShowForm(!showForm)}
             >
-              {showForm ? '✖ Закрыть' : '➕ Добавить достижение'}
+              {showForm ? 'Закрыть' : 'Добавить достижение'}
             </button>
           )}
         </div>
@@ -445,7 +445,7 @@ export default function Achievements() {
               {selectedClubId ? (
                 <span>🔍 Отфильтровано по клубу: <strong>{clubs.find(c => c.id === selectedClubId)?.name}</strong></span>
               ) : (
-                <span>📋 Все достижения</span>
+                <span>Все достижения</span>
               )}
             </span>
             {selectedClubId && (
@@ -453,7 +453,7 @@ export default function Achievements() {
                 className="filter-clear"
                 onClick={() => setSelectedClubId('')}
               >
-                ✕ Сбросить
+                Сбросить
               </button>
             )}
           </div>
@@ -463,7 +463,7 @@ export default function Achievements() {
           filters={filterConfig}
           onFilterChange={setFilters}
           onSearchChange={setFilterSearch}
-          searchPlaceholder="🔍 Поиск по названию, описанию, участнику..."
+          searchPlaceholder="Поиск по названию, описанию, участнику..."
         >
           <div className="filter-count">
             Найдено: <strong>{filteredAchievements.length}</strong>
@@ -472,7 +472,7 @@ export default function Achievements() {
 
         {showForm && canManage && (
           <div className="card form-card">
-            <h3>{editingAchievement ? '✏️ Редактировать достижение' : '📝 Добавить достижение'}</h3>
+            <h3>{editingAchievement ? 'Редактировать достижение' : 'Добавить достижение'}</h3>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
                 <label>Участник *</label>
@@ -508,7 +508,7 @@ export default function Achievements() {
                 </div>
                 {selectedParticipant && (
                   <div className="participant-selected">
-                    ✅ Выбран: <strong>{selectedParticipant.full_name}</strong>
+                    Выбран: <strong>{selectedParticipant.full_name}</strong>
                     <button
                       type="button"
                       onClick={() => {
@@ -555,10 +555,10 @@ export default function Achievements() {
 
               <div className="form-actions">
                 <button type="submit" className="btn-success" disabled={loading || !selectedParticipant}>
-                  {loading ? '⏳ Сохранение...' : editingAchievement ? '💾 Обновить' : '✅ Добавить'}
+                  {loading ? 'Сохранение...' : editingAchievement ? 'Обновить' : 'Добавить'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={resetForm}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -604,8 +604,8 @@ export default function Achievements() {
                       )}
                     </div>
                     <div className="achievement-subtitle">
-                      👤 {a.participant_name || 'Участник'}
-                      {a.achievement_date && ` • 📅 ${new Date(a.achievement_date).toLocaleDateString('ru-RU')}`}
+                      {a.participant_name || 'Участник'}
+                      {a.achievement_date && ` • ${new Date(a.achievement_date).toLocaleDateString('ru-RU')}`}
                     </div>
                     {a.description && <div className="achievement-description">{a.description}</div>}
                     
@@ -616,7 +616,7 @@ export default function Achievements() {
                             className="btn-secondary btn-sm"
                             onClick={() => handleEdit(a)}
                           >
-                            ✏️ Редактировать
+                            Редактировать
                           </button>
                         )}
                         {userCanDelete && (
@@ -624,7 +624,7 @@ export default function Achievements() {
                             className="btn-danger btn-sm"
                             onClick={() => handleDelete(a.id)}
                           >
-                            🗑️ Удалить
+                            Удалить
                           </button>
                         )}
                       </div>

@@ -84,7 +84,7 @@ export default function AdminInvite() {
         throw new Error(api.describeApiError(result));
       }
 
-      // ⚠️ Раньше пароль генерировался здесь, на фронте, и подставлялся в
+      // Раньше пароль генерировался здесь, на фронте, и подставлялся в
       // текст приглашения — но на сервер он не передавался, и сервер
       // создавал учётную запись со СВОИМ паролем. То есть в каждом
       // приглашении был пароль, который не работал.
@@ -96,7 +96,7 @@ export default function AdminInvite() {
 
       const inviteText = `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  🏛️ ДОД «Дипломаты будущего»
+  ДОД «Дипломаты будущего»
   Приглашение в систему
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -107,9 +107,9 @@ export default function AdminInvite() {
 
 Ваши данные для входа:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  📧 Email: ${result.user?.email || form.email}
-  🔒 Пароль: ${password}
-  👤 Роль: ${getRoleLabel(form.role)}
+  Email: ${result.user?.email || form.email}
+  Пароль: ${password}
+  Роль: ${getRoleLabel(form.role)}
   ${form.club_id ? `🏫 Клуб: ${clubs.find(c => c.id === form.club_id)?.name || '—'}` : ''}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -122,7 +122,7 @@ ${window.location.origin}/login
       `;
 
       await navigator.clipboard.writeText(inviteText);
-      setMessage(`✅ Приглашение для "${form.full_name}" создано! Данные скопированы в буфер обмена.`);
+      setMessage(`Приглашение для "${form.full_name}" создано! Данные скопированы в буфер обмена.`);
       setMessageType('success');
       setForm({
         full_name: '',
@@ -133,7 +133,7 @@ ${window.location.origin}/login
       });
       setTimeout(() => setMessage(''), 5000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setSending(false);
@@ -142,10 +142,10 @@ ${window.location.origin}/login
 
   const getRoleLabel = (role) => {
     const labels = {
-      'club_coordinator': '🏫 Координатор КЮДа',
-      'tutor': '📚 Тьютор',
-      'movement_coordinator': '⭐ Координатор движения',
-      'admin': '🔧 Администратор'
+      'club_coordinator': 'Координатор КЮДа',
+      'tutor': 'Тьютор',
+      'movement_coordinator': 'Координатор движения',
+      'admin': 'Администратор'
     };
     return labels[role] || role;
   };
@@ -178,7 +178,7 @@ ${window.location.origin}/login
 
         <div className="card">
           <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-            📝 Создать приглашение
+            Создать приглашение
           </h3>
           <form onSubmit={handleSubmit}>
             <div className="grid-2">
@@ -211,10 +211,10 @@ ${window.location.origin}/login
                   onChange={(e) => setForm({ ...form, role: e.target.value })}
                   required
                 >
-                  <option value="club_coordinator">🏫 Координатор КЮДа</option>
-                  <option value="tutor">📚 Тьютор</option>
-                  <option value="movement_coordinator">⭐ Координатор движения</option>
-                  <option value="admin">🔧 Администратор</option>
+                  <option value="club_coordinator">Координатор КЮДа</option>
+                  <option value="tutor">Тьютор</option>
+                  <option value="movement_coordinator">Координатор движения</option>
+                  <option value="admin">Администратор</option>
                 </select>
               </div>
 
@@ -251,7 +251,7 @@ ${window.location.origin}/login
                 disabled={sending}
                 style={{ width: '100%', marginTop: '8px' }}
               >
-                {sending ? '⏳ Создание...' : '🎫 Создать приглашение'}
+                {sending ? 'Создание...' : 'Создать приглашение'}
               </button>
             )}
           </form>

@@ -75,7 +75,7 @@ export default function MyAchievements() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <div className="grid-4" style={{ marginBottom: '20px' }}>
           <div className="stat-card">
@@ -106,7 +106,7 @@ export default function MyAchievements() {
           <div className="empty-state">
             <div className="icon">🌟</div>
             <p style={{ fontSize: '18px', color: 'var(--color-primary)' }}>У вас пока нет достижений</p>
-            <p style={{ color: 'var(--color-gray-500)' }}>Участвуйте в мероприятиях и получайте награды! 🏆</p>
+            <p style={{ color: 'var(--color-gray-500)' }}>Участвуйте в мероприятиях и получайте награды!</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -150,7 +150,7 @@ export default function MyAchievements() {
                       </p>
                     )}
                     <div style={{ display: 'flex', gap: '12px', fontSize: '13px', color: 'var(--color-gray-400)', flexWrap: 'wrap' }}>
-                      <span>📅 {new Date(item.achievement_date || item.created_at).toLocaleDateString('ru-RU', {
+                      <span>{new Date(item.achievement_date || item.created_at).toLocaleDateString('ru-RU', {
                         day: 'numeric',
                         month: 'long',
                         year: 'numeric'

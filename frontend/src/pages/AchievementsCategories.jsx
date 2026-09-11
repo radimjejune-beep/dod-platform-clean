@@ -73,13 +73,13 @@ export default function AchievementsCategories() {
 
       if (result?.error) throw new Error(api.describeApiError(result));
 
-      setMessage(editingCategory ? '✅ Категория обновлена!' : '✅ Категория создана!');
+      setMessage(editingCategory ? 'Категория обновлена!' : 'Категория создана!');
       setMessageType('success');
       resetForm();
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -130,11 +130,11 @@ export default function AchievementsCategories() {
       }
 
       setCategories(categories.filter(c => c.id !== id));
-      setMessage('✅ Категория удалена');
+      setMessage('Категория удалена');
       setMessageType('success');
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -172,7 +172,7 @@ export default function AchievementsCategories() {
               setShowForm(!showForm);
             }}
           >
-            {showForm ? '✖ Закрыть' : '➕ Создать категорию'}
+            {showForm ? 'Закрыть' : 'Создать категорию'}
           </button>
         </div>
 
@@ -185,7 +185,7 @@ export default function AchievementsCategories() {
         {showForm && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-              {editingCategory ? '✏️ Редактировать категорию' : '📝 Создать категорию'}
+              {editingCategory ? 'Редактировать категорию' : 'Создать категорию'}
             </h3>
             <form onSubmit={handleSubmit}>
               <div className="grid-2">
@@ -287,7 +287,7 @@ export default function AchievementsCategories() {
                       style={{ width: '18px', height: '18px' }}
                     />
                     <span style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
-                      ✅ Активна
+                      Активна
                     </span>
                   </label>
                 </div>
@@ -295,10 +295,10 @@ export default function AchievementsCategories() {
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Сохранение...' : editingCategory ? '💾 Обновить' : '✅ Создать'}
+                  {loading ? 'Сохранение...' : editingCategory ? 'Обновить' : 'Создать'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={resetForm}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -308,7 +308,7 @@ export default function AchievementsCategories() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
-              📋 Все категории
+              Все категории
             </h3>
             <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               {categories.length} категорий
@@ -353,7 +353,7 @@ export default function AchievementsCategories() {
                       background: 'var(--color-gray-100)',
                       color: 'var(--color-gray-500)'
                     }}>
-                      ⭐ {category.points || 0} баллов
+                      {category.points || 0} баллов
                     </span>
                     {category.is_active === false && (
                       <span className="tag" style={{ background: 'var(--color-error-bg)', color: 'var(--color-error)', fontSize: '10px' }}>

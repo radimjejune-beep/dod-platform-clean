@@ -74,11 +74,11 @@ export default function ClubRating() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <div className="card">
           <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-            📊 Таблица лидеров
+            Таблица лидеров
           </h3>
 
           {rating.length === 0 ? (
@@ -152,8 +152,8 @@ export default function ClubRating() {
                     color: 'var(--color-gray-500)',
                     flexShrink: 0
                   }}>
-                    <span>📅 {participant.events_count || 0}</span>
-                    <span>🏆 {participant.achievements_count || 0}</span>
+                    <span>{participant.events_count || 0}</span>
+                    <span>{participant.achievements_count || 0}</span>
                     <span style={{
                       fontWeight: '700',
                       color: 'var(--color-gold)',
@@ -161,7 +161,7 @@ export default function ClubRating() {
                       minWidth: '50px',
                       textAlign: 'right'
                     }}>
-                      {participant.rating_points || 0} ⭐
+                      {participant.rating_points || 0}
                     </span>
                   </div>
                 </div>

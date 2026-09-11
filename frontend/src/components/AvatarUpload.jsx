@@ -19,7 +19,7 @@ export default function AvatarUpload({ currentAvatar, onAvatarUpdated, userId })
     const MAX_SIZE = 500 * 1024; // 500KB
     
     if (file.size > MAX_SIZE) {
-      setError(`❌ Файл слишком большой! Максимум ${MAX_SIZE / 1024} KB. Сожмите изображение.`);
+      setError(`Файл слишком большой! Максимум ${MAX_SIZE / 1024} KB. Сожмите изображение.`);
       setTimeout(() => setError(''), 4000);
       return;
     }
@@ -28,7 +28,7 @@ export default function AvatarUpload({ currentAvatar, onAvatarUpdated, userId })
     // ОГРАНИЧЕНИЕ ТИПА ФАЙЛА
     // ============================================================
     if (!file.type.startsWith('image/')) {
-      setError('❌ Пожалуйста, выберите изображение');
+      setError('Пожалуйста, выберите изображение');
       setTimeout(() => setError(''), 4000);
       return;
     }
@@ -61,11 +61,11 @@ export default function AvatarUpload({ currentAvatar, onAvatarUpdated, userId })
         onAvatarUpdated(result.avatar_url);
       }
 
-      alert('✅ Аватар обновлён!');
+      alert('Аватар обновлён!');
 
     } catch (err) {
       console.error('Ошибка загрузки аватара:', err);
-      setError('❌ Ошибка загрузки: ' + err.message);
+      setError('Ошибка загрузки: ' + err.message);
       setTimeout(() => setError(''), 4000);
     } finally {
       setLoading(false);

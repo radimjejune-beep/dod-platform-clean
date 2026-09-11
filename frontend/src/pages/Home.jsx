@@ -88,7 +88,7 @@ export default function Home() {
       <section className="home-hero">
         <div className="home-hero-bg" />
         <div className="home-hero-content">
-          <div className="home-hero-badge">🇷🇺 Официальное движение</div>
+          <div className="home-hero-badge">Официальное движение</div>
           
           <div className="home-hero-emblem">
             <img 
@@ -109,11 +109,11 @@ export default function Home() {
           <div className="home-hero-buttons">
             {profile ? (
               <button className="home-hero-btn-primary" onClick={handleGetStarted}>
-                📊 Перейти в кабинет
+                Перейти в кабинет
               </button>
             ) : (
               <button className="home-hero-btn-secondary" onClick={handleLogin}>
-                🔑 Вход
+                Вход
               </button>
             )}
           </div>

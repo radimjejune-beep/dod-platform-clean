@@ -13,10 +13,10 @@ import api from '../lib/api';
 import Navigation from '../components/Navigation';
 
 const STATUS = {
-  draft: { label: '📝 Черновик', color: 'var(--color-gray-600)', bg: 'var(--color-gray-100)' },
-  submitted: { label: '📤 На утверждении', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
-  approved: { label: '✅ Утверждена', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-  revision_requested: { label: '↩️ Возвращена на доработку', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
+  draft: { label: 'Черновик', color: 'var(--color-gray-600)', bg: 'var(--color-gray-100)' },
+  submitted: { label: 'На утверждении', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
+  approved: { label: 'Утверждена', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+  revision_requested: { label: '↩ Возвращена на доработку', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
 };
 
 const EMPTY_ESCORT = {
@@ -107,12 +107,12 @@ export default function TeamBuilder() {
       if (result?.error) {
         // Отдельно разбираем случай с согласиями: это самая частая причина
         if (result.code === 'CONSENTS_MISSING') {
-          show(`❌ ${participant.full_name}: не оформлены согласия — ${(result.missing || []).join(', ')}`, 'error', 9000);
+          show(`${participant.full_name}: не оформлены согласия — ${(result.missing || []).join(', ')}`, 'error', 9000);
           return;
         }
         throw new Error(api.describeApiError(result));
       }
-      show(`✅ ${participant.full_name} добавлен в команду`);
+      show(`${participant.full_name} добавлен в команду`);
       loadData();
     } catch (err) {
       show('❌ ' + err.message, 'error');
@@ -124,14 +124,14 @@ export default function TeamBuilder() {
   const addEscort = async (e) => {
     e.preventDefault();
     if (!escort.full_name.trim()) {
-      show('❌ ФИО сопровождающего обязательно', 'error');
+      show('ФИО сопровождающего обязательно', 'error');
       return;
     }
     setBusy(true);
     try {
       const result = await api.addTeamMember(id, { ...escort, role_in_team: 'escort' });
       if (result?.error) throw new Error(api.describeApiError(result));
-      show('✅ Сопровождающий добавлен');
+      show('Сопровождающий добавлен');
       setEscort(EMPTY_ESCORT);
       setShowEscortForm(false);
       loadData();
@@ -148,7 +148,7 @@ export default function TeamBuilder() {
     try {
       const result = await api.deleteTeamMember(id, member.id);
       if (result?.error) throw new Error(api.describeApiError(result));
-      show('✅ Участник убран из команды');
+      show('Участник убран из команды');
       loadData();
     } catch (err) {
       show('❌ ' + err.message, 'error');
@@ -194,7 +194,7 @@ export default function TeamBuilder() {
     try {
       const result = await api.saveTeamMemberDocument(id, docFor.id, docForm);
       if (result?.error) throw new Error(api.describeApiError(result));
-      show('✅ Данные документа сохранены');
+      show('Данные документа сохранены');
       setDocFor(null);
       loadData();
     } catch (err) {
@@ -212,12 +212,12 @@ export default function TeamBuilder() {
       if (result?.error) {
         if (result.code === 'CONSENTS_MISSING') {
           const list = (result.problems || []).map((p) => `${p.full_name} (${p.missing.join(', ')})`).join('; ');
-          show(`❌ Нельзя отправить: нет согласий — ${list}`, 'error', 12000);
+          show(`Нельзя отправить: нет согласий — ${list}`, 'error', 12000);
           return;
         }
         throw new Error(api.describeApiError(result));
       }
-      show('✅ Команда отправлена на утверждение');
+      show('Команда отправлена на утверждение');
       loadData();
     } catch (err) {
       show('❌ ' + err.message, 'error');
@@ -285,8 +285,8 @@ export default function TeamBuilder() {
             <div>
               <h2 style={{ marginBottom: '6px' }}>{team.event_title}</h2>
               <div style={{ fontSize: '14px', color: 'var(--color-gray-500)' }}>
-                🏫 {team.club_name}
-                {team.event_date && <> · 📅 {new Date(team.event_date).toLocaleDateString('ru-RU')}</>}
+                {team.club_name}
+                {team.event_date && <> · {new Date(team.event_date).toLocaleDateString('ru-RU')}</>}
               </div>
             </div>
             <span className="tag" style={{ background: status.bg, color: status.color, height: 'fit-content' }}>
@@ -338,7 +338,7 @@ export default function TeamBuilder() {
 
               <input
                 className="form-input"
-                placeholder="🔍 Поиск по ФИО"
+                placeholder="Поиск по ФИО"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 style={{ marginBottom: '12px' }}
@@ -374,7 +374,7 @@ export default function TeamBuilder() {
                         </div>
                         {blocked && (
                           <div style={{ fontSize: '13px', color: 'var(--color-error)', marginTop: '4px' }}>
-                            ⚠️ Нет согласий: {c.missing_consents.join(', ')}
+                            Нет согласий: {c.missing_consents.join(', ')}
                           </div>
                         )}
                       </div>
@@ -398,7 +398,7 @@ export default function TeamBuilder() {
               {team.allow_escorts && (
                 <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-gray-200)' }}>
                   <button className="btn-secondary" onClick={() => setShowEscortForm(!showEscortForm)}>
-                    {showEscortForm ? '✖ Отмена' : '🧑‍🏫 Добавить сопровождающего'}
+                    {showEscortForm ? 'Отмена' : 'Добавить сопровождающего'}
                   </button>
 
                   {showEscortForm && (
@@ -418,7 +418,7 @@ export default function TeamBuilder() {
                         <input className="form-input" value={escort.school_full_name}
                           onChange={(e) => setEscort({ ...escort, school_full_name: e.target.value })} />
                       </div>
-                      <button type="submit" className="btn-success" disabled={busy}>✅ Добавить</button>
+                      <button type="submit" className="btn-success" disabled={busy}>Добавить</button>
                     </form>
                   )}
                 </div>
@@ -458,8 +458,8 @@ export default function TeamBuilder() {
 
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
                       {m.has_document
-                        ? <span className="tag" style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)' }}>📄 документ заполнен</span>
-                        : <span className="tag" style={{ background: 'var(--color-gold-pale)', color: 'var(--color-gold-dark)' }}>📄 документ не заполнен</span>}
+                        ? <span className="tag" style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)' }}>документ заполнен</span>
+                        : <span className="tag" style={{ background: 'var(--color-gold-pale)', color: 'var(--color-gold-dark)' }}>документ не заполнен</span>}
                       {editable && (
                         <button className="btn-secondary btn-sm" onClick={() => openDocument(m)} disabled={busy}>
                           {m.has_document ? 'Изменить документ' : 'Заполнить документ'}
@@ -500,7 +500,7 @@ export default function TeamBuilder() {
               <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--color-gray-200)' }}>
                 {canSubmit ? (
                   <button className="btn-success w-full" onClick={submitTeam} disabled={busy}>
-                    📤 Отправить команду на утверждение
+                    Отправить команду на утверждение
                   </button>
                 ) : (
                   <div style={{
@@ -566,7 +566,7 @@ export default function TeamBuilder() {
                 </div>
 
                 <div className="btn-group">
-                  <button type="submit" className="btn-success" disabled={busy}>💾 Сохранить</button>
+                  <button type="submit" className="btn-success" disabled={busy}>Сохранить</button>
                   <button type="button" className="btn-secondary" onClick={() => setDocFor(null)}>Отмена</button>
                 </div>
               </form>

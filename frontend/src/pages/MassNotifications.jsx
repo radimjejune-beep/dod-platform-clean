@@ -71,14 +71,14 @@ export default function MassNotifications() {
     e.preventDefault();
     
     if (!form.title.trim() || !form.message.trim()) {
-      setMessage('❌ Заполните заголовок и текст уведомления');
+      setMessage('Заполните заголовок и текст уведомления');
       setMessageType('error');
       return;
     }
 
     const recipientCount = getRecipientCount();
     if (recipientCount === 0) {
-      setMessage('❌ Нет получателей для выбранной группы');
+      setMessage('Нет получателей для выбранной группы');
       setMessageType('error');
       return;
     }
@@ -115,7 +115,7 @@ export default function MassNotifications() {
         throw new Error(data.error || 'Ошибка отправки');
       }
 
-      setMessage(`✅ Уведомление отправлено ${data.sent_count || recipientCount} получателям!`);
+      setMessage(`Уведомление отправлено ${data.sent_count || recipientCount} получателям!`);
       setMessageType('success');
       setForm({
         recipients: 'all',
@@ -142,7 +142,7 @@ export default function MassNotifications() {
       setTimeout(() => setMessage(''), 5000);
     } catch (err) {
       console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setSending(false);
@@ -163,20 +163,20 @@ export default function MassNotifications() {
   const getRecipientLabel = () => {
     const labels = {
       'all': 'Все пользователи',
-      'participants': '👤 Участники',
-      'coordinators': '🏫 Координаторы КЮДов',
-      'tutors': '📚 Тьюторы',
-      'admins': '🔧 Администраторы'
+      'participants': 'Участники',
+      'coordinators': 'Координаторы КЮДов',
+      'tutors': 'Тьюторы',
+      'admins': 'Администраторы'
     };
     return labels[form.recipients] || form.recipients;
   };
 
   const getPriorityLabel = (priority) => {
     const labels = {
-      'low': '🟢 Низкий',
-      'normal': '🟡 Обычный',
-      'high': '🔴 Высокий',
-      'urgent': '🔥 Срочный'
+      'low': 'Низкий',
+      'normal': 'Обычный',
+      'high': 'Высокий',
+      'urgent': 'Срочный'
     };
     return labels[priority] || priority;
   };
@@ -244,25 +244,25 @@ export default function MassNotifications() {
         <div className="stats-grid">
           <div className="stat-card" style={{ borderTop: '3px solid var(--color-primary-light)' }}>
             <div className="stat-number">{stats.totalUsers}</div>
-            <div className="stat-label">👥 Всего пользователей</div>
+            <div className="stat-label">Всего пользователей</div>
           </div>
           <div className="stat-card" style={{ borderTop: '3px solid var(--color-success)' }}>
             <div className="stat-number">{stats.participants}</div>
-            <div className="stat-label">👤 Участников</div>
+            <div className="stat-label">Участников</div>
           </div>
           <div className="stat-card" style={{ borderTop: '3px solid var(--color-gold)' }}>
             <div className="stat-number">{stats.coordinators}</div>
-            <div className="stat-label">🏫 Координаторов</div>
+            <div className="stat-label">Координаторов</div>
           </div>
           <div className="stat-card" style={{ borderTop: '3px solid #6B46C1' }}>
             <div className="stat-number">{stats.tutors}</div>
-            <div className="stat-label">📚 Тьюторов</div>
+            <div className="stat-label">Тьюторов</div>
           </div>
         </div>
 
         {/* ФОРМА СОЗДАНИЯ */}
         <div className="notification-form">
-          <h2>📝 Создать уведомление</h2>
+          <h2>Создать уведомление</h2>
           
           <form onSubmit={handleSubmit}>
             {/* Получатели */}
@@ -275,13 +275,13 @@ export default function MassNotifications() {
                 className="form-select"
               >
                 <option value="all">Все пользователи ({stats.totalUsers})</option>
-                <option value="participants">👤 Участники ({stats.participants})</option>
-                <option value="coordinators">🏫 Координаторы КЮДов ({stats.coordinators})</option>
-                <option value="tutors">📚 Тьюторы ({stats.tutors})</option>
-                <option value="admins">🔧 Администраторы ({stats.admins})</option>
+                <option value="participants">Участники ({stats.participants})</option>
+                <option value="coordinators">Координаторы КЮДов ({stats.coordinators})</option>
+                <option value="tutors">Тьюторы ({stats.tutors})</option>
+                <option value="admins">Администраторы ({stats.admins})</option>
               </select>
               <div className="recipient-info">
-                📊 Будет отправлено <strong>{recipientCount}</strong> получателям
+                Будет отправлено <strong>{recipientCount}</strong> получателям
               </div>
             </div>
 
@@ -323,10 +323,10 @@ export default function MassNotifications() {
                   onChange={(e) => setForm({ ...form, priority: e.target.value })}
                   className="form-select"
                 >
-                  <option value="low">🟢 Низкий</option>
-                  <option value="normal">🟡 Обычный</option>
-                  <option value="high">🔴 Высокий</option>
-                  <option value="urgent">🔥 Срочный</option>
+                  <option value="low">Низкий</option>
+                  <option value="normal">Обычный</option>
+                  <option value="high">Высокий</option>
+                  <option value="urgent">Срочный</option>
                 </select>
               </div>
 
@@ -370,14 +370,14 @@ export default function MassNotifications() {
                 className="btn-send"
                 disabled={sending || recipientCount === 0}
               >
-                {sending ? '⏳ Отправка...' : `📤 Отправить (${recipientCount})`}
+                {sending ? 'Отправка...' : `Отправить (${recipientCount})`}
               </button>
               <button
                 type="button"
                 className="btn-preview"
                 onClick={() => setShowPreview(!showPreview)}
               >
-                👁️ {showPreview ? 'Скрыть' : 'Предпросмотр'}
+                {showPreview ? 'Скрыть' : 'Предпросмотр'}
               </button>
               <button
                 type="button"
@@ -394,7 +394,7 @@ export default function MassNotifications() {
                   setShowPreview(false);
                 }}
               >
-                ✖ Очистить
+                Очистить
               </button>
             </div>
           </form>
@@ -402,7 +402,7 @@ export default function MassNotifications() {
           {/* Предпросмотр */}
           {showPreview && form.title && form.message && (
             <div className="preview-box">
-              <h4>👁️ Предпросмотр уведомления</h4>
+              <h4>Предпросмотр уведомления</h4>
               <div className="preview-card">
                 <div className="preview-header">
                   <h4>{form.title}</h4>
@@ -415,7 +415,7 @@ export default function MassNotifications() {
                 </div>
                 <p className="preview-message">{form.message}</p>
                 <div className="preview-footer">
-                  📤 Получатели: {getRecipientLabel()} ({recipientCount} чел.)
+                  Получатели: {getRecipientLabel()} ({recipientCount} чел.)
                 </div>
               </div>
             </div>
@@ -426,7 +426,7 @@ export default function MassNotifications() {
         {recentNotifications.length > 0 && (
           <div className="recent-notifications">
             <div className="recent-header">
-              <h3>📋 Последние уведомления</h3>
+              <h3>Последние уведомления</h3>
               <button
                 className="btn-view-all"
                 onClick={() => navigate('/notification-history')}
@@ -440,10 +440,10 @@ export default function MassNotifications() {
                 const priorityColor = getPriorityColor(n.priority);
                 const priorityBg = getPriorityBg(n.priority);
                 const statusMap = {
-                  'pending': '⏳ Ожидает',
-                  'sent': '✅ Отправлено',
-                  'scheduled': '📅 Запланировано',
-                  'failed': '❌ Ошибка'
+                  'pending': 'Ожидает',
+                  'sent': 'Отправлено',
+                  'scheduled': 'Запланировано',
+                  'failed': 'Ошибка'
                 };
                 const statusColor = {
                   'pending': 'var(--color-gold)',
@@ -468,13 +468,13 @@ export default function MassNotifications() {
                       <div className="notification-message">{n.message}</div>
                       <div className="notification-meta">
                         <span className="meta-item">
-                          📤 {getRecipientLabel(n.recipients)} ({n.recipient_count} чел.)
+                          {getRecipientLabel(n.recipients)} ({n.recipient_count} чел.)
                         </span>
                         <span className="meta-item">
-                          👤 {n.created_by_name || 'Система'}
+                          {n.created_by_name || 'Система'}
                         </span>
                         <span className="meta-item">
-                          📅 {formatDate(n.created_at)}
+                          {formatDate(n.created_at)}
                         </span>
                         <span className="priority-badge" style={{
                           background: priorityBg,

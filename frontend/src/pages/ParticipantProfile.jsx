@@ -152,7 +152,7 @@ export default function ParticipantProfile() {
             <div className="icon">❌</div>
             <p style={{ fontSize: '18px', color: 'var(--color-error)' }}>{error}</p>
             <button className="btn-primary" onClick={() => { setError(''); loadData(); }}>
-              🔄 Попробовать снова
+              Попробовать снова
             </button>
           </div>
         </div>
@@ -204,7 +204,7 @@ export default function ParticipantProfile() {
           ← Назад
         </button>
 
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
         <div className="card" style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
             <div style={{
@@ -230,18 +230,18 @@ export default function ParticipantProfile() {
               </h1>
               <p style={{ color: 'var(--color-gray-500)', marginTop: '4px' }}>
                 {participant.school || 'Школа не указана'} • {participant.class_name || 'Класс не указан'}
-                {participant.club_name && ` • 🏫 ${participant.club_name}`}
+                {participant.club_name && ` • ${participant.club_name}`}
               </p>
               <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <span className={participant.status === 'active' ? 'status-active' : 'status-inactive'}>
-                  {participant.status === 'active' ? '🟢 Активен' : '🔴 Неактивен'}
+                  {participant.status === 'active' ? 'Активен' : 'Неактивен'}
                 </span>
-                <span className="tag tag-blue">👤 {participant.role === 'participant' ? 'Участник' : participant.role}</span>
+                <span className="tag tag-blue">{participant.role === 'participant' ? 'Участник' : participant.role}</span>
                 {participant.birth_date && (
-                  <span className="tag tag-gold">🎂 {formatDate(participant.birth_date)}</span>
+                  <span className="tag tag-gold">{formatDate(participant.birth_date)}</span>
                 )}
                 {participant.city && (
-                  <span className="tag tag-blue">📍 {participant.city}</span>
+                  <span className="tag tag-blue">{participant.city}</span>
                 )}
               </div>
             </div>
@@ -252,7 +252,7 @@ export default function ParticipantProfile() {
                   className="btn-primary"
                   onClick={() => navigate(`/participant/${participant.id}/edit`)}
                 >
-                  ✏️ Редактировать
+                  Редактировать
                 </button>
               )}
               {canEdit && profile?.role === 'admin' && (
@@ -261,7 +261,7 @@ export default function ParticipantProfile() {
                   style={{ padding: '8px 16px', fontSize: '13px', background: '#6B46C1', color: 'white', border: 'none' }}
                   onClick={() => setShowAssignModal(true)}
                 >
-                  📌 Прикрепить к КЮДу
+                  Прикрепить к КЮДу
                 </button>
               )}
             </div>
@@ -277,7 +277,7 @@ export default function ParticipantProfile() {
               gap: '8px'
             }}>
               <span style={{ fontSize: '14px', color: 'var(--color-gray-500)' }}>
-                🏫 Клуб: <strong>{participant.club_name}</strong>
+                Клуб: <strong>{participant.club_name}</strong>
               </span>
             </div>
           )}
@@ -304,7 +304,7 @@ export default function ParticipantProfile() {
               fontSize: '14px'
             }}
           >
-            📋 Информация
+            Информация
           </button>
           <button
             onClick={() => setActiveTab('interests')}
@@ -319,7 +319,7 @@ export default function ParticipantProfile() {
               fontSize: '14px'
             }}
           >
-            🎯 Интересы и навыки
+            Интересы и навыки
           </button>
           <button
             onClick={() => setActiveTab('achievements')}
@@ -334,7 +334,7 @@ export default function ParticipantProfile() {
               fontSize: '14px'
             }}
           >
-            🏆 Достижения ({achievements.length})
+            Достижения ({achievements.length})
           </button>
           <button
             onClick={() => setActiveTab('events')}
@@ -349,7 +349,7 @@ export default function ParticipantProfile() {
               fontSize: '14px'
             }}
           >
-            📅 Мероприятия ({events.length})
+            Мероприятия ({events.length})
           </button>
           <button
             onClick={() => setActiveTab('bio')}
@@ -364,7 +364,7 @@ export default function ParticipantProfile() {
               fontSize: '14px'
             }}
           >
-            📝 О себе
+            О себе
           </button>
         </div>
 
@@ -406,7 +406,7 @@ export default function ParticipantProfile() {
               <div>
                 <div style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>Статус</div>
                 <div style={{ fontWeight: '500', color: participant.status === 'active' ? 'var(--color-success)' : 'var(--color-error)' }}>
-                  {participant.status === 'active' ? '🟢 Активен' : '🔴 Неактивен'}
+                  {participant.status === 'active' ? 'Активен' : 'Неактивен'}
                 </div>
               </div>
               <div>
@@ -422,7 +422,7 @@ export default function ParticipantProfile() {
         {activeTab === 'interests' && (
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-              🎯 Интересы
+              Интересы
             </h3>
             {interests.length === 0 ? (
               <p style={{ color: 'var(--color-gray-500)' }}>Интересы не указаны</p>
@@ -437,7 +437,7 @@ export default function ParticipantProfile() {
             )}
 
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginTop: '24px', marginBottom: '16px' }}>
-              💪 Навыки
+              Навыки
             </h3>
             {skills.length === 0 ? (
               <p style={{ color: 'var(--color-gray-500)' }}>Навыки не указаны</p>
@@ -454,7 +454,7 @@ export default function ParticipantProfile() {
             {participant.education && (
               <>
                 <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginTop: '24px', marginBottom: '16px' }}>
-                  📚 Образование
+                  Образование
                 </h3>
                 <p style={{ color: 'var(--color-gray-500)', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
                   {participant.education}
@@ -467,7 +467,7 @@ export default function ParticipantProfile() {
         {activeTab === 'achievements' && (
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-              🏆 Достижения
+              Достижения
             </h3>
             {achievements.length === 0 ? (
               <p style={{ color: 'var(--color-gray-500)' }}>Достижений пока нет</p>
@@ -478,7 +478,7 @@ export default function ParticipantProfile() {
                     <div className="title">{a.title}</div>
                     {a.description && <div className="subtitle">{a.description}</div>}
                     <div className="meta">
-                      📅 {new Date(a.achievement_date || a.created_at).toLocaleDateString('ru-RU')}
+                      {new Date(a.achievement_date || a.created_at).toLocaleDateString('ru-RU')}
                     </div>
                   </div>
                 ))}
@@ -490,7 +490,7 @@ export default function ParticipantProfile() {
         {activeTab === 'events' && (
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-              📅 Мероприятия
+              Мероприятия
             </h3>
             {events.length === 0 ? (
               <p style={{ color: 'var(--color-gray-500)' }}>Мероприятий пока нет</p>
@@ -502,12 +502,12 @@ export default function ParticipantProfile() {
                   }}>
                     <div className="title">{e.title}</div>
                     <div className="subtitle">
-                      📅 {new Date(e.event_date).toLocaleDateString('ru-RU')}
-                      {e.location && ` • 📍 ${e.location}`}
+                      {new Date(e.event_date).toLocaleDateString('ru-RU')}
+                      {e.location && ` • ${e.location}`}
                     </div>
                     <div className="meta">
                       <span className={e.status === 'attended' || e.status === 'confirmed' ? 'status-active' : 'status-pending'}>
-                        {e.status === 'attended' || e.status === 'confirmed' ? '✅ Участвовал' : '📝 Записан'}
+                        {e.status === 'attended' || e.status === 'confirmed' ? 'Участвовал' : 'Записан'}
                       </span>
                     </div>
                   </div>
@@ -520,7 +520,7 @@ export default function ParticipantProfile() {
         {activeTab === 'bio' && (
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '12px' }}>
-              📝 О себе
+              О себе
             </h3>
             {participant.bio ? (
               <p style={{ color: 'var(--color-gray-500)', lineHeight: '1.8', whiteSpace: 'pre-wrap' }}>
@@ -533,7 +533,7 @@ export default function ParticipantProfile() {
             {participant.achievements && (
               <>
                 <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginTop: '24px', marginBottom: '12px' }}>
-                  🏅 Личные достижения
+                  Личные достижения
                 </h3>
                 <p style={{ color: 'var(--color-gray-500)', lineHeight: '1.8', whiteSpace: 'pre-wrap' }}>
                   {participant.achievements}

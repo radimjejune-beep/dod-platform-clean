@@ -60,7 +60,7 @@ export default function AdminNews() {
       setNews(data || []);
     } catch (err) {
       console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка загрузки: ' + err.message);
+      setMessage('Ошибка загрузки: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -74,13 +74,13 @@ export default function AdminNews() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      setMessage('❌ Файл слишком большой. Максимум 5MB');
+      setMessage('Файл слишком большой. Максимум 5MB');
       setMessageType('error');
       return;
     }
 
     if (!file.type.startsWith('image/')) {
-      setMessage('❌ Пожалуйста, выберите изображение');
+      setMessage('Пожалуйста, выберите изображение');
       setMessageType('error');
       return;
     }
@@ -169,14 +169,14 @@ export default function AdminNews() {
       const result = await response.json();
       console.log('📥 Результат:', result);
 
-      setMessage(editingId ? '✅ Новость обновлена!' : '✅ Новость создана!');
+      setMessage(editingId ? 'Новость обновлена!' : 'Новость создана!');
       setMessageType('success');
       resetForm();
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setSaving(false);
@@ -225,12 +225,12 @@ export default function AdminNews() {
         throw new Error(result.error);
       }
 
-      setMessage('✅ Новость удалена');
+      setMessage('Новость удалена');
       setMessageType('success');
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -247,7 +247,7 @@ export default function AdminNews() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
@@ -258,7 +258,7 @@ export default function AdminNews() {
         {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-              {editingId ? '✏️ Редактировать новость' : '📝 Создать новость'}
+              {editingId ? 'Редактировать новость' : 'Создать новость'}
             </h3>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
@@ -333,7 +333,7 @@ export default function AdminNews() {
                           document.getElementById('newsImageInput').value = '';
                         }}
                       >
-                        ✕ Удалить фото
+                        Удалить фото
                       </button>
                     </div>
                   ) : (
@@ -359,10 +359,10 @@ export default function AdminNews() {
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="submit" className="btn-success" disabled={saving}>
-                  {saving ? '⏳ Сохранение...' : editingId ? '💾 Обновить' : '✅ Создать'}
+                  {saving ? 'Сохранение...' : editingId ? 'Обновить' : 'Создать'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={resetForm}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -408,7 +408,7 @@ export default function AdminNews() {
                   <div style={{ flex: 1 }}>
                     <div className="title">{item.title}</div>
                     <div className="subtitle">
-                      📅 {new Date(item.created_at).toLocaleDateString('ru-RU')}
+                      {new Date(item.created_at).toLocaleDateString('ru-RU')}
                     </div>
                     <div className="meta">
                       {item.content.length > 100 

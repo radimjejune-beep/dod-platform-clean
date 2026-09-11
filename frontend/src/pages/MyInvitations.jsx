@@ -10,11 +10,11 @@ import api from '../lib/api';
 import Navigation from '../components/Navigation';
 
 const STATUS = {
-  not_started: { label: '⏳ Команда не собрана', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
-  draft: { label: '📝 Черновик', color: 'var(--color-gray-600)', bg: 'var(--color-gray-100)' },
-  submitted: { label: '📤 Отправлена на утверждение', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
-  approved: { label: '✅ Утверждена', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-  revision_requested: { label: '↩️ Возвращена на доработку', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
+  not_started: { label: 'Команда не собрана', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+  draft: { label: 'Черновик', color: 'var(--color-gray-600)', bg: 'var(--color-gray-100)' },
+  submitted: { label: 'Отправлена на утверждение', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
+  approved: { label: 'Утверждена', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+  revision_requested: { label: '↩ Возвращена на доработку', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
 };
 
 export default function MyInvitations() {
@@ -43,7 +43,7 @@ export default function MyInvitations() {
       setInvitations(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('❌ Ошибка загрузки приглашений:', err);
-      setMessage('❌ Не удалось загрузить приглашения');
+      setMessage('Не удалось загрузить приглашения');
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -139,9 +139,9 @@ export default function MyInvitations() {
                   <h3 style={{ marginBottom: '6px' }}>{inv.event_title}</h3>
 
                   <div style={{ fontSize: '14px', color: 'var(--color-gray-500)', marginBottom: '10px' }}>
-                    🏫 {inv.club_name}
-                    {inv.event_date && <> · 📅 {formatDate(inv.event_date)}</>}
-                    {inv.location && <> · 📍 {inv.location}</>}
+                    {inv.club_name}
+                    {inv.event_date && <> · {formatDate(inv.event_date)}</>}
+                    {inv.location && <> · {inv.location}</>}
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
@@ -154,11 +154,11 @@ export default function MyInvitations() {
 
                     {inv.quota && (
                       <span className="tag">
-                        👥 до {inv.quota} чел.
+                        до {inv.quota} чел.
                       </span>
                     )}
 
-                    {inv.allow_escorts && <span className="tag">🧑‍🏫 с сопровождающими</span>}
+                    {inv.allow_escorts && <span className="tag">с сопровождающими</span>}
 
                     {inv.members_count > 0 && (
                       <span className="tag">в команде: {inv.members_count}</span>
@@ -172,9 +172,9 @@ export default function MyInvitations() {
                       color: inv.is_overdue ? 'var(--color-error)' : left !== null && left <= 3 ? 'var(--color-gold-dark)' : 'var(--color-gray-600)'
                     }}>
                       {inv.is_overdue
-                        ? `⚠️ Срок истёк ${formatDate(inv.deadline)}`
+                        ? `Срок истёк ${formatDate(inv.deadline)}`
                         : left === 0
-                          ? '⚠️ Последний день — сегодня'
+                          ? 'Последний день — сегодня'
                           : `Собрать до ${formatDate(inv.deadline)}${left !== null && left > 0 ? ` (осталось дней: ${left})` : ''}`}
                     </div>
                   )}
@@ -213,12 +213,12 @@ export default function MyInvitations() {
                     disabled={busyKey === key}
                   >
                     {busyKey === key
-                      ? '⏳ Открываю...'
+                      ? 'Открываю...'
                       : inv.status === 'not_started'
-                        ? '➕ Собрать команду'
+                        ? 'Собрать команду'
                         : inv.status === 'approved'
-                          ? '👁 Посмотреть состав'
-                          : '✏️ Открыть команду'}
+                          ? 'Посмотреть состав'
+                          : 'Открыть команду'}
                   </button>
                 </div>
               </div>

@@ -75,30 +75,30 @@ export default function Analytics() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <div className="grid-4" style={{ marginBottom: '24px' }}>
           <div className="stat-card">
             <div className="number">{stats.totalParticipants}</div>
-            <div className="label">👥 Участников</div>
+            <div className="label">Участников</div>
           </div>
           <div className="stat-card">
             <div className="number">{stats.totalClubs}</div>
-            <div className="label">🏫 КЮДов</div>
+            <div className="label">КЮДов</div>
           </div>
           <div className="stat-card">
             <div className="number">{stats.totalEvents}</div>
-            <div className="label">📅 Мероприятий</div>
+            <div className="label">Мероприятий</div>
           </div>
           <div className="stat-card">
             <div className="number">{stats.totalAchievements}</div>
-            <div className="label">🏆 Достижений</div>
+            <div className="label">Достижений</div>
           </div>
         </div>
 
         <div className="card">
           <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-            🏆 Топ-5 КЮДов по количеству участников
+            Топ-5 КЮДов по количеству участников
           </h3>
           {topClubs.length === 0 ? (
             <p style={{ color: 'var(--color-gray-500)', textAlign: 'center', padding: '20px' }}>
@@ -130,7 +130,7 @@ export default function Analytics() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
-                      👥 {club.participantsCount}
+                      {club.participantsCount}
                     </span>
                   </div>
                 </div>
@@ -141,17 +141,17 @@ export default function Analytics() {
 
         <div className="card" style={{ marginTop: '20px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-            🚀 Быстрые действия
+            Быстрые действия
           </h3>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <button className="btn-primary" onClick={() => navigate('/clubs')}>
-              🏫 Управлять КЮДами
+              Управлять КЮДами
             </button>
             <button className="btn-primary" onClick={() => navigate('/participants')}>
-              👥 Участники
+              Участники
             </button>
             <button className="btn-primary" onClick={() => navigate('/events')}>
-              📅 Мероприятия
+              Мероприятия
             </button>
           </div>
         </div>

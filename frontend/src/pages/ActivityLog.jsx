@@ -54,25 +54,25 @@ export default function ActivityLog() {
 
   const getActionLabel = (action) => {
     const labels = {
-      'CREATE': '➕ Создание',
-      'UPDATE': '✏️ Обновление',
-      'DELETE': '🗑️ Удаление',
-      'LOGIN': '🔐 Вход',
-      'LOGOUT': '🚪 Выход'
+      'CREATE': 'Создание',
+      'UPDATE': 'Обновление',
+      'DELETE': 'Удаление',
+      'LOGIN': 'Вход',
+      'LOGOUT': 'Выход'
     };
     return labels[action] || action;
   };
 
   const getEntityLabel = (entity) => {
     const labels = {
-      'user': '👤 Пользователь',
-      'document': '📄 Документ',
-      'task': '📋 Задача',
-      'event': '📅 Мероприятие',
-      'goal': '🎯 Цель',
-      'club': '🏫 Клуб',
-      'mass_notification': '📨 Уведомление',
-      'appeal': '📩 Обращение'
+      'user': 'Пользователь',
+      'document': 'Документ',
+      'task': 'Задача',
+      'event': 'Мероприятие',
+      'goal': 'Цель',
+      'club': 'Клуб',
+      'mass_notification': 'Уведомление',
+      'appeal': 'Обращение'
     };
     return labels[entity] || entity;
   };
@@ -108,14 +108,14 @@ export default function ActivityLog() {
 
   const entityTypes = [
     { value: '', label: 'Все типы' },
-    { value: 'user', label: '👤 Пользователи' },
-    { value: 'document', label: '📄 Документы' },
-    { value: 'task', label: '📋 Задачи' },
-    { value: 'event', label: '📅 Мероприятия' },
-    { value: 'goal', label: '🎯 Цели' },
-    { value: 'club', label: '🏫 Клубы' },
-    { value: 'mass_notification', label: '📨 Уведомления' },
-    { value: 'appeal', label: '📩 Обращения' }
+    { value: 'user', label: 'Пользователи' },
+    { value: 'document', label: 'Документы' },
+    { value: 'task', label: 'Задачи' },
+    { value: 'event', label: 'Мероприятия' },
+    { value: 'goal', label: 'Цели' },
+    { value: 'club', label: 'Клубы' },
+    { value: 'mass_notification', label: 'Уведомления' },
+    { value: 'appeal', label: 'Обращения' }
   ];
 
   return (
@@ -133,7 +133,7 @@ export default function ActivityLog() {
             style={{ marginLeft: 'auto' }}
             onClick={() => loadData()}
           >
-            🔄 Обновить
+            Обновить
           </button>
         </div>
 

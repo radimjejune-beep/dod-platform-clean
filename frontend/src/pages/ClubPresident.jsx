@@ -63,7 +63,7 @@ export default function ClubPresident() {
       console.log('🏫 Найденный клуб:', foundClub);
       
       if (!foundClub) {
-        setMessage('❌ Клуб не найден');
+        setMessage('Клуб не найден');
         setMessageType('error');
         setLoading(false);
         return;
@@ -110,7 +110,7 @@ export default function ClubPresident() {
       console.log('🔑 Итоговый доступ:', hasAccess);
 
       if (!hasAccess) {
-        setMessage('❌ У вас нет прав для этого клуба. Вы не привязаны к этому КЮДу.');
+        setMessage('У вас нет прав для этого клуба. Вы не привязаны к этому КЮДу.');
         setMessageType('error');
         setLoading(false);
         return;
@@ -145,7 +145,7 @@ export default function ClubPresident() {
 
     } catch (err) {
       console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка загрузки данных: ' + err.message);
+      setMessage('Ошибка загрузки данных: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -154,7 +154,7 @@ export default function ClubPresident() {
 
   const handleAssignPresident = async () => {
     if (!selectedParticipant) {
-      setMessage('❌ Пожалуйста, выберите участника');
+      setMessage('Пожалуйста, выберите участника');
       setMessageType('error');
       return;
     }
@@ -184,7 +184,7 @@ export default function ClubPresident() {
         throw new Error(result.error);
       }
 
-      setMessage(`✅ Президент назначен!`);
+      setMessage(`Президент назначен!`);
       setMessageType('success');
       setCurrentPresident(result.president);
       
@@ -192,7 +192,7 @@ export default function ClubPresident() {
       
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setSaving(false);
@@ -221,7 +221,7 @@ export default function ClubPresident() {
           ← Назад
         </button>
 
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
@@ -231,7 +231,7 @@ export default function ClubPresident() {
 
         <div className="card" style={{ marginBottom: '20px' }}>
           <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '12px' }}>
-            👑 Текущий президент
+            Текущий президент
           </h3>
           {currentPresident ? (
             <div style={{
@@ -271,7 +271,7 @@ export default function ClubPresident() {
 
         <div className="card">
           <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '12px' }}>
-            👤 Выберите нового президента
+            Выберите нового президента
           </h3>
 
           {!hasParticipants ? (
@@ -328,7 +328,7 @@ export default function ClubPresident() {
                         {p.full_name}
                         {isCurrentPresident && (
                           <span style={{ marginLeft: '8px', fontSize: '12px', color: 'var(--color-gold)' }}>
-                            👑 Текущий президент
+                            Текущий президент
                           </span>
                         )}
                       </div>
@@ -355,7 +355,7 @@ export default function ClubPresident() {
               disabled={saving || !selectedParticipant}
               style={{ marginTop: '16px', width: '100%' }}
             >
-              {saving ? '⏳ Назначение...' : '👑 Назначить президентом'}
+              {saving ? 'Назначение...' : 'Назначить президентом'}
             </button>
           )}
         </div>

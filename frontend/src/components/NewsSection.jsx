@@ -109,13 +109,13 @@ export default function NewsSection({ limit = 3 }) {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      setMessage('❌ Файл слишком большой. Максимум 5MB');
+      setMessage('Файл слишком большой. Максимум 5MB');
       setMessageType('error');
       return;
     }
 
     if (!file.type.startsWith('image/')) {
-      setMessage('❌ Пожалуйста, выберите изображение');
+      setMessage('Пожалуйста, выберите изображение');
       setMessageType('error');
       return;
     }
@@ -138,7 +138,7 @@ export default function NewsSection({ limit = 3 }) {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        setMessage('❌ Не авторизован');
+        setMessage('Не авторизован');
         setMessageType('error');
         setSaving(false);
         return;
@@ -187,13 +187,13 @@ export default function NewsSection({ limit = 3 }) {
         throw new Error(result.error);
       }
 
-      setMessage('✅ Новость обновлена!');
+      setMessage('Новость обновлена!');
       setMessageType('success');
       setShowEditModal(false);
       loadNews();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setSaving(false);
@@ -207,7 +207,7 @@ export default function NewsSection({ limit = 3 }) {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        setMessage('❌ Не авторизован');
+        setMessage('Не авторизован');
         setMessageType('error');
         return;
       }
@@ -224,12 +224,12 @@ export default function NewsSection({ limit = 3 }) {
         throw new Error(result.error);
       }
 
-      setMessage('✅ Новость удалена');
+      setMessage('Новость удалена');
       setMessageType('success');
       loadNews();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -259,7 +259,7 @@ export default function NewsSection({ limit = 3 }) {
         <p>Новостей пока нет</p>
         {canManage && (
           <Link to="/admin/news" className="news-add-link">
-            ➕ Создать новость
+            Создать новость
           </Link>
         )}
       </div>
@@ -278,11 +278,11 @@ export default function NewsSection({ limit = 3 }) {
       )}
 
       <div className="news-header">
-        <h2>📰 Последние новости</h2>
+        <h2>Последние новости</h2>
         <div className="news-header-actions">
           {canManage && (
             <Link to="/admin/news" className="news-add-link">
-              ➕ Управление новостями
+              Управление новостями
             </Link>
           )}
           {news.length > limit && (
@@ -340,7 +340,7 @@ export default function NewsSection({ limit = 3 }) {
         <div className="news-modal-overlay" onClick={() => setShowEditModal(false)}>
           <div className="news-modal" onClick={(e) => e.stopPropagation()}>
             <div className="news-modal-header">
-              <h3>✏️ Редактировать новость</h3>
+              <h3>Редактировать новость</h3>
               <button className="news-modal-close" onClick={() => setShowEditModal(false)}>✕</button>
             </div>
             <form onSubmit={handleSaveEdit}>
@@ -390,7 +390,7 @@ export default function NewsSection({ limit = 3 }) {
                             document.getElementById('editImageInput').value = '';
                           }}
                         >
-                          ✕ Удалить фото
+                          Удалить фото
                         </button>
                       </div>
                     ) : (
@@ -411,10 +411,10 @@ export default function NewsSection({ limit = 3 }) {
               </div>
               <div className="news-modal-footer">
                 <button type="submit" className="btn-success" disabled={saving}>
-                  {saving ? '⏳ Сохранение...' : '💾 Сохранить'}
+                  {saving ? 'Сохранение...' : 'Сохранить'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => setShowEditModal(false)}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>

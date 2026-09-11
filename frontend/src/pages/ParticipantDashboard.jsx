@@ -117,7 +117,7 @@ export default function ParticipantDashboard() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <div className="card" style={{ 
           marginBottom: '24px',
@@ -162,16 +162,16 @@ export default function ParticipantDashboard() {
                   {getLevelEmoji(stats.level)} {getLevelName(stats.level)}
                 </span>
                 <span style={{ background: 'rgba(255,255,255,0.15)', padding: '4px 12px', borderRadius: '20px', fontSize: '13px' }}>
-                  🏆 {stats.achievements_count} достижений
+                  {stats.achievements_count} достижений
                 </span>
                 <span style={{ background: 'rgba(255,255,255,0.15)', padding: '4px 12px', borderRadius: '20px', fontSize: '13px' }}>
-                  📅 {stats.total_events} мероприятий
+                  {stats.total_events} мероприятий
                 </span>
               </div>
             </div>
 
             <Link to="/profile" className="btn-secondary" style={{ alignSelf: 'flex-start' }}>
-              ✏️ Редактировать
+              Редактировать
             </Link>
           </div>
 
@@ -224,7 +224,7 @@ export default function ParticipantDashboard() {
               transition: 'all 0.3s ease'
             }}
           >
-            📊 Обзор
+            Обзор
           </button>
           <button
             onClick={() => setActiveTab('achievements')}
@@ -240,7 +240,7 @@ export default function ParticipantDashboard() {
               transition: 'all 0.3s ease'
             }}
           >
-            🏆 Достижения ({stats.achievements_count})
+            Достижения ({stats.achievements_count})
           </button>
           <button
             onClick={() => setActiveTab('events')}
@@ -256,7 +256,7 @@ export default function ParticipantDashboard() {
               transition: 'all 0.3s ease'
             }}
           >
-            📅 Мероприятия ({stats.total_events})
+            Мероприятия ({stats.total_events})
           </button>
           <button
             onClick={() => setActiveTab('interests')}
@@ -272,7 +272,7 @@ export default function ParticipantDashboard() {
               transition: 'all 0.3s ease'
             }}
           >
-            🎯 Интересы
+            Интересы
           </button>
         </div>
 
@@ -281,33 +281,33 @@ export default function ParticipantDashboard() {
             <div className="grid-4" style={{ marginBottom: '24px' }}>
               <div className="stat-card" style={{ borderTop: '3px solid var(--color-primary-light)' }}>
                 <div className="number">{stats.total_events}</div>
-                <div className="label">📅 Всего мероприятий</div>
+                <div className="label">Всего мероприятий</div>
               </div>
               <div className="stat-card" style={{ borderTop: '3px solid var(--color-success)' }}>
                 <div className="number">{stats.attended_events}</div>
-                <div className="label">✅ Посещено</div>
+                <div className="label">Посещено</div>
               </div>
               <div className="stat-card" style={{ borderTop: '3px solid var(--color-gold)' }}>
                 <div className="number">{stats.achievements_count}</div>
-                <div className="label">🏆 Достижений</div>
+                <div className="label">Достижений</div>
               </div>
               <div className="stat-card" style={{ borderTop: '3px solid #6B46C1' }}>
                 <div className="number">{stats.level}</div>
-                <div className="label">📊 Уровень</div>
+                <div className="label">Уровень</div>
               </div>
             </div>
 
             {recentAchievements.length > 0 && (
               <div className="card" style={{ marginBottom: '24px' }}>
                 <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-                  🏆 Последние достижения
+                  Последние достижения
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {recentAchievements.map((a) => (
                     <div key={a.id} className="list-item" style={{ borderLeftColor: 'var(--color-gold)' }}>
                       <div className="title">{a.title}</div>
                       <div className="subtitle">
-                        📅 {new Date(a.achievement_date || a.created_at).toLocaleDateString('ru-RU')}
+                        {new Date(a.achievement_date || a.created_at).toLocaleDateString('ru-RU')}
                       </div>
                     </div>
                   ))}
@@ -318,15 +318,15 @@ export default function ParticipantDashboard() {
             {upcomingEvents.length > 0 && (
               <div className="card">
                 <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-                  📅 Ближайшие мероприятия
+                  Ближайшие мероприятия
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {upcomingEvents.map((e) => (
                     <div key={e.id} className="list-item" style={{ borderLeftColor: 'var(--color-primary-light)' }}>
                       <div className="title">{e.title}</div>
                       <div className="subtitle">
-                        📅 {new Date(e.event_date).toLocaleDateString('ru-RU')}
-                        {e.location && ` • 📍 ${e.location}`}
+                        {new Date(e.event_date).toLocaleDateString('ru-RU')}
+                        {e.location && ` • ${e.location}`}
                       </div>
                     </div>
                   ))}
@@ -367,7 +367,7 @@ export default function ParticipantDashboard() {
                       <div style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>{a.description}</div>
                     )}
                     <div style={{ fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '8px' }}>
-                      📅 {new Date(a.achievement_date || a.created_at).toLocaleDateString('ru-RU')}
+                      {new Date(a.achievement_date || a.created_at).toLocaleDateString('ru-RU')}
                     </div>
                   </div>
                 ))}
@@ -400,14 +400,14 @@ export default function ParticipantDashboard() {
                 {upcomingEvents.length > 0 && (
                   <>
                     <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-primary)', paddingBottom: '8px', borderBottom: '1px solid var(--color-gray-200)' }}>
-                      📅 Предстоящие
+                      Предстоящие
                     </div>
                     {upcomingEvents.map((e) => (
                       <div key={e.id} className="list-item" style={{ borderLeftColor: 'var(--color-primary-light)' }}>
                         <div className="title">{e.title}</div>
                         <div className="subtitle">
-                          📅 {new Date(e.event_date).toLocaleDateString('ru-RU')}
-                          {e.location && ` • 📍 ${e.location}`}
+                          {new Date(e.event_date).toLocaleDateString('ru-RU')}
+                          {e.location && ` • ${e.location}`}
                         </div>
                       </div>
                     ))}
@@ -421,7 +421,7 @@ export default function ParticipantDashboard() {
         {activeTab === 'interests' && (
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginBottom: '16px' }}>
-              🎯 Мои интересы
+              Мои интересы
             </h3>
             {profile?.interests ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -438,7 +438,7 @@ export default function ParticipantDashboard() {
             )}
 
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginTop: '24px', marginBottom: '16px' }}>
-              💪 Мои навыки
+              Мои навыки
             </h3>
             {profile?.skills ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -457,7 +457,7 @@ export default function ParticipantDashboard() {
             {profile?.bio && (
               <>
                 <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)', marginTop: '24px', marginBottom: '16px' }}>
-                  📝 О себе
+                  О себе
                 </h3>
                 <p style={{ color: 'var(--color-gray-500)', lineHeight: '1.6' }}>{profile.bio}</p>
               </>

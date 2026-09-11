@@ -65,7 +65,7 @@ export default function ClubEvents({ clubId, profile }) {
       
       if (!response.ok) {
         if (response.status === 403) {
-          setMessage('❌ У вас нет доступа к мероприятиям этого клуба');
+          setMessage('У вас нет доступа к мероприятиям этого клуба');
           setMessageType('error');
           setEvents([]);
           return;
@@ -77,7 +77,7 @@ export default function ClubEvents({ clubId, profile }) {
       setEvents(data || []);
     } catch (err) {
       console.error('Ошибка загрузки мероприятий клуба:', err);
-      setMessage('❌ Ошибка загрузки мероприятий');
+      setMessage('Ошибка загрузки мероприятий');
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -108,14 +108,14 @@ export default function ClubEvents({ clubId, profile }) {
         throw new Error(result.error);
       }
 
-      setMessage('✅ Мероприятие создано! Участники клуба будут уведомлены.');
+      setMessage('Мероприятие создано! Участники клуба будут уведомлены.');
       setMessageType('success');
       setShowForm(false);
       resetForm();
       loadEvents();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -153,12 +153,12 @@ export default function ClubEvents({ clubId, profile }) {
         throw new Error(result.error);
       }
       
-      setMessage('✅ Вы записаны на мероприятие!');
+      setMessage('Вы записаны на мероприятие!');
       setMessageType('success');
       loadEvents();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -185,28 +185,28 @@ export default function ClubEvents({ clubId, profile }) {
         throw new Error(result.error);
       }
       
-      setMessage(status === 'approved' ? '✅ Мероприятие одобрено!' : '❌ Мероприятие отклонено');
+      setMessage(status === 'approved' ? 'Мероприятие одобрено!' : 'Мероприятие отклонено');
       setMessageType(status === 'approved' ? 'success' : 'error');
       loadEvents();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { label: '⏳ На модерации', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
-      'approved': { label: '✅ Одобрено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-      'rejected': { label: '❌ Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' },
-      'completed': { label: '📌 Завершено', color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)' }
+      'pending': { label: 'На модерации', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'approved': { label: 'Одобрено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'rejected': { label: 'Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' },
+      'completed': { label: 'Завершено', color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)' }
     };
     return badges[status] || badges['pending'];
   };
 
   if (loading) {
-    return <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-gray-500)' }}>⏳ Загрузка...</div>;
+    return <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-gray-500)' }}>Загрузка...</div>;
   }
 
   return (
@@ -214,14 +214,14 @@ export default function ClubEvents({ clubId, profile }) {
       {/* ШАПКА */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
         <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
-          📅 Внутренние мероприятия клуба
+          Внутренние мероприятия клуба
           <span style={{ fontSize: '12px', color: 'var(--color-gray-400)', marginLeft: '8px' }}>
             ({events.length})
           </span>
         </h3>
         {canCreate && (
           <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
-            {showForm ? '✖ Закрыть' : '➕ Создать мероприятие'}
+            {showForm ? 'Закрыть' : 'Создать мероприятие'}
           </button>
         )}
       </div>
@@ -235,9 +235,9 @@ export default function ClubEvents({ clubId, profile }) {
       {/* ФОРМА СОЗДАНИЯ */}
       {showForm && canCreate && (
         <div className="card" style={{ marginBottom: '20px' }}>
-          <h4 style={{ marginBottom: '12px' }}>📝 Создать внутреннее мероприятие</h4>
+          <h4 style={{ marginBottom: '12px' }}>Создать внутреннее мероприятие</h4>
           <div style={{ padding: '8px 12px', background: 'var(--color-info-bg)', borderRadius: '8px', fontSize: '13px', color: 'var(--color-primary-light)', marginBottom: '12px' }}>
-            💡 Это мероприятие увидят только участники вашего клуба
+            Это мероприятие увидят только участники вашего клуба
           </div>
           <form onSubmit={handleSubmit}>
             <div className="form-group">
@@ -325,7 +325,7 @@ export default function ClubEvents({ clubId, profile }) {
               </div>
             </div>
             <button type="submit" className="btn-success">
-              ✅ Создать мероприятие
+              Создать мероприятие
             </button>
           </form>
         </div>
@@ -364,7 +364,7 @@ export default function ClubEvents({ clubId, profile }) {
                       </span>
                       {event.proposed_by_name && (
                         <span className="tag" style={{ background: 'var(--color-gray-100)', color: 'var(--color-gray-500)', fontSize: '10px' }}>
-                          👤 {event.proposed_by_name}
+                          {event.proposed_by_name}
                         </span>
                       )}
                     </div>
@@ -372,9 +372,9 @@ export default function ClubEvents({ clubId, profile }) {
                       <p style={{ margin: '4px 0', fontSize: '13px', color: 'var(--color-gray-500)' }}>{event.description}</p>
                     )}
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
-                      <span>📅 {new Date(event.event_date).toLocaleDateString('ru-RU')}</span>
-                      {event.location && <span>📍 {event.location}</span>}
-                      <span>👥 {event.current_participants || 0}/{event.max_participants || '∞'}</span>
+                      <span>{new Date(event.event_date).toLocaleDateString('ru-RU')}</span>
+                      {event.location && <span>{event.location}</span>}
+                      <span>{event.current_participants || 0}/{event.max_participants || '∞'}</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -385,7 +385,7 @@ export default function ClubEvents({ clubId, profile }) {
                         style={{ padding: '4px 12px', fontSize: '12px' }}
                         onClick={() => handleRegister(event.id)}
                       >
-                        📝 Записаться
+                        Записаться
                       </button>
                     )}
                     
@@ -397,14 +397,14 @@ export default function ClubEvents({ clubId, profile }) {
                           style={{ padding: '4px 12px', fontSize: '12px' }}
                           onClick={() => handleModerate(event.id, 'approved')}
                         >
-                          ✅ Одобрить
+                          Одобрить
                         </button>
                         <button
                           className="btn-danger"
                           style={{ padding: '4px 12px', fontSize: '12px' }}
                           onClick={() => handleModerate(event.id, 'rejected')}
                         >
-                          ❌ Отклонить
+                          Отклонить
                         </button>
                       </>
                     )}

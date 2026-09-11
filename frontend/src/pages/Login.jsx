@@ -173,7 +173,7 @@ export default function Login() {
               <h1>Дипломаты будущего</h1>
               <p className="login-subtitle">Ассоциация российских дипломатов</p>
               <div className="login-divider" />
-              <p className="login-warning">⚠️ Необходимо изменить временный пароль</p>
+              <p className="login-warning">Необходимо изменить временный пароль</p>
             </div>
 
             {error && (
@@ -213,7 +213,7 @@ export default function Login() {
               </div>
 
               <button type="submit" className="login-btn" disabled={loading}>
-                {loading ? '⏳ Сохранение...' : '🔑 Установить новый пароль'}
+                {loading ? 'Сохранение...' : 'Установить новый пароль'}
               </button>
 
               <p className="login-hint">
@@ -480,11 +480,11 @@ export default function Login() {
             </div>
 
             <button type="submit" className="login-btn" disabled={loading}>
-              {loading ? '⏳ Вход...' : '🔑 Войти в систему'}
+              {loading ? 'Вход...' : 'Войти в систему'}
             </button>
 
             <p className="login-hint">
-              🔒 Только авторизованные пользователи. Аккаунты создаются администрацией.
+              Только авторизованные пользователи. Аккаунты создаются администрацией.
             </p>
           </form>
         </div>

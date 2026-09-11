@@ -42,7 +42,7 @@ export default function MyClubEvents() {
       
     } catch (err) {
       console.error('Ошибка:', err);
-      setMessage('❌ Ошибка загрузки мероприятий: ' + err.message);
+      setMessage('Ошибка загрузки мероприятий: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -51,10 +51,10 @@ export default function MyClubEvents() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { label: '⏳ На модерации', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
-      'approved': { label: '✅ Одобрено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-      'rejected': { label: '❌ Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' },
-      'completed': { label: '📌 Завершено', color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)' }
+      'pending': { label: 'На модерации', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'approved': { label: 'Одобрено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'rejected': { label: 'Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' },
+      'completed': { label: 'Завершено', color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)' }
     };
     return badges[status] || badges['pending'];
   };
@@ -97,7 +97,7 @@ export default function MyClubEvents() {
               style={{ marginLeft: 'auto' }}
               onClick={() => navigate('/events')}
             >
-              ➕ Создать мероприятие
+              Создать мероприятие
             </button>
           )}
         </div>
@@ -125,7 +125,7 @@ export default function MyClubEvents() {
                 onClick={() => navigate('/events')}
                 style={{ marginTop: '16px' }}
               >
-                ➕ Создать мероприятие
+                Создать мероприятие
               </button>
             )}
           </div>
@@ -152,7 +152,7 @@ export default function MyClubEvents() {
                           {status.label}
                         </span>
                         {event.club_name && (
-                          <span className="tag tag-blue">🏫 {event.club_name}</span>
+                          <span className="tag tag-blue">{event.club_name}</span>
                         )}
                       </div>
 
@@ -163,22 +163,22 @@ export default function MyClubEvents() {
                       )}
 
                       <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13px', color: 'var(--color-gray-400)', marginTop: '8px' }}>
-                        <span>📅 {formatDate(event.event_date)}</span>
+                        <span>{formatDate(event.event_date)}</span>
                         {event.end_date && event.end_date !== event.event_date && (
                           <span>— {formatDate(event.end_date)}</span>
                         )}
                         {event.start_time && (
-                          <span>⏰ {event.start_time}{event.end_time && ` — ${event.end_time}`}</span>
+                          <span>{event.start_time}{event.end_time && ` — ${event.end_time}`}</span>
                         )}
                         {event.location && (
-                          <span>📍 {event.location}</span>
+                          <span>{event.location}</span>
                         )}
-                        <span>👥 {event.current_participants || 0}/{event.max_participants || '∞'}</span>
+                        <span>{event.current_participants || 0}/{event.max_participants || '∞'}</span>
                       </div>
 
                       {event.proposed_by_name && (
                         <div style={{ fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
-                          👤 Предложил: {event.proposed_by_name}
+                          Предложил: {event.proposed_by_name}
                         </div>
                       )}
                     </div>
@@ -201,16 +201,16 @@ export default function MyClubEvents() {
                                   body: JSON.stringify({ status: 'approved' })
                                 });
                                 loadData();
-                                setMessage('✅ Мероприятие одобрено!');
+                                setMessage('Мероприятие одобрено!');
                                 setMessageType('success');
                                 setTimeout(() => setMessage(''), 3000);
                               } catch (err) {
-                                setMessage('❌ Ошибка: ' + err.message);
+                                setMessage('Ошибка: ' + err.message);
                                 setMessageType('error');
                               }
                             }}
                           >
-                            ✅ Одобрить
+                            Одобрить
                           </button>
                           <button
                             className="btn-danger"
@@ -228,16 +228,16 @@ export default function MyClubEvents() {
                                   body: JSON.stringify({ status: 'rejected' })
                                 });
                                 loadData();
-                                setMessage('❌ Мероприятие отклонено');
+                                setMessage('Мероприятие отклонено');
                                 setMessageType('error');
                                 setTimeout(() => setMessage(''), 3000);
                               } catch (err) {
-                                setMessage('❌ Ошибка: ' + err.message);
+                                setMessage('Ошибка: ' + err.message);
                                 setMessageType('error');
                               }
                             }}
                           >
-                            ❌ Отклонить
+                            Отклонить
                           </button>
                         </>
                       )}

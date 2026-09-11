@@ -84,7 +84,7 @@ export default function ClubStaff() {
       }
     } catch (err) {
       console.error('❌ Ошибка загрузки сотрудников:', err);
-      setMessage('❌ Не удалось загрузить сотрудников клуба');
+      setMessage('Не удалось загрузить сотрудников клуба');
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -102,14 +102,14 @@ export default function ClubStaff() {
   const addStaff = async (e) => {
     e.preventDefault();
     if (!addForm.user_id) {
-      show('❌ Выберите человека', 'error');
+      show('Выберите человека', 'error');
       return;
     }
     setBusy(true);
     try {
       const result = await api.addClubStaff(clubId, addForm);
       if (result?.error) throw new Error(api.describeApiError(result));
-      show('✅ Сотрудник назначен');
+      show('Сотрудник назначен');
       setAddForm({ user_id: '', position: 'assistant', comment: '' });
       setShowAdd(false);
       loadData();
@@ -125,7 +125,7 @@ export default function ClubStaff() {
     try {
       const result = await api.updateClubStaff(clubId, member.user_id, position);
       if (result?.error) throw new Error(api.describeApiError(result));
-      show(`✅ ${member.full_name}: должность изменена`);
+      show(`${member.full_name}: должность изменена`);
       loadData();
     } catch (err) {
       show('❌ ' + err.message, 'error');
@@ -140,7 +140,7 @@ export default function ClubStaff() {
     try {
       const result = await api.removeClubStaff(clubId, member.user_id);
       if (result?.error) throw new Error(api.describeApiError(result));
-      show('✅ Сотрудник снят с должности');
+      show('Сотрудник снят с должности');
       loadData();
     } catch (err) {
       show('❌ ' + err.message, 'error');
@@ -152,7 +152,7 @@ export default function ClubStaff() {
   const transferHead = async (e) => {
     e.preventDefault();
     if (!transferForm.new_head_id) {
-      show('❌ Выберите нового руководителя', 'error');
+      show('Выберите нового руководителя', 'error');
       return;
     }
     if (!confirm('Передать руководство КЮДом? Вы перестанете быть руководителем.')) return;
@@ -160,7 +160,7 @@ export default function ClubStaff() {
     try {
       const result = await api.transferClubHead(clubId, transferForm);
       if (result?.error) throw new Error(api.describeApiError(result));
-      show(`✅ Руководство передано: ${result.new_head}`);
+      show(`Руководство передано: ${result.new_head}`);
       setShowTransfer(false);
       loadData();
     } catch (err) {
@@ -204,11 +204,11 @@ export default function ClubStaff() {
           {canManage && (
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '16px' }}>
               <button className="btn-primary" onClick={() => setShowAdd(!showAdd)}>
-                {showAdd ? '✖ Закрыть' : '➕ Назначить сотрудника'}
+                {showAdd ? 'Закрыть' : 'Назначить сотрудника'}
               </button>
               {head && (
                 <button className="btn-secondary" onClick={() => setShowTransfer(!showTransfer)}>
-                  👑 Передать руководство
+                  Передать руководство
                 </button>
               )}
             </div>
@@ -270,7 +270,7 @@ export default function ClubStaff() {
                   onChange={(e) => setAddForm({ ...addForm, comment: e.target.value })} />
               </div>
 
-              <button type="submit" className="btn-success" disabled={busy}>✅ Назначить</button>
+              <button type="submit" className="btn-success" disabled={busy}>Назначить</button>
             </form>
           </div>
         )}
@@ -321,7 +321,7 @@ export default function ClubStaff() {
               </div>
 
               <div className="btn-group">
-                <button type="submit" className="btn-primary" disabled={busy}>👑 Передать руководство</button>
+                <button type="submit" className="btn-primary" disabled={busy}>Передать руководство</button>
                 <button type="button" className="btn-secondary" onClick={() => setShowTransfer(false)}>Отмена</button>
               </div>
             </form>

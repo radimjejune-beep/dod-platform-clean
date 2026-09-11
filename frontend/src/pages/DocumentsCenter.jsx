@@ -288,7 +288,7 @@ export default function DocumentsCenter() {
         {/* ЗАГОЛОВОК */}
         <div className="documents-header">
           <div className="documents-header-left">
-            <h1>📁 Центр документов</h1>
+            <h1>Центр документов</h1>
             <p>Управление документами и материалами</p>
           </div>
           {canCreate && (
@@ -436,7 +436,7 @@ export default function DocumentsCenter() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">
-                {editingDoc ? '✏️ Редактировать документ' : '📝 Создать документ'}
+                {editingDoc ? 'Редактировать документ' : 'Создать документ'}
               </h3>
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
@@ -535,13 +535,13 @@ export default function DocumentsCenter() {
                 className="btn btn-success"
                 onClick={editingDoc ? handleUpdate : handleCreate}
               >
-                {editingDoc ? '💾 Сохранить изменения' : '✅ Создать документ'}
+                {editingDoc ? 'Сохранить изменения' : 'Создать документ'}
               </button>
               <button
                 className="btn btn-outline"
                 onClick={closeModal}
               >
-                ❌ Отмена
+                Отмена
               </button>
             </div>
           </div>

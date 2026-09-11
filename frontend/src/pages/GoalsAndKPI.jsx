@@ -63,7 +63,7 @@ export default function GoalsAndKPI() {
 
     } catch (err) {
       console.error('Ошибка загрузки:', err);
-      setMessage('❌ Ошибка загрузки данных');
+      setMessage('Ошибка загрузки данных');
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -77,7 +77,7 @@ export default function GoalsAndKPI() {
 
     try {
       if (!form.title.trim() || !form.target_value) {
-        setMessage('❌ Заголовок и целевое значение обязательны');
+        setMessage('Заголовок и целевое значение обязательны');
         setMessageType('error');
         setLoading(false);
         return;
@@ -108,13 +108,13 @@ export default function GoalsAndKPI() {
         throw new Error(result.error);
       }
 
-      setMessage(editingGoal ? '✅ Цель обновлена!' : '✅ Цель создана!');
+      setMessage(editingGoal ? 'Цель обновлена!' : 'Цель создана!');
       setMessageType('success');
       resetForm();
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -163,32 +163,32 @@ export default function GoalsAndKPI() {
 
     try {
       await api.deleteGoal(id);
-      setMessage('✅ Цель удалена');
+      setMessage('Цель удалена');
       setMessageType('success');
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
 
   const getStatusBadge = (status) => {
     const badges = {
-      'active': { label: '🟢 Активна', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-      'completed': { label: '✅ Выполнена', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
-      'archived': { label: '📦 Архивирована', color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)' }
+      'active': { label: 'Активна', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'completed': { label: 'Выполнена', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
+      'archived': { label: 'Архивирована', color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)' }
     };
     return badges[status] || badges['active'];
   };
 
   const getUnitLabel = (unit) => {
     const labels = {
-      'participants': '👥 Участников',
-      'events': '📅 Мероприятий',
-      'clubs': '🏫 Клубов',
-      'achievements': '🏆 Достижений',
-      'percent': '📊 %'
+      'participants': 'Участников',
+      'events': 'Мероприятий',
+      'clubs': 'Клубов',
+      'achievements': 'Достижений',
+      'percent': '%'
     };
     return labels[unit] || unit;
   };
@@ -229,7 +229,7 @@ export default function GoalsAndKPI() {
               setShowForm(!showForm);
             }}
           >
-            {showForm ? '✖ Закрыть' : '➕ Создать цель'}
+            {showForm ? 'Закрыть' : 'Создать цель'}
           </button>
         </div>
 
@@ -242,7 +242,7 @@ export default function GoalsAndKPI() {
         {showForm && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-              {editingGoal ? '✏️ Редактировать цель' : '📝 Создать цель'}
+              {editingGoal ? 'Редактировать цель' : 'Создать цель'}
             </h3>
             <form onSubmit={handleSubmit}>
               <div className="grid-2">
@@ -262,11 +262,11 @@ export default function GoalsAndKPI() {
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
                   >
-                    <option value="general">📄 Общие</option>
-                    <option value="participants">👥 Участники</option>
-                    <option value="events">📅 Мероприятия</option>
-                    <option value="clubs">🏫 Клубы</option>
-                    <option value="achievements">🏆 Достижения</option>
+                    <option value="general">Общие</option>
+                    <option value="participants">Участники</option>
+                    <option value="events">Мероприятия</option>
+                    <option value="clubs">Клубы</option>
+                    <option value="achievements">Достижения</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -294,11 +294,11 @@ export default function GoalsAndKPI() {
                     value={form.unit}
                     onChange={(e) => setForm({ ...form, unit: e.target.value })}
                   >
-                    <option value="participants">👥 Участников</option>
-                    <option value="events">📅 Мероприятий</option>
-                    <option value="clubs">🏫 Клубов</option>
-                    <option value="achievements">🏆 Достижений</option>
-                    <option value="percent">📊 %</option>
+                    <option value="participants">Участников</option>
+                    <option value="events">Мероприятий</option>
+                    <option value="clubs">Клубов</option>
+                    <option value="achievements">Достижений</option>
+                    <option value="percent">%</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -307,9 +307,9 @@ export default function GoalsAndKPI() {
                     value={form.status}
                     onChange={(e) => setForm({ ...form, status: e.target.value })}
                   >
-                    <option value="active">🟢 Активна</option>
-                    <option value="completed">✅ Выполнена</option>
-                    <option value="archived">📦 Архивирована</option>
+                    <option value="active">Активна</option>
+                    <option value="completed">Выполнена</option>
+                    <option value="archived">Архивирована</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -365,10 +365,10 @@ export default function GoalsAndKPI() {
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Сохранение...' : editingGoal ? '💾 Обновить' : '✅ Создать'}
+                  {loading ? 'Сохранение...' : editingGoal ? 'Обновить' : 'Создать'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={resetForm}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -378,7 +378,7 @@ export default function GoalsAndKPI() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
-              📋 Все цели
+              Все цели
             </h3>
             <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               {goals.length} целей
@@ -414,10 +414,10 @@ export default function GoalsAndKPI() {
                       </span>
                     </div>
                     <div className="subtitle">
-                      🎯 {getUnitLabel(goal.unit)}: {goal.current_value} / {goal.target_value}
-                      {goal.assigned_to && ` • 👤 ${getUserName(goal.assigned_to)}`}
-                      {goal.club_id && ` • 🏫 ${getClubName(goal.club_id)}`}
-                      {goal.start_date && ` • 📅 с ${new Date(goal.start_date).toLocaleDateString('ru-RU')}`}
+                      {getUnitLabel(goal.unit)}: {goal.current_value} / {goal.target_value}
+                      {goal.assigned_to && ` • ${getUserName(goal.assigned_to)}`}
+                      {goal.club_id && ` • ${getClubName(goal.club_id)}`}
+                      {goal.start_date && ` • с ${new Date(goal.start_date).toLocaleDateString('ru-RU')}`}
                       {goal.end_date && ` до ${new Date(goal.end_date).toLocaleDateString('ru-RU')}`}
                     </div>
                     {goal.description && <div className="meta">{goal.description}</div>}
@@ -451,14 +451,14 @@ export default function GoalsAndKPI() {
                         style={{ padding: '4px 12px', fontSize: '12px' }}
                         onClick={() => handleEdit(goal)}
                       >
-                        ✏️ Редактировать
+                        Редактировать
                       </button>
                       <button
                         className="btn-danger"
                         style={{ padding: '4px 12px', fontSize: '12px' }}
                         onClick={() => handleDelete(goal.id)}
                       >
-                        🗑️ Удалить
+                        Удалить
                       </button>
                     </div>
                   </div>

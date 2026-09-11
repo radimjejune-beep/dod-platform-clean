@@ -146,7 +146,7 @@ export default function ClubCalendar() {
             style={{ marginLeft: 'auto' }}
             onClick={() => navigate('/my-club-events')}
           >
-            📋 Список
+            Список
           </button>
         </div>
 
@@ -232,7 +232,7 @@ export default function ClubCalendar() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
-              📋 {selectedDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
+              {selectedDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
             </h3>
             <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               {eventsForSelectedDate.length} мероприятий
@@ -262,14 +262,14 @@ export default function ClubCalendar() {
                     {event.title}
                     {event.status === 'pending' && (
                       <span className="tag" style={{ marginLeft: '8px', background: 'var(--color-gold-pale)', color: 'var(--color-gold-dark)', fontSize: '10px' }}>
-                        ⏳ На модерации
+                        На модерации
                       </span>
                     )}
                   </div>
                   <div className="subtitle">
-                    📍 {event.location || 'Место не указано'}
-                    {event.start_time && ` • ⏰ ${event.start_time}`}
-                    {event.club_name && ` • 🏫 ${event.club_name}`}
+                    {event.location || 'Место не указано'}
+                    {event.start_time && ` • ${event.start_time}`}
+                    {event.club_name && ` • ${event.club_name}`}
                   </div>
                 </div>
               ))}
@@ -320,12 +320,12 @@ export default function ClubCalendar() {
 
             {selectedEvent.club_name && (
               <p style={{ fontSize: '14px', color: 'var(--color-gray-500)', marginBottom: '4px' }}>
-                🏫 {selectedEvent.club_name}
+                {selectedEvent.club_name}
               </p>
             )}
 
             <p style={{ fontSize: '14px', color: 'var(--color-gray-500)', marginBottom: '4px' }}>
-              📅 {new Date(selectedEvent.event_date).toLocaleDateString('ru-RU')}
+              {new Date(selectedEvent.event_date).toLocaleDateString('ru-RU')}
               {selectedEvent.end_date && selectedEvent.end_date !== selectedEvent.event_date && (
                 <> — {new Date(selectedEvent.end_date).toLocaleDateString('ru-RU')}</>
               )}
@@ -333,14 +333,14 @@ export default function ClubCalendar() {
 
             {selectedEvent.start_time && (
               <p style={{ fontSize: '14px', color: 'var(--color-gray-500)', marginBottom: '4px' }}>
-                ⏰ {selectedEvent.start_time}
+                {selectedEvent.start_time}
                 {selectedEvent.end_time && <> — {selectedEvent.end_time}</>}
               </p>
             )}
 
             {selectedEvent.location && (
               <p style={{ fontSize: '14px', color: 'var(--color-gray-500)', marginBottom: '4px' }}>
-                📍 {selectedEvent.location}
+                {selectedEvent.location}
               </p>
             )}
 
@@ -349,7 +349,7 @@ export default function ClubCalendar() {
               background: selectedEvent.status === 'approved' ? 'var(--color-success-bg)' : 'var(--color-gold-pale)',
               color: selectedEvent.status === 'approved' ? 'var(--color-success)' : 'var(--color-gold-dark)'
             }}>
-              {selectedEvent.status === 'approved' ? '✅ Одобрено' : '⏳ На модерации'}
+              {selectedEvent.status === 'approved' ? 'Одобрено' : 'На модерации'}
             </div>
 
             {selectedEvent.description && (
@@ -365,7 +365,7 @@ export default function ClubCalendar() {
 
             <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-gray-200)' }}>
               <p style={{ fontSize: '13px', color: 'var(--color-gray-400)' }}>
-                👥 Лимит мест: {selectedEvent.max_participants || 'Не ограничен'}
+                Лимит мест: {selectedEvent.max_participants || 'Не ограничен'}
               </p>
             </div>
 

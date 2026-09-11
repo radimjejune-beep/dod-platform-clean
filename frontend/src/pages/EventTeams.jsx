@@ -68,7 +68,7 @@ export default function EventTeams() {
       if (evList.length > 0) setEventId(evList[0].id);
     } catch (err) {
       console.error('❌ Ошибка:', err);
-      setMessage('❌ Не удалось загрузить данные');
+      setMessage('Не удалось загрузить данные');
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -93,7 +93,7 @@ export default function EventTeams() {
   const sendInvitations = async (e) => {
     e.preventDefault();
     if (invite.club_ids.length === 0) {
-      show('❌ Отметьте хотя бы один КЮД', 'error');
+      show('Отметьте хотя бы один КЮД', 'error');
       return;
     }
     setBusy(true);
@@ -106,7 +106,7 @@ export default function EventTeams() {
         message: invite.message || null
       });
       if (result?.error) throw new Error(api.describeApiError(result));
-      show(`✅ ${result.message}`);
+      show(`${result.message}`);
       setShowInvite(false);
       setInvite({ club_ids: [], deadline: '', quota: '', allow_escorts: false, message: '' });
       loadSummary(eventId);
@@ -123,7 +123,7 @@ export default function EventTeams() {
     try {
       const result = await api.reviewTeam(row.submission_id, 'approve');
       if (result?.error) throw new Error(api.describeApiError(result));
-      show('✅ Команда утверждена');
+      show('Команда утверждена');
       loadSummary(eventId);
     } catch (err) {
       show('❌ ' + err.message, 'error');
@@ -135,14 +135,14 @@ export default function EventTeams() {
   const sendBack = async (e) => {
     e.preventDefault();
     if (!returnComment.trim()) {
-      show('❌ Нужен комментарий: иначе руководитель не поймёт, что исправлять', 'error');
+      show('Нужен комментарий: иначе руководитель не поймёт, что исправлять', 'error');
       return;
     }
     setBusy(true);
     try {
       const result = await api.reviewTeam(returning.submission_id, 'return', returnComment.trim());
       if (result?.error) throw new Error(api.describeApiError(result));
-      show('✅ Команда возвращена на доработку');
+      show('Команда возвращена на доработку');
       setReturning(null);
       setReturnComment('');
       loadSummary(eventId);
@@ -157,7 +157,7 @@ export default function EventTeams() {
     setBusy(true);
     try {
       await api.exportEventTeams(eventId, withDocuments);
-      show('✅ Файл выгружен');
+      show('Файл выгружен');
     } catch (err) {
       show('❌ ' + err.message, 'error');
     } finally {
@@ -203,14 +203,14 @@ export default function EventTeams() {
           {eventId && (
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '16px' }}>
               <button className="btn-primary" onClick={() => setShowInvite(!showInvite)}>
-                {showInvite ? '✖ Закрыть' : '📣 Пригласить КЮДы'}
+                {showInvite ? 'Закрыть' : 'Пригласить КЮДы'}
               </button>
               <button className="btn-secondary" onClick={() => exportList(false)} disabled={busy}>
-                📊 Выгрузить список
+                Выгрузить список
               </button>
               <button className="btn-secondary" onClick={() => exportList(true)} disabled={busy}
                 title="Выгрузка вместе с данными документов — только для оформления мероприятия">
-                📋 Выгрузить с документами
+                Выгрузить с документами
               </button>
             </div>
           )}
@@ -284,7 +284,7 @@ export default function EventTeams() {
               </div>
 
               <button type="submit" className="btn-success" disabled={busy}>
-                📣 Отправить приглашения
+                Отправить приглашения
               </button>
             </form>
           </div>
@@ -353,16 +353,16 @@ export default function EventTeams() {
                           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                             {row.submission_id && (
                               <button className="btn-secondary btn-sm" onClick={() => navigate(`/team/${row.submission_id}`)}>
-                                👁 Состав
+                                Состав
                               </button>
                             )}
                             {row.status === 'submitted' && (
                               <>
                                 <button className="btn-success btn-sm" onClick={() => approve(row)} disabled={busy}>
-                                  ✅ Утвердить
+                                  Утвердить
                                 </button>
                                 <button className="btn-secondary btn-sm" onClick={() => setReturning(row)} disabled={busy}>
-                                  ↩️ Вернуть
+                                  ↩ Вернуть
                                 </button>
                               </>
                             )}
@@ -408,7 +408,7 @@ export default function EventTeams() {
                 </div>
 
                 <div className="btn-group">
-                  <button type="submit" className="btn-primary" disabled={busy}>↩️ Вернуть на доработку</button>
+                  <button type="submit" className="btn-primary" disabled={busy}>↩ Вернуть на доработку</button>
                   <button type="button" className="btn-secondary" onClick={() => setReturning(null)}>Отмена</button>
                 </div>
               </form>

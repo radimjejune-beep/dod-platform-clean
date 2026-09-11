@@ -41,18 +41,18 @@ export default function PresidentSection({ profile }) {
     const badges = {
       'pending': { label: 'Ожидает', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
       'in_progress': { label: 'В работе', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
-      'completed': { label: 'Выполнено ✅', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-      'rejected': { label: 'Отклонено ❌', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
+      'completed': { label: 'Выполнено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'rejected': { label: 'Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
     };
     return badges[status] || badges['pending'];
   };
 
   const getPriorityLabel = (priority) => {
     const labels = {
-      'low': '🟢 Низкий',
-      'medium': '🟡 Средний',
-      'high': '🔴 Высокий',
-      'urgent': '🔥 Срочный'
+      'low': 'Низкий',
+      'medium': 'Средний',
+      'high': 'Высокий',
+      'urgent': 'Срочный'
     };
     return labels[priority] || priority;
   };
@@ -113,12 +113,12 @@ export default function PresidentSection({ profile }) {
                     )}
                     {task.deadline && (
                       <span className="president-section-task-deadline">
-                        📅 {new Date(task.deadline).toLocaleDateString('ru-RU')}
+                        {new Date(task.deadline).toLocaleDateString('ru-RU')}
                       </span>
                     )}
                     {task.club_name && (
                       <span className="president-section-task-club">
-                        🏫 {task.club_name}
+                        {task.club_name}
                       </span>
                     )}
                   </div>

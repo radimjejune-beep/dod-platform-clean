@@ -163,13 +163,13 @@ export default function ClubAnalytics() {
                       {club.name}
                     </div>
                     <div style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
-                      👥 {club.participantsCount} участников
-                      {club.activeParticipants > 0 && ` • 🟢 ${club.activeParticipants} активных`}
+                      {club.participantsCount} участников
+                      {club.activeParticipants > 0 && ` • ${club.activeParticipants} активных`}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: 'var(--color-gray-500)' }}>
-                    <span>📅 {club.eventsCount} мероприятий</span>
-                    <span>🏆 {club.achievementsCount} достижений</span>
+                    <span>{club.eventsCount} мероприятий</span>
+                    <span>{club.achievementsCount} достижений</span>
                   </div>
                 </div>
               </div>

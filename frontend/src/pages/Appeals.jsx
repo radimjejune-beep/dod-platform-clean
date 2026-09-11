@@ -47,7 +47,7 @@ export default function Appeals() {
       setAppeals(appealsData || []);
     } catch (err) {
       console.error('❌ Ошибка загрузки:', err);
-      setMessage('❌ Ошибка загрузки данных');
+      setMessage('Ошибка загрузки данных');
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -76,14 +76,14 @@ export default function Appeals() {
         throw new Error(result.error);
       }
 
-      setMessage('✅ Обращение отправлено!');
+      setMessage('Обращение отправлено!');
       setMessageType('success');
       setForm({ subject: '', message: '', priority: 'medium' });
       setShowForm(false);
       await loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setSending(false);
@@ -97,7 +97,7 @@ export default function Appeals() {
 
     try {
       if (!replyMessage.trim()) {
-        setMessage('❌ Введите текст ответа');
+        setMessage('Введите текст ответа');
         setMessageType('error');
         setSending(false);
         return;
@@ -105,7 +105,7 @@ export default function Appeals() {
 
       const token = localStorage.getItem('token');
       if (!token) {
-        setMessage('❌ Не авторизован');
+        setMessage('Не авторизован');
         setMessageType('error');
         setSending(false);
         return;
@@ -129,7 +129,7 @@ export default function Appeals() {
         throw new Error(data.error || data.detail || 'Ошибка отправки ответа');
       }
 
-      setMessage('✅ Ответ отправлен!');
+      setMessage('Ответ отправлен!');
       setMessageType('success');
       setReplyMessage('');
       setShowReplyModal(false);
@@ -138,7 +138,7 @@ export default function Appeals() {
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setSending(false);
@@ -147,7 +147,7 @@ export default function Appeals() {
 
   const handleDelete = async (id) => {
     if (!canDelete) {
-      setMessage('❌ У вас нет прав для удаления обращений');
+      setMessage('У вас нет прав для удаления обращений');
       setMessageType('error');
       setTimeout(() => setMessage(''), 3000);
       return;
@@ -171,13 +171,13 @@ export default function Appeals() {
         throw new Error(data.error || 'Ошибка удаления');
       }
 
-      setMessage('✅ Обращение удалено');
+      setMessage('Обращение удалено');
       setMessageType('success');
       await loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка удаления:', err);
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -196,7 +196,7 @@ export default function Appeals() {
       setShowReplies(true);
     } catch (err) {
       console.error('❌ Ошибка загрузки ответов:', err);
-      setMessage('❌ Ошибка загрузки ответов');
+      setMessage('Ошибка загрузки ответов');
       setMessageType('error');
     } finally {
       setLoadingReplies(false);
@@ -301,7 +301,7 @@ export default function Appeals() {
            ============================================================ */}
         <div className="appeals-header">
           <div className="appeals-header-left">
-            <h1>📨 Обращения</h1>
+            <h1>Обращения</h1>
             <p>
               {isClubCoordinator 
                 ? `Ваши обращения к руководству (${appeals.length})` 
@@ -313,7 +313,7 @@ export default function Appeals() {
               className={`btn ${showForm ? 'btn-secondary' : 'btn-gold'}`}
               onClick={() => setShowForm(!showForm)}
             >
-              {showForm ? '✖ Закрыть' : '➕ Создать обращение'}
+              {showForm ? 'Закрыть' : 'Создать обращение'}
             </button>
           )}
         </div>
@@ -323,7 +323,7 @@ export default function Appeals() {
            ============================================================ */}
         {showForm && canCreate && (
           <div className="appeal-form">
-            <h3>✍️ Новое обращение</h3>
+            <h3>Новое обращение</h3>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
                 <label>Тема обращения <span className="required">*</span></label>
@@ -375,10 +375,10 @@ export default function Appeals() {
 
               <div className="form-actions">
                 <button type="submit" className="btn btn-success" disabled={sending}>
-                  {sending ? '⏳ Отправка...' : '📤 Отправить обращение'}
+                  {sending ? 'Отправка...' : 'Отправить обращение'}
                 </button>
                 <button type="button" className="btn btn-outline" onClick={() => setShowForm(false)}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -395,7 +395,7 @@ export default function Appeals() {
             <p>{isClubCoordinator ? 'У вас пока нет обращений' : 'Обращений пока нет'}</p>
             {canCreate && (
               <button className="btn btn-gold" onClick={() => setShowForm(true)}>
-                ➕ Создать обращение
+                Создать обращение
               </button>
             )}
           </div>
@@ -421,10 +421,10 @@ export default function Appeals() {
                           {getPriorityLabel(appeal.priority)}
                         </span>
                         {appeal.club_name && (
-                          <span className="badge badge-blue">🏫 {appeal.club_name}</span>
+                          <span className="badge badge-blue">{appeal.club_name}</span>
                         )}
                         {appeal.coordinator_name && (
-                          <span className="badge badge-gray">👤 {appeal.coordinator_name}</span>
+                          <span className="badge badge-gray">{appeal.coordinator_name}</span>
                         )}
                       </div>
                     </div>
@@ -437,7 +437,7 @@ export default function Appeals() {
                           await loadReplies(appeal.id);
                         }}
                       >
-                        💬 {appeal.reply_count || 0}
+                        {appeal.reply_count || 0}
                       </button>
                       {canReply && appeal.status !== 'resolved' && appeal.status !== 'rejected' && (
                         <button
@@ -449,7 +449,7 @@ export default function Appeals() {
                             setReplyMessage('');
                           }}
                         >
-                          📝 Ответить
+                          Ответить
                         </button>
                       )}
                       {canDelete && (
@@ -466,9 +466,9 @@ export default function Appeals() {
                   <p className="appeal-card-message">{appeal.message}</p>
 
                   <div className="appeal-card-footer">
-                    <span>📅 {new Date(appeal.created_at).toLocaleString('ru-RU')}</span>
+                    <span>{new Date(appeal.created_at).toLocaleString('ru-RU')}</span>
                     {appeal.resolved_at && (
-                      <span>✅ Рассмотрено: {new Date(appeal.resolved_at).toLocaleString('ru-RU')}</span>
+                      <span>Рассмотрено: {new Date(appeal.resolved_at).toLocaleString('ru-RU')}</span>
                     )}
                   </div>
 
@@ -477,7 +477,7 @@ export default function Appeals() {
                      ============================================================ */}
                   {showReplies && selectedAppeal?.id === appeal.id && (
                     <div className="appeal-replies">
-                      <h4>💬 История ответов</h4>
+                      <h4>История ответов</h4>
                       {loadingReplies ? (
                         <div className="loading-replies">
                           <div className="spinner-small" />
@@ -489,10 +489,10 @@ export default function Appeals() {
                           <div key={reply.id} className="appeal-reply">
                             <div className="appeal-reply-message">{reply.message}</div>
                             <div className="appeal-reply-meta">
-                              👤 {reply.author_name || 'Неизвестно'}
+                              {reply.author_name || 'Неизвестно'}
                               {reply.author_role && ` (${reply.author_role})`}
                               {' • '}
-                              📅 {new Date(reply.created_at).toLocaleString('ru-RU')}
+                              {new Date(reply.created_at).toLocaleString('ru-RU')}
                             </div>
                           </div>
                         ))
@@ -504,7 +504,7 @@ export default function Appeals() {
                           setReplies([]);
                         }}
                       >
-                        ✖ Скрыть
+                        Скрыть
                       </button>
                     </div>
                   )}
@@ -522,7 +522,7 @@ export default function Appeals() {
         <div className="modal-overlay" onClick={() => setShowReplyModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">📝 Ответ на обращение</h3>
+              <h3 className="modal-title">Ответ на обращение</h3>
               <button className="modal-close" onClick={() => setShowReplyModal(false)}>✕</button>
             </div>
 
@@ -540,9 +540,9 @@ export default function Appeals() {
                   onChange={(e) => setReplyStatus(e.target.value)}
                   className="form-control"
                 >
-                  <option value="in_progress">🔄 На рассмотрении</option>
-                  <option value="resolved">✅ Решено</option>
-                  <option value="rejected">❌ Отклонено</option>
+                  <option value="in_progress">На рассмотрении</option>
+                  <option value="resolved">Решено</option>
+                  <option value="rejected">Отклонено</option>
                 </select>
               </div>
 
@@ -560,10 +560,10 @@ export default function Appeals() {
 
               <div className="modal-actions">
                 <button type="submit" className="btn btn-success" disabled={sending}>
-                  {sending ? '⏳ Отправка...' : '📤 Отправить ответ'}
+                  {sending ? 'Отправка...' : 'Отправить ответ'}
                 </button>
                 <button type="button" className="btn btn-outline" onClick={() => setShowReplyModal(false)}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>

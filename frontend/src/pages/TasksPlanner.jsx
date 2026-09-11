@@ -67,7 +67,7 @@ export default function TasksPlanner() {
 
     try {
       if (!form.title.trim()) {
-        setMessage('❌ Заголовок обязателен');
+        setMessage('Заголовок обязателен');
         setMessageType('error');
         setLoading(false);
         return;
@@ -91,13 +91,13 @@ export default function TasksPlanner() {
 
       if (result?.error) throw new Error(api.describeApiError(result));
 
-      setMessage(editingTask ? '✅ Задача обновлена!' : '✅ Задача создана!');
+      setMessage(editingTask ? 'Задача обновлена!' : 'Задача создана!');
       setMessageType('success');
       resetForm();
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -145,11 +145,11 @@ export default function TasksPlanner() {
       if (result?.error) throw new Error(api.describeApiError(result));
 
       setTasks(tasks.filter(t => t.id !== id));
-      setMessage('✅ Задача удалена');
+      setMessage('Задача удалена');
       setMessageType('success');
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -176,31 +176,31 @@ export default function TasksPlanner() {
       if (result?.error) throw new Error(api.describeApiError(result));
 
       setTasks(tasks.map(t => (t.id === id ? { ...t, ...result } : t)));
-      setMessage(`✅ Статус изменён на "${status}"`);
+      setMessage(`Статус изменён на "${status}"`);
       setMessageType('success');
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
 
   const getPriorityBadge = (priority) => {
     const badges = {
-      'low': { label: '🟢 Низкий', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-      'medium': { label: '🟡 Средний', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
-      'high': { label: '🔴 Высокий', color: 'var(--color-error)', bg: 'var(--color-error-bg)' },
-      'urgent': { label: '🔥 Срочный', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
+      'low': { label: 'Низкий', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'medium': { label: 'Средний', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'high': { label: 'Высокий', color: 'var(--color-error)', bg: 'var(--color-error-bg)' },
+      'urgent': { label: 'Срочный', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
     };
     return badges[priority] || badges['medium'];
   };
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { label: '⏳ Ожидает', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
-      'in_progress': { label: '🔄 В работе', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
-      'completed': { label: '✅ Выполнено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-      'cancelled': { label: '❌ Отменено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
+      'pending': { label: 'Ожидает', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
+      'in_progress': { label: 'В работе', color: 'var(--color-primary-light)', bg: 'var(--color-info-bg)' },
+      'completed': { label: 'Выполнено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'cancelled': { label: 'Отменено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' }
     };
     return badges[status] || badges['pending'];
   };
@@ -244,7 +244,7 @@ export default function TasksPlanner() {
               setShowForm(!showForm);
             }}
           >
-            {showForm ? '✖ Закрыть' : '➕ Создать задачу'}
+            {showForm ? 'Закрыть' : 'Создать задачу'}
           </button>
         </div>
 
@@ -257,7 +257,7 @@ export default function TasksPlanner() {
         {showForm && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-              {editingTask ? '✏️ Редактировать задачу' : '📝 Создать задачу'}
+              {editingTask ? 'Редактировать задачу' : 'Создать задачу'}
             </h3>
             <form onSubmit={handleSubmit}>
               <div className="grid-2">
@@ -277,11 +277,11 @@ export default function TasksPlanner() {
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
                   >
-                    <option value="general">📄 Общие</option>
-                    <option value="reports">📋 Отчёты</option>
-                    <option value="events">📅 Мероприятия</option>
-                    <option value="communications">📨 Коммуникации</option>
-                    <option value="administration">⚙️ Администрирование</option>
+                    <option value="general">Общие</option>
+                    <option value="reports">Отчёты</option>
+                    <option value="events">Мероприятия</option>
+                    <option value="communications">Коммуникации</option>
+                    <option value="administration">Администрирование</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -290,10 +290,10 @@ export default function TasksPlanner() {
                     value={form.priority}
                     onChange={(e) => setForm({ ...form, priority: e.target.value })}
                   >
-                    <option value="low">🟢 Низкий</option>
-                    <option value="medium">🟡 Средний</option>
-                    <option value="high">🔴 Высокий</option>
-                    <option value="urgent">🔥 Срочный</option>
+                    <option value="low">Низкий</option>
+                    <option value="medium">Средний</option>
+                    <option value="high">Высокий</option>
+                    <option value="urgent">Срочный</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -302,10 +302,10 @@ export default function TasksPlanner() {
                     value={form.status}
                     onChange={(e) => setForm({ ...form, status: e.target.value })}
                   >
-                    <option value="pending">⏳ Ожидает</option>
-                    <option value="in_progress">🔄 В работе</option>
-                    <option value="completed">✅ Выполнено</option>
-                    <option value="cancelled">❌ Отменено</option>
+                    <option value="pending">Ожидает</option>
+                    <option value="in_progress">В работе</option>
+                    <option value="completed">Выполнено</option>
+                    <option value="cancelled">Отменено</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -387,10 +387,10 @@ export default function TasksPlanner() {
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Сохранение...' : editingTask ? '💾 Обновить' : '✅ Создать'}
+                  {loading ? 'Сохранение...' : editingTask ? 'Обновить' : 'Создать'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={resetForm}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -416,28 +416,28 @@ export default function TasksPlanner() {
             style={{ padding: '6px 16px', fontSize: '12px' }}
             onClick={() => setFilterStatus('pending')}
           >
-            ⏳ Ожидают
+            Ожидают
           </button>
           <button
             className={filterStatus === 'in_progress' ? 'btn-primary' : 'btn-secondary'}
             style={{ padding: '6px 16px', fontSize: '12px' }}
             onClick={() => setFilterStatus('in_progress')}
           >
-            🔄 В работе
+            В работе
           </button>
           <button
             className={filterStatus === 'completed' ? 'btn-primary' : 'btn-secondary'}
             style={{ padding: '6px 16px', fontSize: '12px' }}
             onClick={() => setFilterStatus('completed')}
           >
-            ✅ Выполнено
+            Выполнено
           </button>
         </div>
 
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
-              📋 Задачи
+              Задачи
             </h3>
             <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               {filteredTasks.length} задач
@@ -473,9 +473,9 @@ export default function TasksPlanner() {
                       </span>
                     </div>
                     <div className="subtitle">
-                      📅 {task.due_date ? new Date(task.due_date).toLocaleDateString('ru-RU') : 'Без срока'}
-                      {task.assigned_to && ` • 👤 ${getUserName(task.assigned_to)}`}
-                      {task.category && ` • 📂 ${task.category}`}
+                      {task.due_date ? new Date(task.due_date).toLocaleDateString('ru-RU') : 'Без срока'}
+                      {task.assigned_to && ` • ${getUserName(task.assigned_to)}`}
+                      {task.category && ` • ${task.category}`}
                     </div>
                     {task.description && <div className="meta">{task.description}</div>}
                     <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -484,7 +484,7 @@ export default function TasksPlanner() {
                         style={{ padding: '4px 12px', fontSize: '12px' }}
                         onClick={() => handleEdit(task)}
                       >
-                        ✏️ Редактировать
+                        Редактировать
                       </button>
                       {task.status !== 'completed' && (
                         <button
@@ -492,7 +492,7 @@ export default function TasksPlanner() {
                           style={{ padding: '4px 12px', fontSize: '12px' }}
                           onClick={() => handleStatusChange(task.id, 'completed')}
                         >
-                          ✅ Завершить
+                          Завершить
                         </button>
                       )}
                       {task.status === 'pending' && (
@@ -501,7 +501,7 @@ export default function TasksPlanner() {
                           style={{ padding: '4px 12px', fontSize: '12px', background: 'var(--color-primary-light)' }}
                           onClick={() => handleStatusChange(task.id, 'in_progress')}
                         >
-                          🔄 Взять в работу
+                          Взять в работу
                         </button>
                       )}
                       <button
@@ -509,7 +509,7 @@ export default function TasksPlanner() {
                         style={{ padding: '4px 12px', fontSize: '12px' }}
                         onClick={() => handleDelete(task.id)}
                       >
-                        🗑️ Удалить
+                        Удалить
                       </button>
                     </div>
                   </div>

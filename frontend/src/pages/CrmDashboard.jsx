@@ -161,13 +161,13 @@ export default function CrmDashboard() {
            ============================================================ */}
         <div className="crm-header">
           <div className="crm-header-left">
-            <h1>🏢 CRM Дашборд</h1>
+            <h1>CRM Дашборд</h1>
             <p>Управление участниками, мероприятиями и коммуникациями</p>
           </div>
           <div className="crm-header-actions">
-            <Link to="/participants" className="btn-primary">👥 Участники</Link>
-            <Link to="/events" className="btn-primary">📅 Мероприятия</Link>
-            <Link to="/mass-notifications" className="btn-gold">📨 Рассылка</Link>
+            <Link to="/participants" className="btn-primary">Участники</Link>
+            <Link to="/events" className="btn-primary">Мероприятия</Link>
+            <Link to="/mass-notifications" className="btn-gold">Рассылка</Link>
           </div>
         </div>
 
@@ -177,22 +177,22 @@ export default function CrmDashboard() {
         <div className="crm-stats">
           <div className="stat-card" style={{ borderTop: '3px solid var(--color-primary-light)' }}>
             <div className="stat-number">{stats.totalParticipants}</div>
-            <div className="stat-label">👥 Всего участников</div>
+            <div className="stat-label">Всего участников</div>
             <div className="stat-change">+{stats.newThisMonth} за месяц</div>
           </div>
           <div className="stat-card" style={{ borderTop: '3px solid var(--color-success)' }}>
             <div className="stat-number">{stats.activeParticipants}</div>
-            <div className="stat-label">🟢 Активных</div>
+            <div className="stat-label">Активных</div>
             <div className="stat-change">{Math.round((stats.activeParticipants / stats.totalParticipants) * 100) || 0}% от всех</div>
           </div>
           <div className="stat-card" style={{ borderTop: '3px solid var(--color-gold)' }}>
             <div className="stat-number">{stats.totalEvents}</div>
-            <div className="stat-label">📅 Мероприятий</div>
+            <div className="stat-label">Мероприятий</div>
             <div className="stat-change">{stats.upcomingEvents} предстоящих</div>
           </div>
           <div className="stat-card" style={{ borderTop: '3px solid #6B46C1' }}>
             <div className="stat-number">{stats.totalClubs}</div>
-            <div className="stat-label">🏫 КЮДов</div>
+            <div className="stat-label">КЮДов</div>
           </div>
         </div>
 
@@ -205,7 +205,7 @@ export default function CrmDashboard() {
             {/* БЛИЖАЙШИЕ МЕРОПРИЯТИЯ */}
             <div className="card">
               <div className="card-header">
-                <h3>📅 Ближайшие мероприятия</h3>
+                <h3>Ближайшие мероприятия</h3>
                 <Link to="/events" className="card-link">Все →</Link>
               </div>
               {upcomingEvents.length === 0 ? (
@@ -231,7 +231,7 @@ export default function CrmDashboard() {
             {/* АКТИВНОСТЬ */}
             <div className="card">
               <div className="card-header">
-                <h3>📋 Последняя активность</h3>
+                <h3>Последняя активность</h3>
               </div>
               {recentActivity.length === 0 ? (
                 <p className="empty-text">Активности пока нет</p>
@@ -260,7 +260,7 @@ export default function CrmDashboard() {
             {/* ТОП УЧАСТНИКОВ */}
             <div className="card">
               <div className="card-header">
-                <h3>🏆 Топ участников</h3>
+                <h3>Топ участников</h3>
                 <Link to="/participants" className="card-link">Все →</Link>
               </div>
               {topParticipants.length === 0 ? (
@@ -280,10 +280,10 @@ export default function CrmDashboard() {
                       <div className="top-info">
                         <div className="top-name">{p.full_name}</div>
                         <div className="top-meta">
-                          {p.club_name || 'Без клуба'} • 🏆 {p.achievementsCount || 0}
+                          {p.club_name || 'Без клуба'} • {p.achievementsCount || 0}
                         </div>
                       </div>
-                      <div className="top-score">⭐ {p.eventsCount + p.achievementsCount}</div>
+                      <div className="top-score">{p.eventsCount + p.achievementsCount}</div>
                     </div>
                   ))}
                 </div>
@@ -293,7 +293,7 @@ export default function CrmDashboard() {
             {/* БЫСТРЫЕ ДЕЙСТВИЯ */}
             <div className="card">
               <div className="card-header">
-                <h3>⚡ Быстрые действия</h3>
+                <h3>Быстрые действия</h3>
               </div>
               <div className="quick-actions">
                 <Link to="/participants" className="quick-action">

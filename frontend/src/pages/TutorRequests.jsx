@@ -85,7 +85,7 @@ export default function TutorRequests() {
         throw new Error(result.error);
       }
 
-      setMessage('✅ Запрос отправлен координатору движения!');
+      setMessage('Запрос отправлен координатору движения!');
       setMessageType('success');
       setForm({
         tutor_name: '',
@@ -103,7 +103,7 @@ export default function TutorRequests() {
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('❌ Ошибка:', err);
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -129,22 +129,22 @@ export default function TutorRequests() {
         throw new Error(result.error);
       }
 
-      setMessage(status === 'approved' ? '✅ Запрос одобрен!' : '❌ Запрос отклонён');
+      setMessage(status === 'approved' ? 'Запрос одобрен!' : 'Запрос отклонён');
       setMessageType(status === 'approved' ? 'success' : 'error');
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': { color: 'var(--color-gold-dark)', bg: 'var(--color-gold-pale)', label: '⏳ Ожидает' },
-      'approved': { color: 'var(--color-success)', bg: 'var(--color-success-bg)', label: '✅ Одобрено' },
-      'rejected': { color: 'var(--color-error)', bg: 'var(--color-error-bg)', label: '❌ Отклонено' },
-      'cancelled': { color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)', label: '✖ Отменено' }
+      'pending': { color: 'var(--color-gold-dark)', bg: 'var(--color-gold-pale)', label: 'Ожидает' },
+      'approved': { color: 'var(--color-success)', bg: 'var(--color-success-bg)', label: 'Одобрено' },
+      'rejected': { color: 'var(--color-error)', bg: 'var(--color-error-bg)', label: 'Отклонено' },
+      'cancelled': { color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)', label: 'Отменено' }
     };
     return badges[status] || badges['pending'];
   };
@@ -196,7 +196,7 @@ export default function TutorRequests() {
               style={{ marginLeft: 'auto' }}
               onClick={() => setShowForm(!showForm)}
             >
-              {showForm ? '✖ Закрыть' : '➕ Создать запрос'}
+              {showForm ? 'Закрыть' : 'Создать запрос'}
             </button>
           )}
         </div>
@@ -210,7 +210,7 @@ export default function TutorRequests() {
         {showForm && canCreate && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-              📝 Запрос на приглашение тьютора
+              Запрос на приглашение тьютора
             </h3>
             <form onSubmit={handleSubmit}>
               <div className="grid-2">
@@ -279,12 +279,12 @@ export default function TutorRequests() {
                     value={form.role}
                     onChange={(e) => setForm({ ...form, role: e.target.value })}
                   >
-                    <option value="Тьютор">📚 Тьютор</option>
-                    <option value="Старший тьютор">⭐ Старший тьютор</option>
-                    <option value="Организатор">📋 Организатор</option>
-                    <option value="Медиа">📸 Медиа</option>
-                    <option value="Сопровождение">🤝 Сопровождение</option>
-                    <option value="Образовательная работа">📚 Образовательная работа</option>
+                    <option value="Тьютор">Тьютор</option>
+                    <option value="Старший тьютор">Старший тьютор</option>
+                    <option value="Организатор">Организатор</option>
+                    <option value="Медиа">Медиа</option>
+                    <option value="Сопровождение">Сопровождение</option>
+                    <option value="Образовательная работа">Образовательная работа</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -312,10 +312,10 @@ export default function TutorRequests() {
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Отправка...' : '📤 Отправить запрос'}
+                  {loading ? 'Отправка...' : 'Отправить запрос'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -349,13 +349,13 @@ export default function TutorRequests() {
                           {status.label}
                         </span>
                         {req.club_name && (
-                          <span className="tag tag-blue">🏫 {req.club_name}</span>
+                          <span className="tag tag-blue">{req.club_name}</span>
                         )}
                       </div>
                       <div style={{ fontSize: '14px', color: '#475467', marginTop: '8px' }}>
-                        📅 {new Date(req.event_date).toLocaleDateString('ru-RU')}
+                        {new Date(req.event_date).toLocaleDateString('ru-RU')}
                         {' • '}
-                        📋 {req.event_name}
+                        {req.event_name}
                       </div>
                       {req.event_description && (
                         <div style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
@@ -364,23 +364,23 @@ export default function TutorRequests() {
                       )}
                       {req.role && (
                         <div style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
-                          🎯 {req.role}
+                          {req.role}
                         </div>
                       )}
                       {req.responsibilities && req.responsibilities.length > 0 && (
                         <div style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
-                          📋 Обязанности: {req.responsibilities.join(', ')}
+                          Обязанности: {req.responsibilities.join(', ')}
                         </div>
                       )}
                       {req.notes && (
                         <div style={{ fontSize: '13px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
-                          📝 {req.notes}
+                          {req.notes}
                         </div>
                       )}
                       <div style={{ fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
-                        👤 {req.requested_by_name || 'Координатор'}
+                        {req.requested_by_name || 'Координатор'}
                         {' • '}
-                        📅 {new Date(req.created_at).toLocaleString('ru-RU')}
+                        {new Date(req.created_at).toLocaleString('ru-RU')}
                       </div>
                       {req.comment && (
                         <div style={{
@@ -392,7 +392,7 @@ export default function TutorRequests() {
                           color: '#475467',
                           border: '1px solid var(--color-gray-200)'
                         }}>
-                          💬 {req.comment}
+                          {req.comment}
                         </div>
                       )}
                       {req.reviewed_by_name && req.status !== 'pending' && (
@@ -409,14 +409,14 @@ export default function TutorRequests() {
                           style={{ padding: '6px 16px', fontSize: '12px' }}
                           onClick={() => handleReview(req.id, 'approved')}
                         >
-                          ✅ Одобрить
+                          Одобрить
                         </button>
                         <button
                           className="btn-danger"
                           style={{ padding: '6px 16px', fontSize: '12px' }}
                           onClick={() => handleReview(req.id, 'rejected')}
                         >
-                          ❌ Отклонить
+                          Отклонить
                         </button>
                       </div>
                     )}

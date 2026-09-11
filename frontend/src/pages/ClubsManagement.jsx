@@ -61,7 +61,7 @@ export default function ClubsManagement() {
     try {
       // Проверка обязательных полей
       if (!form.name.trim()) {
-        setMessage('❌ Название клуба обязательно');
+        setMessage('Название клуба обязательно');
         setMessageType('error');
         setLoading(false);
         return;
@@ -79,17 +79,17 @@ export default function ClubsManagement() {
 
       if (editingClub) {
         setClubs(clubs.map(c => c.id === editingClub.id ? newClub : c));
-        setMessage('✅ КЮД обновлён!');
+        setMessage('КЮД обновлён!');
       } else {
         setClubs([...clubs, newClub]);
-        setMessage('✅ КЮД создан!');
+        setMessage('КЮД создан!');
       }
 
       setMessageType('success');
       resetForm();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -134,11 +134,11 @@ export default function ClubsManagement() {
       // TODO: добавить API для удаления клуба
       await new Promise(resolve => setTimeout(resolve, 300));
       setClubs(clubs.filter(c => c.id !== id));
-      setMessage('✅ КЮД удалён');
+      setMessage('КЮД удалён');
       setMessageType('success');
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -150,20 +150,20 @@ export default function ClubsManagement() {
       setClubs(clubs.map(c => 
         c.id === id ? { ...c, status: 'archived' } : c
       ));
-      setMessage('📦 КЮД архивирован');
+      setMessage('КЮД архивирован');
       setMessageType('success');
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
 
   const getStatusBadge = (status) => {
     const badges = {
-      'active': { label: '🟢 Активен', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-      'inactive': { label: '🔴 Неактивен', color: 'var(--color-error)', bg: 'var(--color-error-bg)' },
-      'archived': { label: '📦 Архивирован', color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)' }
+      'active': { label: 'Активен', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+      'inactive': { label: 'Неактивен', color: 'var(--color-error)', bg: 'var(--color-error-bg)' },
+      'archived': { label: 'Архивирован', color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)' }
     };
     return badges[status] || badges['active'];
   };
@@ -194,7 +194,7 @@ export default function ClubsManagement() {
               setShowForm(!showForm);
             }}
           >
-            {showForm ? '✖ Закрыть' : '➕ Создать КЮД'}
+            {showForm ? 'Закрыть' : 'Создать КЮД'}
           </button>
         </div>
 
@@ -207,7 +207,7 @@ export default function ClubsManagement() {
         {showForm && (
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-              {editingClub ? '✏️ Редактировать КЮД' : '📝 Создать КЮД'}
+              {editingClub ? 'Редактировать КЮД' : 'Создать КЮД'}
             </h3>
             <form onSubmit={handleSubmit}>
               <div className="grid-2">
@@ -272,9 +272,9 @@ export default function ClubsManagement() {
                     value={form.status}
                     onChange={(e) => setForm({ ...form, status: e.target.value })}
                   >
-                    <option value="active">🟢 Активен</option>
-                    <option value="inactive">🔴 Неактивен</option>
-                    <option value="archived">📦 Архивирован</option>
+                    <option value="active">Активен</option>
+                    <option value="inactive">Неактивен</option>
+                    <option value="archived">Архивирован</option>
                   </select>
                 </div>
               </div>
@@ -291,10 +291,10 @@ export default function ClubsManagement() {
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Сохранение...' : editingClub ? '💾 Обновить' : '✅ Создать'}
+                  {loading ? 'Сохранение...' : editingClub ? 'Обновить' : 'Создать'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={resetForm}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -331,9 +331,9 @@ export default function ClubsManagement() {
                       </span>
                     </div>
                     <div className="subtitle">
-                      {club.city && `📍 ${club.city}`}
-                      {club.school && ` • 🏫 ${club.school}`}
-                      {club.leader_name && ` • 👤 ${club.leader_name}`}
+                      {club.city && `${club.city}`}
+                      {club.school && ` • ${club.school}`}
+                      {club.leader_name && ` • ${club.leader_name}`}
                     </div>
                     {club.description && <div className="meta">{club.description}</div>}
                     <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -342,14 +342,14 @@ export default function ClubsManagement() {
                         style={{ padding: '4px 12px', fontSize: '12px' }}
                         onClick={() => handleEdit(club)}
                       >
-                        ✏️ Редактировать
+                        Редактировать
                       </button>
                       <button
                         className="btn-primary"
                         style={{ padding: '4px 12px', fontSize: '12px' }}
                         onClick={() => navigate(`/club/${club.id}`)}
                       >
-                        👁️ Просмотр
+                        Просмотр
                       </button>
                       {club.status !== 'archived' && (
                         <button
@@ -357,7 +357,7 @@ export default function ClubsManagement() {
                           style={{ padding: '4px 12px', fontSize: '12px', background: 'var(--color-gray-500)', color: 'white' }}
                           onClick={() => handleArchive(club.id)}
                         >
-                          📦 Архивировать
+                          Архивировать
                         </button>
                       )}
                       {(profile?.role === 'admin') && (
@@ -366,7 +366,7 @@ export default function ClubsManagement() {
                           style={{ padding: '4px 12px', fontSize: '12px' }}
                           onClick={() => handleDelete(club.id)}
                         >
-                          🗑️ Удалить
+                          Удалить
                         </button>
                       )}
                     </div>

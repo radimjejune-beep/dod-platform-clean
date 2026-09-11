@@ -114,7 +114,7 @@ export default function Clubs() {
            ============================================================ */}
         <div className="page-header">
           <div className="page-header-left">
-            <h1>🏫 {title}</h1>
+            <h1>{title}</h1>
             <p>{subtitle}</p>
           </div>
           {clubs.length > 0 && (
@@ -145,13 +145,13 @@ export default function Clubs() {
                 <h3 className="club-card-title">{club.name}</h3>
                 <p className="club-card-location">{club.city || 'Город не указан'}</p>
                 <div className="club-card-stats">
-                  <span>👥 {club.participants_count || 0} участников</span>
+                  <span>{club.participants_count || 0} участников</span>
                   {club.coordinators_count !== undefined && (
-                    <span>👤 {club.coordinators_count || 0} координаторов</span>
+                    <span>{club.coordinators_count || 0} координаторов</span>
                   )}
                 </div>
                 {isClubCoordinator && (
-                  <div className="club-card-badge">👑 Ваш КЮД</div>
+                  <div className="club-card-badge">Ваш КЮД</div>
                 )}
 
                 {/* Сотрудники КЮДа — отдельным переходом, чтобы не
@@ -161,7 +161,7 @@ export default function Clubs() {
                   style={{ marginTop: '12px' }}
                   onClick={(e) => { e.stopPropagation(); navigate(`/clubs/${club.id}/staff`); }}
                 >
-                  👥 Сотрудники
+                  Сотрудники
                 </button>
 
                 <div className="club-card-arrow">→</div>

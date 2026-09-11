@@ -43,11 +43,11 @@ export default function CalendarPage() {
       } else {
         console.error('❌ eventsData не является массивом:', eventsData);
         setEvents([]);
-        setError('❌ Ошибка загрузки данных: сервер вернул неверный формат');
+        setError('Ошибка загрузки данных: сервер вернул неверный формат');
       }
     } catch (err) {
       console.error('Ошибка загрузки календаря:', err);
-      setError('❌ Ошибка загрузки данных: ' + err.message);
+      setError('Ошибка загрузки данных: ' + err.message);
       setEvents([]);
     } finally {
       setLoading(false);
@@ -181,7 +181,7 @@ export default function CalendarPage() {
             <div className="icon">❌</div>
             <p style={{ fontSize: '18px', color: 'var(--color-error)' }}>{error}</p>
             <button className="btn-primary" onClick={() => { setError(''); loadData(); }}>
-              🔄 Попробовать снова
+              Попробовать снова
             </button>
           </div>
         </div>
@@ -195,7 +195,7 @@ export default function CalendarPage() {
     <div className="page-background">
       <Navigation profile={profile} />
       <div className="container-page">
-        {/* ❌ УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
+        {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         <div className="card" style={{ marginBottom: '24px' }}>
           <style>
@@ -277,7 +277,7 @@ export default function CalendarPage() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-primary)' }}>
-              📋 {selectedDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
+              {selectedDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
             </h3>
             <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
               {eventsForSelectedDate.length} мероприятий
@@ -306,9 +306,9 @@ export default function CalendarPage() {
                 >
                   <div className="title">{event.title}</div>
                   <div className="subtitle">
-                    📍 {event.location || 'Место не указано'}
-                    {event.start_time && ` • ⏰ ${event.start_time}`}
-                    {event.club_name && ` • 🏫 ${event.club_name}`}
+                    {event.location || 'Место не указано'}
+                    {event.start_time && ` • ${event.start_time}`}
+                    {event.club_name && ` • ${event.club_name}`}
                   </div>
                 </div>
               ))}
@@ -362,12 +362,12 @@ export default function CalendarPage() {
 
             {selectedEvent.club_name && (
               <p style={{ fontSize: '14px', color: 'var(--color-gray-500)', marginBottom: '4px' }}>
-                🏫 {selectedEvent.club_name}
+                {selectedEvent.club_name}
               </p>
             )}
 
             <p style={{ fontSize: '14px', color: 'var(--color-gray-500)', marginBottom: '4px' }}>
-              📅 {new Date(selectedEvent.event_date).toLocaleDateString('ru-RU')}
+              {new Date(selectedEvent.event_date).toLocaleDateString('ru-RU')}
               {selectedEvent.end_date && selectedEvent.end_date !== selectedEvent.event_date && (
                 <> — {new Date(selectedEvent.end_date).toLocaleDateString('ru-RU')}</>
               )}
@@ -375,14 +375,14 @@ export default function CalendarPage() {
 
             {selectedEvent.start_time && (
               <p style={{ fontSize: '14px', color: 'var(--color-gray-500)', marginBottom: '4px' }}>
-                ⏰ {selectedEvent.start_time}
+                {selectedEvent.start_time}
                 {selectedEvent.end_time && <> — {selectedEvent.end_time}</>}
               </p>
             )}
 
             {selectedEvent.location && (
               <p style={{ fontSize: '14px', color: 'var(--color-gray-500)', marginBottom: '4px' }}>
-                📍 {selectedEvent.location}
+                {selectedEvent.location}
               </p>
             )}
 
@@ -410,7 +410,7 @@ export default function CalendarPage() {
 
             <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-gray-200)' }}>
               <p style={{ fontSize: '13px', color: 'var(--color-gray-400)' }}>
-                👥 Лимит мест: {selectedEvent.capacity || 'Не ограничен'}
+                Лимит мест: {selectedEvent.capacity || 'Не ограничен'}
               </p>
             </div>
 

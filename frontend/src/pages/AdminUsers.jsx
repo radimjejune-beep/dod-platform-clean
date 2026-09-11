@@ -96,14 +96,14 @@ export default function AdminUsers() {
       label: 'Роль',
       placeholder: 'Все роли',
       options: [
-        { value: 'participant', label: '👤 Участник' },
-        { value: 'parent', label: '👨‍👩‍👦 Родитель' },
-        { value: 'club_coordinator', label: '🏫 Координатор КЮДа' },
-        { value: 'tutor', label: '📚 Тьютор' },
-        { value: 'movement_coordinator', label: '⭐ Координатор движения' },
-        { value: 'admin', label: '🔧 Администратор' },
-        { value: 'president', label: '👑 Президент' },
-        { value: 'vice_president', label: '⭐ Вице-президент' }
+        { value: 'participant', label: 'Участник' },
+        { value: 'parent', label: 'Родитель' },
+        { value: 'club_coordinator', label: 'Координатор КЮДа' },
+        { value: 'tutor', label: 'Тьютор' },
+        { value: 'movement_coordinator', label: 'Координатор движения' },
+        { value: 'admin', label: 'Администратор' },
+        { value: 'president', label: 'Президент' },
+        { value: 'vice_president', label: 'Вице-президент' }
       ]
     },
     {
@@ -112,9 +112,9 @@ export default function AdminUsers() {
       label: 'Статус',
       placeholder: 'Все статусы',
       options: [
-        { value: 'active', label: '🟢 Активен' },
-        { value: 'inactive', label: '🔴 Неактивен' },
-        { value: 'pending', label: '⏳ Ожидает' }
+        { value: 'active', label: 'Активен' },
+        { value: 'inactive', label: 'Неактивен' },
+        { value: 'pending', label: 'Ожидает' }
       ]
     }
   ];
@@ -185,7 +185,7 @@ export default function AdminUsers() {
 
   const handleDeleteUser = async (userId, fullName) => {
     if (!isAdmin) {
-      setMessage('❌ У вас нет прав для удаления пользователей');
+      setMessage('У вас нет прав для удаления пользователей');
       setMessageType('error');
       setTimeout(() => setMessage(''), 3000);
       return;
@@ -197,7 +197,7 @@ export default function AdminUsers() {
       const result = await api.deleteUser(userId);
       if (result.error) throw new Error(result.error);
 
-      setMessage(`✅ Пользователь "${fullName}" удалён`);
+      setMessage(`Пользователь "${fullName}" удалён`);
       setMessageType('success');
 
       const usersData = await api.getUsers();
@@ -205,14 +205,14 @@ export default function AdminUsers() {
       setUsers(usersData || []);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
 
   const handleResetPassword = async (userId, fullName) => {
     if (!isAdmin) {
-      setMessage('❌ У вас нет прав для сброса пароля');
+      setMessage('У вас нет прав для сброса пароля');
       setMessageType('error');
       return;
     }
@@ -223,7 +223,7 @@ export default function AdminUsers() {
       const result = await api.resetUserPassword(userId);
       if (result.error) throw new Error(api.describeApiError(result));
 
-      // ⚠️ Здесь читалось result.new_password — сервер такого поля не
+      // Здесь читалось result.new_password — сервер такого поля не
       // возвращает, и на экране было «Новый пароль: undefined».
       const newPassword = result.temp_password;
       if (!newPassword) {
@@ -241,17 +241,17 @@ export default function AdminUsers() {
         club: '—'
       }]);
       setShowPasswordList(true);
-      setMessage(`✅ Пароль для "${fullName}" сброшен. Новый пароль показан ниже.`);
+      setMessage(`Пароль для "${fullName}" сброшен. Новый пароль показан ниже.`);
       setMessageType('success');
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
 
   const handleAddParentChild = async () => {
     if (!parentChildForm.parent_id || !parentChildForm.child_id) {
-      setMessage('❌ Выберите родителя и ребёнка');
+      setMessage('Выберите родителя и ребёнка');
       setMessageType('error');
       return;
     }
@@ -262,14 +262,14 @@ export default function AdminUsers() {
         child_id: parentChildForm.child_id
       });
       if (result.error) throw new Error(result.error);
-      setMessage('✅ Ребёнок привязан к родителю!');
+      setMessage('Ребёнок привязан к родителю!');
       setMessageType('success');
       setShowParentChildModal(false);
       setParentChildForm({ parent_id: '', child_id: '' });
       loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     }
   };
@@ -283,7 +283,7 @@ export default function AdminUsers() {
 
     try {
       if (!form.full_name || form.full_name.trim().length < 2) {
-        setMessage('❌ Пожалуйста, укажите ФИО');
+        setMessage('Пожалуйста, укажите ФИО');
         setMessageType('error');
         setLoading(false);
         return;
@@ -325,7 +325,7 @@ export default function AdminUsers() {
 
       const newUserData = {
         full_name: form.full_name.trim(),
-        // ⚠️ Брали email из формы, но сервер мог его изменить: если адрес
+        // Брали email из формы, но сервер мог его изменить: если адрес
         // занят, он добавляет к нему случайные цифры. На экране показывался
         // адрес, под которым войти нельзя.
         email: result.user?.email || email,
@@ -337,7 +337,7 @@ export default function AdminUsers() {
 
       setCreatedUsers([newUserData]);
       setShowPasswordList(true);
-      setMessage(`✅ Пользователь "${form.full_name}" создан!`);
+      setMessage(`Пользователь "${form.full_name}" создан!`);
       setMessageType('success');
       
       setForm({
@@ -359,7 +359,7 @@ export default function AdminUsers() {
       
       setTimeout(() => setMessage(''), 5000);
     } catch (err) {
-      setMessage('❌ Ошибка: ' + err.message);
+      setMessage('Ошибка: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -369,7 +369,7 @@ export default function AdminUsers() {
   const copyPasswords = () => {
     const data = createdUsers.length > 0 ? createdUsers : importedUsersList;
     if (data.length === 0) {
-      setMessage('❌ Нет данных для копирования');
+      setMessage('Нет данных для копирования');
       setMessageType('error');
       return;
     }
@@ -379,17 +379,17 @@ export default function AdminUsers() {
       text += `Логин: ${u.email}\n`;
       text += `Пароль: ${u.password}\n`;
       text += `Роль: ${getRoleLabel(u.role)}\n`;
-      if (u.club && u.club !== '—') text += `🏫 Клуб: ${u.club}\n`;
-      if (u.is_auto_generated) text += `⚠️ Логин сгенерирован автоматически\n`;
+      if (u.club && u.club !== '—') text += `Клуб: ${u.club}\n`;
+      if (u.is_auto_generated) text += `Логин сгенерирован автоматически\n`;
       text += '\n';
     });
     
     navigator.clipboard.writeText(text).then(() => {
-      setMessage('✅ Данные скопированы в буфер обмена!');
+      setMessage('Данные скопированы в буфер обмена!');
       setMessageType('success');
       setTimeout(() => setMessage(''), 3000);
     }).catch(() => {
-      setMessage('📋 Скопируйте данные вручную');
+      setMessage('Скопируйте данные вручную');
       setMessageType('info');
     });
   };
@@ -397,7 +397,7 @@ export default function AdminUsers() {
   const exportPasswordsToExcel = () => {
     const data = createdUsers.length > 0 ? createdUsers : importedUsersList;
     if (data.length === 0) {
-      setMessage('❌ Нет данных для экспорта');
+      setMessage('Нет данных для экспорта');
       setMessageType('error');
       return;
     }
@@ -416,7 +416,7 @@ export default function AdminUsers() {
       { wch: 30 }, { wch: 35 }, { wch: 15 }, { wch: 20 }, { wch: 25 }, { wch: 30 }
     ];
     XLSX.writeFile(wb, `Пароли_${new Date().toISOString().slice(0,10)}.xlsx`);
-    setMessage('✅ Пароли выгружены в Excel!');
+    setMessage('Пароли выгружены в Excel!');
     setMessageType('success');
     setTimeout(() => setMessage(''), 3000);
   };
@@ -436,7 +436,7 @@ export default function AdminUsers() {
         const firstRow = jsonData[0] || {};
         const missingColumns = requiredColumns.filter(col => !(col in firstRow));
         if (missingColumns.length > 0) {
-          setMessage(`❌ В файле отсутствуют колонки: ${missingColumns.join(', ')}`);
+          setMessage(`В файле отсутствуют колонки: ${missingColumns.join(', ')}`);
           setMessageType('error');
           return;
         }
@@ -452,10 +452,10 @@ export default function AdminUsers() {
           role: row.role || 'participant'
         }));
         setImportPreview(formattedData);
-        setMessage(`✅ Загружено ${formattedData.length} записей`);
+        setMessage(`Загружено ${formattedData.length} записей`);
         setMessageType('success');
       } catch (err) {
-        setMessage('❌ Ошибка чтения файла: ' + err.message);
+        setMessage('Ошибка чтения файла: ' + err.message);
         setMessageType('error');
       }
     };
@@ -464,7 +464,7 @@ export default function AdminUsers() {
 
   const handleImportUsers = async () => {
     if (importPreview.length === 0) {
-      setMessage('❌ Нет данных для импорта');
+      setMessage('Нет данных для импорта');
       setMessageType('error');
       return;
     }
@@ -523,7 +523,7 @@ export default function AdminUsers() {
     setImportedUsersList(importedList);
     if (importedList.length > 0) {
       setShowImportedPasswords(true);
-      setMessage(`✅ Импортировано ${importedList.length} участников!`);
+      setMessage(`Импортировано ${importedList.length} участников!`);
       setMessageType('success');
     }
     const usersData = await api.getUsers();
@@ -554,14 +554,14 @@ export default function AdminUsers() {
 
   const getRoleLabel = (role) => {
     const labels = {
-      'participant': '👤 Участник',
-      'parent': '👨‍👩‍👦 Родитель',
-      'club_coordinator': '🏫 Координатор КЮДа',
-      'tutor': '📚 Тьютор',
-      'movement_coordinator': '⭐ Координатор движения',
-      'admin': '🔧 Администратор',
-      'president': '👑 Президент',
-      'vice_president': '⭐ Вице-президент'
+      'participant': 'Участник',
+      'parent': 'Родитель',
+      'club_coordinator': 'Координатор КЮДа',
+      'tutor': 'Тьютор',
+      'movement_coordinator': 'Координатор движения',
+      'admin': 'Администратор',
+      'president': 'Президент',
+      'vice_president': 'Вице-президент'
     };
     return labels[role] || role;
   };
@@ -592,13 +592,13 @@ export default function AdminUsers() {
               className="btn-primary"
               onClick={() => setShowCreateUser((v) => !v)}
             >
-              {showCreateUser ? '✖ Закрыть форму' : '➕ Создать пользователя'}
+              {showCreateUser ? 'Закрыть форму' : 'Создать пользователя'}
             </button>
             <button
               className="btn-secondary"
               onClick={() => setShowImportModal((v) => !v)}
             >
-              📥 Импорт из Excel
+              Импорт из Excel
             </button>
             {/* TODO: кнопка «Привязать родителя» скрыта намеренно. Форма в
                 коде есть, но за ней нет ни api.addParentChild(), ни эндпоинта
@@ -617,7 +617,7 @@ export default function AdminUsers() {
           filters={filterConfig}
           onFilterChange={setFilters}
           onSearchChange={setSearchQuery}
-          searchPlaceholder="🔍 Поиск по ФИО, email, школе..."
+          searchPlaceholder="Поиск по ФИО, email, школе..."
         >
           <div style={{ fontSize: '14px', color: 'var(--color-gray-500)', padding: '6px 12px', background: 'var(--color-gray-50)', borderRadius: '8px' }}>
             Найдено: <strong>{filteredUsers.length}</strong>
@@ -641,14 +641,14 @@ export default function AdminUsers() {
               gap: '8px'
             }}>
               <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--color-primary)' }}>
-                🔑 Данные для входа
+                Данные для входа
               </h3>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button className="btn-primary" onClick={copyPasswords} style={{ padding: '6px 16px', fontSize: '13px' }}>
-                  📋 Копировать
+                  Копировать
                 </button>
                 <button className="btn-primary" onClick={exportPasswordsToExcel} style={{ padding: '6px 16px', fontSize: '13px' }}>
-                  📊 Excel
+                  Excel
                 </button>
                 <button className="btn-secondary" onClick={() => { 
                   setShowPasswordList(false); 
@@ -656,7 +656,7 @@ export default function AdminUsers() {
                   setCreatedUsers([]); 
                   setImportedUsersList([]);
                 }} style={{ padding: '6px 16px', fontSize: '13px' }}>
-                  ✖ Закрыть
+                  Закрыть
                 </button>
               </div>
             </div>
@@ -718,16 +718,16 @@ export default function AdminUsers() {
               fontSize: '13px', 
               color: 'var(--color-primary-light)' 
             }}>
-              💡 Скопируйте данные или выгрузите в Excel для раздачи пользователям.
+              Скопируйте данные или выгрузите в Excel для раздачи пользователям.
             </div>
           </div>
         ) : null}
 
         {showCreateUser && canCreate && (
           <div className="card" style={{ padding: '24px', marginBottom: '24px', borderRadius: '16px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>📝 Создать пользователя</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Создать пользователя</h3>
             <p style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginBottom: '16px' }}>
-              🔑 Пароль будет сгенерирован автоматически и показан после создания
+              Пароль будет сгенерирован автоматически и показан после создания
             </p>
             <form onSubmit={handleSubmitUser}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
@@ -744,14 +744,14 @@ export default function AdminUsers() {
                 <div className="form-group">
                   <label>Роль <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} required>
-                    <option value="participant">👤 Участник</option>
-                    <option value="parent">👨‍👩‍👦 Родитель</option>
-                    <option value="club_coordinator">🏫 Координатор КЮДа</option>
-                    <option value="tutor">📚 Тьютор</option>
-                    <option value="movement_coordinator">⭐ Координатор движения</option>
-                    <option value="admin">🔧 Администратор</option>
-                    <option value="president">👑 Президент</option>
-                    <option value="vice_president">⭐ Вице-президент</option>
+                    <option value="participant">Участник</option>
+                    <option value="parent">Родитель</option>
+                    <option value="club_coordinator">Координатор КЮДа</option>
+                    <option value="tutor">Тьютор</option>
+                    <option value="movement_coordinator">Координатор движения</option>
+                    <option value="admin">Администратор</option>
+                    <option value="president">Президент</option>
+                    <option value="vice_president">Вице-президент</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -805,18 +805,18 @@ export default function AdminUsers() {
                 <div className="form-group">
                   <label>Статус</label>
                   <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                    <option value="active">🟢 Активен</option>
-                    <option value="inactive">🔴 Неактивен</option>
-                    <option value="pending">⏳ Ожидает</option>
+                    <option value="active">Активен</option>
+                    <option value="inactive">Неактивен</option>
+                    <option value="pending">Ожидает</option>
                   </select>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
                 <button type="submit" className="btn-success" disabled={loading}>
-                  {loading ? '⏳ Создание...' : '✅ Создать'}
+                  {loading ? 'Создание...' : 'Создать'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => setShowCreateUser(false)}>
-                  ❌ Отмена
+                  Отмена
                 </button>
               </div>
             </form>
@@ -825,9 +825,9 @@ export default function AdminUsers() {
 
         {showImportModal && (
           <div className="card" style={{ marginBottom: '24px', borderRadius: '16px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>📥 Массовый импорт</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Массовый импорт</h3>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
-              <button className="btn-secondary" onClick={downloadTemplate}>📄 Скачать шаблон</button>
+              <button className="btn-secondary" onClick={downloadTemplate}>Скачать шаблон</button>
               <input type="file" accept=".xlsx,.xls" onChange={handleImportFile} style={{ padding: '8px', border: '1px solid var(--color-gray-200)', borderRadius: '8px' }} />
             </div>
             {importPreview.length > 0 && (
@@ -856,10 +856,10 @@ export default function AdminUsers() {
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <button className="btn-success" onClick={handleImportUsers} disabled={loading}>
-                    {loading ? '⏳ Импорт...' : `✅ Импортировать ${importPreview.length}`}
+                    {loading ? 'Импорт...' : `Импортировать ${importPreview.length}`}
                   </button>
                   <button className="btn-secondary" onClick={() => { setImportPreview([]); setImportFile(null); setShowImportModal(false); }}>
-                    ❌ Отмена
+                    Отмена
                   </button>
                 </div>
               </div>
@@ -883,7 +883,7 @@ export default function AdminUsers() {
             padding: '20px'
           }} onClick={() => setShowParentChildModal(false)}>
             <div className="card" style={{ maxWidth: '500px', width: '100%', padding: '32px' }} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>👨‍👩‍👦 Привязка ребёнка к родителю</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Привязка ребёнка к родителю</h3>
               <p style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginBottom: '16px' }}>
                 Выберите родителя и ребёнка для привязки. После привязки родитель сможет видеть профиль ребёнка.
               </p>
@@ -912,8 +912,8 @@ export default function AdminUsers() {
                 </select>
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button className="btn-success" onClick={handleAddParentChild}>✅ Привязать</button>
-                <button className="btn-secondary" onClick={() => setShowParentChildModal(false)}>❌ Отмена</button>
+                <button className="btn-success" onClick={handleAddParentChild}>Привязать</button>
+                <button className="btn-secondary" onClick={() => setShowParentChildModal(false)}>Отмена</button>
               </div>
             </div>
           </div>
@@ -949,7 +949,7 @@ export default function AdminUsers() {
                         background: u.status === 'active' ? 'var(--color-success-bg)' : 'var(--color-error-bg)',
                         color: u.status === 'active' ? 'var(--color-success)' : 'var(--color-error)'
                       }}>
-                        {u.status === 'active' ? '🟢 Активен' : '🔴 Неактивен'}
+                        {u.status === 'active' ? 'Активен' : 'Неактивен'}
                       </span>
                     </td>
                     <td style={{ textAlign: 'center' }}>

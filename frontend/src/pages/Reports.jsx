@@ -99,8 +99,11 @@ export default function Reports() {
 
       setClubs(clubsData || []);
 
-      const data = reportsData.data || [];
-      const meta = reportsData.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
+      // Сервер отдаёт список массивом. Раньше здесь читали .data — у
+      // массива такого свойства нет, поэтому список всегда выходил
+      // пустым, хотя записи в базе были.
+      const data = Array.isArray(reportsData) ? reportsData : [];
+      const meta = { page: 1, limit: data.length || 20, total: data.length, totalPages: 1 };
       let filteredReports = [];
 
       // ============================================================

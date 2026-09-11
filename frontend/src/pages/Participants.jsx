@@ -61,8 +61,11 @@ export default function Participants() {
       let total = 0;
 
       // ОБРАБОТКА ДАННЫХ С ПАГИНАЦИЕЙ
-      const data = participantsData.data || [];
-      const meta = participantsData.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
+      // Сервер отдаёт список массивом. Раньше здесь читали .data — у
+      // массива такого свойства нет, поэтому список участников всегда
+      // выходил пустым, хотя в базе они были.
+      const data = Array.isArray(participantsData) ? participantsData : [];
+      const meta = { page: 1, limit: data.length || 20, total: data.length, totalPages: 1 };
 
       if (role === 'club_coordinator') {
         setIsClubCoordinator(true);

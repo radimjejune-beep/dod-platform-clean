@@ -153,18 +153,17 @@ export default function Events() {
       // ============================================================
       const [clubsData, eventsData] = await Promise.all([
         api.getClubs().catch(() => []),
-        api.getEvents({ page, limit: pagination.limit }).catch(() => ({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } }))
+        api.getEvents({ page, limit: pagination.limit }).catch(() => [])
       ]);
 
       setClubs(clubsData || []);
       
-      // ОБРАБОТКА ДАННЫХ С ПАГИНАЦИЕЙ
-      if (eventsData && eventsData.data) {
-        setAllEvents(eventsData.data);
-        setPagination(eventsData.pagination);
-      } else {
-        setAllEvents(eventsData || []);
-      }
+      // Сервер отдаёт список массивом. Раньше здесь читали .data — у
+      // массива такого свойства нет, поэтому список всегда выходил
+      // пустым, хотя записи в базе были.
+      const events = Array.isArray(eventsData) ? eventsData : [];
+      setAllEvents(events);
+      setPagination({ page: 1, limit: events.length || 20, total: events.length, totalPages: 1 });
       
       // Фильтрация для координатора клуба
       if (userData.role === 'club_coordinator') {
@@ -186,7 +185,7 @@ export default function Events() {
         }
 
         if (coordinatorClubId) {
-          const filtered = eventsData.data.filter(e => {
+          const filtered = events.filter(e => {
             if (e.type === 'internal' || e.is_club_event) {
               return e.club_id === coordinatorClubId;
             }
@@ -199,7 +198,7 @@ export default function Events() {
           setPagination(prev => ({ ...prev, total: 0 }));
         }
       } else if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userData.role)) {
-        setAllEvents(eventsData.data || []);
+        setAllEvents(events);
       }
       
       if (['admin', 'movement_coordinator'].includes(userData.role)) {
@@ -212,7 +211,7 @@ export default function Events() {
         }
       }
       
-      const pending = (eventsData.data || []).filter(e => e.moderation_status === 'pending');
+      const pending = events.filter(e => e.moderation_status === 'pending');
       setPendingEvents(pending || []);
     } catch (err) {
       console.error('Ошибка:', err);

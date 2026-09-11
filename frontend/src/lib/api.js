@@ -97,9 +97,24 @@ export const describeApiError = (result, fallback = 'Неизвестная ош
 // ============================================================
 // 2. ПОЛЬЗОВАТЕЛИ
 // ============================================================
+// ============================================================
+// СПИСКИ ВСЕГДА ВОЗВРАЩАЮТ МАССИВ
+// ============================================================
+// Функции ниже обещали { data, pagination }, а сервер отдавал обычный
+// массив. У массива нет свойства data, поэтому экраны, читавшие
+// ответ.data, всегда получали пустоту: списки участников, мероприятий,
+// достижений и отчётов ничего не показывали, вежливо сообщая «не
+// найдено». Разбор формы ответа теперь в одном месте: и массив, и
+// конверт { data } превращаются в массив.
+const toArray = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+};
+
 export const getUsers = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/users?${query}` : `${API_URL}/users`;
@@ -109,14 +124,14 @@ export const getUsers = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 export const getParticipants = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/participants?${query}` : `${API_URL}/participants`;
@@ -126,9 +141,9 @@ export const getParticipants = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 export const createUser = async (data) => {
@@ -188,7 +203,7 @@ export const updateProfile = async (data) => {
 // ============================================================
 export const getClubs = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/clubs?${query}` : `${API_URL}/clubs`;
@@ -198,9 +213,9 @@ export const getClubs = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 export const setClubPresident = async (clubId, presidentId) => {
@@ -225,7 +240,7 @@ export const getClubPresident = async (clubId) => {
 // ============================================================
 export const getAchievements = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/achievements?${query}` : `${API_URL}/achievements`;
@@ -235,9 +250,9 @@ export const getAchievements = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 export const addAchievement = async (data) => {
@@ -298,7 +313,7 @@ export const deleteAchievementCategory = async (id) => {
 export const getEvents = async (params = {}) => {
   try {
     const token = getToken();
-    if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+    if (!token) return [];
     
     const query = new URLSearchParams(params).toString();
     const url = query ? `${API_URL}/events?${query}` : `${API_URL}/events`;
@@ -310,14 +325,13 @@ export const getEvents = async (params = {}) => {
     
     if (!response.ok) {
       console.error('❌ Ошибка получения событий:', response.status);
-      return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+      return [];
     }
     
-    const data = await response.json();
-    return data;
+    return toArray(await response.json());
   } catch (error) {
     console.error('❌ Ошибка getEvents:', error);
-    return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+    return [];
   }
 };
 
@@ -352,7 +366,7 @@ export const deleteEvent = async (id) => {
 // ============================================================
 export const getRegistrations = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/registrations?${query}` : `${API_URL}/registrations`;
@@ -362,9 +376,9 @@ export const getRegistrations = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 export const addRegistration = async (data) => {
@@ -381,7 +395,7 @@ export const addRegistration = async (data) => {
 // ============================================================
 export const getAppeals = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/appeals?${query}` : `${API_URL}/appeals`;
@@ -391,9 +405,9 @@ export const getAppeals = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 export const addAppeal = async (data) => {
@@ -427,7 +441,7 @@ export const getAppealReplies = async (appealId) => {
 // ============================================================
 export const getReports = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/reports?${query}` : `${API_URL}/reports`;
@@ -437,9 +451,9 @@ export const getReports = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 export const createReport = async (data) => {
@@ -498,7 +512,7 @@ export const rejectReport = async (id, comment) => {
 // ============================================================
 export const getDocuments = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/documents?${query}` : `${API_URL}/documents`;
@@ -508,9 +522,9 @@ export const getDocuments = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 export const createDocument = async (data) => {
@@ -535,7 +549,7 @@ export const deleteDocument = async (id) => {
 // ============================================================
 export const getNews = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/news?${query}` : `${API_URL}/news`;
@@ -545,9 +559,9 @@ export const getNews = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 export const createNews = async (data) => {
@@ -581,7 +595,7 @@ export const deleteNews = async (id) => {
 // ============================================================
 export const getNotifications = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/notifications?${query}` : `${API_URL}/notifications`;
@@ -591,9 +605,9 @@ export const getNotifications = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 export const markNotificationRead = async (id) => {
@@ -641,7 +655,7 @@ export const getParticipantEvents = async (userId) => {
 // ============================================================
 export const getPresidentTasks = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/president-tasks?${query}` : `${API_URL}/president-tasks`;
@@ -651,9 +665,9 @@ export const getPresidentTasks = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 export const createPresidentTask = async (data) => {
@@ -679,7 +693,7 @@ export const respondToPresidentTask = async (id, response) => {
 // ============================================================
 export const getTutorRequests = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/tutor-requests?${query}` : `${API_URL}/tutor-requests`;
@@ -689,9 +703,9 @@ export const getTutorRequests = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 export const createTutorRequest = async (data) => {
@@ -717,7 +731,7 @@ export const updateTutorRequest = async (id, data) => {
 // ============================================================
 export const getTutorAssignments = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/event-tutor-assignments?${query}` : `${API_URL}/event-tutor-assignments`;
@@ -727,9 +741,9 @@ export const getTutorAssignments = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 export const respondToAssignment = async (assignmentId, status) => {
@@ -746,7 +760,7 @@ export const respondToAssignment = async (assignmentId, status) => {
 // ============================================================
 export const getTutorInvitations = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/tutor-invitations?${query}` : `${API_URL}/tutor-invitations`;
@@ -758,7 +772,7 @@ export const getTutorInvitations = async (params = {}) => {
   
   if (!response.ok) return [];
 
-  return response.json();
+  return toArray(await response.json());
 };
 
 export const createTutorInvitation = async (data) => {
@@ -792,7 +806,7 @@ export const cancelTutorInvitation = async (invitationId) => {
 // ============================================================
 export const getMassNotifications = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/mass-notifications?${query}` : `${API_URL}/mass-notifications`;
@@ -802,9 +816,9 @@ export const getMassNotifications = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 export const createMassNotification = async (data) => {
@@ -829,7 +843,7 @@ export const deleteMassNotification = async (id) => {
 // ============================================================
 export const getGoals = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/goals?${query}` : `${API_URL}/goals`;
@@ -839,9 +853,9 @@ export const getGoals = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 export const createGoal = async (data) => {
@@ -924,7 +938,7 @@ export const deleteTask = async (id) => {
 // ============================================================
 export const getActivityLog = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/activity-log?${query}` : `${API_URL}/activity-log`;
@@ -934,9 +948,9 @@ export const getActivityLog = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 // ============================================================
@@ -958,7 +972,7 @@ export const getConsentsStats = async (clubId = null) => {
 
 export const getConsentsMissing = async (clubId = null) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const url = clubId ? `${API_URL}/consents-missing?club_id=${clubId}` : `${API_URL}/consents-missing`;
   const response = await fetch(url, {
@@ -966,9 +980,9 @@ export const getConsentsMissing = async (clubId = null) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 // ============================================================
@@ -1241,7 +1255,7 @@ export const claimParentInvitation = async (token) => {
 // ============================================================
 export const getParentChildren = async (params = {}) => {
   const token = getToken();
-  if (!token) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!token) return [];
   
   const query = new URLSearchParams(params).toString();
   const url = query ? `${API_URL}/parent-children?${query}` : `${API_URL}/parent-children`;
@@ -1251,9 +1265,9 @@ export const getParentChildren = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  if (!response.ok) return [];
   
-  return response.json();
+  return toArray(await response.json());
 };
 
 // ============================================================

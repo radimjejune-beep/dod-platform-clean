@@ -91,8 +91,11 @@ export default function Achievements() {
       setClubs(clubsData || []);
       setAllParticipants(participantsData || []);
 
-      const data = achievementsData.data || [];
-      const meta = achievementsData.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
+      // Сервер отдаёт список массивом. Раньше здесь читали .data — у
+      // массива такого свойства нет, поэтому список всегда выходил
+      // пустым, хотя записи в базе были.
+      const data = Array.isArray(achievementsData) ? achievementsData : [];
+      const meta = { page: 1, limit: data.length || 20, total: data.length, totalPages: 1 };
 
       let filteredParticipants = [];
       let filteredAchievements = [];

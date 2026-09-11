@@ -364,7 +364,7 @@ export default function Home() {
 
         .home-hero-btn-primary {
           padding: 14px 36px;
-          background: linear-gradient(135deg, var(--color-gold), var(--color-warning));
+          background: var(--color-gold);
           color: var(--color-primary);
           border: none;
           border-radius: 10px;
@@ -379,7 +379,6 @@ export default function Home() {
         }
 
         .home-hero-btn-primary:hover {
-          transform: translateY(-3px) scale(1.02);
           box-shadow: 0 8px 40px rgba(201, 162, 39, 0.3);
         }
 
@@ -402,7 +401,6 @@ export default function Home() {
         .home-hero-btn-secondary:hover {
           border-color: rgba(201, 162, 39, 0.4);
           background: rgba(255, 255, 255, 0.08);
-          transform: translateY(-3px);
         }
 
         .home-hero-partners {
@@ -505,7 +503,6 @@ export default function Home() {
         }
 
         .home-about-value:hover {
-          transform: translateY(-2px);
           box-shadow: 0 8px 30px rgba(11, 31, 58, 0.06);
           border-color: var(--color-gold);
         }
@@ -650,7 +647,6 @@ export default function Home() {
         }
 
         .home-contacts-card:hover {
-          transform: translateY(-4px);
           box-shadow: 0 12px 40px rgba(11, 31, 58, 0.06);
           border-color: var(--color-gold);
         }

@@ -750,7 +750,6 @@ export default function Appeals() {
 
         .appeal-card:hover {
           box-shadow: 0 8px 32px rgba(10,22,40,0.08);
-          transform: translateY(-2px);
         }
 
         .appeal-card-top {

@@ -398,7 +398,6 @@ export default function CrmDashboard() {
         }
 
         .stat-card:hover {
-          transform: translateY(-4px);
           box-shadow: 0 8px 32px rgba(10,22,40,0.08);
         }
 
@@ -660,7 +659,6 @@ export default function CrmDashboard() {
         .quick-action:hover {
           background: var(--color-gray-100);
           border-color: var(--color-gold);
-          transform: translateY(-2px);
           box-shadow: 0 4px 16px rgba(10,22,40,0.06);
         }
 

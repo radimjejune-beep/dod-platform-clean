@@ -85,7 +85,7 @@ export default function CookieBanner() {
 
         .cookie-accept {
           padding: 8px 28px;
-          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
+          background: var(--color-gold);
           color: var(--color-primary-dark);
           border: none;
           border-radius: 8px;
@@ -97,7 +97,6 @@ export default function CookieBanner() {
         }
 
         .cookie-accept:hover {
-          transform: translateY(-2px);
           box-shadow: 0 4px 16px rgba(201, 162, 39, 0.3);
         }
 

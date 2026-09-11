@@ -250,7 +250,6 @@ export default function Clubs() {
         }
 
         .club-card:hover {
-          transform: translateY(-6px);
           box-shadow: 0 12px 40px rgba(10,22,40,0.10);
           border-color: var(--color-gold);
         }

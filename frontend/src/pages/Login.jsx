@@ -378,7 +378,7 @@ export default function Login() {
           .login-btn {
             width: 100%;
             padding: 16px;
-            background: linear-gradient(135deg, var(--color-gold), var(--color-warning));
+            background: var(--color-gold);
             border: none;
             border-radius: 12px;
             font-size: 16px;
@@ -392,7 +392,6 @@ export default function Login() {
           }
 
           .login-btn:hover {
-            transform: translateY(-2px);
             box-shadow: 0 8px 35px rgba(201, 162, 39, 0.35);
           }
 
@@ -638,7 +637,7 @@ export default function Login() {
         .login-btn {
           width: 100%;
           padding: 16px;
-          background: linear-gradient(135deg, var(--color-gold), var(--color-warning));
+          background: var(--color-gold);
           border: none;
           border-radius: 12px;
           font-size: 16px;
@@ -652,7 +651,6 @@ export default function Login() {
         }
 
         .login-btn:hover {
-          transform: translateY(-2px);
           box-shadow: 0 8px 35px rgba(201, 162, 39, 0.35);
         }
 

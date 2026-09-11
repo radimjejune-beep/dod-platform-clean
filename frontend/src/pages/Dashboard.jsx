@@ -405,14 +405,13 @@ export default function Dashboard() {
           left: 0;
           right: 0;
           height: 3px;
-          background: linear-gradient(135deg, var(--color-gold), var(--color-gold-light));
+          background: var(--color-gold);
           opacity: 0.4;
           transition: opacity 0.3s ease;
         }
 
         .stat-card:hover {
           box-shadow: 0 8px 32px rgba(10,22,40,0.10);
-          transform: translateY(-4px);
         }
         .stat-card:hover::before {
           opacity: 1;
@@ -465,7 +464,6 @@ export default function Dashboard() {
 
         .card:hover {
           box-shadow: 0 8px 32px rgba(10,22,40,0.08);
-          transform: translateY(-2px);
         }
 
         .card-title {
@@ -598,7 +596,6 @@ export default function Dashboard() {
         }
 
         .quick-action-card:hover {
-          transform: translateY(-4px);
           box-shadow: 0 8px 32px rgba(10,22,40,0.10);
           border-color: var(--color-gold);
         }

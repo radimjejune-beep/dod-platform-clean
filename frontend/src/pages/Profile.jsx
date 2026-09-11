@@ -224,7 +224,7 @@ export default function Profile() {
           </div>
           <button
             type="submit"
-            className="btn-save-header"
+            className="btn-gold"
             onClick={handleSave}
             disabled={saving}
           >
@@ -695,7 +695,7 @@ export default function Profile() {
             <div className="form-actions-bottom">
               <button
                 type="submit"
-                className="btn-save-full"
+                className="btn-gold btn-lg w-full"
                 disabled={saving}
               >
                 {saving ? 'Сохранение...' : 'Сохранить изменения'}
@@ -747,35 +747,8 @@ export default function Profile() {
           margin: 4px 0 0 0;
         }
 
-        .btn-save-header {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 10px 24px;
-          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
-          color: var(--color-primary-dark);
-          border: none;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          box-shadow: 0 2px 16px rgba(201,162,39,0.25);
-          font-family: 'Inter', sans-serif;
-          min-height: 44px;
-        }
 
-        .btn-save-header:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(201,162,39,0.35);
-        }
 
-        .btn-save-header:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-          pointer-events: none;
-        }
 
         /* ============================================================
            СООБЩЕНИЯ
@@ -1228,35 +1201,8 @@ export default function Profile() {
           border-top: 1px solid var(--color-gray-200);
         }
 
-        .btn-save-full {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 14px 40px;
-          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
-          color: var(--color-primary-dark);
-          border: none;
-          border-radius: 10px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          box-shadow: 0 2px 16px rgba(201,162,39,0.25);
-          font-family: 'Inter', sans-serif;
-          width: 100%;
-        }
 
-        .btn-save-full:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(201,162,39,0.35);
-        }
 
-        .btn-save-full:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-          pointer-events: none;
-        }
 
         /* ============================================================
            СПИННЕР
@@ -1311,10 +1257,6 @@ export default function Profile() {
             align-items: stretch;
           }
 
-          .btn-save-header {
-            width: 100%;
-            justify-content: center;
-          }
 
           .profile-card-header {
             padding: 20px;
@@ -1379,10 +1321,6 @@ export default function Profile() {
             justify-content: center;
           }
 
-          .btn-save-full {
-            padding: 12px 24px;
-            font-size: 14px;
-          }
         }
 
         @media (max-width: 480px) {

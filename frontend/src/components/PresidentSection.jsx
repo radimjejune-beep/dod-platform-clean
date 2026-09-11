@@ -204,7 +204,6 @@ export default function PresidentSection({ profile }) {
         .president-section-btn:hover {
           background: var(--color-info-bg);
           border-color: var(--color-primary-light);
-          transform: translateY(-2px);
         }
 
         .president-section-loading {

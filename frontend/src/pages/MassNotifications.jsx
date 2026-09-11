@@ -567,7 +567,6 @@ export default function MassNotifications() {
         }
 
         .stat-card:hover {
-          transform: translateY(-4px);
           box-shadow: 0 8px 32px rgba(10,22,40,0.08);
         }
 
@@ -701,7 +700,7 @@ export default function MassNotifications() {
           justify-content: center;
           gap: 8px;
           padding: 12px 32px;
-          background: linear-gradient(135deg, var(--color-gold), #D4B84A, var(--color-gold-light));
+          background: var(--color-gold);
           color: var(--color-primary-dark);
           border: none;
           border-radius: 10px;
@@ -715,7 +714,6 @@ export default function MassNotifications() {
         }
 
         .btn-send:hover:not(:disabled) {
-          transform: translateY(-2px);
           box-shadow: 0 8px 32px rgba(201,162,39,0.35);
         }
 

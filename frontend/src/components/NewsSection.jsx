@@ -500,7 +500,6 @@ export default function NewsSection({ limit = 3 }) {
         }
 
         .news-card:hover {
-          transform: translateY(-4px);
           box-shadow: 0 8px 30px rgba(11, 31, 58, 0.1);
         }
 

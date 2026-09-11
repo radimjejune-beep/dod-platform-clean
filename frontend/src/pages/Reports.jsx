@@ -36,7 +36,45 @@ export default function Reports() {
     events_count: 0,
     participants_count: 0
   });
+
+  // Что платформа знает о клубе за выбранный месяц. Раньше отчёт просил
+  // руководителя вспомнить, сколько было мероприятий и участников —
+  // в конце месяца он этого не помнит и пишет наугад либо не пишет вовсе.
+  const [draft, setDraft] = useState(null);
+  const [draftLoading, setDraftLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Как только известны клуб и месяц — считаем цифры и подставляем их
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDraft = async () => {
+      if (!form.club_id || !form.report_month || form.id) {
+        setDraft(null);
+        return;
+      }
+      setDraftLoading(true);
+      try {
+        const data = await api.getReportDraft(form.club_id, form.report_month);
+        if (cancelled) return;
+        setDraft(data);
+        if (data) {
+          setForm((prev) => ({
+            ...prev,
+            events_count: data.events_count ?? prev.events_count,
+            participants_count: data.participants_count ?? prev.participants_count
+          }));
+        }
+      } catch (err) {
+        console.error('❌ Ошибка подготовки отчёта:', err);
+      } finally {
+        if (!cancelled) setDraftLoading(false);
+      }
+    };
+
+    loadDraft();
+    return () => { cancelled = true; };
+  }, [form.club_id, form.report_month, form.id]);
 
   // ============================================================
   // ОПРЕДЕЛЯЕМ РОЛИ
@@ -643,19 +681,68 @@ export default function Reports() {
                 />
               </div>
 
+              {/* Что платформа знает сама: цифры уже подставлены в поля
+                  ниже, а темы занятий и названия мероприятий подсказывают,
+                  о чём писать текст */}
+              {draft && (
+                <div className="card" style={{
+                  padding: '16px',
+                  marginBottom: '16px',
+                  background: 'var(--color-gray-50)'
+                }}>
+                  <div style={{ fontSize: '13px', color: 'var(--color-gray-600)', lineHeight: 1.7 }}>
+                    <strong style={{ color: 'var(--color-primary)' }}>Что уже известно за этот месяц</strong>
+                    <div style={{ marginTop: '8px' }}>
+                      Занятий проведено: <strong>{draft.sessions_held}</strong>
+                      {draft.sessions_cancelled > 0 && `, не состоялось: ${draft.sessions_cancelled}`}
+                      {draft.average_attendance !== null && `, в среднем приходило: ${draft.average_attendance}`}
+                    </div>
+                    <div>
+                      Мероприятий: <strong>{draft.events_count}</strong>
+                      {' · '}Участников в клубе: <strong>{draft.participants_count}</strong>
+                      {draft.joined_this_month > 0 && ` (новых за месяц: ${draft.joined_this_month})`}
+                      {draft.achievements_count > 0 && ` · Достижений выдано: ${draft.achievements_count}`}
+                    </div>
+                    {draft.session_topics?.length > 0 && (
+                      <div style={{ marginTop: '8px' }}>
+                        Темы занятий: {draft.session_topics.join('; ')}
+                      </div>
+                    )}
+                    {draft.event_titles?.length > 0 && (
+                      <div>Мероприятия: {draft.event_titles.join('; ')}</div>
+                    )}
+                    {draft.sessions_held === 0 && draft.events_count === 0 && (
+                      <div style={{ marginTop: '8px', color: 'var(--color-warning)' }}>
+                        За этот месяц в платформе нет ни занятий, ни мероприятий. Если работа велась,
+                        внесите занятия в журнал — тогда отчёт будет собираться сам.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {draftLoading && (
+                <div style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginBottom: '12px' }}>
+                  Считаем показатели за месяц...
+                </div>
+              )}
+
               <div className="form-group">
                 <label>Текст отчёта</label>
                 <textarea
                   rows="6"
                   value={form.report_text}
                   onChange={(e) => setForm({ ...form, report_text: e.target.value })}
-                  placeholder="Опишите проведённые мероприятия, достижения, планы..."
+                  placeholder="Что удалось за месяц, что не получилось, что планируете дальше"
                 />
+                <div className="form-hint">
+                  Цифры платформа посчитала сама — здесь нужно то, чего она знать не может.
+                </div>
               </div>
 
               <div className="form-row">
                 <div className="form-group">
-                  <label>Количество мероприятий</label>
+                  <label>Мероприятий {draft ? '(посчитано)' : ''}</label>
                   <input
                     type="number"
                     value={form.events_count}
@@ -664,7 +751,7 @@ export default function Reports() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Участников всего</label>
+                  <label>Участников в клубе {draft ? '(посчитано)' : ''}</label>
                   <input
                     type="number"
                     value={form.participants_count}

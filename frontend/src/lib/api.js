@@ -1314,6 +1314,18 @@ export const getParticipantAttendance = async (participantId, params = {}) => {
   return response.json();
 };
 
+// Заготовка отчёта: ничего не сохраняет, только считает по базе.
+// Что писать в отчёте — решает человек, но вспоминать числа по памяти
+// ему больше не нужно.
+export const getReportDraft = async (clubId, month) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/report-draft?month=${encodeURIComponent(month)}`, {
+    method: 'GET',
+    headers: headers()
+  });
+  if (!response.ok) return null;
+  return response.json();
+};
+
 export const getClubAttendanceSummary = async (clubId, month) => {
   const response = await fetch(`${API_URL}/clubs/${clubId}/attendance-summary?month=${encodeURIComponent(month)}`, {
     method: 'GET',
@@ -1626,6 +1638,7 @@ const api = {
   saveSessionAttendance,
   getParticipantAttendance,
   getClubAttendanceSummary,
+  getReportDraft,
   issueCredentials,
   createParentInvitation,
   createClubParentInvitations,

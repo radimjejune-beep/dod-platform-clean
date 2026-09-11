@@ -8474,6 +8474,95 @@ app.get('/api/clubs/:clubId/attendance-summary', authenticate, async (req, res) 
   }
 });
 
+
+// ============================================================
+// ЗАГОТОВКА ОТЧЁТА КЮДА ЗА МЕСЯЦ
+// ============================================================
+// Отчёт просил руководителя вспомнить, сколько было мероприятий и
+// участников. Человек в конце месяца этого не помнит — он либо пишет
+// наугад, либо не пишет вовсе. В базе эти числа уже есть: занятия,
+// мероприятия, состав клуба, выданные достижения.
+//
+// Эндпоинт ничего не сохраняет — только считает и отдаёт. Решение,
+// что писать в отчёте, остаётся за человеком.
+app.get('/api/clubs/:clubId/report-draft', authenticate, async (req, res) => {
+  try {
+    const { clubId } = req.params;
+    const month = String(req.query.month || '').trim();
+
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({ error: 'Нужен месяц в виде ГГГГ-ММ' });
+    }
+    if (!MOVEMENT_ROLES.includes(req.user.role) &&
+        !(await canInClub(req.user, clubId, 'submit_reports'))) {
+      return res.status(403).json({ error: 'Нет права готовить отчёт по этому КЮДу' });
+    }
+
+    const [sessions, events, people, achievements] = await Promise.all([
+      pool.query(
+        `SELECT
+           COUNT(*) FILTER (WHERE status = 'held')::int AS held,
+           COUNT(*) FILTER (WHERE status = 'cancelled')::int AS cancelled,
+           ARRAY_REMOVE(ARRAY_AGG(topic ORDER BY session_date) FILTER (WHERE status = 'held'), NULL) AS topics
+         FROM club_sessions
+         WHERE club_id = $1 AND to_char(session_date, 'YYYY-MM') = $2`,
+        [clubId, month]
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS n,
+                ARRAY_REMOVE(ARRAY_AGG(title ORDER BY event_date), NULL) AS titles
+         FROM events
+         WHERE club_id = $1 AND to_char(event_date, 'YYYY-MM') = $2`,
+        [clubId, month]
+      ),
+      pool.query(
+        `SELECT
+           COUNT(*)::int AS total,
+           COUNT(*) FILTER (WHERE to_char(created_at, 'YYYY-MM') = $2)::int AS joined_this_month
+         FROM users
+         WHERE club_id = $1 AND role = 'participant' AND status = 'active'`,
+        [clubId, month]
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS n
+         FROM achievements a
+         JOIN users u ON u.id = a.participant_id
+         WHERE u.club_id = $1 AND to_char(a.created_at, 'YYYY-MM') = $2`,
+        [clubId, month]
+      )
+    ]);
+
+    // Средняя посещаемость считается только по проведённым занятиям
+    const visits = await pool.query(
+      `SELECT COUNT(*)::int AS n
+       FROM session_attendance a
+       JOIN club_sessions s ON s.id = a.session_id
+       WHERE s.club_id = $1 AND s.status = 'held'
+         AND to_char(s.session_date, 'YYYY-MM') = $2
+         AND a.status IN ('present', 'late')`,
+      [clubId, month]
+    );
+
+    const held = sessions.rows[0].held;
+
+    res.json({
+      month,
+      sessions_held: held,
+      sessions_cancelled: sessions.rows[0].cancelled,
+      session_topics: sessions.rows[0].topics || [],
+      average_attendance: held === 0 ? null : Math.round((visits.rows[0].n / held) * 10) / 10,
+      events_count: events.rows[0].n,
+      event_titles: events.rows[0].titles || [],
+      participants_count: people.rows[0].total,
+      joined_this_month: people.rows[0].joined_this_month,
+      achievements_count: achievements.rows[0].n
+    });
+  } catch (error) {
+    console.error('❌ Ошибка подготовки отчёта:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
 // ============================================================
 // ОБРАБОТКА ОШИБОК CORS
 // ============================================================

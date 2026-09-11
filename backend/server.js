@@ -832,12 +832,7 @@ app.post('/api/users', authenticate, requireAdmin, validateBody(userSchema), asy
 
     if (finalClubId) {
       console.log(`  🔗 Привязка к клубу ${finalClubId}...`);
-      await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [finalClubId, user.id]);
-      await pool.query(
-        `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
-         VALUES ($1, $2, 'active', NOW()) ON CONFLICT (profile_id, club_id) DO NOTHING`,
-        [user.id, finalClubId]
-      );
+      await setUserClub(user.id, finalClubId);
       if (role === 'club_coordinator') {
         // Первый сотрудник клуба становится руководителем, последующие —
         // заместителями: руководитель в клубе может быть только один.
@@ -919,8 +914,7 @@ app.patch('/api/users/:id/assign-club', authenticate, async (req, res) => {
     const user = userCheck.rows[0];
     
     if (!club_id) {
-      await pool.query('UPDATE users SET club_id = NULL WHERE id = $1', [id]);
-      invalidateUserCache(id);
+      await setUserClub(id, null);
       return res.json({ 
         message: 'Пользователь откреплён от клуба',
         user: { id: user.id, full_name: user.full_name },
@@ -935,13 +929,7 @@ app.patch('/api/users/:id/assign-club', authenticate, async (req, res) => {
     
     const club = clubCheck.rows[0];
     
-    await pool.query('UPDATE users SET club_id = $1 WHERE id = $2', [club_id, id]);
-    invalidateUserCache(id);
-    await pool.query(
-      `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
-       VALUES ($1, $2, 'active', NOW()) ON CONFLICT (profile_id, club_id) DO NOTHING`,
-      [id, club_id]
-    );
+    await setUserClub(id, club_id);
     
     await logActivity(req.user.userId, 'ASSIGN_CLUB', 'user', id, {
       user: user.full_name,
@@ -1263,12 +1251,12 @@ app.get('/api/clubs', authenticate, async (req, res) => {
     // не осиротить историю участников и мероприятий, но в работе мешают.
     const includeArchived = req.query.include_archived === 'true';
     const result = await pool.query(
-      `SELECT c.*, 
-              COUNT(DISTINCT cp.profile_id) as participants_count
+      `SELECT c.*,
+              (SELECT COUNT(*)::int FROM users u
+                WHERE u.club_id = c.id AND u.role = 'participant' AND u.status = 'active'
+              ) AS participants_count
        FROM clubs c
-       LEFT JOIN club_participants cp ON c.id = cp.club_id AND cp.status = 'active'
        ${includeArchived ? '' : "WHERE COALESCE(c.status, 'active') <> 'archived'"}
-       GROUP BY c.id
        ORDER BY c.name`
     );
     res.json(result.rows);
@@ -4646,14 +4634,13 @@ async function processBulkAction(actionId) {
       try {
         if (action_type === 'assign_club') {
           if (!payload.club_id) throw new Error('Не указан клуб');
-          const upd = await pool.query(
-            `UPDATE users SET club_id = $1, updated_at = NOW()
-             WHERE id = $2 AND role IN ('participant', 'club_coordinator', 'tutor')
-             RETURNING id`,
-            [payload.club_id, targetId]
+          const allowed = await pool.query(
+            `SELECT id FROM users WHERE id = $1 AND role IN ('participant', 'club_coordinator', 'tutor')`,
+            [targetId]
           );
-          if (upd.rows.length === 0) throw new Error('Пользователь не найден или роль не допускает привязку к клубу');
-          invalidateUserCache(targetId);
+          if (allowed.rows.length === 0) throw new Error('Пользователь не найден или роль не допускает привязку к клубу');
+          // Через общую функцию: она же закрывает прежнее членство
+          await setUserClub(targetId, payload.club_id);
         } else if (action_type === 'send_notification') {
           if (!payload.title || !payload.message) throw new Error('Не указан заголовок или текст');
           await createNotification(
@@ -6972,6 +6959,42 @@ app.post('/api/events/:eventId/teams/purge-documents', authenticate, requireAdmi
   }
 });
 
+
+// ============================================================
+// ПЕРЕВОД УЧАСТНИКА В КЛУБ
+// ============================================================
+// Состав клуба хранился в двух местах: users.club_id и таблица
+// club_participants. При переводе поле обновлялось, а в таблицу просто
+// добавлялась ещё одна строка — прежняя оставалась активной, и человек
+// начинал числиться сразу в двух клубах. В списке КЮДов у Владивостока
+// значилось шесть участников, а в журнале занятий — три.
+//
+// users.club_id — единственный источник истины. club_participants
+// остаётся историей членства: когда пришёл и когда ушёл.
+async function setUserClub(userId, clubId, executor = pool) {
+  await executor.query('UPDATE users SET club_id = $1, updated_at = NOW() WHERE id = $2', [clubId, userId]);
+
+  // Закрываем прежнее членство — все клубы, кроме нового
+  await executor.query(
+    `UPDATE club_participants
+     SET status = 'left', left_at = COALESCE(left_at, NOW())
+     WHERE profile_id = $1 AND status = 'active'
+       AND ($2::uuid IS NULL OR club_id <> $2)`,
+    [userId, clubId]
+  );
+
+  if (clubId) {
+    await executor.query(
+      `INSERT INTO club_participants (profile_id, club_id, status, joined_at)
+       VALUES ($1, $2, 'active', NOW())
+       ON CONFLICT (profile_id, club_id)
+       DO UPDATE SET status = 'active', left_at = NULL`,
+      [userId, clubId]
+    );
+  }
+
+  invalidateUserCache(userId);
+}
 
 // ============================================================
 // ПРИГЛАШЕНИЯ РОДИТЕЛЕЙ

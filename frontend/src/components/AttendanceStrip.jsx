@@ -72,9 +72,13 @@ export default function AttendanceStrip({ participantId }) {
       </div>
 
       <div style={{ fontSize: '13px', color: 'var(--color-gray-600)', lineHeight: 1.6 }}>
-        {summary.percentage >= 70 && 'Ходит постоянно — вопросов нет.'}
-        {summary.percentage < 70 && summary.percentage >= 40 && 'Пропускает примерно каждое второе занятие — стоит поговорить.'}
-        {summary.percentage < 40 && (
+        {summary.held < 4 ? (
+          <>Занятий пока мало — {summary.held === 1 ? 'прошло одно' : `прошло ${summary.held}`}. Судить о посещаемости рано.</>
+        ) : summary.percentage >= 70 ? (
+          'Ходит постоянно — вопросов нет.'
+        ) : summary.percentage >= 40 ? (
+          'Пропускает примерно каждое второе занятие — стоит поговорить.'
+        ) : (
           <span style={{ color: 'var(--color-error)' }}>
             <Icon name="warning" size={14} /> Бывает редко. Возможно, участник уже ушёл из клуба.
           </span>

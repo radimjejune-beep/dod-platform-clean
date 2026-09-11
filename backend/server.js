@@ -15,6 +15,13 @@ import morgan from 'morgan';
 
 import { authenticate, requireRole, requireAdmin, requireAdminOrCoordinator, initAuth, invalidateUserCache, BLOCKED_STATUSES } from './middleware/auth.js';
 import { logActivity, initLogger, getActivityLogs } from './lib/logger.js';
+import {
+  CLUB_POSITIONS,
+  CLUB_POSITION_LABELS,
+  ALL_CLUB_PERMISSIONS,
+  NO_CLUB_PERMISSIONS,
+  permissionsForPosition
+} from './lib/clubPermissions.js';
 
 // ===== ВАЛИДАЦИЯ =====
 import { validateBody } from './middleware/validate.js';
@@ -312,13 +319,46 @@ const MOVEMENT_ROLES = ['admin', 'movement_coordinator', 'president', 'vice_pres
 // Все роли сотрудников (могут работать с участниками в своей зоне)
 const STAFF_ROLES = [...MOVEMENT_ROLES, 'club_coordinator', 'tutor'];
 
-// Клубы, за которые отвечает координатор КЮДа (их может быть несколько)
+// Клубы, в которых человек работает — на любой должности.
+// Раньше читалось из club_coordinators, где должность была одна.
 async function getCoordinatorClubIds(userId) {
   const result = await pool.query(
-    'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
+    'SELECT club_id FROM club_staff WHERE user_id = $1 AND removed_at IS NULL',
     [userId]
   );
   return result.rows.map((r) => r.club_id);
+}
+
+// Что человек может делать в конкретном клубе.
+// Одна точка правды вместо двух десятков проверок role === 'club_coordinator'.
+async function getClubPermissions(requester, clubId) {
+  if (!clubId) return NO_CLUB_PERMISSIONS;
+
+  // Координаторы движения и админы могут всё в любом клубе
+  if (MOVEMENT_ROLES.includes(requester.role)) return ALL_CLUB_PERMISSIONS;
+
+  const staff = await pool.query(
+    'SELECT position FROM club_staff WHERE user_id = $1 AND club_id = $2 AND removed_at IS NULL',
+    [requester.userId, clubId]
+  );
+  if (staff.rows.length === 0) return NO_CLUB_PERMISSIONS;
+
+  return permissionsForPosition(staff.rows[0].position);
+}
+
+async function canInClub(requester, clubId, capability) {
+  const permissions = await getClubPermissions(requester, clubId);
+  return permissions[capability] === true;
+}
+
+// Должность человека в клубе — нужна там, где важно не «можно ли»,
+// а «кто именно»: например, отправлять команду вправе только руководитель
+async function getClubPosition(userId, clubId) {
+  const r = await pool.query(
+    'SELECT position FROM club_staff WHERE user_id = $1 AND club_id = $2 AND removed_at IS NULL',
+    [userId, clubId]
+  );
+  return r.rows[0]?.position || null;
 }
 
 // Имеет ли запрашивающий право видеть данные конкретного участника
@@ -798,12 +838,21 @@ app.post('/api/users', authenticate, requireAdmin, validateBody(userSchema), asy
         [user.id, finalClubId]
       );
       if (role === 'club_coordinator') {
-        await pool.query(
-          `INSERT INTO club_coordinators (profile_id, club_id, created_at)
-           VALUES ($1, $2, NOW()) ON CONFLICT (profile_id, club_id) DO NOTHING`,
-          [user.id, finalClubId]
+        // Первый сотрудник клуба становится руководителем, последующие —
+        // заместителями: руководитель в клубе может быть только один.
+        const hasHead = await pool.query(
+          `SELECT 1 FROM club_staff WHERE club_id = $1 AND position = 'head' AND removed_at IS NULL`,
+          [finalClubId]
         );
-        console.log(`  ✅ Координатор привязан к клубу ${clubName}`);
+        const position = hasHead.rows.length > 0 ? 'deputy' : 'head';
+
+        await pool.query(
+          `INSERT INTO club_staff (club_id, user_id, position, appointed_by, comment)
+           VALUES ($1, $2, $3, $4, 'Назначен при создании учётной записи')
+           ON CONFLICT DO NOTHING`,
+          [finalClubId, user.id, position, req.user.userId]
+        );
+        console.log(`  ✅ Сотрудник привязан к клубу ${clubName}: ${position}`);
       } else {
         console.log(`  ✅ Участник привязан к клубу ${clubName}`);
       }
@@ -5745,6 +5794,341 @@ app.get('/api/consents-missing', authenticate, async (req, res) => {
     res.json(result.rows.filter((r) => Array.isArray(r.missing) && r.missing.length > 0));
   } catch (error) {
     console.error('❌ Ошибка получения списка без согласий:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// ========== СОТРУДНИКИ КЮДА ==========
+// ============================================================
+
+// Список сотрудников клуба
+app.get('/api/clubs/:clubId/staff', authenticate, async (req, res) => {
+  try {
+    const { clubId } = req.params;
+
+    // Видеть состав может любой сотрудник этого клуба и движение
+    if (!(await canInClub(req.user, clubId, 'view_participants'))) {
+      return res.status(403).json({ error: 'Нет доступа к этому КЮДу' });
+    }
+
+    const result = await pool.query(
+      `SELECT cs.id, cs.user_id, cs.position, cs.appointed_at, cs.comment,
+              u.full_name, u.email, u.phone, u.avatar_url,
+              a.full_name AS appointed_by_name
+       FROM club_staff cs
+       JOIN users u ON u.id = cs.user_id
+       LEFT JOIN users a ON a.id = cs.appointed_by
+       WHERE cs.club_id = $1 AND cs.removed_at IS NULL
+       ORDER BY CASE cs.position
+                  WHEN 'head' THEN 0 WHEN 'deputy' THEN 1
+                  WHEN 'methodist' THEN 2 WHEN 'curator' THEN 3 ELSE 4 END,
+                u.full_name`,
+      [clubId]
+    );
+
+    res.json(result.rows.map((r) => ({ ...r, position_label: CLUB_POSITION_LABELS[r.position] })));
+  } catch (error) {
+    console.error('❌ Ошибка получения сотрудников клуба:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Назначить сотрудника
+app.post('/api/clubs/:clubId/staff', authenticate, async (req, res) => {
+  try {
+    const { clubId } = req.params;
+    const { user_id, position, comment } = req.body;
+
+    if (!(await canInClub(req.user, clubId, 'manage_staff'))) {
+      return res.status(403).json({ error: 'Управлять сотрудниками может руководитель КЮДа' });
+    }
+
+    if (!user_id || !CLUB_POSITIONS.includes(position)) {
+      return res.status(400).json({
+        error: `user_id обязателен, position — одно из: ${CLUB_POSITIONS.join(', ')}`
+      });
+    }
+
+    // Руководителя назначаем только через передачу руководства: иначе
+    // частичный уникальный индекс вернёт невнятную ошибку базы
+    if (position === 'head') {
+      return res.status(400).json({
+        error: 'Руководитель назначается через передачу руководства',
+        code: 'USE_TRANSFER_HEAD'
+      });
+    }
+
+    const user = await pool.query('SELECT id, full_name, role FROM users WHERE id = $1', [user_id]);
+    if (user.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    if (user.rows[0].role === 'participant' || user.rows[0].role === 'parent') {
+      return res.status(400).json({
+        error: 'Сотрудником клуба не может быть участник или родитель',
+        code: 'WRONG_GLOBAL_ROLE'
+      });
+    }
+
+    let result;
+    try {
+      result = await pool.query(
+        `INSERT INTO club_staff (club_id, user_id, position, appointed_by, comment)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, user_id, position, appointed_at`,
+        [clubId, user_id, position, req.user.userId, comment || null]
+      );
+    } catch (error) {
+      if (error.code === '23505') {
+        return res.status(409).json({
+          error: 'Этот человек уже работает в клубе — смените ему должность',
+          code: 'ALREADY_STAFF'
+        });
+      }
+      throw error;
+    }
+
+    invalidateUserCache(user_id);
+    await logActivity(req.user.userId, 'CLUB_STAFF_APPOINTED', 'club', clubId, {
+      user: user.rows[0].full_name,
+      position
+    });
+    await createNotification(
+      user_id,
+      'club_staff',
+      '🏫 Назначение в КЮД',
+      `Вы назначены: ${CLUB_POSITION_LABELS[position]}`,
+      '/clubs'
+    );
+
+    res.status(201).json({ ...result.rows[0], position_label: CLUB_POSITION_LABELS[position] });
+  } catch (error) {
+    console.error('❌ Ошибка назначения сотрудника:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Сменить должность
+app.patch('/api/clubs/:clubId/staff/:userId', authenticate, async (req, res) => {
+  try {
+    const { clubId, userId } = req.params;
+    const { position } = req.body;
+
+    if (!(await canInClub(req.user, clubId, 'manage_staff'))) {
+      return res.status(403).json({ error: 'Управлять сотрудниками может руководитель КЮДа' });
+    }
+
+    if (!CLUB_POSITIONS.includes(position)) {
+      return res.status(400).json({ error: `position — одно из: ${CLUB_POSITIONS.join(', ')}` });
+    }
+    if (position === 'head') {
+      return res.status(400).json({
+        error: 'Руководитель назначается через передачу руководства',
+        code: 'USE_TRANSFER_HEAD'
+      });
+    }
+
+    const current = await pool.query(
+      'SELECT position FROM club_staff WHERE club_id = $1 AND user_id = $2 AND removed_at IS NULL',
+      [clubId, userId]
+    );
+    if (current.rows.length === 0) {
+      return res.status(404).json({ error: 'Этот человек не работает в клубе' });
+    }
+    // Руководитель не может разжаловать сам себя — клуб останется без головы
+    if (current.rows[0].position === 'head') {
+      return res.status(400).json({
+        error: 'Сначала передайте руководство другому сотруднику',
+        code: 'USE_TRANSFER_HEAD'
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE club_staff SET position = $1
+       WHERE club_id = $2 AND user_id = $3 AND removed_at IS NULL
+       RETURNING id, user_id, position, appointed_at`,
+      [position, clubId, userId]
+    );
+
+    invalidateUserCache(userId);
+    await logActivity(req.user.userId, 'CLUB_STAFF_POSITION_CHANGED', 'club', clubId, {
+      user_id: userId, from: current.rows[0].position, to: position
+    });
+
+    res.json({ ...result.rows[0], position_label: CLUB_POSITION_LABELS[position] });
+  } catch (error) {
+    console.error('❌ Ошибка смены должности:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Снять с должности. Мягко: строка остаётся для истории.
+app.delete('/api/clubs/:clubId/staff/:userId', authenticate, async (req, res) => {
+  try {
+    const { clubId, userId } = req.params;
+
+    if (!(await canInClub(req.user, clubId, 'manage_staff'))) {
+      return res.status(403).json({ error: 'Управлять сотрудниками может руководитель КЮДа' });
+    }
+
+    const current = await pool.query(
+      'SELECT position FROM club_staff WHERE club_id = $1 AND user_id = $2 AND removed_at IS NULL',
+      [clubId, userId]
+    );
+    if (current.rows.length === 0) {
+      return res.status(404).json({ error: 'Этот человек не работает в клубе' });
+    }
+    if (current.rows[0].position === 'head') {
+      return res.status(400).json({
+        error: 'Нельзя снять руководителя — сначала передайте руководство',
+        code: 'USE_TRANSFER_HEAD'
+      });
+    }
+
+    await pool.query(
+      `UPDATE club_staff SET removed_at = NOW(), removed_by = $1
+       WHERE club_id = $2 AND user_id = $3 AND removed_at IS NULL`,
+      [req.user.userId, clubId, userId]
+    );
+
+    invalidateUserCache(userId);
+    await logActivity(req.user.userId, 'CLUB_STAFF_REMOVED', 'club', clubId, {
+      user_id: userId, position: current.rows[0].position
+    });
+
+    res.json({ message: 'Сотрудник снят с должности' });
+  } catch (error) {
+    console.error('❌ Ошибка снятия сотрудника:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Передача руководства. Одной операцией, чтобы клуб не остался без головы.
+app.post('/api/clubs/:clubId/transfer-head', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { clubId } = req.params;
+    const { new_head_id, keep_as } = req.body;
+
+    if (!(await canInClub(req.user, clubId, 'manage_staff'))) {
+      return res.status(403).json({ error: 'Передать руководство может руководитель КЮДа или координатор движения' });
+    }
+    if (!new_head_id) {
+      return res.status(400).json({ error: 'new_head_id обязателен' });
+    }
+
+    const keepPosition = keep_as && CLUB_POSITIONS.includes(keep_as) && keep_as !== 'head' ? keep_as : null;
+
+    const candidate = await pool.query('SELECT id, full_name, role FROM users WHERE id = $1', [new_head_id]);
+    if (candidate.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    if (['participant', 'parent'].includes(candidate.rows[0].role)) {
+      return res.status(400).json({ error: 'Руководителем клуба не может быть участник или родитель' });
+    }
+
+    await client.query('BEGIN');
+
+    const oldHead = await client.query(
+      `SELECT user_id FROM club_staff
+       WHERE club_id = $1 AND position = 'head' AND removed_at IS NULL`,
+      [clubId]
+    );
+
+    // Старого руководителя либо оставляем в клубе на другой должности,
+    // либо снимаем совсем
+    if (oldHead.rows.length > 0) {
+      if (keepPosition) {
+        await client.query(
+          `UPDATE club_staff SET position = $1
+           WHERE club_id = $2 AND user_id = $3 AND removed_at IS NULL`,
+          [keepPosition, clubId, oldHead.rows[0].user_id]
+        );
+      } else {
+        await client.query(
+          `UPDATE club_staff SET removed_at = NOW(), removed_by = $1
+           WHERE club_id = $2 AND user_id = $3 AND removed_at IS NULL`,
+          [req.user.userId, clubId, oldHead.rows[0].user_id]
+        );
+      }
+    }
+
+    // Новый руководитель мог уже работать в клубе на другой должности
+    const existing = await client.query(
+      'SELECT id FROM club_staff WHERE club_id = $1 AND user_id = $2 AND removed_at IS NULL',
+      [clubId, new_head_id]
+    );
+
+    if (existing.rows.length > 0) {
+      await client.query(`UPDATE club_staff SET position = 'head' WHERE id = $1`, [existing.rows[0].id]);
+    } else {
+      await client.query(
+        `INSERT INTO club_staff (club_id, user_id, position, appointed_by)
+         VALUES ($1, $2, 'head', $3)`,
+        [clubId, new_head_id, req.user.userId]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    invalidateUserCache();
+    await logActivity(req.user.userId, 'CLUB_HEAD_TRANSFERRED', 'club', clubId, {
+      from: oldHead.rows[0]?.user_id || null,
+      to: new_head_id,
+      old_head_kept_as: keepPosition
+    });
+    await createNotification(
+      new_head_id,
+      'club_staff',
+      '🏫 Вы назначены руководителем КЮДа',
+      'Вам передано руководство клубом',
+      '/clubs',
+      'high'
+    );
+
+    res.json({ message: 'Руководство передано', new_head: candidate.rows[0].full_name });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Ошибка передачи руководства:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  } finally {
+    client.release();
+  }
+});
+
+// В каких клубах я работаю и кем
+app.get('/api/my-clubs', authenticate, async (req, res) => {
+  try {
+    const { userId, role } = req.user;
+
+    if (MOVEMENT_ROLES.includes(role)) {
+      const all = await pool.query(
+        `SELECT c.id AS club_id, c.name AS club_name, NULL::varchar AS position,
+                'Координатор движения'::varchar AS position_label
+         FROM clubs c ORDER BY c.name`
+      );
+      return res.json({ movement_wide: true, clubs: all.rows, permissions: ALL_CLUB_PERMISSIONS });
+    }
+
+    const result = await pool.query(
+      `SELECT cs.club_id, c.name AS club_name, cs.position, cs.appointed_at
+       FROM club_staff cs
+       JOIN clubs c ON c.id = cs.club_id
+       WHERE cs.user_id = $1 AND cs.removed_at IS NULL
+       ORDER BY c.name`,
+      [userId]
+    );
+
+    res.json({
+      movement_wide: false,
+      clubs: result.rows.map((r) => ({
+        ...r,
+        position_label: CLUB_POSITION_LABELS[r.position],
+        permissions: permissionsForPosition(r.position)
+      }))
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения моих клубов:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });

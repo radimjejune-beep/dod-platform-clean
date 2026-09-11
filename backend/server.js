@@ -6167,9 +6167,23 @@ app.post('/api/events/:eventId/invite-clubs', authenticate, async (req, res) => 
     const { eventId } = req.params;
     const { club_ids, deadline, quota, allow_escorts = false, message } = req.body;
 
-    if (!MOVEMENT_ROLES.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Приглашать клубы может координатор движения' });
+    // Приглашать клубы и назначать квоту может координатор движения либо
+    // тьютор, назначенный ответственным именно на это мероприятие
+    let allowed = MOVEMENT_ROLES.includes(req.user.role);
+    if (!allowed && req.user.role === 'tutor') {
+      const assigned = await pool.query(
+        `SELECT 1 FROM event_tutor_assignments
+         WHERE event_id = $1 AND tutor_id = $2 AND status = 'accepted'`,
+        [eventId, req.user.userId]
+      );
+      allowed = assigned.rows.length > 0;
     }
+    if (!allowed) {
+      return res.status(403).json({
+        error: 'Приглашать клубы может координатор движения или тьютор, ответственный за это мероприятие'
+      });
+    }
+
     if (!Array.isArray(club_ids) || club_ids.length === 0) {
       return res.status(400).json({ error: 'club_ids обязателен и не может быть пустым' });
     }

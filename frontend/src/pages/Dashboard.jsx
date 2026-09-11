@@ -2,15 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useMenuItems } from '../hooks/useMenuItems';
 import api from '../lib/api';
+import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import Icon from '../components/Icon';
 
 export default function Dashboard() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboard');
   const [stats, setStats] = useState({
     users: 0,
     clubs: 0,
@@ -25,12 +24,6 @@ export default function Dashboard() {
   const [recentAchievements, setRecentAchievements] = useState([]);
 
   const navigate = useNavigate();
-
-  // ============================================================
-  // ЕДИНОЕ МЕНЮ (ОБЩЕЕ С НАВИГАЦИЕЙ)
-  // ============================================================
-  const menuItems = useMenuItems(profile);
-  const tabs = menuItems || [];
 
   // ============================================================
   // ЗАГРУЗКА ДАННЫХ
@@ -91,14 +84,6 @@ export default function Dashboard() {
       setRecentEvents(upcoming);
       setRecentParticipants(participantsList.slice(0, 5));
       setRecentAchievements(achievements.slice(0, 5));
-
-      // ИСПРАВЛЕНО: проверка наличия tabs
-      if (tabs.length > 0) {
-        const tabExists = tabs.some(t => t.id === activeTab);
-        if (!tabExists) {
-          setActiveTab(tabs[0].id);
-        }
-      }
 
     } catch (err) {
       console.error('Ошибка загрузки:', err);
@@ -214,43 +199,23 @@ export default function Dashboard() {
 
   const quickActions = getQuickActions();
 
-  // ============================================================
-  // РЕНДЕР КОНТЕНТА ВКЛАДКИ
-  // ============================================================
-  const renderTabContent = () => {
-    const activeTabData = tabs.find(t => t.id === activeTab);
-
-    if (!activeTabData || activeTab === 'dashboard') {
-      return renderOverview();
-    }
-
-    return (
-      <div className="dashboard-tab-content">
-        <div className="dashboard-tab-page">
-          <div className="tab-header">
-            <h3 className="tab-title">{activeTabData.label}</h3>
-            <Link to={activeTabData.path} className="btn btn-primary btn-sm">
-              Перейти к разделу →
-            </Link>
-          </div>
-          <div className="card tab-card">
-            <p className="tab-hint">
-              Перейдите на страницу «{activeTabData.label}» для полного доступа
-            </p>
-            <Link to={activeTabData.path} className="btn btn-gold" style={{ width: '100%', justifyContent: 'center' }}>
-              Открыть {activeTabData.label.toLowerCase()}
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
+  // В базе роль лежит латинским кодом; человеку он ничего не говорит
+  const ROLE_LABELS = {
+    admin: 'Администратор',
+    movement_coordinator: 'Координатор движения',
+    club_coordinator: 'Руководитель КЮДа',
+    tutor: 'Тьютор',
+    participant: 'Участник',
+    parent: 'Законный представитель',
+    president: 'Президент',
+    vice_president: 'Вице-президент'
   };
 
   // ============================================================
   // ВКЛАДКА: ОБЗОР (ГЛАВНАЯ СТРАНИЦА ДАШБОРДА)
   // ============================================================
   const renderOverview = () => (
-    <div className="dashboard-tab-content">
+    <div className="dashboard-content">
       <div className="dashboard-profile-card">
         <h3 className="dashboard-section-title">Ваш профиль</h3>
         <div className="dashboard-profile-info">
@@ -260,7 +225,7 @@ export default function Dashboard() {
           </div>
           <div className="profile-info-item">
             <span className="profile-info-label">Роль</span>
-            <span className="profile-info-value">{profile?.role || '—'}</span>
+            <span className="profile-info-value">{ROLE_LABELS[profile?.role] || profile?.role || '—'}</span>
           </div>
           <div className="profile-info-item">
             <span className="profile-info-label">Статус</span>
@@ -314,7 +279,9 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="dashboard-page">
+    <div className="dashboard-page-wrapper">
+      <Navigation profile={profile} />
+      <div className="dashboard-page">
       {/* ПРИВЕТСТВИЕ */}
       <div className="dashboard-welcome">
         <div className="dashboard-welcome-content">
@@ -322,7 +289,7 @@ export default function Dashboard() {
           <p>Добро пожаловать в платформу «Дипломаты будущего»</p>
         </div>
         <div className="dashboard-welcome-role">
-          <span className="dashboard-role-badge">{profile?.role}</span>
+          <span className="dashboard-role-badge">{ROLE_LABELS[profile?.role] || profile?.role}</span>
         </div>
       </div>
 
@@ -346,34 +313,24 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ВКЛАДКИ — ТЕ ЖЕ, ЧТО В МЕНЮ */}
-      <div className="dashboard-tabs">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            className={`dashboard-tab ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {renderOverview()}
+
       </div>
-
-      {/* КОНТЕНТ ВКЛАДКИ */}
-      {renderTabContent()}
-
       <Footer />
 
       <style>{`
         /* ============================================================
            ОСНОВНЫЕ СТИЛИ
            ============================================================ */
+        .dashboard-page-wrapper {
+          min-height: 100vh;
+          background: var(--color-gray-100);
+        }
+
         .dashboard-page {
           max-width: 1200px;
           margin: 0 auto;
           padding: 24px 32px 48px;
-          background: var(--color-gray-100);
-          min-height: 100vh;
         }
 
         /* ============================================================
@@ -480,94 +437,10 @@ export default function Dashboard() {
         }
 
         /* ============================================================
-           ВКЛАДКИ
-           ============================================================ */
-        .dashboard-tabs {
-          display: flex;
-          gap: 4px;
-          margin-bottom: 24px;
-          border-bottom: 1px solid var(--color-gray-200);
-          padding-bottom: 4px;
-          flex-wrap: wrap;
-          background: white;
-          padding: 4px 4px 0 4px;
-          border-radius: 12px 12px 0 0;
-          border: 1px solid var(--color-gray-200);
-          border-bottom: none;
-        }
-
-        .dashboard-tab {
-          padding: 10px 20px;
-          border: none;
-          background: transparent;
-          font-size: 14px;
-          font-weight: 500;
-          color: var(--color-gray-500);
-          cursor: pointer;
-          transition: all 0.3s ease;
-          border-radius: 8px 8px 0 0;
-          font-family: 'Inter', sans-serif;
-        }
-
-        .dashboard-tab:hover {
-          color: var(--color-primary-dark);
-          background: var(--color-gray-50);
-        }
-
-        .dashboard-tab.active {
-          color: var(--color-primary-dark);
-          font-weight: 600;
-          background: var(--color-gold-pale);
-          position: relative;
-        }
-
-        .dashboard-tab.active::after {
-          content: '';
-          position: absolute;
-          bottom: -2px;
-          left: 0;
-          right: 0;
-          height: 2px;
-          background: var(--color-gold);
-        }
-
-        /* ============================================================
            КОНТЕНТ ВКЛАДКИ
            ============================================================ */
-        .dashboard-tab-content {
+        .dashboard-content {
           width: 100%;
-        }
-
-        .dashboard-tab-page {
-          width: 100%;
-        }
-
-        .tab-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 16px;
-          flex-wrap: wrap;
-          gap: 12px;
-        }
-
-        .tab-title {
-          font-family: 'Playfair Display', serif;
-          font-size: 20px;
-          font-weight: 600;
-          color: var(--color-primary-dark);
-          margin: 0;
-        }
-
-        .tab-card {
-          padding: 24px;
-          text-align: center;
-        }
-
-        .tab-hint {
-          color: var(--color-gray-400);
-          margin-bottom: 16px;
-          font-size: 14px;
         }
 
         .dashboard-section-title {
@@ -626,6 +499,11 @@ export default function Dashboard() {
           display: flex;
           flex-direction: column;
           gap: 2px;
+          min-width: 0;
+        }
+
+        .profile-info-value {
+          overflow-wrap: anywhere;
         }
 
         .profile-info-label {
@@ -843,11 +721,6 @@ export default function Dashboard() {
             padding: 16px 18px;
           }
 
-          .dashboard-tab {
-            padding: 8px 14px;
-            font-size: 13px;
-          }
-
           .dashboard-profile-card {
             padding: 18px 20px;
           }
@@ -899,11 +772,6 @@ export default function Dashboard() {
             font-size: 11px;
           }
 
-          .dashboard-tab {
-            padding: 6px 10px;
-            font-size: 12px;
-          }
-
           .dashboard-section-title {
             font-size: 17px;
           }
@@ -946,11 +814,6 @@ export default function Dashboard() {
             font-size: 11px;
             min-height: 26px;
             min-width: 40px;
-          }
-
-          .tab-header {
-            flex-direction: column;
-            align-items: stretch;
           }
           .tab-header .btn {
             width: 100%;

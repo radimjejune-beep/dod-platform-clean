@@ -197,7 +197,7 @@ export default function AdminUsers() {
 
     try {
       const result = await api.deleteUser(userId);
-      if (result.error) throw new Error(result.error);
+      if (result.error) throw new Error(api.describeApiError(result, 'Не удалось удалить пользователя'));
 
       setMessage(`Пользователь "${fullName}" удалён`);
       setMessageType('success');

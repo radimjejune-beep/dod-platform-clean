@@ -1237,6 +1237,19 @@ app.delete('/api/users/:id', authenticate, requireAdmin, async (req, res) => {
 
     res.json({ message: 'Пользователь удалён' });
   } catch (error) {
+    // 23503 — на пользователя ещё что-то ссылается. Раньше это уходило
+    // в общий обработчик, и человек видел «Внутренняя ошибка сервера»
+    // там, где на самом деле сработало ограничение целостности: понять
+    // из такого ответа было нечего.
+    if (error && error.code === '23503') {
+      console.error('⚠️ Удаление заблокировано связями:', error.table, error.constraint);
+      return res.status(409).json({
+        error: 'Пользователя нельзя удалить: на него ссылаются другие записи в системе. ' +
+               'Заблокируйте учётную запись вместо удаления или сообщите, что именно мешает.',
+        code: 'USER_HAS_REFERENCES',
+        details: { table: error.table, constraint: error.constraint }
+      });
+    }
     console.error('❌ Ошибка удаления пользователя:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }

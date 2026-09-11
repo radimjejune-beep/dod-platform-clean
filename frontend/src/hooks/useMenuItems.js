@@ -99,6 +99,7 @@ export function useMenuItems(profile) {
         { id: 'appeals', path: '/appeals', icon: 'chat', label: 'Обращения' },
         { id: 'club-analytics', path: '/club-analytics', icon: 'chart', label: 'Аналитика клуба' },
         { id: 'club-calendar', path: '/club-calendar', icon: 'calendar', label: 'Календарь клуба' },
+        { id: 'club-sessions', path: '/club-sessions', icon: 'journal', label: 'Занятия и посещаемость' },
         { id: 'my-club-events', path: '/my-club-events', icon: 'calendar', label: 'Мероприятия клуба' },
         { id: 'tutor-requests', path: '/tutor-requests', icon: 'handshake', label: 'Запрос тьютора' },
         { id: 'tutor-invitations', path: '/tutor-invitations', icon: 'mail', label: 'Приглашения тьюторов' },

@@ -1250,6 +1250,80 @@ export const restoreClub = async (id) => {
 };
 
 // ============================================================
+// 21d. ЗАНЯТИЯ КЛУБА И ПОСЕЩАЕМОСТЬ
+// ============================================================
+export const getClubSessions = async (clubId, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  const url = `${API_URL}/clubs/${clubId}/sessions${query ? '?' + query : ''}`;
+  const response = await fetch(url, { method: 'GET', headers: headers() });
+  if (!response.ok) return [];
+  return toArray(await response.json());
+};
+
+export const createClubSession = async (clubId, data) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/sessions`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const updateSession = async (sessionId, data) => {
+  const response = await fetch(`${API_URL}/sessions/${sessionId}`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deleteSession = async (sessionId) => {
+  const response = await fetch(`${API_URL}/sessions/${sessionId}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// Возвращает весь состав клуба, а не только отмеченных: иначе
+// новенького на экране отметки просто не будет видно.
+export const getSessionAttendance = async (sessionId) => {
+  const response = await fetch(`${API_URL}/sessions/${sessionId}/attendance`, {
+    method: 'GET',
+    headers: headers()
+  });
+  if (!response.ok) return { session: null, attendance: [] };
+  return response.json();
+};
+
+export const saveSessionAttendance = async (sessionId, attendance) => {
+  const response = await fetch(`${API_URL}/sessions/${sessionId}/attendance`, {
+    method: 'PUT',
+    headers: headers(),
+    body: JSON.stringify({ attendance })
+  });
+  return response.json();
+};
+
+export const getParticipantAttendance = async (participantId, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  const url = `${API_URL}/participants/${participantId}/attendance${query ? '?' + query : ''}`;
+  const response = await fetch(url, { method: 'GET', headers: headers() });
+  if (!response.ok) return { sessions: [], summary: { held: 0, visited: 0, percentage: null } };
+  return response.json();
+};
+
+export const getClubAttendanceSummary = async (clubId, month) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/attendance-summary?month=${encodeURIComponent(month)}`, {
+    method: 'GET',
+    headers: headers()
+  });
+  if (!response.ok) return null;
+  return response.json();
+};
+
+// ============================================================
 // 21c. МАССОВАЯ ВЫДАЧА ВРЕМЕННЫХ ПАРОЛЕЙ
 // ============================================================
 // Пароли приходят в ответе один раз и нигде не сохраняются: в базе лежит
@@ -1544,6 +1618,14 @@ const api = {
   updateClub,
   archiveClub,
   restoreClub,
+  getClubSessions,
+  createClubSession,
+  updateSession,
+  deleteSession,
+  getSessionAttendance,
+  saveSessionAttendance,
+  getParticipantAttendance,
+  getClubAttendanceSummary,
   issueCredentials,
   createParentInvitation,
   createClubParentInvitations,

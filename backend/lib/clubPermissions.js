@@ -37,7 +37,8 @@ export const CLUB_CAPABILITIES = [
   'form_team',            // собирать команду на форум
   'submit_team',          // отправлять команду на утверждение
   'manage_staff',         // управлять составом сотрудников
-  'view_consents'         // видеть согласия родителей
+  'view_consents',        // видеть согласия родителей
+  'manage_sessions'       // проводить занятия клуба и отмечать посещаемость
 ];
 
 function build(list) {
@@ -58,7 +59,8 @@ export const CLUB_POSITION_PERMISSIONS = Object.freeze({
     'view_participants', 'manage_participants', 'edit_participant',
     'create_events', 'moderate_events', 'write_notes', 'view_all_notes',
     'grant_achievements', 'submit_reports', 'create_appeals',
-    'assign_president', 'invite_tutors', 'form_team', 'view_consents'
+    'assign_president', 'invite_tutors', 'form_team', 'view_consents',
+    'manage_sessions'
   ]),
 
   // Методист ведёт процесс: программы, мероприятия, отчётность.
@@ -66,14 +68,17 @@ export const CLUB_POSITION_PERMISSIONS = Object.freeze({
   methodist: build([
     'view_participants', 'edit_participant', 'create_events',
     'write_notes', 'grant_achievements', 'submit_reports',
-    'invite_tutors', 'view_consents'
+    'invite_tutors', 'view_consents', 'manage_sessions'
   ]),
 
   // Куратор работает с детьми. Организационных прав нет.
   // view_all_notes отсутствует намеренно: свои заметки видит всегда,
   // чужие — нет.
+  // Занятия чаще всего ведёт именно куратор, поэтому отмечать
+  // посещаемость он должен — иначе журнал будет вести кто-то другой
+  // с его слов, а это худший способ вести журнал.
   curator: build([
-    'view_participants', 'write_notes', 'grant_achievements'
+    'view_participants', 'write_notes', 'grant_achievements', 'manage_sessions'
   ]),
 
   // Помощник — доступ на чтение. Волонтёр, практикант, новый сотрудник.

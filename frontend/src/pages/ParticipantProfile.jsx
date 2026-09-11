@@ -7,6 +7,7 @@ import Navigation from '../components/Navigation';
 import AssignClubModal from '../components/AssignClubModal';
 import Icon from '../components/Icon';
 import ParentInviteCard from '../components/ParentInviteCard';
+import AttendanceStrip from '../components/AttendanceStrip';
 
 export default function ParticipantProfile() {
   const { id } = useParams();
@@ -427,6 +428,10 @@ export default function ParticipantProfile() {
         {activeTab === 'info' && (
           <ParentInviteCard participantId={participant.id} participantName={participant.full_name} />
         )}
+
+        {/* Посещаемость занятий: три пропуска подряд видно сразу, а в
+            журнале из сорока строк — нет */}
+        {activeTab === 'info' && <AttendanceStrip participantId={participant.id} />}
 
         {activeTab === 'interests' && (
           <div className="card">

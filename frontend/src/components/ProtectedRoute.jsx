@@ -14,6 +14,11 @@ const routeRoles = {
   '/parent-consents': ['parent', 'admin', 'movement_coordinator'],
   // Выдача временных паролей — только администратор: это сброс доступа
   '/issue-credentials': ['admin'],
+  // Журнал занятий ведут сотрудники КЮДа; движение видит все клубы.
+  // Маршрут /clubs/:clubId/sessions здесь не указан намеренно: таблица
+  // сверяет путь целиком, а право зависит от должности в конкретном
+  // клубе — это проверяет сервер.
+  '/club-sessions': ['club_coordinator', 'tutor', 'admin', 'movement_coordinator'],
   '/club-coordinator-dashboard': ['club_coordinator'],
   '/tutor-dashboard': ['tutor'],
   '/profile': ['all'],

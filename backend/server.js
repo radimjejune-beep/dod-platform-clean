@@ -8086,6 +8086,394 @@ app.post('/api/clubs/:clubId/parent-invitations', authenticate, async (req, res)
   }
 });
 
+
+// ============================================================
+// ЗАНЯТИЯ КЮДА И ПОСЕЩАЕМОСТЬ
+// ============================================================
+// Клуб собирается еженедельно, и до сих пор эта работа нигде не
+// отражалась: отчёт за месяц писался по памяти, а то, что участник
+// перестал ходить, выяснялось в конце года.
+//
+// Кто отмечает: руководитель, заместитель, методист и куратор
+// (право manage_sessions). Занятия чаще всего ведёт куратор, поэтому
+// отмечать должен он сам — журнал, заполненный кем-то с его слов, это
+// худший вид журнала.
+
+const ATTENDANCE_STATUSES = ['present', 'late', 'absent', 'excused'];
+
+// Участник видит свои занятия, родитель — занятия своего ребёнка,
+// сотрудники клуба — занятия своего клуба, движение — все.
+async function canViewClubSessions(requester, clubId) {
+  if (MOVEMENT_ROLES.includes(requester.role)) return true;
+  return canInClub(requester, clubId, 'view_participants');
+}
+
+// ===== СПИСОК ЗАНЯТИЙ КЛУБА =====
+app.get('/api/clubs/:clubId/sessions', authenticate, async (req, res) => {
+  try {
+    const { clubId } = req.params;
+    if (!(await canViewClubSessions(req.user, clubId))) {
+      return res.status(403).json({ error: 'Нет доступа к занятиям этого КЮДа' });
+    }
+
+    const params = [clubId];
+    let period = '';
+    if (req.query.from) { params.push(req.query.from); period += ` AND s.session_date >= $${params.length}`; }
+    if (req.query.to)   { params.push(req.query.to);   period += ` AND s.session_date <= $${params.length}`; }
+
+    const result = await pool.query(
+      `SELECT s.*, u.full_name AS conducted_by_name,
+              COUNT(a.id) FILTER (WHERE a.status IN ('present', 'late'))::int AS present_count,
+              COUNT(a.id)::int AS marked_count
+       FROM club_sessions s
+       LEFT JOIN users u ON u.id = s.conducted_by
+       LEFT JOIN session_attendance a ON a.session_id = s.id
+       WHERE s.club_id = $1${period}
+       GROUP BY s.id, u.full_name
+       ORDER BY s.session_date DESC, s.started_at DESC NULLS LAST`,
+      params
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения занятий:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== СОЗДАНИЕ ЗАНЯТИЯ =====
+app.post('/api/clubs/:clubId/sessions', authenticate, async (req, res) => {
+  try {
+    const { clubId } = req.params;
+    if (!MOVEMENT_ROLES.includes(req.user.role) &&
+        !(await canInClub(req.user, clubId, 'manage_sessions'))) {
+      return res.status(403).json({ error: 'Нет права проводить занятия в этом КЮДе' });
+    }
+
+    const { session_date, topic, location, started_at, duration_minutes, status, notes } = req.body || {};
+    if (!session_date) {
+      return res.status(400).json({ error: 'Нужна дата занятия' });
+    }
+    if (status && !['planned', 'held'].includes(status)) {
+      return res.status(400).json({ error: 'Занятие создаётся запланированным или сразу проведённым' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO club_sessions
+         (club_id, session_date, started_at, duration_minutes, topic, location,
+          status, conducted_by, notes, created_by, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+       RETURNING *`,
+      [clubId, session_date, started_at || null, duration_minutes || null,
+       topic || null, location || null, status || 'planned',
+       req.user.userId, notes || null, req.user.userId]
+    );
+
+    await logActivity(req.user.userId, 'SESSION_CREATED', 'club', clubId, {
+      session_id: result.rows[0].id,
+      date: session_date
+    });
+
+    res.status(201).json({ message: 'Занятие создано', session: result.rows[0] });
+  } catch (error) {
+    console.error('❌ Ошибка создания занятия:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== ПРАВКА ЗАНЯТИЯ =====
+app.patch('/api/sessions/:id', authenticate, async (req, res) => {
+  try {
+    const found = await pool.query('SELECT * FROM club_sessions WHERE id = $1', [req.params.id]);
+    if (found.rows.length === 0) return res.status(404).json({ error: 'Занятие не найдено' });
+    const session = found.rows[0];
+
+    if (!MOVEMENT_ROLES.includes(req.user.role) &&
+        !(await canInClub(req.user, session.club_id, 'manage_sessions'))) {
+      return res.status(403).json({ error: 'Нет права менять занятия этого КЮДа' });
+    }
+
+    const { session_date, topic, location, started_at, duration_minutes, status, cancel_reason, notes } = req.body || {};
+
+    if (status && !['planned', 'held', 'cancelled'].includes(status)) {
+      return res.status(400).json({ error: 'Неизвестное состояние занятия' });
+    }
+    // Отменённое занятие без причины — это просто пропавшее занятие
+    if (status === 'cancelled' && !String(cancel_reason || '').trim()) {
+      return res.status(400).json({
+        error: 'Укажите, почему занятие не состоялось',
+        code: 'CANCEL_REASON_REQUIRED'
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE club_sessions
+       SET session_date = COALESCE($1, session_date),
+           topic = COALESCE($2, topic),
+           location = COALESCE($3, location),
+           started_at = COALESCE($4, started_at),
+           duration_minutes = COALESCE($5, duration_minutes),
+           status = COALESCE($6, status),
+           cancel_reason = CASE WHEN $6 = 'cancelled' THEN $7 ELSE NULL END,
+           notes = COALESCE($8, notes),
+           updated_at = NOW()
+       WHERE id = $9
+       RETURNING *`,
+      [session_date || null, topic || null, location || null, started_at || null,
+       duration_minutes || null, status || null, cancel_reason || null,
+       notes || null, req.params.id]
+    );
+
+    await logActivity(req.user.userId, 'SESSION_UPDATED', 'club', session.club_id, {
+      session_id: req.params.id,
+      status: result.rows[0].status
+    });
+
+    res.json({ message: 'Занятие обновлено', session: result.rows[0] });
+  } catch (error) {
+    console.error('❌ Ошибка изменения занятия:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== УДАЛЕНИЕ ЗАНЯТИЯ =====
+// Удалить можно только пустое занятие. Если посещаемость уже отмечена,
+// удаление стёрло бы историю присутствия детей — такое занятие
+// отменяется с указанием причины и остаётся в журнале.
+app.delete('/api/sessions/:id', authenticate, async (req, res) => {
+  try {
+    const found = await pool.query('SELECT id, club_id, session_date FROM club_sessions WHERE id = $1', [req.params.id]);
+    if (found.rows.length === 0) return res.status(404).json({ error: 'Занятие не найдено' });
+    const session = found.rows[0];
+
+    if (!MOVEMENT_ROLES.includes(req.user.role) &&
+        !(await canInClub(req.user, session.club_id, 'manage_sessions'))) {
+      return res.status(403).json({ error: 'Нет права менять занятия этого КЮДа' });
+    }
+
+    const marks = await pool.query(
+      'SELECT COUNT(*)::int AS n FROM session_attendance WHERE session_id = $1',
+      [req.params.id]
+    );
+    if (marks.rows[0].n > 0) {
+      return res.status(409).json({
+        error: `По занятию уже отмечено участников: ${marks.rows[0].n}. Удалить нельзя — отмените занятие с указанием причины, оно останется в журнале.`,
+        code: 'SESSION_HAS_ATTENDANCE'
+      });
+    }
+
+    await pool.query('DELETE FROM club_sessions WHERE id = $1', [req.params.id]);
+    await logActivity(req.user.userId, 'SESSION_DELETED', 'club', session.club_id, {
+      date: session.session_date
+    });
+
+    res.json({ message: 'Занятие удалено' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления занятия:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== ЛИСТ ПОСЕЩАЕМОСТИ =====
+// Возвращаем всех участников клуба, а не только отмеченных: экран
+// отметки должен показать весь состав, иначе новенького забудут.
+app.get('/api/sessions/:id/attendance', authenticate, async (req, res) => {
+  try {
+    const found = await pool.query('SELECT * FROM club_sessions WHERE id = $1', [req.params.id]);
+    if (found.rows.length === 0) return res.status(404).json({ error: 'Занятие не найдено' });
+    const session = found.rows[0];
+
+    if (!(await canViewClubSessions(req.user, session.club_id))) {
+      return res.status(403).json({ error: 'Нет доступа к занятиям этого КЮДа' });
+    }
+
+    const rows = await pool.query(
+      `SELECT u.id AS participant_id, u.full_name, u.class_name, u.avatar_url,
+              a.status, a.comment, a.marked_at
+       FROM users u
+       LEFT JOIN session_attendance a ON a.participant_id = u.id AND a.session_id = $2
+       WHERE u.club_id = $1 AND u.role = 'participant' AND u.status = 'active'
+       ORDER BY u.full_name`,
+      [session.club_id, req.params.id]
+    );
+
+    res.json({ session, attendance: rows.rows });
+  } catch (error) {
+    console.error('❌ Ошибка получения посещаемости:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== СОХРАНЕНИЕ ОТМЕТОК =====
+// Отметки сохраняются пачкой и одной транзакцией: полузаполненный
+// журнал хуже пустого.
+app.put('/api/sessions/:id/attendance', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const found = await pool.query('SELECT * FROM club_sessions WHERE id = $1', [req.params.id]);
+    if (found.rows.length === 0) return res.status(404).json({ error: 'Занятие не найдено' });
+    const session = found.rows[0];
+
+    if (!MOVEMENT_ROLES.includes(req.user.role) &&
+        !(await canInClub(req.user, session.club_id, 'manage_sessions'))) {
+      return res.status(403).json({ error: 'Нет права отмечать посещаемость в этом КЮДе' });
+    }
+    if (session.status === 'cancelled') {
+      return res.status(400).json({ error: 'Занятие отменено — отмечать посещаемость нечего' });
+    }
+
+    const marks = Array.isArray(req.body?.attendance) ? req.body.attendance : [];
+    if (marks.length === 0) {
+      return res.status(400).json({ error: 'Нет отметок для сохранения' });
+    }
+    for (const m of marks) {
+      if (!m.participant_id || !ATTENDANCE_STATUSES.includes(m.status)) {
+        return res.status(400).json({ error: 'Неизвестный статус посещения' });
+      }
+    }
+
+    // Отмечать можно только участников этого клуба
+    const allowed = await pool.query(
+      `SELECT id FROM users WHERE club_id = $1 AND role = 'participant' AND id = ANY($2)`,
+      [session.club_id, marks.map((m) => m.participant_id)]
+    );
+    const allowedIds = new Set(allowed.rows.map((r) => r.id));
+    const clean = marks.filter((m) => allowedIds.has(m.participant_id));
+    if (clean.length === 0) {
+      return res.status(400).json({ error: 'Среди отмеченных нет участников этого КЮДа' });
+    }
+
+    await client.query('BEGIN');
+    for (const m of clean) {
+      await client.query(
+        `INSERT INTO session_attendance (session_id, participant_id, status, comment, marked_by, marked_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())
+         ON CONFLICT (session_id, participant_id) DO UPDATE
+         SET status = EXCLUDED.status, comment = EXCLUDED.comment,
+             marked_by = EXCLUDED.marked_by, marked_at = NOW()`,
+        [req.params.id, m.participant_id, m.status, m.comment || null, req.user.userId]
+      );
+    }
+    // Отметили посещаемость — значит занятие состоялось
+    if (session.status === 'planned') {
+      await client.query(
+        `UPDATE club_sessions SET status = 'held', conducted_by = COALESCE(conducted_by, $2), updated_at = NOW()
+         WHERE id = $1`,
+        [req.params.id, req.user.userId]
+      );
+    }
+    await client.query('COMMIT');
+
+    await logActivity(req.user.userId, 'ATTENDANCE_MARKED', 'club', session.club_id, {
+      session_id: req.params.id,
+      marked: clean.length
+    });
+
+    res.json({ message: 'Посещаемость сохранена', marked: clean.length });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Ошибка сохранения посещаемости:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  } finally {
+    client.release();
+  }
+});
+
+// ===== ПОСЕЩАЕМОСТЬ ОДНОГО УЧАСТНИКА =====
+app.get('/api/participants/:id/attendance', authenticate, async (req, res) => {
+  try {
+    if (!(await canViewParticipant(req.user, req.params.id))) {
+      return res.status(403).json({ error: 'Нет доступа к данным этого участника' });
+    }
+
+    const params = [req.params.id];
+    let period = '';
+    if (req.query.from) { params.push(req.query.from); period += ` AND s.session_date >= $${params.length}`; }
+    if (req.query.to)   { params.push(req.query.to);   period += ` AND s.session_date <= $${params.length}`; }
+
+    const rows = await pool.query(
+      `SELECT s.id AS session_id, s.session_date, s.topic, s.status AS session_status,
+              a.status, a.comment
+       FROM club_sessions s
+       JOIN users u ON u.club_id = s.club_id AND u.id = $1
+       LEFT JOIN session_attendance a ON a.session_id = s.id AND a.participant_id = $1
+       WHERE s.status = 'held'${period}
+       ORDER BY s.session_date DESC
+       LIMIT 100`,
+      params
+    );
+
+    const held = rows.rows.length;
+    const visited = rows.rows.filter((r) => r.status === 'present' || r.status === 'late').length;
+
+    res.json({
+      sessions: rows.rows,
+      summary: {
+        held,
+        visited,
+        percentage: held === 0 ? null : Math.round((visited / held) * 100)
+      }
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения посещаемости участника:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== СВОДКА ПО КЛУБУ ЗА МЕСЯЦ =====
+// Из неё берутся цифры для отчёта КЮДа, чтобы руководителю не
+// приходилось вспоминать их по памяти.
+app.get('/api/clubs/:clubId/attendance-summary', authenticate, async (req, res) => {
+  try {
+    const { clubId } = req.params;
+    if (!(await canViewClubSessions(req.user, clubId))) {
+      return res.status(403).json({ error: 'Нет доступа к занятиям этого КЮДа' });
+    }
+
+    const month = String(req.query.month || '').trim();
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({ error: 'Нужен месяц в виде ГГГГ-ММ' });
+    }
+
+    const result = await pool.query(
+      `WITH held AS (
+         SELECT s.id
+         FROM club_sessions s
+         WHERE s.club_id = $1 AND s.status = 'held'
+           AND to_char(s.session_date, 'YYYY-MM') = $2
+       )
+       SELECT
+         (SELECT COUNT(*)::int FROM held) AS sessions_held,
+         (SELECT COUNT(*)::int FROM club_sessions s
+           WHERE s.club_id = $1 AND s.status = 'cancelled'
+             AND to_char(s.session_date, 'YYYY-MM') = $2) AS sessions_cancelled,
+         (SELECT COUNT(DISTINCT a.participant_id)::int
+            FROM session_attendance a
+           WHERE a.session_id IN (SELECT id FROM held)
+             AND a.status IN ('present', 'late')) AS unique_participants,
+         (SELECT COUNT(*)::int FROM session_attendance a
+           WHERE a.session_id IN (SELECT id FROM held)
+             AND a.status IN ('present', 'late')) AS total_visits`,
+      [clubId, month]
+    );
+
+    const row = result.rows[0];
+    res.json({
+      month,
+      sessions_held: row.sessions_held,
+      sessions_cancelled: row.sessions_cancelled,
+      unique_participants: row.unique_participants,
+      total_visits: row.total_visits,
+      average_attendance: row.sessions_held === 0
+        ? null
+        : Math.round((row.total_visits / row.sessions_held) * 10) / 10
+    });
+  } catch (error) {
+    console.error('❌ Ошибка сводки посещаемости:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
 // ============================================================
 // ОБРАБОТКА ОШИБОК CORS
 // ============================================================

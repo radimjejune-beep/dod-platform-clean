@@ -1263,6 +1263,16 @@ export const createParentInvitation = async (participantId) => {
   return response.json();
 };
 
+// Приглашения сразу по всему КЮДу: по одному на участника — это два
+// десятка ссылок руками в каждом клубе.
+export const createClubParentInvitations = async (clubId) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/parent-invitations`, {
+    method: 'POST',
+    headers: headers()
+  });
+  return response.json();
+};
+
 export const getParentInvitations = async (participantId) => {
   const response = await fetch(`${API_URL}/participants/${participantId}/parent-invitations`, {
     method: 'GET',
@@ -1523,6 +1533,7 @@ const api = {
   restoreClub,
   issueCredentials,
   createParentInvitation,
+  createClubParentInvitations,
   getParentInvitations,
   revokeParentInvitation,
   createMyParentCode,

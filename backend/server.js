@@ -8000,6 +8000,92 @@ app.delete('/api/event-tutor-assignments/:id', authenticate, requireAdminOrCoord
   }
 });
 
+
+// ============================================================
+// ПРИГЛАШЕНИЯ РОДИТЕЛЯМ — СРАЗУ ПО ВСЕМУ КЮДУ
+// ============================================================
+// По одному приглашению на участника — это двадцать ссылок руками в
+// клубе средней величины и больше девятисот по всему движению. Здесь
+// они выпускаются пачкой, и руководитель получает готовый список
+// «ФИО ребёнка → ссылка для родителя», который можно разослать или
+// распечатать.
+//
+// Те, у кого представитель уже привязан, пропускаются: выпускать им
+// приглашение незачем.
+app.post('/api/clubs/:clubId/parent-invitations', authenticate, async (req, res) => {
+  try {
+    const { clubId } = req.params;
+
+    if (!MOVEMENT_ROLES.includes(req.user.role) &&
+        !(await canInClub(req.user, clubId, 'manage_participants'))) {
+      return res.status(403).json({ error: 'Нет права приглашать родителей в этом КЮДе' });
+    }
+
+    const club = await pool.query('SELECT id, name FROM clubs WHERE id = $1', [clubId]);
+    if (club.rows.length === 0) {
+      return res.status(404).json({ error: 'КЮД не найден' });
+    }
+
+    const participants = await pool.query(
+      `SELECT u.id, u.full_name, u.parent_full_name, u.parent_email, u.parent_phone,
+              EXISTS (SELECT 1 FROM child_parent cp
+                       WHERE cp.child_id = u.id AND cp.status = 'active') AS has_parent
+       FROM users u
+       WHERE u.club_id = $1 AND u.role = 'participant' AND u.status = 'active'
+       ORDER BY u.full_name`,
+      [clubId]
+    );
+
+    const issued = [];
+    const skipped = [];
+
+    for (const p of participants.rows) {
+      if (p.has_parent) {
+        skipped.push({ id: p.id, full_name: p.full_name, reason: 'представитель уже привязан' });
+        continue;
+      }
+      const token = generateInviteToken();
+      const invitation = await issueParentInvitation({
+        childId: p.id,
+        source: 'staff',
+        token,
+        ttlHours: PARENT_INVITE_TTL_HOURS,
+        createdBy: req.user.userId,
+        hints: {
+          full_name: p.parent_full_name,
+          email: p.parent_email,
+          phone: p.parent_phone
+        }
+      });
+      issued.push({
+        participant_id: p.id,
+        child_name: p.full_name,
+        parent_hint: p.parent_full_name || null,
+        parent_phone: p.parent_phone || null,
+        token,
+        path: `/parent-join?token=${token}`,
+        expires_at: invitation.expires_at
+      });
+    }
+
+    await logActivity(req.user.userId, 'PARENT_INVITATIONS_BULK', 'club', clubId, {
+      club: club.rows[0].name,
+      issued: issued.length,
+      skipped: skipped.length
+    });
+
+    res.status(201).json({
+      message: `Выпущено приглашений: ${issued.length}`,
+      club_name: club.rows[0].name,
+      issued,
+      skipped
+    });
+  } catch (error) {
+    console.error('❌ Ошибка массового выпуска приглашений:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
 // ============================================================
 // ОБРАБОТКА ОШИБОК CORS
 // ============================================================

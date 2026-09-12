@@ -221,7 +221,7 @@ export default function CoordinatorDashboard() {
                 </button>
               )}
               {stats.consentsPending > 0 && (
-                <button className="btn-primary" style={{ padding: '4px 16px', fontSize: '12px' }} onClick={() => navigate('/consents-management')}>
+                <button className="btn-primary" style={{ padding: '4px 16px', fontSize: '12px', background: 'var(--color-primary-light)', color: 'white' }} onClick={() => navigate('/consents-management')}>
                   Согласия
                 </button>
               )}
@@ -359,7 +359,7 @@ export default function CoordinatorDashboard() {
               <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/mass-notifications')}>
                 Массовые уведомления
               </button>
-              <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/consents-management')}>
+              <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', background: 'var(--color-primary-light)', color: 'white' }} onClick={() => navigate('/consents-management')}>
                 Управление согласиями
               </button>
               <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', background: 'var(--color-gold)', color: 'var(--color-primary)' }} onClick={() => navigate('/documents-center')}>

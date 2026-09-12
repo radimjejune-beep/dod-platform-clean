@@ -468,6 +468,13 @@ export default function Participants() {
                       <span className="card-label">Клуб</span>
                       <span className="card-value">{p.club_name || '—'}</span>
                     </div>
+                    {/* На узком экране открываются карточки, а не таблица —
+                        без этой строки руководитель с телефона не увидел бы,
+                        кого нельзя брать на форум */}
+                    <div className="card-info">
+                      <span className="card-label">К выезду</span>
+                      <span className="card-value"><TripReadiness participant={p} compact /></span>
+                    </div>
                   </div>
                   <div className="card-footer">
                     <span className={`status-badge ${p.status === 'active' ? 'active' : 'inactive'}`}>

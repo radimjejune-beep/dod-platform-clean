@@ -581,7 +581,7 @@ export default function StaffManagement() {
                             {s.full_name}
                           </div>
                           <div style={{ fontSize: '12px', color: 'var(--color-gray-500)' }}>
-                            {s.role} • {s.position || 'Должность не указана'}
+                            {roleLabel(s.role)} • {s.position || 'Должность не указана'}
                           </div>
                         </div>
                       ))}

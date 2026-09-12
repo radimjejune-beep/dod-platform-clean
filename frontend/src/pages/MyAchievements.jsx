@@ -51,6 +51,8 @@ export default function MyAchievements() {
 
   const stats = getStats();
 
+  // Функция возвращает ИМЯ значка, а не сам значок: раньше тут были эмодзи,
+  // и после их замены имя стало печататься текстом — «trophy Участие»
   const getCategoryIcon = (category) => {
     const icons = {
       'Участие': 'target',
@@ -102,8 +104,13 @@ export default function MyAchievements() {
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
                 {Object.entries(stats.categories).map(([category, count]) => (
-                  <span key={category} className="tag tag-blue">
-                    {getCategoryIcon(category)} {category}: {count}
+                  <span
+                    key={category}
+                    className="tag tag-blue"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                  >
+                    <Icon name={getCategoryIcon(category)} size={13} />
+                    {category}: {count}
                   </span>
                 ))}
               </div>
@@ -165,8 +172,12 @@ export default function MyAchievements() {
                         year: 'numeric'
                       })}</span>
                       {item.category && (
-                        <span className="tag tag-blue">
-                          {getCategoryIcon(item.category)} {item.category}
+                        <span
+                          className="tag tag-blue"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                        >
+                          <Icon name={getCategoryIcon(item.category)} size={13} />
+                          {item.category}
                         </span>
                       )}
                     </div>

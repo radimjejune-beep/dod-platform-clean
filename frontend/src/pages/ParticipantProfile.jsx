@@ -260,8 +260,8 @@ export default function ParticipantProfile() {
               )}
               {canEdit && profile?.role === 'admin' && (
                 <button
-                  className="btn-secondary"
-                  style={{ padding: '8px 16px', fontSize: '13px', background: 'var(--color-primary-light)', color: 'white', border: 'none' }}
+                  className="btn-primary"
+                  style={{ padding: '8px 16px', fontSize: '13px' }}
                   onClick={() => setShowAssignModal(true)}
                 >
                   Прикрепить к КЮДу

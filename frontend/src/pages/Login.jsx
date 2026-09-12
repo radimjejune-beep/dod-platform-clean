@@ -150,7 +150,7 @@ export default function Login() {
     const routes = {
       'participant': '/participant-dashboard',
       'parent': '/parent-dashboard',
-      'club_coordinator': '/club-coordinator-dashboard',
+      'club_coordinator': '/dashboard',
       'tutor': '/tutor-dashboard',
       'admin': '/dashboard',
       'movement_coordinator': '/dashboard',

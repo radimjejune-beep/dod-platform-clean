@@ -1341,7 +1341,6 @@ export default function Events() {
                         <>
                           <button
                             className="btn-primary btn-sm"
-                            style={{ background: 'var(--color-primary-light)', color: 'white' }}
                             onClick={async () => {
                               setSelectedEventForRegistrations(event);
                               await loadRegistrations(event.id);
@@ -1362,7 +1361,6 @@ export default function Events() {
                       {canAssignTutorLocal && (
                         <button
                           className="btn-primary btn-sm"
-                          style={{ background: 'var(--color-primary-light)', color: 'white' }}
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedEventForTutor(event);

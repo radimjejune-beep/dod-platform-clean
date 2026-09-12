@@ -9,9 +9,16 @@ import AssignClubModal from '../components/AssignClubModal';
 import * as XLSX from 'xlsx';
 import Icon from '../components/Icon';
 import { roleLabel } from '../lib/roles';
+import { countOf } from '../lib/format';
 
 export default function AdminUsers() {
   const [profile, setProfile] = useState(null);
+  // Отметки для удаления пачкой: при переводе клубов и чистке проверочных
+  // записей удалять по одному — занятие на полчаса
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [deleteTargets, setDeleteTargets] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteReport, setDeleteReport] = useState(null);
   const [users, setUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [clubs, setClubs] = useState([]);
@@ -163,30 +170,93 @@ export default function AdminUsers() {
   // сервер отказывался такой адрес принимать. Теперь адрес выдаёт сервер:
   // он же следит за тем, чтобы логин не повторялся.
 
-  const handleDeleteUser = async (userId, fullName) => {
+  // Себя удалить нельзя: админ остался бы без доступа к платформе
+  const deletableUsers = filteredUsers.filter((u) => u.id !== profile?.id);
+  const selectedUsers = allUsers.filter((u) => selectedIds.has(u.id));
+  const allVisibleChecked =
+    deletableUsers.length > 0 && deletableUsers.every((u) => selectedIds.has(u.id));
+
+  const toggleOne = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllVisible = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleChecked) deletableUsers.forEach((u) => next.delete(u.id));
+      else deletableUsers.forEach((u) => next.add(u.id));
+      return next;
+    });
+  };
+
+  const askDelete = (users) => {
     if (!isAdmin) {
       setMessage('У вас нет прав для удаления пользователей');
       setMessageType('error');
       setTimeout(() => setMessage(''), 3000);
       return;
     }
+    if (!users.length) return;
+    setDeleteReport(null);
+    setDeleteTargets(users);
+  };
 
-    if (!confirm(`Вы уверены, что хотите удалить пользователя "${fullName}"?`)) return;
+  // Подтверждение внутри страницы, а не системным окном: при удалении
+  // пачкой нужно видеть поимённо, кого удаляешь.
+  const confirmDelete = async () => {
+    if (!deleteTargets?.length) return;
+    setDeleting(true);
 
-    try {
-      const result = await api.deleteUser(userId);
-      if (result.error) throw new Error(api.describeApiError(result, 'Не удалось удалить пользователя'));
+    const deleted = [];
+    const failed = [];
 
-      setMessage(`Пользователь "${fullName}" удалён`);
+    // По одному, а не разом: сервер отказывает в удалении тех, за кем
+    // числятся отчёты или выданные достижения, и по каждому нужна причина
+    for (const user of deleteTargets) {
+      try {
+        const result = await api.deleteUser(user.id);
+        if (result?.error) {
+          failed.push({
+            user,
+            reason: api.describeApiError(result, 'Не удалось удалить')
+          });
+        } else {
+          deleted.push(user);
+        }
+      } catch (err) {
+        failed.push({ user, reason: err.message || 'Не удалось удалить' });
+      }
+    }
+
+    const usersData = await api.getUsers();
+    setAllUsers(usersData || []);
+    setUsers(usersData || []);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      deleted.forEach((u) => next.delete(u.id));
+      return next;
+    });
+
+    setDeleting(false);
+    setDeleteTargets(null);
+
+    if (failed.length === 0) {
+      setDeleteTargets(null);
+      setDeleteReport(null);
+      setMessage(
+        deleted.length === 1
+          ? `Пользователь «${deleted[0].full_name}» удалён`
+          : `Удалено: ${countOf(deleted.length, 'пользователь', 'пользователя', 'пользователей')}`
+      );
       setMessageType('success');
-
-      const usersData = await api.getUsers();
-      setAllUsers(usersData || []);
-      setUsers(usersData || []);
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
-      setMessage('Ошибка: ' + err.message);
-      setMessageType('error');
+      setTimeout(() => setMessage(''), 4000);
+    } else {
+      // Часть могла удалиться, часть нет — показываем разбор поимённо
+      setDeleteReport({ deleted, failed });
     }
   };
 
@@ -870,10 +940,48 @@ export default function AdminUsers() {
           </div>
         )}
 
+        {isAdmin && selectedIds.size > 0 && (
+          <div
+            className="message"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              flexWrap: 'wrap',
+              background: 'var(--color-gold-pale)',
+              borderLeftColor: 'var(--color-gold)'
+            }}
+          >
+            <strong>
+              Отмечено: {countOf(selectedIds.size, 'пользователь', 'пользователя', 'пользователей')}
+            </strong>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button className="btn-outline btn-sm" onClick={() => setSelectedIds(new Set())}>
+                Снять отметки
+              </button>
+              <button className="btn-danger btn-sm" onClick={() => askDelete(selectedUsers)}>
+                <Icon name="trash" size={14} />
+                Удалить отмеченных
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="table-wrapper">
           <table>
             <thead>
               <tr>
+                {isAdmin && (
+                  <th style={{ width: '36px' }}>
+                    <input
+                      type="checkbox"
+                      checked={allVisibleChecked}
+                      onChange={toggleAllVisible}
+                      title="Отметить всех в списке"
+                      aria-label="Отметить всех в списке"
+                    />
+                  </th>
+                )}
                 <th>ФИО</th>
                 <th>Email</th>
                 <th>Роль</th>
@@ -884,10 +992,24 @@ export default function AdminUsers() {
             </thead>
             <tbody>
               {filteredUsers.length === 0 ? (
-                <tr><td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: 'var(--color-gray-500)' }}>Пользователей не найдено</td></tr>
+                <tr><td colSpan={isAdmin ? 7 : 6} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-gray-500)' }}>Пользователей не найдено</td></tr>
               ) : (
                 filteredUsers.map((u) => (
-                  <tr key={u.id}>
+                  <tr key={u.id} style={selectedIds.has(u.id) ? { background: 'var(--color-gold-pale)' } : undefined}>
+                    {isAdmin && (
+                      <td>
+                        {u.id === profile?.id ? (
+                          <span title="Себя удалить нельзя" style={{ color: 'var(--color-gray-300)' }}>—</span>
+                        ) : (
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(u.id)}
+                            onChange={() => toggleOne(u.id)}
+                            aria-label={`Отметить ${u.full_name}`}
+                          />
+                        )}
+                      </td>
+                    )}
                     <td style={{ fontWeight: '500' }}>{u.full_name}</td>
                     <td style={{ color: 'var(--color-gray-500)' }}>{u.email}</td>
                     <td>{roleLabel(u.role)}</td>
@@ -945,7 +1067,7 @@ export default function AdminUsers() {
 
                             <button
                               className="btn-ghost btn-sm btn-icon row-action-danger"
-                              onClick={() => handleDeleteUser(u.id, u.full_name)}
+                              onClick={() => askDelete([u])}
                               title="Удалить пользователя"
                               aria-label="Удалить пользователя"
                             >
@@ -962,6 +1084,97 @@ export default function AdminUsers() {
           </table>
         </div>
       </div>
+
+      {/* Подтверждение удаления. Системное окно браузера показывает только
+          строку текста — для пачки нужно видеть поимённо, кого удаляешь. */}
+      {deleteTargets && (
+        <div className="modal-overlay" onClick={() => !deleting && setDeleteTargets(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                {deleteTargets.length === 1
+                  ? 'Удалить пользователя?'
+                  : `Удалить ${countOf(deleteTargets.length, 'пользователя', 'пользователей', 'пользователей')}?`}
+              </h3>
+            </div>
+
+            <p style={{ color: 'var(--color-gray-600)', marginBottom: '12px' }}>
+              Учётные записи будут удалены безвозвратно. Мероприятия, отчёты и
+              достижения, которые эти люди создавали, останутся — у них просто
+              пропадёт автор.
+            </p>
+
+            <div style={{
+              maxHeight: '220px',
+              overflowY: 'auto',
+              border: '1px solid var(--color-gray-200)',
+              borderRadius: 'var(--radius)',
+              padding: '8px 12px',
+              marginBottom: '16px'
+            }}>
+              {deleteTargets.map((u) => (
+                <div key={u.id} style={{ padding: '4px 0', fontSize: '14px' }}>
+                  {u.full_name}
+                  <span style={{ color: 'var(--color-gray-500)' }}> · {roleLabel(u.role)}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="modal-actions">
+              <button className="btn-danger" onClick={confirmDelete} disabled={deleting}>
+                {deleting ? 'Удаляем…' : 'Удалить'}
+              </button>
+              <button className="btn-outline" onClick={() => setDeleteTargets(null)} disabled={deleting}>
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Разбор: часть могла удалиться, часть нет */}
+      {deleteReport && (
+        <div className="modal-overlay" onClick={() => setDeleteReport(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Удалились не все</h3>
+              <button className="modal-close" onClick={() => setDeleteReport(null)}>
+                <Icon name="close" />
+              </button>
+            </div>
+
+            {deleteReport.deleted.length > 0 && (
+              <div className="message message-success">
+                Удалено: {countOf(deleteReport.deleted.length, 'пользователь', 'пользователя', 'пользователей')}
+              </div>
+            )}
+
+            <p style={{ color: 'var(--color-gray-600)', margin: '12px 0 8px' }}>
+              Этих удалить не получилось:
+            </p>
+            <div style={{
+              maxHeight: '240px',
+              overflowY: 'auto',
+              border: '1px solid var(--color-gray-200)',
+              borderRadius: 'var(--radius)',
+              padding: '8px 12px'
+            }}>
+              {deleteReport.failed.map(({ user, reason }) => (
+                <div key={user.id} style={{ padding: '6px 0', fontSize: '14px' }}>
+                  <div style={{ fontWeight: '500' }}>{user.full_name}</div>
+                  <div style={{ color: 'var(--color-error)', fontSize: '13px' }}>{reason}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="modal-actions">
+              <button className="btn-primary" onClick={() => setDeleteReport(null)}>
+                Понятно
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <AssignClubModal
         isOpen={showAssignModal}

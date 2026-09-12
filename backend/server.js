@@ -29,6 +29,7 @@ import {
   eventSchema, 
   userSchema, 
   userUpdateSchema,
+  clubEscortSchema,
   clubThreadSchema,
   clubThreadReplySchema,
   registrationSchema,
@@ -7326,6 +7327,114 @@ async function setUserClub(userId, clubId, executor = pool) {
 
   invalidateUserCache(userId);
 }
+
+// ============================================================
+// СОПРОВОЖДАЮЩИЕ ВЗРОСЛЫЕ КЮДА
+// ============================================================
+// На каждый форум ФИО, телефон и организацию сопровождающего вбивали
+// заново — нигде он не хранился. Учётной записи ему не заводим: делать
+// ему в платформе нечего. Это справочник клуба, без входа и без прав.
+
+app.get('/api/clubs/:clubId/escorts', authenticate, async (req, res) => {
+  try {
+    const perms = await getClubPermissions(req.user, req.params.clubId);
+    if (!perms.form_team && !perms.view_participants) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    const result = await pool.query(
+      `SELECT id, full_name, phone, organization, relation, comment, created_at
+         FROM club_escorts
+        WHERE club_id = $1 AND archived_at IS NULL
+        ORDER BY full_name`,
+      [req.params.clubId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения сопровождающих:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.post('/api/clubs/:clubId/escorts', authenticate, validateBody(clubEscortSchema), async (req, res) => {
+  try {
+    const perms = await getClubPermissions(req.user, req.params.clubId);
+    if (!perms.form_team) {
+      return res.status(403).json({
+        error: 'Вести список сопровождающих может руководитель КЮДа или его заместитель'
+      });
+    }
+
+    const { full_name, phone, organization, relation, comment } = req.validatedBody;
+    const result = await pool.query(
+      `INSERT INTO club_escorts (club_id, full_name, phone, organization, relation, comment, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [
+        req.params.clubId,
+        full_name.trim(),
+        phone || '',
+        organization || '',
+        relation || '',
+        comment || '',
+        req.user.userId
+      ]
+    );
+
+    await logActivity(req.user.userId, 'CLUB_ESCORT_ADDED', 'club', req.params.clubId, {
+      full_name: full_name.trim()
+    });
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка добавления сопровождающего:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.patch('/api/clubs/:clubId/escorts/:escortId', authenticate, validateBody(clubEscortSchema), async (req, res) => {
+  try {
+    const perms = await getClubPermissions(req.user, req.params.clubId);
+    if (!perms.form_team) return res.status(403).json({ error: 'Недостаточно прав' });
+
+    const { full_name, phone, organization, relation, comment } = req.validatedBody;
+    const result = await pool.query(
+      `UPDATE club_escorts
+          SET full_name = $1, phone = $2, organization = $3, relation = $4, comment = $5
+        WHERE id = $6 AND club_id = $7 AND archived_at IS NULL
+        RETURNING *`,
+      [full_name.trim(), phone || '', organization || '', relation || '', comment || '',
+       req.params.escortId, req.params.clubId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Сопровождающий не найден' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка правки сопровождающего:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Убираем из списка, но не из базы: в поданных заявках этот человек есть
+app.delete('/api/clubs/:clubId/escorts/:escortId', authenticate, async (req, res) => {
+  try {
+    const perms = await getClubPermissions(req.user, req.params.clubId);
+    if (!perms.form_team) return res.status(403).json({ error: 'Недостаточно прав' });
+
+    const result = await pool.query(
+      `UPDATE club_escorts SET archived_at = NOW()
+        WHERE id = $1 AND club_id = $2 AND archived_at IS NULL RETURNING id`,
+      [req.params.escortId, req.params.clubId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Сопровождающий не найден' });
+    }
+    res.json({ message: 'Убран из списка' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления сопровождающего:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
 
 // ============================================================
 // ПЕРЕПИСКА МЕЖДУ КЮДАМИ

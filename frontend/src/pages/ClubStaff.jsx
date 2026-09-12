@@ -11,6 +11,7 @@ import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 import ClubParentInvites from '../components/ClubParentInvites';
+import ClubEscorts from '../components/ClubEscorts';
 
 const POSITIONS = [
   { code: 'head', label: 'Руководитель КЮДа', hint: 'Отвечает за клуб целиком. Один на клуб.' },
@@ -398,6 +399,10 @@ export default function ClubStaff() {
         {/* Согласия за участников оформляют родители, а для этого у
             каждого должен быть свой вход. Кнопка стоит здесь, потому что
             это экран, где руководитель ведёт свой КЮД. */}
+        {/* Сопровождающие видны всем сотрудникам клуба, править может
+            руководитель и заместитель — те же, кто собирает команду */}
+        <ClubEscorts clubId={clubId} canManage={canManage || myPosition === 'deputy'} />
+
         {canManage && (
           <ClubParentInvites clubId={clubId} clubName={club?.name} />
         )}

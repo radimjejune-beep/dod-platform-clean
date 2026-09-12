@@ -217,6 +217,31 @@ export const describeApiError = (result, fallback = 'Неизвестная ош
 };
 
 // ============================================================
+// СОПРОВОЖДАЮЩИЕ ВЗРОСЛЫЕ КЮДА
+// ============================================================
+export const getClubEscorts = async (clubId) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/escorts`, { headers: headers() });
+  return toArray(await response.json());
+};
+
+export const addClubEscort = async (clubId, data) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/escorts`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const removeClubEscort = async (clubId, escortId) => {
+  const response = await fetch(`${API_URL}/clubs/${clubId}/escorts/${escortId}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+// ============================================================
 // ПЕРЕПИСКА МЕЖДУ КЮДАМИ
 // ============================================================
 export const getClubThreads = async () => {
@@ -1664,6 +1689,10 @@ const api = {
   getUsers,
   getParticipants,
   createUser,
+  getClubEscorts,
+  addClubEscort,
+  removeClubEscort,
+
   getClubThreads,
   getClubThread,
   getClubRecipients,

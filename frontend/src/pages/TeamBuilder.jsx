@@ -40,6 +40,9 @@ export default function TeamBuilder() {
   const [search, setSearch] = useState('');
   const [showEscortForm, setShowEscortForm] = useState(false);
   const [escort, setEscort] = useState(EMPTY_ESCORT);
+  // Справочник сопровождающих клуба: чтобы не набирать одного и того же
+  // человека заново на каждый форум
+  const [knownEscorts, setKnownEscorts] = useState([]);
   const [docFor, setDocFor] = useState(null);
   const [docForm, setDocForm] = useState({ document_type: 'birth_certificate', series_number: '', issued_by: '', issued_at: '' });
 
@@ -86,6 +89,7 @@ export default function TeamBuilder() {
         .map((p) => ({ ...p, missing_consents: missingMap[p.id] || [] }));
 
       setCandidates(list);
+      setKnownEscorts(await api.getClubEscorts(data.club_id));
     } catch (err) {
       console.error('❌ Ошибка загрузки команды:', err);
       setMessage(err.message);
@@ -404,6 +408,36 @@ export default function TeamBuilder() {
 
                   {showEscortForm && (
                     <form onSubmit={addEscort} style={{ marginTop: '12px' }}>
+                      {knownEscorts.length > 0 && (
+                        <div className="form-group">
+                          <label className="form-label">Выбрать из списка КЮДа</label>
+                          <select
+                            className="form-input"
+                            value=""
+                            onChange={(e) => {
+                              const found = knownEscorts.find((k) => k.id === e.target.value);
+                              if (!found) return;
+                              setEscort({
+                                ...escort,
+                                full_name: found.full_name,
+                                participant_phone: found.phone || '',
+                                school_full_name: found.organization || ''
+                              });
+                            }}
+                          >
+                            <option value="">Или заполните вручную ниже</option>
+                            {knownEscorts.map((k) => (
+                              <option key={k.id} value={k.id}>
+                                {k.full_name}{k.relation ? ` — ${k.relation}` : ''}
+                              </option>
+                            ))}
+                          </select>
+                          <small>
+                            Список ведётся на странице сотрудников КЮДа. Данные
+                            подставятся в поля ниже, их можно поправить.
+                          </small>
+                        </div>
+                      )}
                       <div className="form-group">
                         <label className="form-label">ФИО сопровождающего *</label>
                         <input className="form-input" value={escort.full_name}

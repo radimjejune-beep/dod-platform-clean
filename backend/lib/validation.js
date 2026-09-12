@@ -110,6 +110,21 @@ export const clubThreadReplySchema = Joi.object({
   })
 });
 
+// 1c. СОПРОВОЖДАЮЩИЙ ВЗРОСЛЫЙ В СПРАВОЧНИКЕ КЮДА
+export const clubEscortSchema = Joi.object({
+  full_name: Joi.string().min(3).max(255).required().messages({
+    'string.min': 'Укажите ФИО полностью',
+    'string.empty': 'ФИО обязательно',
+    'any.required': 'ФИО обязательно'
+  }),
+  phone: Joi.string().pattern(/^[\+\d\s\-\(\)]{10,20}$/).allow('', null).messages({
+    'string.pattern.base': 'Некорректный номер телефона'
+  }),
+  organization: Joi.string().max(300).allow('', null),
+  relation: Joi.string().max(120).allow('', null),
+  comment: Joi.string().max(1000).allow('', null)
+});
+
 // 2. СОБЫТИЕ
 export const eventSchema = Joi.object({
   title: Joi.string().min(3).max(200).required().messages({
@@ -331,6 +346,7 @@ export const validate = (schema, data) => {
 export default {
   userSchema,
   userUpdateSchema,
+  clubEscortSchema,
   clubThreadSchema,
   clubThreadReplySchema,
   eventSchema,

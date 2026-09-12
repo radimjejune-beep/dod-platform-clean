@@ -2,8 +2,27 @@
 
 import { useMemo } from 'react';
 
+// Пункты для конкретных ролей перечисляются вместе с общими, и некоторые
+// повторяются: у родителя «Мероприятия» и «Календарь» стояли в меню
+// дважды. Убираем повторы по адресу, оставляя пункт на первом месте, но с
+// названием из роли — родителю нужны «Достижения детей», а не «Мои
+// достижения».
+function dropDuplicates(items) {
+  const order = [];
+  const byPath = new Map();
+  for (const item of items) {
+    if (!byPath.has(item.path)) order.push(item.path);
+    byPath.set(item.path, { ...byPath.get(item.path), ...item });
+  }
+  return order.map((path) => byPath.get(path));
+}
+
 export function useMenuItems(profile) {
-  return useMemo(() => {
+  return useMemo(() => dropDuplicates(buildMenu(profile)), [profile]);
+}
+
+function buildMenu(profile) {
+  {
     if (!profile) return [];
 
     const role = profile.role;
@@ -178,7 +197,7 @@ export function useMenuItems(profile) {
     // ПО УМОЛЧАНИЮ
     // ============================================================
     return commonItems;
-  }, [profile]);
+  }
 }
 
 export default useMenuItems;

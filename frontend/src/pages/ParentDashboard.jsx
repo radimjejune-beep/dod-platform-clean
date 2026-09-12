@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { countOf } from '../lib/format';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -157,8 +158,8 @@ export default function ParentDashboard() {
           <div>
             <h1>Родительский кабинет</h1>
             <p>
-              {children.length > 0 
-                ? `У вас привязано ${children.length} ребёнок(а)` 
+              {children.length > 0
+                ? `У вас ${countOf(children.length, 'ребёнок', 'ребёнка', 'детей')} на платформе`
                 : 'У вас пока нет привязанных детей'}
             </p>
           </div>

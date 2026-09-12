@@ -7,6 +7,7 @@ import Navigation from '../components/Navigation';
 import FilterBar from '../components/FilterBar';
 import Footer from '../components/Footer';
 import Icon from '../components/Icon';
+import TripReadiness from '../components/TripReadiness';
 
 export default function Participants() {
   const [profile, setProfile] = useState(null);
@@ -352,13 +353,14 @@ export default function Participants() {
                   <th>Школа</th>
                   <th>Клуб</th>
                   <th>Статус</th>
+                  <th>К выезду</th>
                   <th style={{ textAlign: 'center' }}>Действия</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="empty-table">
+                    <td colSpan="7" className="empty-table">
                       <div className="empty-icon"><Icon name="eye" /></div>
                       <p>{isClubCoordinator ? 'В вашем клубе пока нет участников' : 'Участников не найдено'}</p>
                     </td>
@@ -386,6 +388,9 @@ export default function Participants() {
                           {p.status === 'active' ? 'Активен' : 'Неактивен'}
                         </span>
                       </td>
+                      {/* Дыры в данных видно заранее, а не в день подачи
+                          заявки на форум */}
+                      <td><TripReadiness participant={p} compact /></td>
                       <td>
                         <div className="action-buttons">
                           <button

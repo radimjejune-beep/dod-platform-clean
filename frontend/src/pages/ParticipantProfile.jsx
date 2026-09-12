@@ -7,6 +7,7 @@ import Navigation from '../components/Navigation';
 import AssignClubModal from '../components/AssignClubModal';
 import Icon from '../components/Icon';
 import ParentInviteCard from '../components/ParentInviteCard';
+import TripReadiness from '../components/TripReadiness';
 import AttendanceStrip from '../components/AttendanceStrip';
 
 export default function ParticipantProfile() {
@@ -428,7 +429,10 @@ export default function ParticipantProfile() {
             согласий он не поедет на мероприятия — поэтому блок стоит прямо
             в основной вкладке карточки, а не спрятан отдельной вкладкой */}
         {activeTab === 'info' && (
-          <ParentInviteCard participantId={participant.id} participantName={participant.full_name} />
+          <>
+            <TripReadiness participant={participant} />
+            <ParentInviteCard participantId={participant.id} participantName={participant.full_name} />
+          </>
         )}
 
         {/* Посещаемость занятий: три пропуска подряд видно сразу, а в

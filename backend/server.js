@@ -1019,7 +1019,8 @@ app.get('/api/users/:id', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
 
-    res.json(result.rows[0]);
+    const user = result.rows[0];
+    res.json(user.role === 'participant' ? withTripReadiness(user) : user);
   } catch (error) {
     console.error('❌ Ошибка получения карточки:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
@@ -1237,6 +1238,43 @@ app.get('/api/users', authenticate, async (req, res) => {
 // ============================================================
 // ПОЛУЧЕНИЕ УЧАСТНИКОВ
 // ============================================================
+// ============================================================
+// ГОТОВНОСТЬ УЧАСТНИКА К ВЫЕЗДУ
+// ============================================================
+// Чего не хватает, чтобы человека можно было включить в команду на
+// выездной форум. Раньше это выяснялось в день подачи заявки: заявка
+// просто отказывалась принимать участника, а почему — приходилось
+// догадываться. Считаем на сервере, чтобы карточка, список участников и
+// сама заявка говорили одно и то же.
+const TRIP_FIELDS = [
+  ['birth_date', 'дата рождения'],
+  ['city', 'город'],
+  ['school', 'учебное заведение'],
+  ['class_name', 'класс'],
+  ['phone', 'телефон участника'],
+  ['parent_full_name', 'ФИО родителя'],
+  ['parent_phone', 'телефон родителя']
+];
+
+function withTripReadiness(row) {
+  const missing = [];
+
+  if ((row.consents_required_given || 0) < (row.consents_required_total || 0)) {
+    missing.push('обязательные согласия');
+  }
+  if (!row.has_parent) {
+    missing.push('законный представитель');
+  }
+  for (const [field, label] of TRIP_FIELDS) {
+    const value = row[field];
+    if (value === null || value === undefined || String(value).trim() === '') {
+      missing.push(label);
+    }
+  }
+
+  return { ...row, trip_missing: missing, trip_ready: missing.length === 0 };
+}
+
 app.get('/api/participants', authenticate, async (req, res) => {
   try {
     const allowedRoles = ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'];
@@ -1253,6 +1291,7 @@ app.get('/api/participants', authenticate, async (req, res) => {
       SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school,
              u.class_name, u.birth_date, u.created_at, u.status, u.avatar_url,
              u.club_id, c.name as club_name,
+             u.city, u.parent_full_name, u.parent_phone,
              COALESCE(cs.given, '{}'::text[]) AS consents_given,
              COALESCE(cs.required_total, 0) AS consents_required_total,
              COALESCE(cs.required_given, 0) AS consents_required_given,
@@ -1303,7 +1342,7 @@ app.get('/api/participants', authenticate, async (req, res) => {
     query += ' ORDER BY u.full_name';
     
     const result = await pool.query(query, params);
-    res.json(result.rows);
+    res.json(result.rows.map(withTripReadiness));
   } catch (error) {
     console.error('❌ Ошибка:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });

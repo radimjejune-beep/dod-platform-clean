@@ -222,36 +222,58 @@ function isPasswordStrong(password) {
   return { valid: true };
 }
 
-function generateEmailFromName(fullName) {
-  const parts = fullName.trim().split(' ');
-  let login = '';
-  if (parts.length >= 2) {
-    const firstName = parts[0].toLowerCase();
-    const lastName = parts[parts.length - 1].toLowerCase();
-    const randomNum = Math.floor(Math.random() * 10000);
-    login = `${firstName}.${lastName}${randomNum}`;
-  } else {
-    login = `user${Math.floor(Math.random() * 100000)}`;
-  }
-  
-  const translit = {
-    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
-    'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
-    'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
-    'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
-    'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
-  };
-  
+// Логин собирается из имени, потому что почты у движения нет и адрес
+// нужен только для входа. Мягкий и твёрдый знаки отображаются в пустую
+// строку — а пустая строка ложна, поэтому прежняя проверка отправляла их
+// в ветку «оставить как есть», и в адресах оказывались русские буквы:
+// proverochnyy.roditelь5450@dod.local. Такой логин человек не наберёт.
+// Теперь проверяем наличие ключа, а всё, что не латиница и не цифра,
+// отбрасываем — в адрес попадает только то, что можно ввести с клавиатуры.
+const TRANSLIT = {
+  'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
+  'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+  'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+  'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+  'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+};
+
+function transliterate(value) {
   let result = '';
-  for (const char of login) {
-    if (translit[char]) {
-      result += translit[char];
+  for (const char of String(value).toLowerCase()) {
+    if (Object.prototype.hasOwnProperty.call(TRANSLIT, char)) {
+      result += TRANSLIT[char];
     } else {
       result += char;
     }
   }
-  
-  return `${result}@dod.local`;
+  // Оставляем только латиницу, цифры, точку и дефис
+  return result.replace(/[^a-z0-9.-]/g, '');
+}
+
+function generateEmailFromName(fullName) {
+  const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+  const randomNum = Math.floor(Math.random() * 10000);
+
+  // ФИО у нас пишут как «Фамилия Имя Отчество», поэтому берём первые два
+  // слова: nagoeva.rimma читается, а прежнее «первое и последнее» давало
+  // nagoeva.artagovna — фамилию с отчеством
+  let login = '';
+  if (parts.length >= 2) {
+    const surname = transliterate(parts[0]);
+    const name = transliterate(parts[1]);
+    if (surname || name) {
+      login = `${[surname, name].filter(Boolean).join('.')}${randomNum}`;
+    }
+  } else if (parts.length === 1) {
+    login = `${transliterate(parts[0])}${randomNum}`;
+  }
+
+  // Имя из одних небуквенных символов или пустое — остаётся запасной логин
+  if (!login || !/^[a-z]/.test(login)) {
+    login = `user${Math.floor(Math.random() * 100000)}`;
+  }
+
+  return `${login}@dod.local`;
 }
 
 async function createNotification(userId, type, title, message, link = null, priority = 'normal') {

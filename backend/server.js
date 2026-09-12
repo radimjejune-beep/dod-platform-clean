@@ -1403,7 +1403,7 @@ app.post('/api/achievements', authenticate, validateBody(achievementSchema), asy
     await createNotification(
       participant_id,
       'achievement',
-      '🏅 Новое достижение',
+      'Новое достижение',
       `Вам присвоено достижение: ${title}`,
       '/my-achievements'
     );
@@ -2071,7 +2071,7 @@ app.post('/api/appeals', authenticate, validateBody(appealSchema), async (req, r
     for (const admin of admins.rows) {
       await pool.query(
         `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
-         VALUES ($1, 'appeal', '📨 Новое обращение', $2, '/appeals', 'high', NOW())`,
+         VALUES ($1, 'appeal', 'Новое обращение', $2, '/appeals', 'high', NOW())`,
         [admin.id, `Новое обращение от координатора: ${subject.trim()}`]
       );
     }
@@ -2130,7 +2130,7 @@ app.post('/api/appeals/:id/reply', authenticate, async (req, res) => {
     if (appeal.coordinator_id) {
       await pool.query(
         `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
-         VALUES ($1, 'appeal', '📨 Ответ на обращение', $2, '/appeals', 'high', NOW())`,
+         VALUES ($1, 'appeal', 'Ответ на обращение', $2, '/appeals', 'high', NOW())`,
         [appeal.coordinator_id, `Получен ответ на ваше обращение: ${appeal.subject}`]
       );
     }
@@ -2615,7 +2615,7 @@ app.patch('/api/clubs/:clubId/president', authenticate, async (req, res) => {
     await createNotification(
       president_id,
       'president',
-      '👑 Вы назначены президентом клуба',
+      'Вы назначены президентом клуба',
       `Вам присвоена должность президента КЮДа`,
       '/president-tasks'
     );
@@ -2668,8 +2668,9 @@ app.get('/api/club-rating/:clubId', authenticate, async (req, res) => {
 
     const rating = result.rows.map((row, index) => ({
       ...row,
-      position: index + 1,
-      medal: index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : null
+      // Поле medal с эмодзи-медалями фронтенд никогда не читал, а позиция
+      // в рейтинге и так есть
+      position: index + 1
     }));
 
     res.json(rating);
@@ -3231,8 +3232,8 @@ app.patch('/api/reports/:id/submit', authenticate, async (req, res) => {
     await createNotification(
       userId,
       'report',
-      '📤 Отчёт отправлен на проверку',
-      `Вы отправили отчёт "${result.rows[0].title}" на проверку`,
+      'Отчёт отправлен на проверку',
+      `Отчёт за ${monthName(result.rows[0].report_month)} отправлен на проверку`,
       '/reports',
       'normal'
     );
@@ -3245,8 +3246,8 @@ app.patch('/api/reports/:id/submit', authenticate, async (req, res) => {
       await createNotification(
         admin.id,
         'report',
-        '📤 Новый отчёт на проверку',
-        `Отчёт "${result.rows[0].title}" (${clubName}) отправлен на проверку`,
+        'Новый отчёт на проверку',
+        `${clubName} отправил отчёт за ${monthName(result.rows[0].report_month)}`,
         '/reports',
         'high'
       );
@@ -3290,8 +3291,8 @@ app.patch('/api/reports/:id/approve', authenticate, async (req, res) => {
       await createNotification(
         report.created_by,
         'report',
-        '✅ Отчёт утверждён',
-        `Ваш отчёт "${result.rows[0].title}" утверждён!`,
+        'Отчёт утверждён',
+        `Отчёт за ${monthName(result.rows[0].report_month)} утверждён`,
         '/reports',
         'high'
       );
@@ -3306,8 +3307,8 @@ app.patch('/api/reports/:id/approve', authenticate, async (req, res) => {
         await createNotification(
           coord.profile_id,
           'report',
-          '✅ Отчёт утверждён',
-          `Отчёт "${result.rows[0].title}" утверждён!`,
+          'Отчёт утверждён',
+          `Отчёт за ${monthName(result.rows[0].report_month)} утверждён`,
           '/reports',
           'normal'
         );
@@ -3353,8 +3354,8 @@ app.patch('/api/reports/:id/reject', authenticate, async (req, res) => {
       await createNotification(
         report.created_by,
         'report',
-        '❌ Отчёт отклонён',
-        `Ваш отчёт "${result.rows[0].title}" отклонён. Причина: ${comment || 'Без комментария'}`,
+        'Отчёт отклонён',
+        `Отчёт за ${monthName(result.rows[0].report_month)} возвращён на доработку. Причина: ${comment || 'не указана'}`,
         '/reports',
         'high'
       );
@@ -4000,7 +4001,7 @@ app.post('/api/event-registrations', authenticate, async (req, res) => {
       for (const coord of coordinators.rows) {
         await pool.query(
           `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
-           VALUES ($1, 'registration', '📝 Новая заявка на мероприятие', $2, '/events', 'high', NOW())`,
+           VALUES ($1, 'registration', 'Новая заявка на мероприятие', $2, '/events', 'high', NOW())`,
           [coord.profile_id, `Новая заявка на "${event.title}"`]
         );
       }
@@ -4324,12 +4325,12 @@ app.patch('/api/event-registrations/:id/approve-club', authenticate, async (req,
     
     if (clubCoord.rows.length > 0) {
       const message = status === 'approved' 
-        ? `✅ Заявка на "${registration.title}" одобрена!` 
-        : `❌ Заявка на "${registration.title}" отклонена`;
+        ? `Заявка на «${registration.title}» одобрена`
+        : `Заявка на «${registration.title}» отклонена`;
       
       await pool.query(
         `INSERT INTO notifications (user_id, type, title, message, link, priority, created_at)
-         VALUES ($1, 'registration', '📝 Статус заявки обновлён', $2, '/events', 'high', NOW())`,
+         VALUES ($1, 'registration', 'Статус заявки обновлён', $2, '/events', 'high', NOW())`,
         [clubCoord.rows[0].profile_id, message]
       );
     }
@@ -4903,7 +4904,7 @@ app.post('/api/tasks', authenticate, validateBody(taskSchema), async (req, res) 
       await createNotification(
         task.assigned_to,
         'task',
-        '📋 Новая задача',
+        'Новая задача',
         `Вам поставлена задача: ${task.title}`,
         '/tasks-planner',
         task.priority === 'urgent' ? 'high' : 'normal'
@@ -5211,7 +5212,7 @@ app.post('/api/tutor-invitations', authenticate, validateBody(tutorInvitationSch
     await createNotification(
       d.tutor_id,
       'tutor_invitation',
-      '📚 Приглашение к работе',
+      'Приглашение к работе',
       `Вас приглашают в качестве тьютора${d.role && d.role !== 'Тьютор' ? ` (${d.role})` : ''}`,
       '/tutor-invitations',
       'high'
@@ -5265,7 +5266,7 @@ app.patch('/api/tutor-invitations/:id/respond', authenticate, async (req, res) =
     await createNotification(
       check.rows[0].created_by,
       'tutor_invitation',
-      status === 'accepted' ? '✅ Приглашение принято' : '❌ Приглашение отклонено',
+      status === 'accepted' ? 'Приглашение принято' : 'Приглашение отклонено',
       `Тьютор ${status === 'accepted' ? 'принял' : 'отклонил'} ваше приглашение`,
       '/tutor-invitations'
     );
@@ -5642,7 +5643,7 @@ app.post('/api/consents/revoke', authenticate, async (req, res) => {
       await createNotification(
         a.id,
         'consent',
-        '⚠️ Отозвано согласие',
+        'Отозвано согласие',
         `Отозвано согласие «${code}». Проверьте, что обработка данных прекращена.`,
         '/consents-management',
         'high'
@@ -5877,7 +5878,7 @@ app.post('/api/clubs/:clubId/staff', authenticate, async (req, res) => {
     await createNotification(
       user_id,
       'club_staff',
-      '🏫 Назначение в КЮД',
+      'Назначение в КЮД',
       `Вы назначены: ${CLUB_POSITION_LABELS[position]}`,
       '/clubs'
     );
@@ -6061,7 +6062,7 @@ app.post('/api/clubs/:clubId/transfer-head', authenticate, async (req, res) => {
     await createNotification(
       new_head_id,
       'club_staff',
-      '🏫 Вы назначены руководителем КЮДа',
+      'Вы назначены руководителем КЮДа',
       'Вам передано руководство клубом',
       '/clubs',
       'high'
@@ -6203,7 +6204,7 @@ app.post('/api/events/:eventId/invite-clubs', authenticate, async (req, res) => 
       await createNotification(
         s.user_id,
         'team_invitation',
-        '📣 Приглашение на мероприятие',
+        'Приглашение на мероприятие',
         `Ваш КЮД приглашён на «${event.rows[0].title}». Сформируйте команду${deadline ? ` до ${new Date(deadline).toLocaleDateString('ru-RU')}` : ''}.`,
         '/my-invitations',
         'high'
@@ -6769,7 +6770,7 @@ app.post('/api/team-submissions/:id/submit', authenticate, async (req, res) => {
       await createNotification(
         c.id,
         'team_submission',
-        '📋 Команда на утверждение',
+        'Команда на утверждение',
         `${submission.club_name} подал команду на «${submission.event_title}» — ${members.rows.length} чел.`,
         '/event-teams',
         'high'
@@ -6840,7 +6841,7 @@ app.patch('/api/team-submissions/:id/review', authenticate, async (req, res) => 
       await createNotification(
         s.user_id,
         'team_submission',
-        decision === 'approve' ? '✅ Команда утверждена' : '↩️ Команда возвращена на доработку',
+        decision === 'approve' ? 'Команда утверждена' : 'Команда возвращена на доработку',
         decision === 'approve'
           ? `Команда на «${sub.rows[0].event_title}» утверждена`
           : `Команда на «${sub.rows[0].event_title}» возвращена: ${comment.trim()}`,

@@ -88,8 +88,8 @@ export default function GoalsAndKPI() {
         title: form.title.trim(),
         description: form.description || '',
         category: form.category || 'general',
-        target_value: parseInt(form.target_value),
-        current_value: parseInt(form.current_value) || 0,
+        target_value: parseInt(form.target_value, 10) || 0,
+        current_value: parseInt(form.current_value, 10) || 0,
         unit: form.unit || 'participants',
         status: form.status || 'active',
         start_date: form.start_date || null,
@@ -275,7 +275,7 @@ export default function GoalsAndKPI() {
                   <input
                     type="number"
                     value={form.target_value}
-                    onChange={(e) => setForm({ ...form, target_value: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => setForm({ ...form, target_value: parseInt(e.target.value, 10) || 0 })}
                     required
                     min="0"
                   />
@@ -285,7 +285,7 @@ export default function GoalsAndKPI() {
                   <input
                     type="number"
                     value={form.current_value}
-                    onChange={(e) => setForm({ ...form, current_value: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => setForm({ ...form, current_value: parseInt(e.target.value, 10) || 0 })}
                     min="0"
                   />
                 </div>

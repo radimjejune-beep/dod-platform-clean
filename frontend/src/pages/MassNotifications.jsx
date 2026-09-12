@@ -84,6 +84,14 @@ export default function MassNotifications() {
       return;
     }
 
+    // Выбрали «отправить позже», но дату не поставили: раньше уходил
+    // пустой scheduled_at, и сервер отвечал общей ошибкой валидации
+    if (!form.send_now && !form.schedule_date) {
+      setMessage('Укажите дату и время отправки или выберите «Отправить сейчас»');
+      setMessageType('error');
+      return;
+    }
+
     if (!confirm(`Отправить уведомление ${recipientCount} получателям?`)) return;
 
     setSending(true);
@@ -106,14 +114,14 @@ export default function MassNotifications() {
           message: form.message.trim(),
           recipients: form.recipients,
           priority: form.priority,
-          scheduled_at: form.send_now ? null : form.schedule_date
+          scheduled_at: form.send_now ? null : (form.schedule_date || null)
         })
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Ошибка отправки');
+        throw new Error(api.describeApiError(data, 'Ошибка отправки'));
       }
 
       setMessage(`Уведомление отправлено ${data.sent_count || recipientCount} получателям!`);

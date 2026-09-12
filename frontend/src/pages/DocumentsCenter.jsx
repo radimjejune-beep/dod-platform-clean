@@ -105,11 +105,24 @@ export default function DocumentsCenter() {
     }
 
     try {
-      if (profile?.role === 'club_coordinator' && profile?.club_id) {
-        formData.club_id = profile.club_id;
+      // Раньше состояние формы меняли на месте — React о правке не знал
+      const payload = {
+        ...formData,
+        title: formData.title.trim(),
+        club_id:
+          profile?.role === 'club_coordinator' && profile?.club_id
+            ? profile.club_id
+            : formData.club_id || null
+      };
+
+      const doc = await api.createDocument(payload);
+
+      // Ошибку сервера раньше клали в список как документ
+      if (doc?.error) {
+        setError(api.describeApiError(doc, 'Не удалось создать документ'));
+        return;
       }
 
-      const doc = await api.createDocument(formData);
       setDocuments([doc, ...documents]);
       setShowModal(false);
       setFormData({
@@ -125,7 +138,7 @@ export default function DocumentsCenter() {
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       console.error('Ошибка создания:', err);
-      setError('Ошибка создания документа');
+      setError(err.message || 'Ошибка создания документа');
     }
   };
 

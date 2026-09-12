@@ -310,8 +310,8 @@ export default function Reports() {
         club_id: clubId,
         report_month: form.report_month,
         report_text: form.report_text || '',
-        events_count: parseInt(form.events_count) || 0,
-        participants_count: parseInt(form.participants_count) || 0
+        events_count: parseInt(form.events_count, 10) || 0,
+        participants_count: parseInt(form.participants_count, 10) || 0
       };
 
       let response;
@@ -340,7 +340,7 @@ export default function Reports() {
       }
 
       if (!response.ok) {
-        throw new Error(result.error || 'Ошибка сохранения отчёта');
+        throw new Error(api.describeApiError(result, 'Ошибка сохранения отчёта'));
       }
 
       setMessage(form.id ? 'Отчёт обновлён!' : 'Отчёт создан!');
@@ -405,7 +405,7 @@ export default function Reports() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Ошибка удаления');
+        throw new Error(api.describeApiError(result, 'Ошибка удаления'));
       }
 
       setMessage('Отчёт удалён');
@@ -434,7 +434,7 @@ export default function Reports() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Ошибка отправки');
+        throw new Error(api.describeApiError(result, 'Ошибка отправки'));
       }
 
       setMessage('Отчёт отправлен на проверку!');
@@ -463,7 +463,7 @@ export default function Reports() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Ошибка утверждения');
+        throw new Error(api.describeApiError(result, 'Ошибка утверждения'));
       }
 
       setMessage('Отчёт утверждён!');
@@ -495,7 +495,7 @@ export default function Reports() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Ошибка отклонения');
+        throw new Error(api.describeApiError(result, 'Ошибка отклонения'));
       }
 
       setMessage('Отчёт отклонён');

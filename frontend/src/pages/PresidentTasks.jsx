@@ -224,7 +224,7 @@ export default function PresidentTasks() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Ошибка ${response.status}`);
+        throw new Error(api.describeApiError(errorData, `Ошибка ${response.status}`));
       }
 
       const result = await response.json();
@@ -279,7 +279,7 @@ export default function PresidentTasks() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Ошибка ${response.status}`);
+        throw new Error(api.describeApiError(errorData, `Ошибка ${response.status}`));
       }
 
       const result = await response.json();
@@ -315,7 +315,7 @@ export default function PresidentTasks() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Ошибка ${response.status}`);
+        throw new Error(api.describeApiError(errorData, `Ошибка ${response.status}`));
       }
 
       const result = await response.json();
@@ -680,7 +680,7 @@ export default function PresidentTasks() {
                                 });
                                 if (!response.ok) {
                                   const errorData = await response.json().catch(() => ({}));
-                                  throw new Error(errorData.error || `Ошибка ${response.status}`);
+                                  throw new Error(api.describeApiError(errorData, `Ошибка ${response.status}`));
                                 }
                                 setMessage('Задание удалено');
                                 setMessageType('success');

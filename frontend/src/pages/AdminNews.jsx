@@ -163,8 +163,15 @@ export default function AdminNews() {
       console.log('📥 Статус ответа:', response.status);
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `Ошибка ${response.status}`);
+        // Раньше сюда падал сырой JSON сервера; теперь разбираем его
+        // так же, как везде, и показываем человеческое объяснение
+        let errorData = null;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = null;
+        }
+        throw new Error(api.describeApiError(errorData, `Ошибка ${response.status}`));
       }
 
       const result = await response.json();

@@ -129,7 +129,53 @@ const FIELD_LABELS = {
   contact_email: 'Электронная почта',
   contact_phone: 'Телефон',
   session_date: 'Дата занятия',
-  topic: 'Тема'
+  topic: 'Тема',
+  // Обращения, документы, новости, цели, задачи, уведомления
+  subject: 'Тема обращения',
+  message: 'Текст',
+  priority: 'Приоритет',
+  content: 'Текст',
+  image_url: 'Ссылка на изображение',
+  category: 'Категория',
+  document_type: 'Тип документа',
+  is_public: 'Доступ',
+  tags: 'Метки',
+  target_value: 'Целевое значение',
+  current_value: 'Текущее значение',
+  unit: 'Единица измерения',
+  status: 'Статус',
+  start_date: 'Дата начала',
+  assigned_to: 'Ответственный',
+  due_date: 'Срок',
+  recurrence: 'Повторение',
+  recurrence_end: 'Окончание повторений',
+  deadline: 'Срок',
+  is_global: 'Для всего движения',
+  recipients: 'Получатели',
+  scheduled_at: 'Дата отправки',
+  events_count: 'Количество мероприятий',
+  participants_count: 'Количество участников',
+  participant_id: 'Участник',
+  achievement_date: 'Дата достижения',
+  tutor_id: 'Тьютор',
+  event_id: 'Мероприятие',
+  user_id: 'Пользователь',
+  responsibilities: 'Обязанности',
+  icon: 'Значок',
+  color: 'Цвет',
+  points: 'Баллы',
+  leader_name: 'Руководитель',
+  interests: 'Интересы',
+  bio: 'О себе',
+  skills: 'Навыки',
+  education: 'Образование',
+  achievements: 'Достижения',
+  social_links: 'Ссылки',
+  telegram: 'Telegram',
+  vk: 'ВКонтакте',
+  parent_full_name: 'ФИО родителя',
+  parent_phone: 'Телефон родителя',
+  parent_email: 'Почта родителя'
 };
 
 export const describeApiError = (result, fallback = 'Неизвестная ошибка') => {
@@ -148,6 +194,18 @@ export const describeApiError = (result, fallback = 'Неизвестная ош
             .replace('must be a string', 'заполнено неверно')
             .replace('must be a number', 'должно быть числом')
             .replace('must be a valid date', 'неверная дата')
+            .replace('must be a boolean', 'должно быть «да» или «нет»')
+            .replace('must be an array', 'должно быть списком')
+            .replace('must be a valid GUID', 'выбрано неверно')
+            .replace('must be a valid uri', 'должно быть ссылкой вида https://…')
+            .replace('must be a valid email', 'некорректный адрес почты')
+            .replace('must be an integer', 'должно быть целым числом')
+            .replace(/must be greater than or equal to (\S+)/, 'не может быть меньше $1')
+            .replace(/must be less than or equal to (\S+)/, 'не может быть больше $1')
+            .replace(/length must be at least (\S+) characters long/, 'слишком короткое (минимум $1 симв.)')
+            .replace(/length must be less than or equal to (\S+) characters long/, 'слишком длинное (максимум $1 симв.)')
+            .replace(/must be one of \[(.+)\]/, 'допустимые значения: $1')
+            .replace('is not allowed', 'не поддерживается')
             .trim();
           return `${label} — ${text}`;
         })

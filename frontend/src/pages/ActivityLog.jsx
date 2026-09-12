@@ -164,7 +164,7 @@ export default function ActivityLog() {
             <div style={{ minWidth: '120px' }}>
               <select
                 value={filters.limit}
-                onChange={(e) => setFilters({ ...filters, limit: parseInt(e.target.value), offset: 0 })}
+                onChange={(e) => setFilters({ ...filters, limit: parseInt(e.target.value, 10) || 50, offset: 0 })}
                 style={{
                   width: '100%',
                   padding: '8px 14px',

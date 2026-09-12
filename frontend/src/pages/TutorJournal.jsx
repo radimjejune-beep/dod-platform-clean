@@ -358,7 +358,7 @@ export default function TutorJournal() {
                 <label>Вовлеченность</label>
                 <select
                   value={scores.engagement || ''}
-                  onChange={(e) => setScores({ ...scores, engagement: parseInt(e.target.value) || null })}
+                  onChange={(e) => setScores({ ...scores, engagement: parseInt(e.target.value, 10) || null })}
                 >
                   <option value="">Не оценено</option>
                   <option value="5">Требует внимания</option>
@@ -373,7 +373,7 @@ export default function TutorJournal() {
                 <label>Работа в команде</label>
                 <select
                   value={scores.teamwork || ''}
-                  onChange={(e) => setScores({ ...scores, teamwork: parseInt(e.target.value) || null })}
+                  onChange={(e) => setScores({ ...scores, teamwork: parseInt(e.target.value, 10) || null })}
                 >
                   <option value="">Не оценено</option>
                   <option value="5">Требует внимания</option>
@@ -388,7 +388,7 @@ export default function TutorJournal() {
                 <label>Инициативность</label>
                 <select
                   value={scores.initiative || ''}
-                  onChange={(e) => setScores({ ...scores, initiative: parseInt(e.target.value) || null })}
+                  onChange={(e) => setScores({ ...scores, initiative: parseInt(e.target.value, 10) || null })}
                 >
                   <option value="">Не оценено</option>
                   <option value="5">Требует внимания</option>
@@ -403,7 +403,7 @@ export default function TutorJournal() {
                 <label>Коммуникация</label>
                 <select
                   value={scores.communication || ''}
-                  onChange={(e) => setScores({ ...scores, communication: parseInt(e.target.value) || null })}
+                  onChange={(e) => setScores({ ...scores, communication: parseInt(e.target.value, 10) || null })}
                 >
                   <option value="">Не оценено</option>
                   <option value="5">Требует внимания</option>
@@ -418,7 +418,7 @@ export default function TutorJournal() {
                 <label>Ответственность</label>
                 <select
                   value={scores.responsibility || ''}
-                  onChange={(e) => setScores({ ...scores, responsibility: parseInt(e.target.value) || null })}
+                  onChange={(e) => setScores({ ...scores, responsibility: parseInt(e.target.value, 10) || null })}
                 >
                   <option value="">Не оценено</option>
                   <option value="5">Требует внимания</option>

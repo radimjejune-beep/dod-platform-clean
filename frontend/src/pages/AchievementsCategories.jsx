@@ -271,7 +271,7 @@ export default function AchievementsCategories() {
                   <input
                     type="number"
                     value={form.points}
-                    onChange={(e) => setForm({ ...form, points: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => setForm({ ...form, points: parseInt(e.target.value, 10) || 0 })}
                     min="0"
                     step="5"
                     placeholder="10"

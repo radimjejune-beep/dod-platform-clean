@@ -508,7 +508,7 @@ export default function TasksPlanner() {
                       {task.status === 'pending' && (
                         <button
                           className="btn-primary"
-                          style={{ padding: '4px 12px', fontSize: '12px', background: 'var(--color-primary-light)' }}
+                          style={{ padding: '4px 12px', fontSize: '12px' }}
                           onClick={() => handleStatusChange(task.id, 'in_progress')}
                         >
                           Взять в работу

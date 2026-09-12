@@ -25,6 +25,8 @@ export default function DocumentsCenter() {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  // Клуб раньше вводили UUID-ом руками — теперь выбирают из списка
+  const [clubs, setClubs] = useState([]);
 
   const navigate = useNavigate();
 
@@ -46,6 +48,10 @@ export default function DocumentsCenter() {
         const docs = await api.getDocuments();
         setDocuments(docs || []);
         setFilteredDocuments(docs || []);
+
+        if (user?.role === 'admin' || user?.role === 'movement_coordinator') {
+          setClubs(await api.getClubs());
+        }
       } catch (err) {
         console.error('Ошибка загрузки документов:', err);
         setError('Ошибка загрузки документов');
@@ -175,7 +181,17 @@ export default function DocumentsCenter() {
     }
 
     try {
-      const updated = await api.updateDocument(editingDoc.id, formData);
+      const updated = await api.updateDocument(editingDoc.id, {
+        ...formData,
+        title: formData.title.trim(),
+        club_id: formData.club_id || null
+      });
+
+      if (updated?.error) {
+        setError(api.describeApiError(updated, 'Не удалось сохранить документ'));
+        return;
+      }
+
       setDocuments(documents.map(d => d.id === updated.id ? updated : d));
       setShowModal(false);
       setEditingDoc(null);
@@ -192,7 +208,7 @@ export default function DocumentsCenter() {
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       console.error('Ошибка обновления:', err);
-      setError('Ошибка обновления документа');
+      setError(err.message || 'Ошибка обновления документа');
     }
   };
 
@@ -319,6 +335,7 @@ export default function DocumentsCenter() {
                   club_id: profile?.club_id || null,
                   tags: []
                 });
+                setError('');
                 setShowModal(true);
               }}
             >
@@ -375,6 +392,7 @@ export default function DocumentsCenter() {
                     club_id: profile?.club_id || null,
                     tags: []
                   });
+                  setError('');
                   setShowModal(true);
                 }}
               >
@@ -455,6 +473,10 @@ export default function DocumentsCenter() {
               <button className="modal-close" onClick={closeModal}><Icon name="close" /></button>
             </div>
 
+            {/* Раньше ошибка появлялась на странице под затемнением
+                и оставалась не видна тому, кто заполнял форму */}
+            {error && <div className="message message-error">{error}</div>}
+
             <div className="form-group">
               <label>Название документа <span className="required">*</span></label>
               <input
@@ -520,14 +542,18 @@ export default function DocumentsCenter() {
 
             {profile?.role === 'admin' && (
               <div className="form-group">
-                <label>Клуб (ID)</label>
-                <input
-                  type="text"
+                <label>КЮД</label>
+                <select
                   className="form-control"
                   value={formData.club_id || ''}
                   onChange={(e) => setFormData({ ...formData, club_id: e.target.value || null })}
-                  placeholder="ID клуба (оставьте пустым для общего доступа)"
-                />
+                >
+                  <option value="">Для всего движения</option>
+                  {clubs.map((club) => (
+                    <option key={club.id} value={club.id}>{club.name}</option>
+                  ))}
+                </select>
+                <small>Оставьте «Для всего движения», если документ общий</small>
               </div>
             )}
 

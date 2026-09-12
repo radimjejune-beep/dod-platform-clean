@@ -345,6 +345,7 @@ export default function MassNotifications() {
                   <label className="radio-label">
                     <input
                       type="radio"
+                      name="send_mode"
                       checked={form.send_now}
                       onChange={() => setForm({ ...form, send_now: true, schedule_date: '' })}
                     />
@@ -353,6 +354,7 @@ export default function MassNotifications() {
                   <label className="radio-label">
                     <input
                       type="radio"
+                      name="send_mode"
                       checked={!form.send_now}
                       onChange={() => setForm({ ...form, send_now: false })}
                     />

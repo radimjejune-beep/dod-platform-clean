@@ -6,6 +6,15 @@ import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
+// Категории в списке показывались служебными словами: general, reports
+const CATEGORY_LABELS = {
+  general: 'Общие',
+  reports: 'Отчёты',
+  events: 'Мероприятия',
+  communications: 'Коммуникации',
+  administration: 'Администрирование'
+};
+
 export default function TasksPlanner() {
   const [profile, setProfile] = useState(null);
   const [tasks, setTasks] = useState([]);
@@ -476,7 +485,7 @@ export default function TasksPlanner() {
                     <div className="subtitle">
                       {task.due_date ? new Date(task.due_date).toLocaleDateString('ru-RU') : 'Без срока'}
                       {task.assigned_to && ` • ${getUserName(task.assigned_to)}`}
-                      {task.category && ` • ${task.category}`}
+                      {task.category && ` • ${CATEGORY_LABELS[task.category] || task.category}`}
                     </div>
                     {task.description && <div className="meta">{task.description}</div>}
                     <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

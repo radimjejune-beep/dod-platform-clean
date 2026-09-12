@@ -87,7 +87,7 @@ export default function ClubCoordinatorDashboard() {
           </button>
           <button 
             onClick={() => navigate('/participants')}
-            style={{ padding: '10px 20px', background: 'var(--color-success)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', marginRight: '10px' }}
+            style={{ padding: '10px 20px', background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', marginRight: '10px' }}
           >
             Участники
           </button>

@@ -649,7 +649,7 @@ export default function PresidentTasks() {
                           </button>
                           <button
                             className="btn-success"
-                            style={{ padding: '6px 12px', fontSize: '12px', background: 'var(--color-success)' }}
+                            style={{ padding: '6px 12px', fontSize: '12px' }}
                             onClick={() => handleUpdateStatus(task.id, 'completed')}
                           >
                             Завершить

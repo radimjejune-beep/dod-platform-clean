@@ -1193,14 +1193,24 @@ export default function Events() {
                         <span className="tag tag-closed">Регистрация закрыта</span>
                       )}
                     </div>
+                    {/* Части подписи раньше разделяли эмодзи; после их
+                        удаления строки склеились: «15.10.20260/20» */}
                     <div className="event-subtitle">
-                      {event.event_date ? new Date(event.event_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
-                      {event.location && `${event.location}`}
-                      {event.club_name && `${event.club_name}`}
-                      {event.max_participants > 0 && `${event.registrations_count || 0}/${event.max_participants}`}
-                      {event.registration_deadline && (
-                        `Дедлайн: ${new Date(event.registration_deadline).toLocaleDateString('ru-RU')}`
-                      )}
+                      {[
+                        event.event_date
+                          ? new Date(event.event_date).toLocaleDateString('ru-RU')
+                          : 'Дата не указана',
+                        event.location,
+                        event.club_name,
+                        event.max_participants > 0
+                          ? `Записалось: ${event.registrations_count || 0} из ${event.max_participants}`
+                          : null,
+                        event.registration_deadline
+                          ? `Приём заявок до ${new Date(event.registration_deadline).toLocaleDateString('ru-RU')}`
+                          : null
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </div>
                     {event.description && <div className="event-description">{event.description}</div>}
                     
@@ -1342,7 +1352,6 @@ export default function Events() {
                           </button>
                           <button
                             className="btn-primary btn-sm"
-                            style={{ background: 'var(--color-success)', color: 'white' }}
                             onClick={() => handleExport(event.id, event.title)}
                             disabled={exporting}
                           >

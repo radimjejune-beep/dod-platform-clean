@@ -204,10 +204,15 @@ export default function CoordinatorDashboard() {
             gap: '8px'
           }}>
             <span>
-              <strong>Требуют внимания:</strong>
-              {stats.pendingAppeals > 0 && `${stats.pendingAppeals} обращений`}
-              {stats.consentsPending > 0 && `${stats.consentsPending} участников без согласий`}
-              {stats.pendingTasks > 0 && `${stats.pendingTasks} заданий`}
+              <strong>Требуют внимания:</strong>{' '}
+              {/* Раньше пункты разделяли эмодзи — без них числа склеивались */}
+              {[
+                stats.pendingAppeals > 0 ? `обращений: ${stats.pendingAppeals}` : null,
+                stats.consentsPending > 0 ? `участников без согласий: ${stats.consentsPending}` : null,
+                stats.pendingTasks > 0 ? `заданий: ${stats.pendingTasks}` : null
+              ]
+                .filter(Boolean)
+                .join(' · ')}
             </span>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {stats.pendingAppeals > 0 && (

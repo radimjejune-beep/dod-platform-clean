@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { countOf } from '../lib/format';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import Icon from '../components/Icon';
@@ -146,7 +147,7 @@ export default function Clubs() {
                 <h3 className="club-card-title">{club.name}</h3>
                 <p className="club-card-location">{club.city || 'Город не указан'}</p>
                 <div className="club-card-stats">
-                  <span>{club.participants_count || 0} участников</span>
+                  <span>{countOf(club.participants_count || 0, 'участник', 'участника', 'участников')}</span>
                   {club.coordinators_count !== undefined && (
                     <span>{club.coordinators_count || 0} координаторов</span>
                   )}

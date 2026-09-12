@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { monthLabel, countOf } from '../lib/format';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import Icon from '../components/Icon';
@@ -808,16 +809,16 @@ export default function Reports() {
                     }}
                   >
                     <div className="report-title">
-                      {report.title || `Отчёт за ${report.report_month || 'неизвестный месяц'}`}
+                      {report.title || `Отчёт за ${monthLabel(report.report_month) || 'неизвестный месяц'}`}
                       <span className="tag" style={{ background: status.bg, color: status.color }}>
                         {status.label}
                       </span>
                     </div>
                     <div className="report-subtitle">
                       {report.club_name || 'Клуб'} 
-                      {report.report_month && ` • ${report.report_month}`}
-                      {report.events_count !== undefined && ` • ${report.events_count} мероприятий`}
-                      {report.participants_count !== undefined && ` • ${report.participants_count} участников`}
+                      {report.report_month && ` • ${monthLabel(report.report_month)}`}
+                      {report.events_count !== undefined && ` • ${countOf(report.events_count, 'мероприятие', 'мероприятия', 'мероприятий')}`}
+                      {report.participants_count !== undefined && ` • ${countOf(report.participants_count, 'участник', 'участника', 'участников')}`}
                     </div>
                     {report.created_by_name && (
                       <div className="report-meta">Создал: {report.created_by_name}</div>
@@ -913,7 +914,7 @@ export default function Reports() {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{selectedReport.title || `Отчёт за ${selectedReport.report_month || 'неизвестный месяц'}`}</h3>
+              <h3>{selectedReport.title || `Отчёт за ${monthLabel(selectedReport.report_month) || 'неизвестный месяц'}`}</h3>
               <button className="modal-close" onClick={() => setShowModal(false)}><Icon name="close" /></button>
             </div>
 

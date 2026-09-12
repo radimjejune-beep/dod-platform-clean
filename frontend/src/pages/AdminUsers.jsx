@@ -212,14 +212,14 @@ export default function AdminUsers() {
 
       // Показываем в том же списке, что и при создании: оттуда пароль
       // можно скопировать или выгрузить, и он не исчезнет через 5 секунд.
-      setCreatedUsers([{
+      setCreatedUsers((prev) => [{
         full_name: fullName,
         email: result.user?.email || '—',
         password: newPassword,
         role: result.user?.role || '—',
         is_auto_generated: false,
         club: '—'
-      }]);
+      }, ...prev]);
       setShowPasswordList(true);
       setMessage(`Пароль для "${fullName}" сброшен. Новый пароль показан ниже.`);
       setMessageType('success');
@@ -258,7 +258,10 @@ export default function AdminUsers() {
     e.preventDefault();
     setMessage('');
     setLoading(true);
-    setCreatedUsers([]);
+    // Список выданных доступов раньше очищался на каждом создании, и при
+    // заведении группы участников подряд на экране оставался только
+    // последний: пароли предыдущих терялись, их приходилось сбрасывать.
+    // Теперь список копится, пока его не закроют кнопкой «Закрыть».
     setShowPasswordList(false);
 
     try {
@@ -299,7 +302,7 @@ export default function AdminUsers() {
         club: clubs.find(c => c.id === form.club_id)?.name || '—'
       };
 
-      setCreatedUsers([newUserData]);
+      setCreatedUsers((prev) => [newUserData, ...prev]);
       setShowPasswordList(true);
       setMessage(`Пользователь "${form.full_name}" создан!`);
       setMessageType('success');

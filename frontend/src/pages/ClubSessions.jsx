@@ -371,7 +371,7 @@ export default function ClubSessions() {
             </div>
           ) : (
             <div className="table-wrapper">
-              <table className="table">
+              <table className="table table--sticky-actions">
                 <thead>
                   <tr>
                     <th>Дата</th>

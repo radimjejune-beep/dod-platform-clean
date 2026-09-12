@@ -755,6 +755,22 @@ select.form-control {
   min-width: 600px;
 }
 
+/* Таблица шире экрана телефона, и последняя колонка — с кнопками — уезжала
+   за правый край: на журнале занятий это прятало «Отметить», то самое
+   действие, ради которого экран открывают. Прижимаем колонку действий к
+   правому краю, она остаётся на виду при любой ширине. */
+.table--sticky-actions th:last-child,
+.table--sticky-actions td:last-child {
+  position: sticky;
+  right: 0;
+  background: var(--color-white);
+  box-shadow: -8px 0 8px -8px rgba(11, 31, 58, 0.15);
+}
+
+.table--sticky-actions thead th:last-child {
+  background: var(--color-gray-50);
+}
+
 .table thead {
   background: var(--color-gray-50);
   border-bottom: 1px solid var(--color-gray-200);

@@ -33,6 +33,7 @@ export default function Attention() {
   const [profile, setProfile] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [denied, setDenied] = useState(false);
   const [opened, setOpened] = useState(() => new Set());
   const navigate = useNavigate();
 
@@ -43,9 +44,19 @@ export default function Attention() {
       const me = await api.getMe();
       if (!me || !me.id) return;
       setProfile(me);
-      setData(await api.getAttention());
+
+      // Сводка — рабочий экран движения и КЮДов. Родителю и участнику
+      // сервер отвечает отказом, а экран показывал «Всё в порядке»:
+      // человек без доступа читал это как «в движении всё хорошо».
+      const summary = await api.getAttention();
+      if (summary?.error) {
+        setDenied(true);
+        return;
+      }
+      setData(summary);
     } catch (err) {
       console.error('❌ Ошибка загрузки сводки:', err);
+      setDenied(true);
     } finally {
       setLoading(false);
     }
@@ -75,6 +86,29 @@ export default function Attention() {
         <Navigation profile={profile} />
         <div className="container-page" style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
           <div className="spinner" />
+        </div>
+      </div>
+    );
+  }
+
+  if (denied) {
+    return (
+      <div className="page-background">
+        <Navigation profile={profile} />
+        <div className="container-page">
+          <div className="card">
+            <div className="empty-state">
+              <div className="empty-state-icon"><Icon name="warning" /></div>
+              <h3>Этот раздел не для вашей роли</h3>
+              <p>
+                Сводка показывает, что мешает работе движения и КЮДов. Она открыта
+                руководителям КЮДов, тьюторам, координаторам движения и руководству.
+              </p>
+              <button className="btn-primary" onClick={() => navigate('/dashboard')}>
+                На главную
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );

@@ -537,7 +537,9 @@ export default function Navigation({ profile }) {
         }
         .nav-profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .nav-profile-fullname { font-weight: 600; font-size: 14px; color: var(--color-primary-dark); }
-        .nav-profile-role { font-size: 12px; color: var(--color-gray-600); text-transform: capitalize; }
+                /* Названия ролей приходят уже готовыми: capitalize делал из
+           «Законный представитель» — «Законный Представитель» */
+        .nav-profile-role { font-size: 12px; color: var(--color-gray-600); }
         .nav-profile-divider { height: 1px; background: var(--color-gray-100); margin: 0 12px; }
         .nav-profile-item {
           display: flex; align-items: center; gap: 10px;
@@ -660,7 +662,6 @@ export default function Navigation({ profile }) {
         .sidebar-profile-role {
           font-size: 12px;
           color: var(--color-gray-600);
-          text-transform: capitalize;
         }
 
         .sidebar-nav {

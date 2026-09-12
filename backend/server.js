@@ -828,54 +828,70 @@ app.post('/api/users', authenticate, requireAdmin, validateBody(userSchema), asy
       }
     }
 
-    const result = await pool.query(
-      `INSERT INTO users (
-        email, password_hash, full_name, role, phone, school, class_name, 
-        birth_date, status, must_change_password, created_by, created_at,
-        club_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active', true, $9, NOW(), $10)
-      RETURNING id, email, full_name, role, club_id`,
-      [
-        finalEmail, 
-        password_hash, 
-        full_name, 
-        role || 'participant', 
-        phone || '', 
-        school || '', 
-        class_name || '', 
-        birth_date || null, 
-        req.user.userId,
-        finalClubId
-      ]
-    );
+    // Запись и привязка к клубу — одно целое. Раньше они шли порознь, и
+    // сбой на привязке оставлял в базе участника без клуба, а админ видел
+    // «Внутренняя ошибка сервера» и пробовал завести его заново.
+    const client = await pool.connect();
+    let user;
+    try {
+      await client.query('BEGIN');
 
-    const user = result.rows[0];
-    console.log(`  ✅ Пользователь создан: ${user.id}`);
+      const result = await client.query(
+        `INSERT INTO users (
+          email, password_hash, full_name, role, phone, school, class_name, 
+          birth_date, status, must_change_password, created_by, created_at,
+          club_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active', true, $9, NOW(), $10)
+        RETURNING id, email, full_name, role, club_id`,
+        [
+          finalEmail, 
+          password_hash, 
+          full_name, 
+          role || 'participant', 
+          phone || '', 
+          school || '', 
+          class_name || '', 
+          birth_date || null, 
+          req.user.userId,
+          finalClubId
+        ]
+      );
 
-    if (finalClubId) {
-      console.log(`  🔗 Привязка к клубу ${finalClubId}...`);
-      await setUserClub(user.id, finalClubId);
-      if (role === 'club_coordinator') {
-        // Первый сотрудник клуба становится руководителем, последующие —
-        // заместителями: руководитель в клубе может быть только один.
-        const hasHead = await pool.query(
-          `SELECT 1 FROM club_staff WHERE club_id = $1 AND position = 'head' AND removed_at IS NULL`,
-          [finalClubId]
-        );
-        const position = hasHead.rows.length > 0 ? 'deputy' : 'head';
+      user = result.rows[0];
+      console.log(`  ✅ Пользователь создан: ${user.id}`);
 
-        await pool.query(
-          `INSERT INTO club_staff (club_id, user_id, position, appointed_by, comment)
-           VALUES ($1, $2, $3, $4, 'Назначен при создании учётной записи')
-           ON CONFLICT DO NOTHING`,
-          [finalClubId, user.id, position, req.user.userId]
-        );
-        console.log(`  ✅ Сотрудник привязан к клубу ${clubName}: ${position}`);
+      if (finalClubId) {
+        console.log(`  🔗 Привязка к клубу ${finalClubId}...`);
+        await setUserClub(user.id, finalClubId, client);
+        if (role === 'club_coordinator') {
+          // Первый сотрудник клуба становится руководителем, последующие —
+          // заместителями: руководитель в клубе может быть только один.
+          const hasHead = await client.query(
+            `SELECT 1 FROM club_staff WHERE club_id = $1 AND position = 'head' AND removed_at IS NULL`,
+            [finalClubId]
+          );
+          const position = hasHead.rows.length > 0 ? 'deputy' : 'head';
+
+          await client.query(
+            `INSERT INTO club_staff (club_id, user_id, position, appointed_by, comment)
+             VALUES ($1, $2, $3, $4, 'Назначен при создании учётной записи')
+             ON CONFLICT DO NOTHING`,
+            [finalClubId, user.id, position, req.user.userId]
+          );
+          console.log(`  ✅ Сотрудник привязан к клубу ${clubName}: ${position}`);
+        } else {
+          console.log(`  ✅ Участник привязан к клубу ${clubName}`);
+        }
       } else {
-        console.log(`  ✅ Участник привязан к клубу ${clubName}`);
+        console.log(`  ⚠️ Пользователь создан БЕЗ клуба`);
       }
-    } else {
-      console.log(`  ⚠️ Пользователь создан БЕЗ клуба`);
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
     }
 
     const updatedUser = await pool.query(
@@ -7007,7 +7023,9 @@ app.post('/api/events/:eventId/teams/purge-documents', authenticate, requireAdmi
 // users.club_id — единственный источник истины. club_participants
 // остаётся историей членства: когда пришёл и когда ушёл.
 async function setUserClub(userId, clubId, executor = pool) {
-  await executor.query('UPDATE users SET club_id = $1, updated_at = NOW() WHERE id = $2', [clubId, userId]);
+  // В таблице users есть created_at, но нет updated_at — запрос с ним
+  // валил создание участника уже после того, как запись была заведена
+  await executor.query('UPDATE users SET club_id = $1 WHERE id = $2', [clubId, userId]);
 
   // Закрываем прежнее членство — все клубы, кроме нового
   await executor.query(

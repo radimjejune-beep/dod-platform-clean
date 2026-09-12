@@ -15,9 +15,12 @@ export const userSchema = Joi.object({
     'any.required': 'ФИО обязательно'
   }),
   // Почты у движения нет: адрес — это логин, и чаще всего его выдаёт
-  // сервер. Пустое значение здесь обязано проходить, иначе участника
-  // нельзя завести вообще — а форма как раз обещает «необязательно».
-  email: Joi.string().email().max(100).allow('', null).messages({
+  // сервер в зоне @dod.local. Пустое значение обязано проходить, иначе
+  // участника нельзя завести вообще — форма как раз обещает
+  // «необязательно». А tlds: false нужен потому, что Joi по умолчанию
+  // сверяет домен верхнего уровня со списком IANA, где никакого .local
+  // нет: собственные логины движения он отвергал как «некорректный».
+  email: Joi.string().email({ tlds: { allow: false } }).max(100).allow('', null).messages({
     'string.email': 'Некорректный email',
     'string.max': 'Email не может превышать 100 символов'
   }),
@@ -39,7 +42,7 @@ export const userSchema = Joi.object({
   vk: Joi.string().max(200).allow('', null),
   parent_full_name: Joi.string().max(100).allow('', null),
   parent_phone: Joi.string().pattern(/^[\+\d\s\-\(\)]{10,20}$/).allow('', null),
-  parent_email: Joi.string().email().max(100).allow('', null),
+  parent_email: Joi.string().email({ tlds: { allow: false } }).max(100).allow('', null),
   // Форма шлёт '' при выборе «Без клуба» — раньше это валило всю проверку
   club_id: Joi.string().uuid().allow(null, ''),
   status: Joi.string().valid('active', 'inactive', 'pending'),
@@ -193,7 +196,7 @@ export const clubSchema = Joi.object({
   city: Joi.string().max(100).allow('', null),
   school: Joi.string().max(500).allow('', null),
   leader_name: Joi.string().max(255).allow('', null),
-  contact_email: Joi.string().email().max(255).allow('', null).messages({
+  contact_email: Joi.string().email({ tlds: { allow: false } }).max(255).allow('', null).messages({
     'string.email': 'Проверьте адрес электронной почты'
   }),
   contact_phone: Joi.string().max(50).allow('', null),

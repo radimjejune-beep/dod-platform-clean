@@ -809,7 +809,7 @@ export default function Reports() {
                     }}
                   >
                     <div className="report-title">
-                      {report.title || `Отчёт за ${monthLabel(report.report_month) || 'неизвестный месяц'}`}
+                      {report.report_month ? `Отчёт за ${monthLabel(report.report_month)}` : (report.title || 'Отчёт')}
                       <span className="tag" style={{ background: status.bg, color: status.color }}>
                         {status.label}
                       </span>
@@ -914,7 +914,7 @@ export default function Reports() {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{selectedReport.title || `Отчёт за ${monthLabel(selectedReport.report_month) || 'неизвестный месяц'}`}</h3>
+              <h3>{selectedReport.report_month ? `Отчёт за ${monthLabel(selectedReport.report_month)}` : (selectedReport.title || 'Отчёт')}</h3>
               <button className="modal-close" onClick={() => setShowModal(false)}><Icon name="close" /></button>
             </div>
 

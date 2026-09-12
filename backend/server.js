@@ -3195,7 +3195,7 @@ app.post('/api/reports', authenticate, validateBody(reportSchema), async (req, r
     const result = await pool.query(
       `INSERT INTO reports (club_id, created_by, title, content, report_month, events_count, participants_count, status, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft', NOW(), NOW()) RETURNING *`,
-      [club_id, userId, `Отчёт за ${report_month} (${clubName})`, report_text || '', report_month, parseInt(events_count) || 0, parseInt(participants_count) || 0]
+      [club_id, userId, `Отчёт за ${monthName(report_month)} (${clubName})`, report_text || '', report_month, parseInt(events_count) || 0, parseInt(participants_count) || 0]
     );
 
     res.status(201).json(result.rows[0]);
@@ -7022,6 +7022,17 @@ app.post('/api/events/:eventId/teams/purge-documents', authenticate, requireAdmi
 //
 // users.club_id — единственный источник истины. club_participants
 // остаётся историей членства: когда пришёл и когда ушёл.
+// Месяц в базе лежит как 2026-09. В названия отчётов и в уведомления
+// он попадал в этом же виде — «Отчёт за 2026-09». Человеку нужен месяц
+// словом.
+function monthName(ym) {
+  const [y, m] = String(ym || '').split('-').map(Number);
+  const names = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
+                 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+  if (!y || !m || !names[m - 1]) return String(ym || '');
+  return `${names[m - 1]} ${y}`;
+}
+
 async function setUserClub(userId, clubId, executor = pool) {
   // В таблице users есть created_at, но нет updated_at — запрос с ним
   // валил создание участника уже после того, как запись была заведена
@@ -8676,13 +8687,6 @@ app.get('/api/attention', authenticate, async (req, res) => {
     const now = new Date();
     const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const prevMonth = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
-    const monthName = (ym) => {
-      const [y, m] = String(ym).split('-').map(Number);
-      const names = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
-                     'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-      return `${names[m - 1] || ym} ${y}`;
-    };
-
     const [noConsent, noParent, noHead, noReport, faded, waitingTeams, pendingInvites] = await Promise.all([
       // Участники без обязательных согласий — без них нельзя на мероприятия
       pool.query(

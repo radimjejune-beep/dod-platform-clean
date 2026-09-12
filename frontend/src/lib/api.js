@@ -217,6 +217,51 @@ export const describeApiError = (result, fallback = 'Неизвестная ош
 };
 
 // ============================================================
+// ПЕРЕПИСКА МЕЖДУ КЮДАМИ
+// ============================================================
+export const getClubThreads = async () => {
+  const response = await fetch(`${API_URL}/club-threads`, { headers: headers() });
+  return toArray(await response.json());
+};
+
+export const getClubThread = async (id) => {
+  const response = await fetch(`${API_URL}/club-threads/${id}`, { headers: headers() });
+  return response.json();
+};
+
+export const getClubRecipients = async (clubId) => {
+  const response = await fetch(`${API_URL}/club-threads/recipients/${clubId}`, { headers: headers() });
+  return toArray(await response.json());
+};
+
+export const createClubThread = async (data) => {
+  const response = await fetch(`${API_URL}/club-threads`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const replyToClubThread = async (id, message) => {
+  const response = await fetch(`${API_URL}/club-threads/${id}/messages`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ message })
+  });
+  return response.json();
+};
+
+export const setClubThreadStatus = async (id, status) => {
+  const response = await fetch(`${API_URL}/club-threads/${id}/status`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ status })
+  });
+  return response.json();
+};
+
+// ============================================================
 // 2. ПОЛЬЗОВАТЕЛИ
 // ============================================================
 // ============================================================
@@ -1619,6 +1664,13 @@ const api = {
   getUsers,
   getParticipants,
   createUser,
+  getClubThreads,
+  getClubThread,
+  getClubRecipients,
+  createClubThread,
+  replyToClubThread,
+  setClubThreadStatus,
+
   getUser,
   updateUser,
   deleteUser,

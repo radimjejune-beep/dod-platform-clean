@@ -38,7 +38,8 @@ export const CLUB_CAPABILITIES = [
   'submit_team',          // отправлять команду на утверждение
   'manage_staff',         // управлять составом сотрудников
   'view_consents',        // видеть согласия родителей
-  'manage_sessions'       // проводить занятия клуба и отмечать посещаемость
+  'manage_sessions',      // проводить занятия клуба и отмечать посещаемость
+  'write_club_messages'   // писать другим КЮДам от имени своего
 ];
 
 function build(list) {
@@ -60,7 +61,7 @@ export const CLUB_POSITION_PERMISSIONS = Object.freeze({
     'create_events', 'moderate_events', 'write_notes', 'view_all_notes',
     'grant_achievements', 'submit_reports', 'create_appeals',
     'assign_president', 'invite_tutors', 'form_team', 'view_consents',
-    'manage_sessions'
+    'manage_sessions', 'write_club_messages'
   ]),
 
   // Методист ведёт процесс: программы, мероприятия, отчётность.

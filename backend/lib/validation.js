@@ -83,6 +83,33 @@ export const userUpdateSchema = Joi.object({
   'object.min': 'Нет данных для сохранения'
 });
 
+// 1b. ПЕРЕПИСКА МЕЖДУ КЮДАМИ
+export const clubThreadSchema = Joi.object({
+  to_club_id: Joi.string().uuid().required().messages({
+    'any.required': 'Выберите КЮД, которому пишете',
+    'string.empty': 'Выберите КЮД, которому пишете'
+  }),
+  // Кому именно: пусто — всему КЮДу
+  to_user_id: Joi.string().uuid().allow(null, ''),
+  subject: Joi.string().min(3).max(200).required().messages({
+    'string.min': 'Тема слишком короткая',
+    'string.empty': 'Тема обязательна',
+    'any.required': 'Тема обязательна'
+  }),
+  message: Joi.string().min(5).max(5000).required().messages({
+    'string.min': 'Напишите, о чём вопрос',
+    'string.empty': 'Сообщение обязательно',
+    'any.required': 'Сообщение обязательно'
+  })
+});
+
+export const clubThreadReplySchema = Joi.object({
+  message: Joi.string().min(1).max(5000).required().messages({
+    'string.empty': 'Пустой ответ отправить нельзя',
+    'any.required': 'Пустой ответ отправить нельзя'
+  })
+});
+
 // 2. СОБЫТИЕ
 export const eventSchema = Joi.object({
   title: Joi.string().min(3).max(200).required().messages({
@@ -304,6 +331,8 @@ export const validate = (schema, data) => {
 export default {
   userSchema,
   userUpdateSchema,
+  clubThreadSchema,
+  clubThreadReplySchema,
   eventSchema,
   registrationSchema,
   reportSchema,

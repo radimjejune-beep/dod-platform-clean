@@ -42,6 +42,7 @@ import ClubSessions from './pages/ClubSessions';
 import Attention from './pages/Attention';
 import ParticipantDashboard from './pages/ParticipantDashboard';
 import ClubCoordinatorDashboard from './pages/ClubCoordinatorDashboard';
+import ClubThreads from './pages/ClubThreads';
 import TutorDashboard from './pages/TutorDashboard';
 import TutorJournal from './pages/TutorJournal';
 import MyReviews from './pages/MyReviews';
@@ -165,6 +166,7 @@ function App() {
         <Route path="/parent-consents" element={<ParentConsents />} />
         <Route path="/issue-credentials" element={<IssueCredentials />} />
         <Route path="/club-sessions" element={<ClubSessions />} />
+        <Route path="/club-threads" element={<ClubThreads />} />
         <Route path="/attention" element={<Attention />} />
         <Route path="/clubs/:clubId/sessions" element={<ClubSessions />} />
 

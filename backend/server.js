@@ -29,6 +29,8 @@ import {
   eventSchema, 
   userSchema, 
   userUpdateSchema,
+  clubThreadSchema,
+  clubThreadReplySchema,
   registrationSchema,
   reportSchema,
   achievementSchema,
@@ -7324,6 +7326,323 @@ async function setUserClub(userId, clubId, executor = pool) {
 
   invalidateUserCache(userId);
 }
+
+// ============================================================
+// ПЕРЕПИСКА МЕЖДУ КЮДАМИ
+// ============================================================
+// Спросить у соседнего клуба, как они проводили занятие, попросить
+// материалы, сговориться о совместном выезде. Раньше это уходило в личные
+// мессенджеры, и в движении не оставалось следа: ушёл человек — ушла вся
+// история.
+//
+// Кто участвует: только взрослые сотрудники КЮДов. Участники и родители
+// сюда не попадают ни при каких условиях — проверяется здесь, а не
+// прятанием кнопки в интерфейсе.
+//
+// Писать от имени клуба может руководитель и заместитель
+// (право write_club_messages), читать — любой сотрудник обоих клубов.
+
+// Клубы, где человек числится сотрудником, вместе с должностью
+async function staffClubs(userId) {
+  const result = await pool.query(
+    'SELECT club_id, position FROM club_staff WHERE user_id = $1 AND removed_at IS NULL',
+    [userId]
+  );
+  return result.rows;
+}
+
+app.get('/api/club-threads', authenticate, async (req, res) => {
+  try {
+    const mine = await staffClubs(req.user.userId);
+    if (mine.length === 0) return res.json([]);
+
+    const clubIds = mine.map((r) => r.club_id);
+    const result = await pool.query(
+      `SELECT t.id, t.subject, t.status, t.created_at, t.last_message_at,
+              t.from_club_id, t.to_club_id,
+              cf.name AS from_club_name, ct.name AS to_club_name,
+              t.to_user_id, tu.full_name AS to_user_name,
+              (SELECT COUNT(*)::int FROM club_thread_messages m WHERE m.thread_id = t.id) AS messages_count,
+              (SELECT m.body FROM club_thread_messages m
+                WHERE m.thread_id = t.id ORDER BY m.created_at DESC LIMIT 1) AS last_message
+         FROM club_threads t
+         JOIN clubs cf ON cf.id = t.from_club_id
+         JOIN clubs ct ON ct.id = t.to_club_id
+         LEFT JOIN users tu ON tu.id = t.to_user_id
+        WHERE t.from_club_id = ANY($1) OR t.to_club_id = ANY($1)
+        ORDER BY t.last_message_at DESC`,
+      [clubIds]
+    );
+
+    res.json(result.rows.map((row) => ({
+      ...row,
+      // Для экрана: чей это разговор с нашей стороны и с кем
+      my_club_id: clubIds.includes(row.from_club_id) ? row.from_club_id : row.to_club_id,
+      partner_club_name: clubIds.includes(row.from_club_id) ? row.to_club_name : row.from_club_name,
+      started_by_us: clubIds.includes(row.from_club_id)
+    })));
+  } catch (error) {
+    console.error('❌ Ошибка получения переписки КЮДов:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.get('/api/club-threads/:id', authenticate, async (req, res) => {
+  try {
+    const mine = await staffClubs(req.user.userId);
+    const clubIds = mine.map((r) => r.club_id);
+
+    const threadRes = await pool.query(
+      `SELECT t.*, cf.name AS from_club_name, ct.name AS to_club_name,
+              tu.full_name AS to_user_name
+         FROM club_threads t
+         JOIN clubs cf ON cf.id = t.from_club_id
+         JOIN clubs ct ON ct.id = t.to_club_id
+         LEFT JOIN users tu ON tu.id = t.to_user_id
+        WHERE t.id = $1`,
+      [req.params.id]
+    );
+    if (threadRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Переписка не найдена' });
+    }
+
+    const thread = threadRes.rows[0];
+    if (!clubIds.includes(thread.from_club_id) && !clubIds.includes(thread.to_club_id)) {
+      return res.status(403).json({ error: 'Эта переписка не вашего КЮДа' });
+    }
+
+    const messages = await pool.query(
+      `SELECT m.id, m.body, m.created_at, m.author_club_id,
+              u.full_name AS author_name, c.name AS author_club_name
+         FROM club_thread_messages m
+         LEFT JOIN users u ON u.id = m.author_id
+         LEFT JOIN clubs c ON c.id = m.author_club_id
+        WHERE m.thread_id = $1
+        ORDER BY m.created_at`,
+      [req.params.id]
+    );
+
+    res.json({ ...thread, messages: messages.rows });
+  } catch (error) {
+    console.error('❌ Ошибка получения переписки:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Кому можно написать в чужом КЮДе. Отдаёт только сотрудников — имена и
+// должности, без почты и телефонов: для выбора адресата этого достаточно,
+// а лишние контакты чужих людей раздавать незачем.
+app.get('/api/club-threads/recipients/:clubId', authenticate, async (req, res) => {
+  try {
+    const mine = await staffClubs(req.user.userId);
+    if (mine.length === 0) {
+      return res.status(403).json({ error: 'Доступно сотрудникам КЮДов' });
+    }
+
+    const result = await pool.query(
+      `SELECT u.id, u.full_name, cs.position
+         FROM club_staff cs
+         JOIN users u ON u.id = cs.user_id
+        WHERE cs.club_id = $1 AND cs.removed_at IS NULL AND u.status = 'active'
+        ORDER BY
+          CASE cs.position
+            WHEN 'head' THEN 1 WHEN 'deputy' THEN 2 WHEN 'methodist' THEN 3
+            WHEN 'curator' THEN 4 ELSE 5
+          END,
+          u.full_name`,
+      [req.params.clubId]
+    );
+
+    res.json(result.rows.map((r) => ({
+      ...r,
+      position_label: CLUB_POSITION_LABELS[r.position] || r.position
+    })));
+  } catch (error) {
+    console.error('❌ Ошибка получения сотрудников КЮДа:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.post('/api/club-threads', authenticate, validateBody(clubThreadSchema), async (req, res) => {
+  try {
+    const { to_club_id, to_user_id, subject, message } = req.validatedBody;
+    const mine = await staffClubs(req.user.userId);
+
+    // Писать может только тот, кому должность это позволяет
+    const sender = mine.find((r) => permissionsForPosition(r.position).write_club_messages);
+    if (!sender) {
+      return res.status(403).json({
+        error: 'Писать другим КЮДам может руководитель или заместитель',
+        code: 'NOT_ALLOWED_TO_WRITE'
+      });
+    }
+
+    if (sender.club_id === to_club_id) {
+      return res.status(400).json({ error: 'Нельзя написать своему же КЮДу' });
+    }
+
+    const clubCheck = await pool.query('SELECT id, name FROM clubs WHERE id = $1', [to_club_id]);
+    if (clubCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'КЮД не найден' });
+    }
+
+    // Адресат — обязательно сотрудник того самого КЮДа. Иначе можно было
+    // бы написать «сотруднику» участнику или родителю, а взрослая
+    // переписка о детях не их дело.
+    const addressee = to_user_id || null;
+    if (addressee) {
+      const check = await pool.query(
+        `SELECT 1 FROM club_staff WHERE user_id = $1 AND club_id = $2 AND removed_at IS NULL`,
+        [addressee, to_club_id]
+      );
+      if (check.rows.length === 0) {
+        return res.status(400).json({
+          error: 'Выбранный человек не работает в этом КЮДе',
+          code: 'NOT_CLUB_STAFF'
+        });
+      }
+    }
+
+    const client = await pool.connect();
+    let thread;
+    try {
+      await client.query('BEGIN');
+      const created = await client.query(
+        `INSERT INTO club_threads (from_club_id, to_club_id, to_user_id, subject, created_by)
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [sender.club_id, to_club_id, addressee, subject.trim(), req.user.userId]
+      );
+      thread = created.rows[0];
+      await client.query(
+        `INSERT INTO club_thread_messages (thread_id, author_id, author_club_id, body)
+         VALUES ($1, $2, $3, $4)`,
+        [thread.id, req.user.userId, sender.club_id, message.trim()]
+      );
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    // Сообщаем сотрудникам КЮДа-получателя
+    const recipients = await pool.query(
+      `SELECT user_id FROM club_staff WHERE club_id = $1 AND removed_at IS NULL`,
+      [to_club_id]
+    );
+    const fromName = await getClubName(sender.club_id);
+    for (const r of recipients.rows) {
+      const forMe = addressee && r.user_id === addressee;
+      await createNotification(
+        r.user_id,
+        'club_thread',
+        forMe ? 'Вопрос лично вам от другого КЮДа' : 'Сообщение от другого КЮДа',
+        `${fromName}: ${subject.trim()}`,
+        '/club-threads',
+        forMe ? 'high' : 'normal'
+      );
+    }
+
+    await logActivity(req.user.userId, 'CLUB_THREAD_CREATED', 'club', to_club_id, {
+      thread_id: thread.id,
+      subject: subject.trim()
+    });
+
+    res.status(201).json(thread);
+  } catch (error) {
+    console.error('❌ Ошибка создания переписки:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.post('/api/club-threads/:id/messages', authenticate, validateBody(clubThreadReplySchema), async (req, res) => {
+  try {
+    const { message } = req.validatedBody;
+    const mine = await staffClubs(req.user.userId);
+
+    const threadRes = await pool.query('SELECT * FROM club_threads WHERE id = $1', [req.params.id]);
+    if (threadRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Переписка не найдена' });
+    }
+    const thread = threadRes.rows[0];
+
+    // Отвечать может тот, кто состоит в одном из двух клубов и имеет право писать
+    const author = mine.find(
+      (r) =>
+        (r.club_id === thread.from_club_id || r.club_id === thread.to_club_id) &&
+        permissionsForPosition(r.position).write_club_messages
+    );
+    if (!author) {
+      return res.status(403).json({
+        error: 'Отвечать может руководитель или заместитель КЮДа-участника переписки',
+        code: 'NOT_ALLOWED_TO_WRITE'
+      });
+    }
+
+    const created = await pool.query(
+      `INSERT INTO club_thread_messages (thread_id, author_id, author_club_id, body)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [thread.id, req.user.userId, author.club_id, message.trim()]
+    );
+
+    await pool.query(
+      `UPDATE club_threads SET last_message_at = NOW(), status = 'open' WHERE id = $1`,
+      [thread.id]
+    );
+
+    const otherClubId = author.club_id === thread.from_club_id ? thread.to_club_id : thread.from_club_id;
+    const recipients = await pool.query(
+      `SELECT user_id FROM club_staff WHERE club_id = $1 AND removed_at IS NULL`,
+      [otherClubId]
+    );
+    const fromName = await getClubName(author.club_id);
+    for (const r of recipients.rows) {
+      await createNotification(
+        r.user_id,
+        'club_thread',
+        'Ответ от другого КЮДа',
+        `${fromName}: ${thread.subject}`,
+        '/club-threads',
+        'normal'
+      );
+    }
+
+    res.status(201).json(created.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка ответа в переписке:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.patch('/api/club-threads/:id/status', authenticate, async (req, res) => {
+  try {
+    const status = req.body?.status === 'closed' ? 'closed' : 'open';
+    const mine = await staffClubs(req.user.userId);
+
+    const threadRes = await pool.query('SELECT * FROM club_threads WHERE id = $1', [req.params.id]);
+    if (threadRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Переписка не найдена' });
+    }
+    const thread = threadRes.rows[0];
+
+    const allowed = mine.some(
+      (r) =>
+        (r.club_id === thread.from_club_id || r.club_id === thread.to_club_id) &&
+        permissionsForPosition(r.position).write_club_messages
+    );
+    if (!allowed) return res.status(403).json({ error: 'Недостаточно прав' });
+
+    const updated = await pool.query(
+      'UPDATE club_threads SET status = $1 WHERE id = $2 RETURNING *',
+      [status, thread.id]
+    );
+    res.json(updated.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка смены состояния переписки:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
 
 // ============================================================
 // ПРИГЛАШЕНИЯ РОДИТЕЛЕЙ

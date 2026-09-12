@@ -35,6 +35,10 @@ const routeRoles = {
   // сверяет путь целиком, а право зависит от должности в конкретном
   // клубе — это проверяет сервер.
   '/club-sessions': ['club_coordinator', 'tutor', 'admin', 'movement_coordinator'],
+  // Переписка КЮДов — разговор равных. Движение её намеренно не читает:
+  // так решили в движении. Сервер отдаёт только тем, кто числится
+  // сотрудником одного из двух клубов-участников.
+  '/club-threads': ['club_coordinator'],
   '/attention': ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'],
   '/club-coordinator-dashboard': ['club_coordinator'],
   '/tutor-dashboard': ['tutor'],

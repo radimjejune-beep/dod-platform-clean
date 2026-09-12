@@ -53,6 +53,36 @@ export const userSchema = Joi.object({
   })
 });
 
+// 1a. ПРАВКА ЧУЖОЙ КАРТОЧКИ СОТРУДНИКОМ
+// Отдельно от userSchema: при создании часть полей обязательна, а здесь
+// приходят только те, что меняют. Набор подобран под заявку на форум —
+// дата рождения, город, школа, класс, телефон участника и данные
+// родителя. Заполненные один раз в карточке, они подставляются в каждую
+// следующую заявку сами.
+export const userUpdateSchema = Joi.object({
+  full_name: Joi.string().min(2).max(100).messages({
+    'string.empty': 'ФИО обязательно',
+    'string.min': 'ФИО должно содержать минимум 2 символа'
+  }),
+  phone: Joi.string().pattern(/^[\+\d\s\-\(\)]{10,20}$/).allow('', null).messages({
+    'string.pattern.base': 'Некорректный номер телефона'
+  }),
+  school: Joi.string().max(300).allow('', null),
+  class_name: Joi.string().max(50).allow('', null),
+  birth_date: Joi.date().allow(null, ''),
+  city: Joi.string().max(100).allow('', null),
+  status: Joi.string().valid('active', 'inactive', 'pending'),
+  parent_full_name: Joi.string().max(255).allow('', null),
+  parent_phone: Joi.string().pattern(/^[\+\d\s\-\(\)]{10,20}$/).allow('', null).messages({
+    'string.pattern.base': 'Некорректный номер телефона родителя'
+  }),
+  parent_email: Joi.string().email({ tlds: { allow: false } }).max(255).allow('', null).messages({
+    'string.email': 'Некорректная почта родителя'
+  })
+}).min(1).messages({
+  'object.min': 'Нет данных для сохранения'
+});
+
 // 2. СОБЫТИЕ
 export const eventSchema = Joi.object({
   title: Joi.string().min(3).max(200).required().messages({
@@ -273,6 +303,7 @@ export const validate = (schema, data) => {
 
 export default {
   userSchema,
+  userUpdateSchema,
   eventSchema,
   registrationSchema,
   reportSchema,

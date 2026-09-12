@@ -28,6 +28,7 @@ import { validateBody } from './middleware/validate.js';
 import { 
   eventSchema, 
   userSchema, 
+  userUpdateSchema,
   registrationSchema,
   reportSchema,
   achievementSchema,
@@ -752,6 +753,12 @@ app.get('/api/me', authenticate, async (req, res) => {
               u.position, u.status, u.club_id, u.created_at, u.avatar_url, u.is_president,
               u.social_links, u.skills, u.education, u.achievements, u.telegram, u.vk,
               u.must_change_password,
+              -- Вкладка «Родители» в профиле читает эти поля, а сюда они не
+              -- попадали: экран всегда показывал пустоту, пока человек сам
+              -- что-нибудь не сохранит. Те же поля подставляются в заявку
+              -- на выездной форум.
+              u.parent_full_name, u.parent_phone, u.parent_email,
+              u.charter_acceptance_date,
               c.name as club_name
        FROM users u
        LEFT JOIN clubs c ON u.club_id = c.id
@@ -929,6 +936,175 @@ app.post('/api/users', authenticate, requireAdmin, validateBody(userSchema), asy
 // ============================================================
 // ПРИКРЕПЛЕНИЕ К КЛУБУ (АДМИН)
 // ============================================================
+// ============================================================
+// КАРТОЧКА ОДНОГО ЧЕЛОВЕКА
+// ============================================================
+// Экран карточки участника грузил весь список пользователей и искал в нём
+// нужного. Список закрыт для руководителя КЮДа и тьютора — то есть для
+// тех, кому карточка нужнее всех, — и они видели «Участник не найден».
+// Отдельный запрос отдаёт одного человека и сам решает, кому его видно.
+async function canSeeUser(requester, targetId) {
+  if (requester.userId === targetId) return true;
+  if (MOVEMENT_ROLES.includes(requester.role)) return true;
+
+  if (requester.role === 'club_coordinator') {
+    const clubIds = await getCoordinatorClubIds(requester.userId);
+    if (clubIds.length === 0) return false;
+    const check = await pool.query(
+      'SELECT 1 FROM users WHERE id = $1 AND club_id = ANY($2)',
+      [targetId, clubIds]
+    );
+    return check.rows.length > 0;
+  }
+
+  if (requester.role === 'tutor') {
+    const check = await pool.query(
+      `SELECT 1 FROM event_participants ep
+         JOIN event_tutor_assignments eta ON eta.event_id = ep.event_id
+        WHERE ep.participant_id = $1 AND eta.tutor_id = $2
+        LIMIT 1`,
+      [targetId, requester.userId]
+    );
+    return check.rows.length > 0;
+  }
+
+  return false;
+}
+
+app.get('/api/users/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!(await canSeeUser(req.user, id))) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    const result = await pool.query(
+      `SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school, u.class_name,
+              u.birth_date, u.is_minor, u.registration_status, u.interests, u.bio,
+              u.city, u.position, u.status, u.club_id, u.created_at, u.avatar_url,
+              u.is_president, u.social_links, u.skills, u.education, u.achievements,
+              u.telegram, u.vk,
+              u.parent_full_name, u.parent_phone, u.parent_email,
+              c.name AS club_name,
+              COALESCE(cs.given, '{}'::text[]) AS consents_given,
+              COALESCE(cs.required_total, 0) AS consents_required_total,
+              COALESCE(cs.required_given, 0) AS consents_required_given,
+              cs.last_given_at AS consent_agreement_date,
+              EXISTS (
+                SELECT 1 FROM child_parent cp
+                 WHERE cp.child_id = u.id AND cp.status = 'active'
+              ) AS has_parent
+         FROM users u
+         LEFT JOIN clubs c ON c.id = u.club_id
+         LEFT JOIN LATERAL (
+           SELECT array_agg(uc.consent_type) AS given,
+                  MAX(uc.given_at) AS last_given_at,
+                  (SELECT COUNT(*)::int FROM consent_documents d
+                    WHERE d.is_current = true AND d.is_required = true) AS required_total,
+                  COUNT(*) FILTER (
+                    WHERE uc.consent_type IN (
+                      SELECT d.code FROM consent_documents d
+                       WHERE d.is_current = true AND d.is_required = true
+                    )
+                  )::int AS required_given
+             FROM user_consents uc
+            WHERE uc.user_id = u.id AND uc.revoked_at IS NULL
+         ) cs ON true
+        WHERE u.id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка получения карточки:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// ПРАВКА ЧУЖОЙ КАРТОЧКИ
+// ============================================================
+// Форма правки участника отправляла PATCH /api/users/:id, а такого
+// маршрута не было вовсе: кнопка «Сохранить» не сохраняла ничего, и
+// сообщить об этом было некому — сервер отвечал страницей «не найдено».
+//
+// Набор полей подобран под заявку на выездной форум: дата рождения,
+// город, учебное заведение, класс, телефон участника, ФИО и телефон
+// родителя. Заполненные один раз здесь, они подставляются в каждую
+// следующую заявку сами — прежде их вводили на каждый форум заново.
+app.patch('/api/users/:id', authenticate, validateBody(userUpdateSchema), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const role = req.user.role;
+
+    const canEditAnyone = ['admin', 'movement_coordinator'].includes(role);
+    let allowed = canEditAnyone;
+
+    if (!allowed && role === 'club_coordinator') {
+      // Руководитель правит только участников своего КЮДа
+      const clubIds = await getCoordinatorClubIds(req.user.userId);
+      if (clubIds.length > 0) {
+        const check = await pool.query(
+          `SELECT 1 FROM users WHERE id = $1 AND role = 'participant' AND club_id = ANY($2)`,
+          [id, clubIds]
+        );
+        allowed = check.rows.length > 0;
+      }
+    }
+
+    if (!allowed) {
+      return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+
+    const data = req.validatedBody;
+
+    // Статус учётной записи меняет только движение: руководитель КЮДа не
+    // должен отключать человеку вход
+    if (data.status !== undefined && !canEditAnyone) {
+      delete data.status;
+    }
+
+    const fields = [];
+    const values = [];
+    for (const [key, value] of Object.entries(data)) {
+      fields.push(`${key} = $${fields.length + 1}`);
+      values.push(value === '' ? null : value);
+    }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'Нет данных для сохранения' });
+    }
+
+    values.push(id);
+    const result = await pool.query(
+      `UPDATE users SET ${fields.join(', ')} WHERE id = $${values.length}
+       RETURNING id, email, full_name, role, phone, school, class_name, birth_date,
+                 city, status, club_id, parent_full_name, parent_phone, parent_email`,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    invalidateUserCache(id);
+    await logActivity(req.user.userId, 'UPDATE_USER', 'user', id, {
+      fields: Object.keys(data)
+    });
+
+    console.log(`✅ Карточка обновлена: ${result.rows[0].full_name}`);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка правки карточки:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
 app.patch('/api/users/:id/assign-club', authenticate, async (req, res) => {
   try {
     const { id } = req.params;

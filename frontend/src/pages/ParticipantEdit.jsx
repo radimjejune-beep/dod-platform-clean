@@ -29,16 +29,18 @@ export default function ParticipantEdit() {
       }
       setProfile(userData);
 
-      const usersData = await api.getUsers();
-      const found = usersData.find(u => u.id === id);
-      
-      if (!found) {
+      // Раньше грузили весь список пользователей и искали в нём нужного.
+      // Список закрыт для руководителя КЮДа и тьютора, и они видели
+      // «Участник не найден» вместо карточки своего же участника.
+      const found = await api.getUser(id);
+
+      if (!found || found.error) {
         setLoading(false);
-        setMessage('Участник не найден');
+        setMessage(found?.error ? api.describeApiError(found, 'Участник не найден') : 'Участник не найден');
         setMessageType('error');
         return;
       }
-      
+
       setParticipant(found);
     } catch (err) {
       console.error('Ошибка:', err);
@@ -79,11 +81,17 @@ export default function ParticipantEdit() {
     setMessage('');
 
     try {
+      // Набор полей повторяет заявку на выездной форум: заполненные здесь
+      // один раз, дальше они подставляются в каждую заявку сами
       const updateData = {
         full_name: participant.full_name.trim(),
         phone: participant.phone || '',
         school: participant.school || '',
         class_name: participant.class_name || '',
+        birth_date: participant.birth_date ? String(participant.birth_date).slice(0, 10) : '',
+        city: participant.city || '',
+        parent_full_name: participant.parent_full_name || '',
+        parent_phone: participant.parent_phone || '',
         status: participant.status || 'active'
       };
 
@@ -221,6 +229,25 @@ export default function ParticipantEdit() {
                 />
               </div>
               <div className="form-group">
+                <label>Дата рождения</label>
+                <input
+                  type="date"
+                  name="birth_date"
+                  value={participant.birth_date ? String(participant.birth_date).slice(0, 10) : ''}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-group">
+                <label>Город</label>
+                <input
+                  type="text"
+                  name="city"
+                  value={participant.city || ''}
+                  onChange={handleChange}
+                  placeholder="Нальчик"
+                />
+              </div>
+              <div className="form-group">
                 <label>Статус</label>
                 <select
                   name="status"
@@ -231,6 +258,37 @@ export default function ParticipantEdit() {
                   <option value="inactive">Неактивен</option>
                   <option value="pending">Ожидает</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Эти поля нужны для заявки на выездной форум. Заполненные
+                здесь один раз, дальше они подставляются в каждую заявку
+                сами — раньше их вводили заново на каждый форум. */}
+            <h3 style={{ marginTop: '24px', marginBottom: '4px' }}>Законный представитель</h3>
+            <p style={{ color: 'var(--color-gray-500)', fontSize: '13px', marginBottom: '12px' }}>
+              Нужен для заявок на выездные форумы. Это не заменяет согласия —
+              их оформляет сам родитель в своём кабинете.
+            </p>
+            <div className="grid-2">
+              <div className="form-group">
+                <label>ФИО родителя</label>
+                <input
+                  type="text"
+                  name="parent_full_name"
+                  value={participant.parent_full_name || ''}
+                  onChange={handleChange}
+                  placeholder="Иванова Мария Петровна"
+                />
+              </div>
+              <div className="form-group">
+                <label>Телефон родителя</label>
+                <input
+                  type="tel"
+                  name="parent_phone"
+                  value={participant.parent_phone || ''}
+                  onChange={handleChange}
+                  placeholder="+7 999 123 45 67"
+                />
               </div>
             </div>
 

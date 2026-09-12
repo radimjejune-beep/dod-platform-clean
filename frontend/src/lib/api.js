@@ -277,6 +277,16 @@ export const createUser = async (data) => {
   return response.json();
 };
 
+// Карточка одного человека. Прежде экраны грузили весь список
+// пользователей и искали в нём нужного — список закрыт для руководителя
+// КЮДа и тьютора, и они видели «Участник не найден».
+export const getUser = async (userId) => {
+  const response = await fetch(`${API_URL}/users/${userId}`, {
+    headers: headers()
+  });
+  return response.json();
+};
+
 export const updateUser = async (userId, data) => {
   const response = await fetch(`${API_URL}/users/${userId}`, {
     method: 'PATCH',
@@ -1609,6 +1619,7 @@ const api = {
   getUsers,
   getParticipants,
   createUser,
+  getUser,
   updateUser,
   deleteUser,
   resetUserPassword,

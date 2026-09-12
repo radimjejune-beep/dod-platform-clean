@@ -35,12 +35,14 @@ export default function ParticipantProfile() {
       }
       setProfile(userData);
 
-      const usersData = await api.getUsers();
-      const found = usersData.find(u => u.id === id);
+      // Карточка отдельным запросом: список пользователей закрыт для
+      // руководителя КЮДа и тьютора, и они видели «Участник не найден»
+      // вместо карточки собственного участника
+      const found = await api.getUser(id);
       
-      if (!found) {
+      if (!found || found.error) {
         setLoading(false);
-        setError('Участник не найден');
+        setError(found?.error ? api.describeApiError(found, 'Участник не найден') : 'Участник не найден');
         return;
       }
       setParticipant(found);

@@ -67,18 +67,24 @@ export default function ConsentsManagement() {
     }
   };
 
+  // Считаем по обязательным согласиям: согласие на распространение данных
+  // даётся по желанию, и его отсутствие не мешает участвовать.
+  const hasConsent = (p, code) =>
+    Array.isArray(p?.consents_given) && p.consents_given.includes(code);
+
   const getConsentStatus = (p) => {
-    const consents = ['consent_personal_data', 'consent_photo_publication', 'consent_event_participation'];
-    const given = consents.filter(c => p[c]).length;
-    if (given === 3) return 'full';
+    const total = p?.consents_required_total || 0;
+    const given = p?.consents_required_given || 0;
+    if (total && given >= total) return 'full';
     if (given === 0) return 'none';
     return 'partial';
   };
 
   const getConsentPercentage = (p) => {
-    const consents = ['consent_personal_data', 'consent_photo_publication', 'consent_event_participation'];
-    const given = consents.filter(c => p[c]).length;
-    return Math.round((given / 3) * 100);
+    const total = p?.consents_required_total || 0;
+    const given = p?.consents_required_given || 0;
+    if (!total) return given ? 100 : 0;
+    return Math.round((given / total) * 100);
   };
 
   const updateStats = (data) => {
@@ -155,9 +161,9 @@ export default function ConsentsManagement() {
       'Клуб': p.club_name || '—',
       'Класс': p.class_name || '—',
       'Школа': p.school || '—',
-      'Согласие на обработку данных': p.consent_personal_data ? 'Да' : 'Нет',
-      'Согласие на публикацию фото': p.consent_photo_publication ? 'Да' : 'Нет',
-      'Согласие на участие в мероприятиях': p.consent_event_participation ? 'Да' : 'Нет',
+      'Согласие на обработку данных': hasConsent(p, 'personal_data') ? 'Да' : 'Нет',
+      'Согласие на публикацию фото': hasConsent(p, 'data_distribution') ? 'Да' : 'Нет',
+      'Согласие на участие в мероприятиях': hasConsent(p, 'event_participation') ? 'Да' : 'Нет',
       'Статус согласий': getConsentPercentage(p) + '%'
     }));
 
@@ -329,13 +335,13 @@ export default function ConsentsManagement() {
                         <td style={{ color: 'var(--color-gray-500)' }}>{p.club_name || '—'}</td>
                         <td style={{ color: 'var(--color-gray-500)' }}>{p.class_name || '—'}</td>
                         <td style={{ textAlign: 'center' }}>
-                          {p.consent_personal_data ? <Icon name="success" /> : <Icon name="error" />}
+                          {hasConsent(p, 'personal_data') ? <Icon name="success" /> : <Icon name="error" />}
                         </td>
                         <td style={{ textAlign: 'center' }}>
-                          {p.consent_photo_publication ? <Icon name="success" /> : <Icon name="error" />}
+                          {hasConsent(p, 'data_distribution') ? <Icon name="success" /> : <Icon name="error" />}
                         </td>
                         <td style={{ textAlign: 'center' }}>
-                          {p.consent_event_participation ? <Icon name="success" /> : <Icon name="error" />}
+                          {hasConsent(p, 'event_participation') ? <Icon name="success" /> : <Icon name="error" />}
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           <span className="tag" style={{ background: status.bg, color: status.color, fontSize: '11px' }}>

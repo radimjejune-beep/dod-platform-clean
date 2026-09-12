@@ -96,13 +96,18 @@ export default function ParentDashboard() {
     loadChildStats(child.id);
   };
 
+  // Отсчёт ведём по обязательным согласиям: согласие на распространение
+  // данных даётся по желанию, и без него участвовать можно.
   const getConsentStatus = (child) => {
     if (!child) return { total: 0, given: 0, percentage: 0 };
-    const consents = ['consent_personal_data', 'consent_photo_publication', 'consent_event_participation'];
-    const total = consents.length;
-    const given = consents.filter(c => child[c]).length;
+    const total = child.consents_required_total || 0;
+    const given = child.consents_required_given || 0;
+    if (!total) return { total: 0, given, percentage: given ? 100 : 0 };
     return { total, given, percentage: Math.round((given / total) * 100) };
   };
+
+  const hasConsent = (child, code) =>
+    Array.isArray(child?.consents_given) && child.consents_given.includes(code);
 
   // ===== ПРИВЯЗКА РЕБЁНКА =====
   const handleLinkChild = async (e) => {
@@ -330,24 +335,18 @@ export default function ParentDashboard() {
               </div>
 
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ color: selectedChild.consent_personal_data ? 'var(--color-success)' : 'var(--color-error)' }}>
-                    {selectedChild.consent_personal_data ? <Icon name="success" /> : <Icon name="error" />}
-                  </span>
-                  <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>Персональные данные</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ color: selectedChild.consent_photo_publication ? 'var(--color-success)' : 'var(--color-error)' }}>
-                    {selectedChild.consent_photo_publication ? <Icon name="success" /> : <Icon name="error" />}
-                  </span>
-                  <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>Публикация фото</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ color: selectedChild.consent_event_participation ? 'var(--color-success)' : 'var(--color-error)' }}>
-                    {selectedChild.consent_event_participation ? <Icon name="success" /> : <Icon name="error" />}
-                  </span>
-                  <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>Участие в мероприятиях</span>
-                </div>
+                {[
+                  { code: 'personal_data', label: 'Персональные данные' },
+                  { code: 'event_participation', label: 'Участие в мероприятиях' },
+                  { code: 'data_distribution', label: 'Публикация фото и новостей' }
+                ].map(({ code, label }) => (
+                  <div key={code} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ color: hasConsent(selectedChild, code) ? 'var(--color-success)' : 'var(--color-error)' }}>
+                      <Icon name={hasConsent(selectedChild, code) ? 'success' : 'error'} />
+                    </span>
+                    <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>{label}</span>
+                  </div>
+                ))}
                 {selectedChild.consent_agreement_date && (
                   <span style={{ fontSize: '12px', color: 'var(--color-gray-400)' }}>
                     Подписаны: {new Date(selectedChild.consent_agreement_date).toLocaleDateString('ru-RU')}

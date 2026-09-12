@@ -1068,12 +1068,39 @@ app.get('/api/participants', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Недостаточно прав' });
     }
 
+    // Состояние согласий берём из user_consents — там они и живут, вместе
+    // с редакцией текста и тем, кто их дал. Экраны «Согласия» и панель
+    // координатора читали старые колонки users.consent_*, в которые
+    // давно ничего не пишется: у всех участников выходило «согласий нет»,
+    // и в выгрузку для проверки шло то же самое.
     let query = `
       SELECT u.id, u.email, u.full_name, u.role, u.phone, u.school,
              u.class_name, u.birth_date, u.created_at, u.status, u.avatar_url,
-             u.club_id, c.name as club_name
+             u.club_id, c.name as club_name,
+             COALESCE(cs.given, '{}'::text[]) AS consents_given,
+             COALESCE(cs.required_total, 0) AS consents_required_total,
+             COALESCE(cs.required_given, 0) AS consents_required_given,
+             cs.last_given_at AS consent_agreement_date,
+             EXISTS (
+               SELECT 1 FROM child_parent cp
+                WHERE cp.child_id = u.id AND cp.status = 'active'
+             ) AS has_parent
       FROM users u
       LEFT JOIN clubs c ON u.club_id = c.id
+      LEFT JOIN LATERAL (
+        SELECT array_agg(uc.consent_type) AS given,
+               MAX(uc.given_at) AS last_given_at,
+               (SELECT COUNT(*)::int FROM consent_documents d
+                 WHERE d.is_current = true AND d.is_required = true) AS required_total,
+               COUNT(*) FILTER (
+                 WHERE uc.consent_type IN (
+                   SELECT d.code FROM consent_documents d
+                    WHERE d.is_current = true AND d.is_required = true
+                 )
+               )::int AS required_given
+          FROM user_consents uc
+         WHERE uc.user_id = u.id AND uc.revoked_at IS NULL
+      ) cs ON true
       WHERE u.role = 'participant'
     `;
     const params = [];
@@ -2477,14 +2504,36 @@ app.get('/api/parent-children', authenticate, async (req, res) => {
   try {
     const userId = req.user.userId;
 
+    // Согласия лежат в user_consents вместе с редакцией текста и тем, кто
+    // их дал. Прежние колонки consent_personal_data и соседние остались от
+    // старой схемы, где галочки ставил сам ребёнок; писать в них давно
+    // запрещено, а родительский кабинет читал именно их — и показывал
+    // «0%» даже когда все согласия оформлены.
     const result = await pool.query(
       `SELECT u.id, u.full_name, u.phone, u.school, u.class_name, u.birth_date, u.avatar_url,
-              u.status, u.consent_personal_data, u.consent_photo_publication, u.consent_event_participation,
-              u.consent_agreement_date, u.interests, u.bio, u.city,
-              cl.name as club_name, cp.parent_id, cp.child_id, cp.status as link_status
+              u.status, u.interests, u.bio, u.city,
+              cl.name as club_name, cp.parent_id, cp.child_id, cp.status as link_status,
+              COALESCE(c.given, '{}'::text[]) AS consents_given,
+              COALESCE(c.required_total, 0) AS consents_required_total,
+              COALESCE(c.required_given, 0) AS consents_required_given,
+              c.last_given_at AS consent_agreement_date
        FROM child_parent cp
        LEFT JOIN users u ON cp.child_id = u.id
        LEFT JOIN clubs cl ON u.club_id = cl.id
+       LEFT JOIN LATERAL (
+         SELECT array_agg(uc.consent_type) AS given,
+                MAX(uc.given_at) AS last_given_at,
+                (SELECT COUNT(*)::int FROM consent_documents d
+                  WHERE d.is_current = true AND d.is_required = true) AS required_total,
+                COUNT(*) FILTER (
+                  WHERE uc.consent_type IN (
+                    SELECT d.code FROM consent_documents d
+                     WHERE d.is_current = true AND d.is_required = true
+                  )
+                )::int AS required_given
+           FROM user_consents uc
+          WHERE uc.user_id = u.id AND uc.revoked_at IS NULL
+       ) c ON true
        WHERE cp.parent_id = $1 AND cp.status = 'active'
        ORDER BY u.full_name`,
       [userId]

@@ -67,8 +67,10 @@ export default function CoordinatorDashboard() {
         return date.getMonth() === thisMonth && date.getFullYear() === thisYear;
       });
 
-      const consentsPending = participants.filter(p => 
-        !p.consent_personal_data || !p.consent_photo_publication || !p.consent_event_participation
+      // Считаем по обязательным согласиям из user_consents: старые колонки
+      // users.consent_* не заполняются, и в счётчик попадали все подряд
+      const consentsPending = participants.filter(
+        (p) => (p.consents_required_given || 0) < (p.consents_required_total || 0)
       );
 
       const clubsWithStats = clubs.map(club => ({

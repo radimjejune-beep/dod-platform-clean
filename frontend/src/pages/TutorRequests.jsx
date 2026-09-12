@@ -83,7 +83,7 @@ export default function TutorRequests() {
       console.log('📥 Результат:', result);
       
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage('Запрос отправлен координатору движения!');
@@ -127,7 +127,7 @@ export default function TutorRequests() {
 
       const result = await response.json();
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage(status === 'approved' ? 'Запрос одобрен!' : 'Запрос отклонён');

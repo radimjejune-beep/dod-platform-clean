@@ -96,14 +96,65 @@ export const changePassword = async (data) => {
 // Сервер при ошибке валидации возвращает { error, details: [{field, message}] },
 // но интерфейс показывал только error — то есть «Ошибка валидации данных»
 // без единого намёка, какое поле не так.
+// Сервер называет поля так, как они зовутся в базе: form_url,
+// event_date, club_id. Человеку это ничего не говорит, а именно по
+// этому сообщению он должен понять, что исправить.
+const FIELD_LABELS = {
+  title: 'Название',
+  description: 'Описание',
+  location: 'Место',
+  event_date: 'Дата начала',
+  end_date: 'Дата окончания',
+  start_time: 'Время начала',
+  end_time: 'Время окончания',
+  type: 'Тип',
+  capacity: 'Вместимость',
+  club_id: 'Клуб',
+  form_url: 'Ссылка на форму',
+  registration_deadline: 'Срок регистрации',
+  max_participants: 'Максимум участников',
+  target_clubs: 'Приглашённые КЮДы',
+  full_name: 'ФИО',
+  email: 'Электронная почта',
+  password: 'Пароль',
+  phone: 'Телефон',
+  role: 'Роль',
+  birth_date: 'Дата рождения',
+  school: 'Школа',
+  class_name: 'Класс',
+  report_month: 'Отчётный месяц',
+  report_text: 'Текст отчёта',
+  name: 'Название',
+  city: 'Город',
+  contact_email: 'Электронная почта',
+  contact_phone: 'Телефон',
+  session_date: 'Дата занятия',
+  topic: 'Тема'
+};
+
 export const describeApiError = (result, fallback = 'Неизвестная ошибка') => {
   if (!result) return fallback;
 
   const details = Array.isArray(result.details)
-    ? result.details.map((d) => (d.field ? `${d.field}: ${d.message}` : d.message)).join('; ')
+    ? result.details
+        .map((d) => {
+          if (!d.field) return d.message;
+          const label = FIELD_LABELS[d.field] || d.field;
+          // Сообщения Joi приходят по-английски и с именем поля внутри
+          const text = String(d.message || '')
+            .replace(new RegExp(`"${d.field}"\\s*`, 'g'), '')
+            .replace('is not allowed to be empty', 'не заполнено')
+            .replace('is required', 'обязательно')
+            .replace('must be a string', 'заполнено неверно')
+            .replace('must be a number', 'должно быть числом')
+            .replace('must be a valid date', 'неверная дата')
+            .trim();
+          return `${label} — ${text}`;
+        })
+        .join('; ')
     : '';
 
-  if (details) return `${result.error || fallback}. ${details}`;
+  if (details) return `${result.error || fallback}: ${details}`;
   return result.error || fallback;
 };
 

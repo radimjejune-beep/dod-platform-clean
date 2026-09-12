@@ -74,7 +74,7 @@ export default function Appeals() {
       });
 
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage('Обращение отправлено!');

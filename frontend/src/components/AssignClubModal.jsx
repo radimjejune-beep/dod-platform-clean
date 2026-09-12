@@ -44,7 +44,7 @@ export default function AssignClubModal({
 
     try {
       const result = await api.assignUserToClub(userId, selectedClubId);
-      if (result.error) throw new Error(result.error);
+      if (result.error) throw new Error(api.describeApiError(result));
 
       setMessage(`${userFullName} прикреплён к КЮДУ!`);
       setMessageType('success');

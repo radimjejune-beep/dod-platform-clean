@@ -103,7 +103,7 @@ export default function Profile() {
       const result = await api.updateProfile(updateData);
 
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage('Профиль успешно обновлён!');

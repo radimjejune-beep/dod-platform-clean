@@ -53,7 +53,7 @@ export default function TutorAssignments() {
       const result = await api.respondToAssignment(id, status);
       
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage(status === 'accepted' ? 'Вы приняли назначение!' : 'Вы отклонили назначение');

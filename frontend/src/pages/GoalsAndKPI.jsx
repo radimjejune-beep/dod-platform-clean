@@ -106,7 +106,7 @@ export default function GoalsAndKPI() {
       }
 
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage(editingGoal ? 'Цель обновлена!' : 'Цель создана!');

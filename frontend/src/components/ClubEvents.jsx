@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from './Icon';
+import { describeApiError } from '../lib/api';
 
 export default function ClubEvents({ clubId, profile }) {
   const [events, setEvents] = useState([]);
@@ -106,7 +107,7 @@ export default function ClubEvents({ clubId, profile }) {
 
       const result = await response.json();
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(describeApiError(result));
       }
 
       setMessage('Мероприятие создано! Участники клуба будут уведомлены.');
@@ -151,7 +152,7 @@ export default function ClubEvents({ clubId, profile }) {
       
       const result = await response.json();
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(describeApiError(result));
       }
       
       setMessage('Вы записаны на мероприятие!');
@@ -183,7 +184,7 @@ export default function ClubEvents({ clubId, profile }) {
       
       const result = await response.json();
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(describeApiError(result));
       }
       
       setMessage(status === 'approved' ? 'Мероприятие одобрено!' : 'Мероприятие отклонено');

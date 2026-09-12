@@ -204,7 +204,7 @@ export default function StaffManagement() {
       });
 
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage(`Сотрудник "${staffForm.full_name}" создан! Временный пароль: ${tempPassword}`);

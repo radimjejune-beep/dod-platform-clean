@@ -90,7 +90,7 @@ export default function ParticipantEdit() {
       const result = await api.updateUser(id, updateData);
       
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage('Профиль участника обновлён!');

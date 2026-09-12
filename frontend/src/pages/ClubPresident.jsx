@@ -182,7 +182,7 @@ export default function ClubPresident() {
       const result = await response.json();
 
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage(`Президент назначен!`);

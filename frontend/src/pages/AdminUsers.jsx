@@ -263,7 +263,7 @@ export default function AdminUsers() {
         parent_id: parentChildForm.parent_id,
         child_id: parentChildForm.child_id
       });
-      if (result.error) throw new Error(result.error);
+      if (result.error) throw new Error(api.describeApiError(result));
       setMessage('Ребёнок привязан к родителю!');
       setMessageType('success');
       setShowParentChildModal(false);

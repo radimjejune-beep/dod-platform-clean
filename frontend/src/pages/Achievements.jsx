@@ -306,7 +306,7 @@ export default function Achievements() {
       }
 
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage(editingAchievement ? 'Достижение обновлено!' : 'Достижение добавлено!');
@@ -366,7 +366,7 @@ export default function Achievements() {
     if (!confirm('Удалить достижение?')) return;
     try {
       const result = await api.deleteAchievement(id);
-      if (result.error) throw new Error(result.error);
+      if (result.error) throw new Error(api.describeApiError(result));
       setMessage('Достижение удалено');
       setMessageType('success');
       loadData(pagination.page);

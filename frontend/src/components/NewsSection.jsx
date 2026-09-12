@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from './Icon';
+import { describeApiError } from '../lib/api';
 
 export default function NewsSection({ limit = 3 }) {
   const [news, setNews] = useState([]);
@@ -185,7 +186,7 @@ export default function NewsSection({ limit = 3 }) {
 
       const result = await response.json();
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(describeApiError(result));
       }
 
       setMessage('Новость обновлена!');
@@ -222,7 +223,7 @@ export default function NewsSection({ limit = 3 }) {
       
       const result = await response.json();
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(describeApiError(result));
       }
 
       setMessage('Новость удалена');

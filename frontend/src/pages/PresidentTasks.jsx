@@ -228,7 +228,7 @@ export default function PresidentTasks() {
       }
 
       const result = await response.json();
-      if (result.error) throw new Error(result.error);
+      if (result.error) throw new Error(api.describeApiError(result));
 
       setMessage('Задание создано!');
       setMessageType('success');
@@ -283,7 +283,7 @@ export default function PresidentTasks() {
       }
 
       const result = await response.json();
-      if (result.error) throw new Error(result.error);
+      if (result.error) throw new Error(api.describeApiError(result));
 
       setMessage('Ответ отправлен!');
       setMessageType('success');
@@ -319,7 +319,7 @@ export default function PresidentTasks() {
       }
 
       const result = await response.json();
-      if (result.error) throw new Error(result.error);
+      if (result.error) throw new Error(api.describeApiError(result));
 
       setMessage(`Статус изменён на "${status}"`);
       setMessageType('success');

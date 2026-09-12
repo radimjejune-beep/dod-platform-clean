@@ -376,7 +376,7 @@ export default function Events() {
       );
 
       const data = await response.json();
-      if (data.error) throw new Error(data.error);
+      if (data.error) throw new Error(api.describeApiError(data));
 
       setMessage(status === 'approved' ? 'Заявка клуба одобрена!' : 'Заявка клуба отклонена');
       setMessageType(status === 'approved' ? 'success' : 'error');
@@ -590,13 +590,13 @@ export default function Events() {
         start_time: form.start_time || null,
         end_time: form.end_time || null,
         type: form.type,
-        capacity: parseInt(form.capacity),
+        capacity: parseInt(form.capacity, 10) || 20,
         club_id: form.club_id || null,
-        form_url: form.form_url || null,
+        form_url: form.form_url || '',
         is_global: form.is_global || false,
         is_club_event: !!form.club_id,
         registration_deadline: form.registration_deadline || null,
-        max_participants: parseInt(form.max_participants) || 0,
+        max_participants: parseInt(form.max_participants, 10) || 0,
         target_clubs: form.target_clubs || []
       };
 
@@ -630,7 +630,7 @@ export default function Events() {
       }
 
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       const successMessage = form.id 
@@ -703,7 +703,7 @@ export default function Events() {
     if (!confirm('Удалить это мероприятие?')) return;
     try {
       const result = await api.deleteEvent(id);
-      if (result.error) throw new Error(result.error);
+      if (result.error) throw new Error(api.describeApiError(result));
       setMessage('Мероприятие удалено');
       setMessageType('success');
       loadData(pagination.page);
@@ -730,7 +730,7 @@ export default function Events() {
         })
       });
       const result = await response.json();
-      if (result.error) throw new Error(result.error);
+      if (result.error) throw new Error(api.describeApiError(result));
       setMessage(status === 'approved' ? 'Мероприятие одобрено!' : 'Мероприятие отклонено');
       setMessageType(status === 'approved' ? 'success' : 'error');
       setShowModerationModal(false);
@@ -768,7 +768,7 @@ export default function Events() {
       const result = await response.json();
 
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage('Тьютор назначен на мероприятие!');

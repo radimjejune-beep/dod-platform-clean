@@ -51,7 +51,7 @@ export default function AvatarUpload({ currentAvatar, onAvatarUpdated, userId, s
       const result = await api.uploadAvatar(compressedBase64);
       
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       // Обновляем preview (не сохраняем в localStorage!)

@@ -18,31 +18,31 @@ export const userSchema = Joi.object({
     'string.email': 'Некорректный email',
     'string.max': 'Email не может превышать 100 символов'
   }),
-  phone: Joi.string().pattern(/^[\+\d\s\-\(\)]{10,20}$/).allow('').messages({
+  phone: Joi.string().pattern(/^[\+\d\s\-\(\)]{10,20}$/).allow('', null).messages({
     'string.pattern.base': 'Некорректный номер телефона'
   }),
   role: Joi.string().valid('participant', 'parent', 'club_coordinator', 'tutor', 'movement_coordinator', 'admin', 'president', 'vice_president'),
-  school: Joi.string().max(200).allow(''),
-  class_name: Joi.string().max(50).allow(''),
+  school: Joi.string().max(200).allow('', null),
+  class_name: Joi.string().max(50).allow('', null),
   birth_date: Joi.date().allow(null, ''),
-  city: Joi.string().max(100).allow(''),
-  interests: Joi.string().max(500).allow(''),
-  bio: Joi.string().max(1000).allow(''),
-  skills: Joi.string().max(500).allow(''),
-  education: Joi.string().max(500).allow(''),
-  achievements: Joi.string().max(500).allow(''),
-  social_links: Joi.string().max(500).allow(''),
-  telegram: Joi.string().max(100).allow(''),
-  vk: Joi.string().max(200).allow(''),
-  parent_full_name: Joi.string().max(100).allow(''),
-  parent_phone: Joi.string().pattern(/^[\+\d\s\-\(\)]{10,20}$/).allow(''),
-  parent_email: Joi.string().email().max(100).allow(''),
+  city: Joi.string().max(100).allow('', null),
+  interests: Joi.string().max(500).allow('', null),
+  bio: Joi.string().max(1000).allow('', null),
+  skills: Joi.string().max(500).allow('', null),
+  education: Joi.string().max(500).allow('', null),
+  achievements: Joi.string().max(500).allow('', null),
+  social_links: Joi.string().max(500).allow('', null),
+  telegram: Joi.string().max(100).allow('', null),
+  vk: Joi.string().max(200).allow('', null),
+  parent_full_name: Joi.string().max(100).allow('', null),
+  parent_phone: Joi.string().pattern(/^[\+\d\s\-\(\)]{10,20}$/).allow('', null),
+  parent_email: Joi.string().email().max(100).allow('', null),
   // Форма шлёт '' при выборе «Без клуба» — раньше это валило всю проверку
   club_id: Joi.string().uuid().allow(null, ''),
   status: Joi.string().valid('active', 'inactive', 'pending'),
   // Пароля в схеме не было вовсе, а stripUnknown его молча выбрасывал:
   // сервер всегда генерировал свой, даже когда админ задал пароль вручную
-  password: Joi.string().min(8).max(128).allow('').messages({
+  password: Joi.string().min(8).max(128).allow('', null).messages({
     'string.min': 'Пароль должен содержать минимум 8 символов'
   })
 });
@@ -55,8 +55,8 @@ export const eventSchema = Joi.object({
     'string.max': 'Название не может превышать 200 символов',
     'any.required': 'Название обязательно'
   }),
-  description: Joi.string().max(2000).allow(''),
-  location: Joi.string().max(200).allow(''),
+  description: Joi.string().max(2000).allow('', null),
+  location: Joi.string().max(200).allow('', null),
   event_date: Joi.date().required().messages({
     'date.base': 'Неверный формат даты',
     'any.required': 'Дата обязательна'
@@ -67,7 +67,7 @@ export const eventSchema = Joi.object({
   type: Joi.string().valid('internal', 'outgoing', 'global_forum').default('internal'),
   capacity: Joi.number().integer().min(1).default(20),
   club_id: Joi.string().uuid().allow(null),
-  form_url: Joi.string().uri().max(500).allow('').messages({
+  form_url: Joi.string().uri().max(500).allow('', null).messages({
     'string.uri': 'Неверный URL'
   }),
   is_global: Joi.boolean().default(false),
@@ -94,7 +94,7 @@ export const reportSchema = Joi.object({
     'string.pattern.base': 'Неверный формат месяца. Используйте YYYY-MM',
     'any.required': 'Месяц обязателен'
   }),
-  report_text: Joi.string().max(5000).allow(''),
+  report_text: Joi.string().max(5000).allow('', null),
   events_count: Joi.number().integer().min(0).default(0),
   participants_count: Joi.number().integer().min(0).default(0)
 });
@@ -108,7 +108,7 @@ export const achievementSchema = Joi.object({
     'string.max': 'Название не может превышать 200 символов',
     'any.required': 'Название достижения обязательно'
   }),
-  description: Joi.string().max(1000).allow(''),
+  description: Joi.string().max(1000).allow('', null),
   achievement_date: Joi.date().allow(null)
 });
 
@@ -132,7 +132,7 @@ export const appealSchema = Joi.object({
 // 7. ДОКУМЕНТ
 export const documentSchema = Joi.object({
   title: Joi.string().min(3).max(200).required(),
-  content: Joi.string().max(5000).allow(''),
+  content: Joi.string().max(5000).allow('', null),
   category: Joi.string().valid('general', 'instructions', 'templates', 'orders', 'other').default('general'),
   document_type: Joi.string().valid('pdf', 'doc', 'docx', 'xlsx', 'other').default('pdf'),
   is_public: Joi.boolean().default(true),
@@ -144,13 +144,13 @@ export const documentSchema = Joi.object({
 export const newsSchema = Joi.object({
   title: Joi.string().min(3).max(200).required(),
   content: Joi.string().min(10).max(10000).required(),
-  image_url: Joi.string().uri().max(500).allow('')
+  image_url: Joi.string().uri().max(500).allow('', null)
 });
 
 // 9. ЦЕЛЬ (KPI)
 export const goalSchema = Joi.object({
   title: Joi.string().min(3).max(200).required(),
-  description: Joi.string().max(1000).allow(''),
+  description: Joi.string().max(1000).allow('', null),
   category: Joi.string().valid('general', 'participants', 'events', 'clubs', 'achievements').default('general'),
   target_value: Joi.number().integer().min(0).required(),
   current_value: Joi.number().integer().min(0).default(0),
@@ -165,7 +165,7 @@ export const goalSchema = Joi.object({
 // 10. ЗАДАЧА
 export const taskSchema = Joi.object({
   title: Joi.string().min(3).max(200).required(),
-  description: Joi.string().max(2000).allow(''),
+  description: Joi.string().max(2000).allow('', null),
   priority: Joi.string().valid('low', 'medium', 'high', 'urgent').default('medium'),
   status: Joi.string().valid('pending', 'in_progress', 'completed', 'cancelled').default('pending'),
   due_date: Joi.date().allow(null, ''),
@@ -202,9 +202,9 @@ export const achievementCategorySchema = Joi.object({
     'string.empty': 'Название категории обязательно',
     'any.required': 'Название категории обязательно'
   }),
-  description: Joi.string().max(500).allow(''),
-  icon: Joi.string().max(50).allow(''),
-  color: Joi.string().pattern(/^#[0-9A-Fa-f]{6}$/).allow('').messages({
+  description: Joi.string().max(500).allow('', null),
+  icon: Joi.string().max(50).allow('', null),
+  color: Joi.string().pattern(/^#[0-9A-Fa-f]{6}$/).allow('', null).messages({
     'string.pattern.base': 'Цвет должен быть в формате #RRGGBB'
   }),
   points: Joi.number().integer().min(0).max(1000).default(0),
@@ -218,8 +218,8 @@ export const tutorInvitationSchema = Joi.object({
   }),
   event_id: Joi.string().uuid().allow(null, ''),
   club_id: Joi.string().uuid().allow(null, ''),
-  message: Joi.string().max(2000).allow(''),
-  role: Joi.string().max(100).allow(''),
+  message: Joi.string().max(2000).allow('', null),
+  role: Joi.string().max(100).allow('', null),
   responsibilities: Joi.array().items(Joi.string().max(200)).max(20).default([]),
   start_date: Joi.date().allow(null, ''),
   end_date: Joi.date().allow(null, '')
@@ -228,7 +228,7 @@ export const tutorInvitationSchema = Joi.object({
 // 11. ЗАДАНИЕ ПРЕЗИДЕНТА
 export const presidentTaskSchema = Joi.object({
   title: Joi.string().min(3).max(200).required(),
-  description: Joi.string().max(2000).allow(''),
+  description: Joi.string().max(2000).allow('', null),
   priority: Joi.string().valid('low', 'medium', 'high', 'urgent').default('medium'),
   deadline: Joi.date().allow(null),
   club_id: Joi.string().uuid().allow(null),

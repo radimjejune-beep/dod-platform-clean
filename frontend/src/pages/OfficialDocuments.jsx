@@ -123,7 +123,7 @@ export default function OfficialDocuments() {
       const result = await response.json();
 
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       const submitResponse = await fetch(`https://dod-backend.relaxdev.ru/api/documents/${result.id}/submit`, {
@@ -168,7 +168,7 @@ export default function OfficialDocuments() {
       const result = await response.json();
 
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage('Документ одобрен!');
@@ -202,7 +202,7 @@ export default function OfficialDocuments() {
       const result = await response.json();
 
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage('Документ отклонён');
@@ -230,7 +230,7 @@ export default function OfficialDocuments() {
       const result = await response.json();
 
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage('Документ опубликован!');
@@ -258,7 +258,7 @@ export default function OfficialDocuments() {
       const result = await response.json();
 
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(api.describeApiError(result));
       }
 
       setMessage('Документ удалён');

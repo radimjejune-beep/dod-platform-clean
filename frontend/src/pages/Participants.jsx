@@ -181,14 +181,21 @@ export default function Participants() {
 
   const classes = getUniqueClasses();
 
+  // Руководителю КЮДа предлагали выбрать любой из 44 клубов, хотя видит он
+  // только свой: сорок три пункта, которые ничего не меняют
+  const clubsInList = new Set(participants.map((p) => p.club_id).filter(Boolean));
+  const showClubFilter = clubsInList.size > 1;
+
   const filterConfig = [
-    {
+    ...(showClubFilter ? [{
       key: 'club_id',
       type: 'select',
       label: 'Клуб',
       placeholder: 'Все КЮДы',
-      options: clubs.map(c => ({ value: c.id, label: c.name }))
-    },
+      options: clubs
+        .filter((c) => clubsInList.has(c.id))
+        .map(c => ({ value: c.id, label: c.name }))
+    }] : []),
     {
       key: 'status',
       type: 'select',

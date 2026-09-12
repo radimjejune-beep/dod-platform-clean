@@ -62,8 +62,15 @@ export default function Dashboard() {
         api.getAchievements().catch(() => []),
       ]);
 
-      // ИСПРАВЛЕНО: фильтруем только участников
-      const participantsList = users.filter(u => u.role === 'participant');
+      // Участников берём из /api/participants, а не из общего списка
+      // пользователей: тот закрыт для руководителя КЮДа и тьютора, ответ
+      // «нет прав» молча превращался в пустой массив, и дашборд показывал
+      // руководителю «0 участников» при живом клубе. А /api/participants
+      // сам отдаёт каждому его зону: движению — всех, руководителю — его
+      // клуб, тьютору — участников его мероприятий.
+      const participantsList = Array.isArray(participants) && participants.length
+        ? participants
+        : users.filter(u => u.role === 'participant');
 
       // ИСПРАВЛЕНО: фильтруем ближайшие мероприятия
       const now = new Date();
@@ -72,9 +79,16 @@ export default function Dashboard() {
         .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
         .slice(0, 5);
 
+      // Руководителю КЮДа число «44 клуба» ничего не говорит: клуб у него
+      // один. Показываем столько, сколько в его зоне.
+      const isMovement = ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(user.role);
+      const clubsCount = isMovement
+        ? clubs.length
+        : new Set(participantsList.map((p) => p.club_id).filter(Boolean).concat(user.club_id ? [user.club_id] : [])).size;
+
       setStats({
         users: users.length || 0,
-        clubs: clubs.length || 0,
+        clubs: clubsCount || 0,
         events: events.length || 0,
         participants: participantsList.length || 0,
         achievements: achievements.length || 0,
@@ -242,7 +256,13 @@ export default function Dashboard() {
 
       <div className="dashboard-grid-2">
         <div className="card">
-          <h4 className="card-title">Статистика платформы</h4>
+          {/* «Статистика платформы» у руководителя КЮДа — это статистика
+              его клуба, а не движения: цифры приходят из его зоны */}
+          <h4 className="card-title">
+            {['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role)
+              ? 'Статистика движения'
+              : 'Ваши цифры'}
+          </h4>
           <div className="dashboard-mini-stats">
             <div>
               <span className="stat-number">{stats.participants}</span>

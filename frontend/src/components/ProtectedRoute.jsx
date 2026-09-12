@@ -1,12 +1,28 @@
 // frontend/src/components/ProtectedRoute.jsx
+//
+// Таблица прав на страницы существовала с самого начала, но нигде не была
+// подключена: любой вошедший мог открыть по прямой ссылке любой экран.
+// Данные при этом не утекали — сервер права проверяет, — но родитель,
+// открыв сводку движения, видел «Всё в порядке» вместо отказа.
+//
+// Заодно убрана привязка к sessionStorage. Она задумывалась как «закрыл
+// вкладку — вышел», но очищала признак сессии и при обычном обновлении
+// страницы: нажатие F5 выбрасывало человека на вход. Сроком жизни доступа
+// распоряжается токен, он живёт сутки.
 
 import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import api from '../lib/api';
 
 // ===== СПИСОК РОЛЕЙ ДЛЯ КАЖДОГО МАРШРУТА =====
 const routeRoles = {
-  '/dashboard': ['admin', 'movement_coordinator', 'president', 'vice_president'],
+  // Общий дашборд умеет показывать своё каждой роли: руководителю КЮДа —
+  // его клуб и отчёты, тьютору — журнал, участнику и родителю — их
+  // мероприятия и достижения. Список ролей сужать нельзя: после входа
+  // руководитель КЮДа отправляется именно сюда.
+  '/dashboard': ['all'],
+  '/coordinator-dashboard': ['admin', 'movement_coordinator', 'president', 'vice_president'],
+  '/crm': ['admin', 'movement_coordinator', 'president', 'vice_president'],
   '/participant-dashboard': ['participant'],
   '/parent-dashboard': ['parent'],
   // Согласия за ребёнка оформляет законный представитель; администрация
@@ -27,7 +43,9 @@ const routeRoles = {
   '/clubs': ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'],
   '/events': ['all'],
   '/achievements': ['admin', 'movement_coordinator', 'tutor', 'president', 'vice_president'],
-  '/my-achievements': ['participant', 'parent'],
+  // Экран личных достижений есть в меню у всех ролей — это своя страница,
+  // а не чужие данные
+  '/my-achievements': ['all'],
   '/manage-achievements': ['admin', 'movement_coordinator', 'club_coordinator'],
   '/my-reviews': ['all'],
   '/reports': ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'],
@@ -40,12 +58,12 @@ const routeRoles = {
   '/import-participants': ['admin', 'movement_coordinator'],
   '/appeals': ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'],
   '/staff': ['admin', 'movement_coordinator'],
-  '/staff-calendar': ['admin', 'movement_coordinator'],
+  '/staff-calendar': ['admin', 'movement_coordinator', 'tutor'],
   '/president-tasks': ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'],
   '/my-journal': ['tutor'],
   '/calendar': ['all'],
   '/tutor-requests': ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'],
-  '/tutor-invitations': ['tutor', 'admin', 'movement_coordinator', 'president', 'vice_president'],
+  '/tutor-invitations': ['tutor', 'club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'],
   // ===== НОВЫЕ МАРШРУТЫ =====
   '/my-club-events': ['club_coordinator', 'participant', 'tutor'],
   '/my-invitations': ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'],
@@ -53,13 +71,38 @@ const routeRoles = {
   // маршрут /clubs/:clubId/staff проверяется на сервере: права зависят от
   // должности в конкретном клубе, а не от глобальной роли
   '/club-calendar': ['club_coordinator', 'participant', 'tutor'],
+
+  // ===== ДОБАВЛЕНО ПРИ ПОДКЛЮЧЕНИИ ТАБЛИЦЫ =====
+  // Эти экраны были открыты всем вошедшим, включая родителей и участников
+  '/clubs-management': ['admin', 'movement_coordinator'],
+  '/documents-center': ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'],
+  '/goals': ['admin', 'movement_coordinator', 'president', 'vice_president'],
+  '/tasks-planner': ['admin', 'movement_coordinator', 'club_coordinator', 'president', 'vice_president'],
+  '/mass-notifications': ['admin', 'movement_coordinator'],
+  '/consents-management': ['admin', 'movement_coordinator', 'club_coordinator'],
+  '/activity-log': ['admin', 'movement_coordinator'],
+  '/notification-history': ['admin', 'movement_coordinator'],
+  '/club-rating': ['admin', 'movement_coordinator', 'club_coordinator', 'tutor', 'president', 'vice_president'],
+  '/dashboard-analytics': ['admin', 'movement_coordinator', 'president', 'vice_president'],
+  '/achievements-categories': ['admin', 'movement_coordinator'],
+  '/tutor-assignments': ['tutor', 'admin', 'movement_coordinator'],
+  // Официальные документы движения читают все — на то они и официальные
+  '/documents': ['all'],
+
+  // Маршруты с переменной частью (/participant/:id, /club/:id,
+  // /clubs/:clubId/staff, /team/:id, /tutor-journal/:eventId) здесь не
+  // указаны намеренно: таблица сверяет путь целиком, а право там зависит
+  // не от роли вообще, а от связи человека с конкретным клубом или
+  // командой. Это проверяет сервер.
 };
 
 // ===== КАКАЯ СТРАНИЦА ДЛЯ КАЖДОЙ РОЛИ ПО УМОЛЧАНИЮ =====
 const defaultRouteByRole = {
   'participant': '/participant-dashboard',
   'parent': '/parent-dashboard',
-  'club_coordinator': '/club-coordinator-dashboard',
+  // /club-coordinator-dashboard теперь сам перенаправляет сюда: если
+  // оставить его домашней страницей, переадресация зациклится
+  'club_coordinator': '/dashboard',
   'tutor': '/tutor-dashboard',
   'admin': '/dashboard',
   'movement_coordinator': '/dashboard',
@@ -68,167 +111,73 @@ const defaultRouteByRole = {
 };
 
 export default function ProtectedRoute({ children }) {
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState(null);
-  const [hasAccess, setHasAccess] = useState(true);
-  const [redirectPath, setRedirectPath] = useState(null);
-
-  const checkSession = () => {
-    const token = localStorage.getItem('token');
-    const sessionId = sessionStorage.getItem('sessionId');
-    const userId = sessionStorage.getItem('userId');
-    
-    if (!token) {
-      console.log('❌ Нет токена');
-      return false;
-    }
-    
-    if (!sessionId) {
-      console.log('❌ Сессия истекла (закрыта вкладка)');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      return false;
-    }
-    
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    if (user.id && userId && user.id !== userId) {
-      console.log('❌ Несовпадение userId');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      sessionStorage.removeItem('sessionId');
-      return false;
-    }
-    
-    console.log('✅ Сессия активна');
-    return true;
-  };
+  const [checking, setChecking] = useState(true);
+  const [role, setRole] = useState(null);
+  const location = useLocation();
 
   useEffect(() => {
-    const validateAuth = async () => {
-      if (!checkSession()) {
-        setIsAuthenticated(false);
-        setLoading(false);
+    let cancelled = false;
+
+    const validate = async () => {
+      if (!localStorage.getItem('token')) {
+        if (!cancelled) setChecking(false);
         return;
       }
 
       try {
-        const token = localStorage.getItem('token');
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        
-        if (user && user.id) {
-          setIsAuthenticated(true);
-          setUserRole(user.role);
-          
-          const currentPath = window.location.pathname;
-          const allowedRoles = routeRoles[currentPath] || ['all'];
-          
-          if (allowedRoles.includes('all') || allowedRoles.includes(user.role)) {
-            setHasAccess(true);
-          } else {
-            setHasAccess(false);
-            const defaultRoute = defaultRouteByRole[user.role] || '/dashboard';
-            setRedirectPath(defaultRoute);
-          }
+        // Роль берём у сервера, а не из localStorage: там её может
+        // подправить кто угодно, да и после смены роли старое значение
+        // висело бы до следующего входа.
+        const me = await api.getMe();
+        if (cancelled) return;
+        if (me && me.id) {
+          setRole(me.role);
+          localStorage.setItem('user', JSON.stringify(me));
         } else {
-          try {
-            const userData = await api.getMe();
-            if (userData && userData.id) {
-              localStorage.setItem('user', JSON.stringify(userData));
-              setIsAuthenticated(true);
-              setUserRole(userData.role);
-              
-              const currentPath = window.location.pathname;
-              const allowedRoles = routeRoles[currentPath] || ['all'];
-              
-              if (allowedRoles.includes('all') || allowedRoles.includes(userData.role)) {
-                setHasAccess(true);
-              } else {
-                setHasAccess(false);
-                const defaultRoute = defaultRouteByRole[userData.role] || '/dashboard';
-                setRedirectPath(defaultRoute);
-              }
-            } else {
-              logout();
-            }
-          } catch (err) {
-            console.error('❌ Ошибка получения данных:', err);
-            logout();
-          }
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
         }
       } catch (err) {
-        console.error('❌ Ошибка проверки авторизации:', err);
-        logout();
+        console.error('❌ Не удалось проверить доступ:', err);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
       } finally {
-        setLoading(false);
+        if (!cancelled) setChecking(false);
       }
     };
 
-    validateAuth();
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        const token = localStorage.getItem('token');
-        const sessionId = sessionStorage.getItem('sessionId');
-        if (token && !sessionId) {
-          console.log('🔒 Сессия потеряна при возврате');
-          logout();
-          window.location.href = '/login';
-        }
-      }
-    };
-
-    const handleBeforeUnload = () => {
-      sessionStorage.removeItem('sessionId');
-      sessionStorage.removeItem('userId');
-      sessionStorage.removeItem('userRole');
-      sessionStorage.removeItem('loginTime');
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
+    validate();
+    return () => { cancelled = true; };
   }, []);
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    sessionStorage.removeItem('sessionId');
-    sessionStorage.removeItem('userId');
-    sessionStorage.removeItem('userRole');
-    sessionStorage.removeItem('loginTime');
-    setIsAuthenticated(false);
-  };
-
-  if (loading) {
+  if (checking) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         height: '100vh',
-        fontSize: '18px',
         color: 'var(--color-gray-500)'
       }}>
-        Проверка сессии...
+        Проверяем доступ…
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    console.log('🔒 Не авторизован, перенаправление на /login');
+  if (!role) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!hasAccess && redirectPath) {
-    console.log('🚫 Нет доступа, перенаправление на:', redirectPath);
-    return <Navigate to={redirectPath} replace />;
+  // Права сверяются на каждый переход, а не один раз при загрузке:
+  // внутри приложения адрес меняется без перезагрузки страницы.
+  const allowed = routeRoles[location.pathname] || ['all'];
+  if (!allowed.includes('all') && !allowed.includes(role)) {
+    const home = defaultRouteByRole[role] || '/dashboard';
+    // Если у роли нет доступа даже к своей домашней странице, дальше
+    // отправлять некуда — иначе переадресация зациклится.
+    if (home === location.pathname) return children || <Outlet />;
+    return <Navigate to={home} replace />;
   }
 
-  console.log('✅ Авторизован и имеет доступ');
-  return children;
+  return children || <Outlet />;
 }

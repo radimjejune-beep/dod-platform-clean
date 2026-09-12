@@ -1,6 +1,7 @@
 // frontend/src/App.jsx
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import ProtectedRoute from './components/ProtectedRoute';
 import { useEffect, useState } from 'react';
 import api from './lib/api';
 
@@ -139,6 +140,15 @@ function App() {
         <Route path="/terms" element={<Terms />} />
 
         {/* ============================================================
+           ВСЁ ОСТАЛЬНОЕ — ТОЛЬКО ДЛЯ ВОШЕДШИХ
+           Проверка роли на каждый переход: список прав на страницы лежит
+           в ProtectedRoute. Раньше эта таблица существовала, но нигде не
+           подключалась, и любой вошедший мог открыть по прямой ссылке
+           любой экран.
+           ============================================================ */}
+        <Route element={<ProtectedRoute />}>
+
+        {/* ============================================================
            CRM
            ============================================================ */}
         <Route path="/crm" element={<CrmDashboard />} />
@@ -262,6 +272,8 @@ function App() {
         <Route path="/goals" element={<GoalsAndKPI />} />
         <Route path="/activity-log" element={<ActivityLog />} />
         <Route path="/notification-history" element={<NotificationHistory />} />
+
+        </Route>
 
         {/* ============================================================
            РЕДИРЕКТ

@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import { roleLabel, ROLE_LABELS } from '../lib/roles';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
@@ -101,10 +102,13 @@ export default function IssueCredentials() {
   const issue = async () => {
     if (pickedList.length === 0) return;
     if (willReset.length > 0) {
-      const ok = window.confirm(
-        `${willReset.length} из выбранных уже пользуются своим паролем. ` +
-        'Он будет заменён временным, и войти со старым они больше не смогут. Продолжить?'
-      );
+      const ok = await confirmAction({
+        title: 'Часть людей потеряет свой пароль',
+        text: `${willReset.length} из выбранных уже пользуются своим паролем. `
+          + 'Он будет заменён временным, и войти со старым они больше не смогут.',
+        confirmLabel: 'Выдать временные',
+        tone: 'danger'
+      });
       if (!ok) return;
     }
 

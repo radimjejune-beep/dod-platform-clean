@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from './Icon';
 import { describeApiError } from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 
 export default function ClubEvents({ clubId, profile }) {
   const [events, setEvents] = useState([]);
@@ -139,7 +140,7 @@ export default function ClubEvents({ clubId, profile }) {
   };
 
   const handleRegister = async (eventId) => {
-    if (!confirm('Записаться на мероприятие?')) return;
+    if (!await confirmAction({ title: 'Записаться на мероприятие?' })) return;
     
     try {
       const token = localStorage.getItem('token');
@@ -166,7 +167,7 @@ export default function ClubEvents({ clubId, profile }) {
   };
 
   const handleModerate = async (eventId, status) => {
-    if (!confirm(`Подтвердить ${status === 'approved' ? 'одобрение' : 'отклонение'}?`)) return;
+    if (!await confirmAction({ title: `Подтвердить ${status === 'approved' ? 'одобрение' : 'отклонение'}?` })) return;
     
     try {
       const token = localStorage.getItem('token');

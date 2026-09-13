@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -148,7 +149,7 @@ export default function TeamBuilder() {
   };
 
   const removeMember = async (member) => {
-    if (!confirm(`Убрать ${member.full_name} из команды?`)) return;
+    if (!await confirmAction({ title: `Убрать ${member.full_name} из команды?`, tone: 'danger' })) return;
     setBusy(true);
     try {
       const result = await api.deleteTeamMember(id, member.id);
@@ -210,7 +211,11 @@ export default function TeamBuilder() {
   };
 
   const submitTeam = async () => {
-    if (!confirm('Отправить команду на утверждение? После отправки состав менять нельзя.')) return;
+    if (!await confirmAction({
+      title: 'Отправить команду на утверждение?',
+      text: 'После отправки состав менять нельзя. Чтобы добавить или убрать ребёнка, придётся просить координатора вернуть команду на доработку.',
+      confirmLabel: 'Отправить'
+    })) return;
     setBusy(true);
     try {
       const result = await api.submitTeam(id);

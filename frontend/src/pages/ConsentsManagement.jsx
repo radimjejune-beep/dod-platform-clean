@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -126,7 +127,11 @@ export default function ConsentsManagement() {
       return;
     }
 
-    if (!confirm(`Отправить напоминание по ${target.length} участникам?`)) return;
+    if (!await confirmAction({
+      title: `Напомнить о согласиях по ${target.length} участникам?`,
+      text: 'Уведомление придёт их законным представителям внутри платформы.',
+      confirmLabel: 'Напомнить'
+    })) return;
 
     try {
       const result = await api.remindAboutConsents(target.map((p) => p.id));

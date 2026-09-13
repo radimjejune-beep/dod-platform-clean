@@ -12,6 +12,7 @@
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Icon from './Icon';
 
 export default function ClubParentInvites({ clubId, clubName, onDone }) {
@@ -23,10 +24,8 @@ export default function ClubParentInvites({ clubId, clubName, onDone }) {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
   const issue = async () => {
-    if (!window.confirm(
-      `Выпустить приглашения родителям всех участников КЮДа${clubName ? ` «${clubName}»` : ''}?\n\n` +
-      'Тем, у кого законный представитель уже привязан, приглашение не выпускается.'
-    )) return;
+    if (!await confirmAction({ title: `Выпустить приглашения родителям всех участников КЮДа${clubName ? ` «${clubName}»` : ''}?\n\n` +
+      'Тем, у кого законный представитель уже привязан, приглашение не выпускается.' })) return;
 
     setBusy(true);
     setMessage('');

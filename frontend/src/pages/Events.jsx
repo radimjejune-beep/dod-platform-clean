@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import FilterBar from '../components/FilterBar';
 import Footer from '../components/Footer';
@@ -295,7 +296,7 @@ export default function Events() {
   // ОТПИСКА
   // ============================================================
   const handleUnregister = async (registrationId) => {
-    if (!confirm('Отписаться от мероприятия?')) return;
+    if (!await confirmAction({ title: 'Отписаться от мероприятия?', tone: 'danger' })) return;
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
@@ -359,7 +360,7 @@ export default function Events() {
   // ОДОБРЕНИЕ ЗАЯВКИ КЛУБА
   // ============================================================
   const handleApproveClub = async (registrationId, status) => {
-    if (!confirm(`Подтвердить ${status === 'approved' ? 'одобрение' : 'отклонение'} заявки клуба?`)) return;
+    if (!await confirmAction({ title: `Подтвердить ${status === 'approved' ? 'одобрение' : 'отклонение'} заявки клуба?` })) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -700,7 +701,12 @@ export default function Events() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Удалить это мероприятие?')) return;
+    if (!await confirmAction({
+      title: 'Удалить мероприятие?',
+      text: 'Записи участников на него пропадут вместе с мероприятием.',
+      confirmLabel: 'Удалить',
+      tone: 'danger'
+    })) return;
     try {
       const result = await api.deleteEvent(id);
       if (result.error) throw new Error(api.describeApiError(result));
@@ -715,7 +721,7 @@ export default function Events() {
   };
 
   const handleModerate = async (id, status) => {
-    if (!confirm(`Подтвердить ${status === 'approved' ? 'одобрение' : 'отклонение'}?`)) return;
+    if (!await confirmAction({ title: `Подтвердить ${status === 'approved' ? 'одобрение' : 'отклонение'}?` })) return;
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://dod-backend.relaxdev.ru/api/events/${id}/moderate`, {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -124,7 +125,7 @@ export default function TutorInvitations() {
   };
 
   const handleRespond = async (id, status) => {
-    if (!confirm(`Подтвердить ${status === 'accepted' ? 'принятие' : 'отклонение'} приглашения?`)) return;
+    if (!await confirmAction({ title: `Подтвердить ${status === 'accepted' ? 'принятие' : 'отклонение'} приглашения?` })) return;
 
     try {
       const result = await api.respondToTutorInvitation(id, status);
@@ -485,9 +486,15 @@ export default function TutorInvitations() {
                       <button
                         className="btn-danger"
                         style={{ padding: '6px 12px', fontSize: '12px' }}
-                        onClick={() => {
-                          if (confirm('Отменить приглашение?')) {
-                            api.cancelTutorInvitation(inv.id).then(() => loadData());
+                        onClick={async () => {
+                          if (await confirmAction({
+                            title: 'Отменить приглашение?',
+                            text: 'Тьютор больше не увидит это приглашение у себя.',
+                            confirmLabel: 'Отменить приглашение',
+                            tone: 'danger'
+                          })) {
+                            await api.cancelTutorInvitation(inv.id);
+                            loadData();
                           }
                         }}
                       >

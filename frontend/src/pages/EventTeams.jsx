@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -119,7 +120,7 @@ export default function EventTeams() {
   };
 
   const approve = async (row) => {
-    if (!confirm(`Утвердить команду «${row.club_name}»?`)) return;
+    if (!await confirmAction({ title: `Утвердить команду «${row.club_name}»?` })) return;
     setBusy(true);
     try {
       const result = await api.reviewTeam(row.submission_id, 'approve');

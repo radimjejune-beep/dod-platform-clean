@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import FilterBar from '../components/FilterBar';
 import AssignClubModal from '../components/AssignClubModal';
@@ -267,7 +268,12 @@ export default function AdminUsers() {
       return;
     }
 
-    if (!confirm(`Сбросить пароль для "${fullName}"?`)) return;
+    if (!await confirmAction({
+      title: `Сбросить пароль для «${fullName}»?`,
+      text: 'Человек не сможет войти со своим прежним паролем. Новый временный пароль надо будет передать ему лично — письма платформа не отправляет.',
+      confirmLabel: 'Сбросить',
+      tone: 'danger'
+    })) return;
 
     try {
       const result = await api.resetUserPassword(userId);
@@ -505,7 +511,7 @@ export default function AdminUsers() {
       setMessageType('error');
       return;
     }
-    if (!confirm(`Импортировать ${importPreview.length} участников?`)) return;
+    if (!await confirmAction({ title: `Импортировать ${importPreview.length} участников?` })) return;
     setLoading(true);
     const importedList = [];
     for (const row of importPreview) {

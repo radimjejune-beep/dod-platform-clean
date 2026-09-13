@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import * as XLSX from 'xlsx';
 import Icon from '../components/Icon';
@@ -107,7 +108,7 @@ export default function ImportParticipants() {
       return;
     }
 
-    if (!confirm(`Импортировать ${previewData.length} участников?`)) return;
+    if (!await confirmAction({ title: `Импортировать ${previewData.length} участников?` })) return;
 
     setLoading(true);
     setMessage('');

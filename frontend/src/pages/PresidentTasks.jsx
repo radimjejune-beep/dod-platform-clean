@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -300,7 +301,7 @@ export default function PresidentTasks() {
   };
 
   const handleUpdateStatus = async (taskId, status) => {
-    if (!confirm(`Подтвердить изменение статуса на "${status}"?`)) return;
+    if (!await confirmAction({ title: `Подтвердить изменение статуса на "${status}"?` })) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -669,7 +670,12 @@ export default function PresidentTasks() {
                           className="btn-danger"
                           style={{ padding: '6px 12px', fontSize: '12px' }}
                           onClick={async () => {
-                            if (confirm('Удалить задание?')) {
+                            if (await confirmAction({
+                              title: 'Удалить задание?',
+                              text: 'Вместе с заданием пропадут и ответы клубов на него.',
+                              confirmLabel: 'Удалить',
+                              tone: 'danger'
+                            })) {
                               try {
                                 const token = localStorage.getItem('token');
                                 const response = await fetch(`https://dod-backend.relaxdev.ru/api/president-tasks/${task.id}`, {

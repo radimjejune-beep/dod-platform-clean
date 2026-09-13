@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 import ClubParentInvites from '../components/ClubParentInvites';
@@ -159,7 +160,12 @@ export default function ClubStaff() {
   };
 
   const removeStaff = async (member) => {
-    if (!confirm(`Снять ${member.full_name} с должности в этом КЮДе?`)) return;
+    if (!await confirmAction({
+      title: `Снять ${member.full_name} с должности?`,
+      text: 'Человек потеряет доступ к этому КЮДу. Его заметки, выданные достижения и отмеченная посещаемость останутся на месте.',
+      confirmLabel: 'Снять',
+      tone: 'danger'
+    })) return;
     setBusy(true);
     try {
       const result = await api.removeClubStaff(clubId, member.user_id);
@@ -179,7 +185,11 @@ export default function ClubStaff() {
       show('Выберите нового руководителя', 'error');
       return;
     }
-    if (!confirm('Передать руководство КЮДом? Вы перестанете быть руководителем.')) return;
+    if (!await confirmAction({
+      title: 'Передать руководство КЮДом?',
+      text: 'Вы перестанете быть руководителем сразу после подтверждения и больше не сможете отправлять команды на форумы и менять состав сотрудников. Вернуть руководство сможет только новый руководитель или координатор движения.',
+      confirmLabel: 'Передать'
+    })) return;
     setBusy(true);
     try {
       const result = await api.transferClubHead(clubId, transferForm);

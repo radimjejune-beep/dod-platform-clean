@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -112,7 +113,7 @@ export default function TutorRequests() {
   };
 
   const handleReview = async (id, status) => {
-    if (!confirm(`Подтвердить ${status === 'approved' ? 'одобрение' : 'отклонение'} запроса?`)) return;
+    if (!await confirmAction({ title: `Подтвердить ${status === 'approved' ? 'одобрение' : 'отклонение'} запроса?` })) return;
 
     try {
       const token = localStorage.getItem('token');

@@ -15,6 +15,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction, askComment } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -186,19 +187,22 @@ export default function ClubSessions() {
   };
 
   const cancelSession = async (session) => {
-    const reason = window.prompt('Почему занятие не состоялось?');
-    if (reason === null) return;
-    if (!reason.trim()) {
-      show('Причина обязательна — иначе занятие просто пропадёт из журнала', 'error');
-      return;
-    }
-    const result = await api.updateSession(session.id, { status: 'cancelled', cancel_reason: reason.trim() });
+    const reason = await askComment({
+      title: 'Занятие не состоялось?',
+      text: 'Занятие останется в журнале с пометкой и причиной — в статистику проведённых оно не попадёт.',
+      confirmLabel: 'Отметить',
+      commentLabel: 'Причина',
+      commentPlaceholder: 'Карантин, отмена по школе, болезнь ведущего',
+      commentRequired: true
+    });
+    if (!reason) return;
+    const result = await api.updateSession(session.id, { status: 'cancelled', cancel_reason: reason });
     if (result?.error) show(api.describeApiError(result, 'Не удалось отменить занятие'), 'error');
     else { await loadSessions(clubId); show('Занятие отмечено как не состоявшееся'); }
   };
 
   const removeSession = async (session) => {
-    if (!window.confirm('Удалить занятие?')) return;
+    if (!await confirmAction({ title: 'Удалить занятие?', tone: 'danger' })) return;
     const result = await api.deleteSession(session.id);
     if (result?.code === 'SESSION_HAS_ATTENDANCE') {
       show(result.error, 'error');

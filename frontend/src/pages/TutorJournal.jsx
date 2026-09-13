@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -110,7 +111,7 @@ export default function TutorJournal() {
   };
 
   const handleSubmitAll = async () => {
-    if (!confirm('Отправить все оценки на проверку?')) return;
+    if (!await confirmAction({ title: 'Отправить все оценки на проверку?' })) return;
 
     try {
       const token = localStorage.getItem('token');

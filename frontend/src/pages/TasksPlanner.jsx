@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -148,7 +149,7 @@ export default function TasksPlanner() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Удалить задачу?')) return;
+    if (!await confirmAction({ title: 'Удалить задачу?', tone: 'danger' })) return;
 
     try {
       const result = await api.deleteTask(id);

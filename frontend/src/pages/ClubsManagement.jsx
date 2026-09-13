@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -138,15 +139,22 @@ export default function ClubsManagement() {
   // мероприятия, отчёты и достижения. Клуб уходит в архив — пропадает из
   // списков, но вся история остаётся на месте.
   const handleArchive = async (id, { force = false } = {}) => {
-    if (!force && !confirm('Перенести этот КЮД в архив? Он исчезнет из списков, история сохранится.')) return;
+    if (!force && !await confirmAction({
+      title: 'Перенести КЮД в архив?',
+      text: 'Клуб исчезнет из списков, но вся история — участники, отчёты, достижения — останется на месте.',
+      confirmLabel: 'В архив'
+    })) return;
 
     try {
       const result = await api.archiveClub(id, { force });
 
       if (result?.code === 'CLUB_NOT_EMPTY') {
-        const ok = confirm(
-          `${result.error}\n\nПеренести в архив вместе с ними?`
-        );
+        const ok = await confirmAction({
+          title: 'В КЮДе ещё есть люди и записи',
+          text: `${result.error}\n\nПеренести в архив вместе с ними?`,
+          confirmLabel: 'Перенести всё равно',
+          tone: 'danger'
+        });
         if (ok) return handleArchive(id, { force: true });
         return;
       }

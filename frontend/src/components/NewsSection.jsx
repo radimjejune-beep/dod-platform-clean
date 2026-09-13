@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from './Icon';
 import { describeApiError } from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 
 export default function NewsSection({ limit = 3 }) {
   const [news, setNews] = useState([]);
@@ -204,7 +205,7 @@ export default function NewsSection({ limit = 3 }) {
 
   // ===== УДАЛЕНИЕ НОВОСТИ =====
   const handleDelete = async (id) => {
-    if (!confirm('Удалить эту новость?')) return;
+    if (!await confirmAction({ title: 'Удалить эту новость?', tone: 'danger' })) return;
     
     try {
       const token = localStorage.getItem('token');

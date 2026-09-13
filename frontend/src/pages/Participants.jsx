@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import FilterBar from '../components/FilterBar';
 import Footer from '../components/Footer';
@@ -243,7 +244,13 @@ export default function Participants() {
   const canDelete = ['admin'].includes(role);
 
   const handleDelete = async (id, fullName) => {
-    if (!confirm(`Удалить участника "${fullName}"?`)) return;
+    if (!await confirmAction({
+      title: `Удалить участника «${fullName}»?`,
+      text: 'Вместе с карточкой пропадут его достижения, оценки и отметки о посещаемости. '
+        + 'Если ребёнок просто ушёл из клуба — надёжнее снять его с учёта, а не удалять.',
+      confirmLabel: 'Удалить',
+      tone: 'danger'
+    })) return;
     try {
       await api.deleteUser(id);
       setMessage('Участник удалён');

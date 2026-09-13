@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -217,7 +218,7 @@ export default function MyClubEvents() {
                             className="btn-danger"
                             style={{ padding: '6px 16px', fontSize: '12px' }}
                             onClick={async () => {
-                              if (!confirm('Отклонить мероприятие?')) return;
+                              if (!await confirmAction({ title: 'Отклонить мероприятие?', tone: 'danger' })) return;
                               try {
                                 const token = localStorage.getItem('token');
                                 await fetch(`https://dod-backend.relaxdev.ru/api/club-events/${event.id}/moderate`, {

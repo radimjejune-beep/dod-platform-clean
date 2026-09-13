@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 import Attachments from '../components/Attachments';
@@ -233,7 +234,7 @@ export default function DocumentsCenter() {
       return;
     }
 
-    if (!window.confirm(`Удалить документ «${doc.title}»?`)) return;
+    if (!await confirmAction({ title: `Удалить документ «${doc.title}»?`, tone: 'danger' })) return;
 
     try {
       await api.deleteDocument(doc.id);

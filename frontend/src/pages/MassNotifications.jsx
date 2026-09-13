@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -92,7 +93,11 @@ export default function MassNotifications() {
       return;
     }
 
-    if (!confirm(`Отправить уведомление ${recipientCount} получателям?`)) return;
+    if (!await confirmAction({
+      title: `Отправить уведомление ${recipientCount} получателям?`,
+      text: 'Отменить рассылку после отправки нельзя — уведомление появится у всех сразу.',
+      confirmLabel: 'Отправить'
+    })) return;
 
     setSending(true);
     setMessage('');

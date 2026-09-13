@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -244,7 +245,7 @@ export default function OfficialDocuments() {
   };
 
   const handleDelete = async (id, title) => {
-    if (!confirm(`Удалить документ "${title}"?`)) return;
+    if (!await confirmAction({ title: `Удалить документ "${title}"?`, tone: 'danger' })) return;
 
     try {
       const token = localStorage.getItem('token');

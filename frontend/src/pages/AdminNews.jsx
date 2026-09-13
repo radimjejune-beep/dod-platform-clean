@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -217,7 +218,7 @@ export default function AdminNews() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Удалить эту новость?')) return;
+    if (!await confirmAction({ title: 'Удалить эту новость?', tone: 'danger' })) return;
     
     try {
       const token = localStorage.getItem('token');

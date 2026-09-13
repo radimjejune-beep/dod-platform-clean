@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -81,7 +82,7 @@ export default function EventManagement() {
       return;
     }
 
-    if (!confirm(`Добавить ${selectedParticipants.length} участников на мероприятие?`)) return;
+    if (!await confirmAction({ title: `Добавить ${selectedParticipants.length} участников на мероприятие?` })) return;
 
     setLoading(true);
     let successCount = 0;
@@ -119,7 +120,7 @@ export default function EventManagement() {
   };
 
   const handleRemoveParticipant = async (participantId, fullName) => {
-    if (!confirm(`Удалить "${fullName}" с мероприятия?`)) return;
+    if (!await confirmAction({ title: `Удалить "${fullName}" с мероприятия?`, tone: 'danger' })) return;
 
     try {
       const token = localStorage.getItem('token');

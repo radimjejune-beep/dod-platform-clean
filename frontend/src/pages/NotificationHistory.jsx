@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 
@@ -43,7 +44,7 @@ export default function NotificationHistory() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Удалить это уведомление?')) return;
+    if (!await confirmAction({ title: 'Удалить это уведомление?', tone: 'danger' })) return;
 
     try {
       await api.deleteMassNotification(id);

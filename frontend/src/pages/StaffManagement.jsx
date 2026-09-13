@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import { roleLabel } from '../lib/roles';
 import Icon from '../components/Icon';
@@ -288,7 +289,7 @@ export default function StaffManagement() {
   // из платформы — раньше кнопка называлась «Удалить сотрудника» и
   // не делала ни того, ни другого.
   const handleRemoveAssignment = async (assignmentId) => {
-    if (!confirm('Снять сотрудника с этого мероприятия?')) return;
+    if (!await confirmAction({ title: 'Снять сотрудника с этого мероприятия?', tone: 'danger' })) return;
 
     try {
       const result = await api.deleteTutorAssignment(assignmentId);

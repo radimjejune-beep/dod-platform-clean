@@ -442,7 +442,9 @@ export default function Appeals() {
                           await loadReplies(appeal.id);
                         }}
                       >
-                        {appeal.reply_count || 0}
+                        {/* Кнопка была подписана одной цифрой — «0» рядом с
+                            карточкой не говорит вообще ничего */}
+                        Ответы ({appeal.reply_count || 0})
                       </button>
                       {canReply && appeal.status !== 'resolved' && appeal.status !== 'rejected' && (
                         <button

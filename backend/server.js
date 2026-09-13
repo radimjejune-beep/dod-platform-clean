@@ -34,6 +34,7 @@ import {
   clubThreadReplySchema,
   registrationSchema,
   reportSchema,
+  reportUpdateSchema,
   achievementSchema,
   appealSchema,
   documentSchema,
@@ -3427,17 +3428,24 @@ app.get('/api/reports', authenticate, async (req, res) => {
     `;
     const params = [];
 
-    if (userRole === 'club_coordinator') {
-      const clubResult = await pool.query('SELECT club_id FROM club_coordinators WHERE profile_id = $1', [userId]);
-      if (clubResult.rows.length > 0) {
-        query += ' AND r.club_id = $1';
-        params.push(clubResult.rows[0].club_id);
+    // ⚠️ Клуб искался в club_coordinators — таблица мертва с миграции 005.
+    // Сотрудник, назначенный через состав клуба, видел пустой список отчётов,
+    // включая собственные черновики.
+    if (!MOVEMENT_ROLES.includes(userRole)) {
+      const staff = await pool.query(
+        'SELECT club_id FROM club_staff WHERE user_id = $1 AND removed_at IS NULL',
+        [userId]
+      );
+      const clubIds = staff.rows.map((r) => r.club_id);
+      if (clubIds.length > 0) {
+        query += ' AND r.club_id = ANY($1::uuid[])';
+        params.push(clubIds);
       } else {
         query += ' AND 1 = 0';
       }
     }
 
-    query += ' ORDER BY r.created_at DESC';
+    query += ' ORDER BY r.report_month DESC, r.created_at DESC';
 
     const result = await pool.query(query, params);
     res.json(result.rows);
@@ -3447,41 +3455,128 @@ app.get('/api/reports', authenticate, async (req, res) => {
   }
 });
 
+// Кто вправе готовить отчёт по этому КЮДу
+async function canReportForClub(user, clubId) {
+  if (MOVEMENT_ROLES.includes(user.role)) return true;
+  return canInClub(user, clubId, 'submit_reports');
+}
+
 app.post('/api/reports', authenticate, validateBody(reportSchema), async (req, res) => {
   try {
     const userId = req.user.userId;
-    const userRole = req.user.role;
+    const { club_id, report_month, highlights, difficulties, plans } = req.validatedBody;
 
-    const validatedData = req.validatedBody;
-    const { club_id, report_month, report_text, events_count, participants_count } = validatedData;
-
-    if (!club_id) return res.status(400).json({ error: 'Выберите клуб' });
-    if (!report_month) return res.status(400).json({ error: 'Выберите месяц отчёта' });
-
-    const monthRegex = /^\d{4}-\d{2}$/;
-    if (!monthRegex.test(report_month)) {
-      return res.status(400).json({ error: 'Неверный формат месяца. Используйте YYYY-MM' });
+    // ⚠️ Права проверялись по club_coordinators — таблица мертва с миграции
+    // 005. Руководитель, назначенный через состав сотрудников, получал
+    // «нет доступа к этому клубу» и не мог сдать отчёт вообще.
+    if (!(await canReportForClub(req.user, club_id))) {
+      return res.status(403).json({ error: 'Нет права сдавать отчёт по этому КЮДу' });
     }
 
-    if (userRole === 'club_coordinator') {
-      const clubCheck = await pool.query('SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2', [userId, club_id]);
-      if (clubCheck.rows.length === 0) {
-        return res.status(403).json({ error: 'У вас нет доступа к этому клубу' });
-      }
+    const existing = await pool.query(
+      'SELECT id, status FROM reports WHERE club_id = $1 AND report_month = $2',
+      [club_id, report_month]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(409).json({
+        error: 'Отчёт за этот месяц уже есть — откройте его и допишите',
+        code: 'REPORT_EXISTS',
+        report_id: existing.rows[0].id
+      });
     }
 
     const clubNameResult = await pool.query('SELECT name FROM clubs WHERE id = $1', [club_id]);
     const clubName = clubNameResult.rows[0]?.name || 'Клуб';
 
+    // Цифры берём из журнала, а не из формы
+    const snapshot = await reportSnapshot(club_id, report_month);
+
     const result = await pool.query(
-      `INSERT INTO reports (club_id, created_by, title, content, report_month, events_count, participants_count, status, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft', NOW(), NOW()) RETURNING *`,
-      [club_id, userId, `Отчёт за ${monthName(report_month)} (${clubName})`, report_text || '', report_month, parseInt(events_count) || 0, parseInt(participants_count) || 0]
+      `INSERT INTO reports (
+         club_id, created_by, title, report_month, status,
+         highlights, difficulties, plans,
+         sessions_held, sessions_cancelled, average_attendance, session_topics,
+         events_count, event_titles, participants_count, new_participants,
+         achievements_count, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, 'draft',
+               $5, $6, $7,
+               $8, $9, $10, $11,
+               $12, $13, $14, $15,
+               $16, NOW(), NOW())
+       RETURNING *`,
+      [
+        club_id, userId, `Отчёт за ${monthName(report_month)} (${clubName})`, report_month,
+        highlights || '', difficulties || '', plans || '',
+        snapshot.sessions_held, snapshot.sessions_cancelled,
+        snapshot.average_attendance, snapshot.session_topics,
+        snapshot.events_count, snapshot.event_titles,
+        snapshot.participants_count, snapshot.joined_this_month,
+        snapshot.achievements_count
+      ]
     );
 
+    console.log(`📝 Создан отчёт КЮДа за ${report_month}: занятий ${snapshot.sessions_held}, участников ${snapshot.participants_count}`);
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка создания отчёта:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== ПРАВКА ЧЕРНОВИКА =====
+// Раньше этого обработчика не существовало вовсе: фронтенд слал сюда PUT и
+// молча получал 404, то есть открыть свой черновик и дописать его было нельзя.
+app.put('/api/reports/:id', authenticate, validateBody(reportUpdateSchema), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { highlights, difficulties, plans } = req.validatedBody;
+
+    const found = await pool.query('SELECT * FROM reports WHERE id = $1', [id]);
+    if (found.rows.length === 0) {
+      return res.status(404).json({ error: 'Отчёт не найден' });
+    }
+    const report = found.rows[0];
+
+    if (!(await canReportForClub(req.user, report.club_id))) {
+      return res.status(403).json({ error: 'Нет права править отчёт этого КЮДа' });
+    }
+
+    // Отправленный отчёт лежит у координатора: пока он не вернул его на
+    // доработку, текст менять нельзя — иначе решение принимается по одному
+    // тексту, а в базе окажется другой
+    if (report.status !== 'draft') {
+      return res.status(400).json({
+        error: report.status === 'submitted'
+          ? 'Отчёт уже отправлен. Чтобы изменить его, попросите координатора вернуть отчёт на доработку'
+          : 'Утверждённый отчёт не правится',
+        code: 'NOT_EDITABLE'
+      });
+    }
+
+    // Цифры пересчитываем: с прошлой правки в журнале могли появиться занятия
+    const snapshot = await reportSnapshot(report.club_id, report.report_month);
+
+    const result = await pool.query(
+      `UPDATE reports SET
+         highlights = $1, difficulties = $2, plans = $3,
+         sessions_held = $4, sessions_cancelled = $5, average_attendance = $6,
+         session_topics = $7, events_count = $8, event_titles = $9,
+         participants_count = $10, new_participants = $11, achievements_count = $12,
+         updated_at = NOW()
+       WHERE id = $13
+       RETURNING *`,
+      [
+        highlights || '', difficulties || '', plans || '',
+        snapshot.sessions_held, snapshot.sessions_cancelled, snapshot.average_attendance,
+        snapshot.session_topics, snapshot.events_count, snapshot.event_titles,
+        snapshot.participants_count, snapshot.joined_this_month, snapshot.achievements_count,
+        id
+      ]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка правки отчёта:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
@@ -3499,14 +3594,33 @@ app.patch('/api/reports/:id/submit', authenticate, async (req, res) => {
 
     const report = check.rows[0];
 
+    // ⚠️ Проверки прав здесь не было вообще: отправить отчёт чужого КЮДа
+    // мог любой авторизованный, зная его идентификатор
+    if (!(await canReportForClub(req.user, report.club_id))) {
+      return res.status(403).json({ error: 'Нет права сдавать отчёт по этому КЮДу' });
+    }
+
     if (report.status !== 'draft') {
       return res.status(400).json({ error: 'Отчёт уже отправлен' });
     }
 
+    // Пересчитываем цифры на момент отправки: это они уходят координатору,
+    // и дальше отчёт живёт с ними, даже если журнал потом дополнят
+    const snapshot = await reportSnapshot(report.club_id, report.report_month);
+
     const result = await pool.query(
-      `UPDATE reports SET status = 'submitted', submitted_by = $1, submitted_at = NOW(), updated_at = NOW() 
+      `UPDATE reports SET
+         status = 'submitted', submitted_by = $1, submitted_at = NOW(), updated_at = NOW(),
+         sessions_held = $3, sessions_cancelled = $4, average_attendance = $5,
+         session_topics = $6, events_count = $7, event_titles = $8,
+         participants_count = $9, new_participants = $10, achievements_count = $11
        WHERE id = $2 RETURNING *`,
-      [userId, id]
+      [
+        userId, id,
+        snapshot.sessions_held, snapshot.sessions_cancelled, snapshot.average_attendance,
+        snapshot.session_topics, snapshot.events_count, snapshot.event_titles,
+        snapshot.participants_count, snapshot.joined_this_month, snapshot.achievements_count
+      ]
     );
 
     await createNotification(
@@ -9609,6 +9723,73 @@ app.get('/api/clubs/:clubId/attendance-summary', authenticate, async (req, res) 
 //
 // Эндпоинт ничего не сохраняет — только считает и отдаёт. Решение,
 // что писать в отчёте, остаётся за человеком.
+// Цифры отчёта КЮДа за месяц.
+//
+// Считает сервер, а не браузер: раньше events_count и participants_count
+// приходили из формы, то есть отчёт мог утверждать любые числа, какие
+// пришлёт клиент. Сравнивать такие отчёты между КЮДами бессмысленно.
+async function reportSnapshot(clubId, month) {
+  const [sessions, events, people, achievements] = await Promise.all([
+    pool.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE status = 'held')::int AS held,
+         COUNT(*) FILTER (WHERE status = 'cancelled')::int AS cancelled,
+         ARRAY_REMOVE(ARRAY_AGG(topic ORDER BY session_date) FILTER (WHERE status = 'held'), NULL) AS topics
+       FROM club_sessions
+       WHERE club_id = $1 AND to_char(session_date, 'YYYY-MM') = $2`,
+      [clubId, month]
+    ),
+    pool.query(
+      `SELECT COUNT(*)::int AS n,
+              ARRAY_REMOVE(ARRAY_AGG(title ORDER BY event_date), NULL) AS titles
+       FROM events
+       WHERE club_id = $1 AND to_char(event_date, 'YYYY-MM') = $2`,
+      [clubId, month]
+    ),
+    pool.query(
+      `SELECT
+         COUNT(*)::int AS total,
+         COUNT(*) FILTER (WHERE to_char(created_at, 'YYYY-MM') = $2)::int AS joined_this_month
+       FROM users
+       WHERE club_id = $1 AND role = 'participant' AND status = 'active'`,
+      [clubId, month]
+    ),
+    pool.query(
+      `SELECT COUNT(*)::int AS n
+       FROM achievements a
+       JOIN users u ON u.id = a.participant_id
+       WHERE u.club_id = $1 AND to_char(a.created_at, 'YYYY-MM') = $2`,
+      [clubId, month]
+    )
+  ]);
+
+  // Средняя посещаемость считается только по проведённым занятиям
+  const visits = await pool.query(
+    `SELECT COUNT(*)::int AS n
+     FROM session_attendance a
+     JOIN club_sessions s ON s.id = a.session_id
+     WHERE s.club_id = $1 AND s.status = 'held'
+       AND to_char(s.session_date, 'YYYY-MM') = $2
+       AND a.status IN ('present', 'late')`,
+    [clubId, month]
+  );
+
+  const held = sessions.rows[0].held;
+
+  return {
+    month,
+    sessions_held: held,
+    sessions_cancelled: sessions.rows[0].cancelled,
+    session_topics: sessions.rows[0].topics || [],
+    average_attendance: held === 0 ? null : Math.round((visits.rows[0].n / held) * 10) / 10,
+    events_count: events.rows[0].n,
+    event_titles: events.rows[0].titles || [],
+    participants_count: people.rows[0].total,
+    joined_this_month: people.rows[0].joined_this_month,
+    achievements_count: achievements.rows[0].n
+  };
+}
+
 app.get('/api/clubs/:clubId/report-draft', authenticate, async (req, res) => {
   try {
     const { clubId } = req.params;
@@ -9622,65 +9803,7 @@ app.get('/api/clubs/:clubId/report-draft', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Нет права готовить отчёт по этому КЮДу' });
     }
 
-    const [sessions, events, people, achievements] = await Promise.all([
-      pool.query(
-        `SELECT
-           COUNT(*) FILTER (WHERE status = 'held')::int AS held,
-           COUNT(*) FILTER (WHERE status = 'cancelled')::int AS cancelled,
-           ARRAY_REMOVE(ARRAY_AGG(topic ORDER BY session_date) FILTER (WHERE status = 'held'), NULL) AS topics
-         FROM club_sessions
-         WHERE club_id = $1 AND to_char(session_date, 'YYYY-MM') = $2`,
-        [clubId, month]
-      ),
-      pool.query(
-        `SELECT COUNT(*)::int AS n,
-                ARRAY_REMOVE(ARRAY_AGG(title ORDER BY event_date), NULL) AS titles
-         FROM events
-         WHERE club_id = $1 AND to_char(event_date, 'YYYY-MM') = $2`,
-        [clubId, month]
-      ),
-      pool.query(
-        `SELECT
-           COUNT(*)::int AS total,
-           COUNT(*) FILTER (WHERE to_char(created_at, 'YYYY-MM') = $2)::int AS joined_this_month
-         FROM users
-         WHERE club_id = $1 AND role = 'participant' AND status = 'active'`,
-        [clubId, month]
-      ),
-      pool.query(
-        `SELECT COUNT(*)::int AS n
-         FROM achievements a
-         JOIN users u ON u.id = a.participant_id
-         WHERE u.club_id = $1 AND to_char(a.created_at, 'YYYY-MM') = $2`,
-        [clubId, month]
-      )
-    ]);
-
-    // Средняя посещаемость считается только по проведённым занятиям
-    const visits = await pool.query(
-      `SELECT COUNT(*)::int AS n
-       FROM session_attendance a
-       JOIN club_sessions s ON s.id = a.session_id
-       WHERE s.club_id = $1 AND s.status = 'held'
-         AND to_char(s.session_date, 'YYYY-MM') = $2
-         AND a.status IN ('present', 'late')`,
-      [clubId, month]
-    );
-
-    const held = sessions.rows[0].held;
-
-    res.json({
-      month,
-      sessions_held: held,
-      sessions_cancelled: sessions.rows[0].cancelled,
-      session_topics: sessions.rows[0].topics || [],
-      average_attendance: held === 0 ? null : Math.round((visits.rows[0].n / held) * 10) / 10,
-      events_count: events.rows[0].n,
-      event_titles: events.rows[0].titles || [],
-      participants_count: people.rows[0].total,
-      joined_this_month: people.rows[0].joined_this_month,
-      achievements_count: achievements.rows[0].n
-    });
+    res.json(await reportSnapshot(clubId, month));
   } catch (error) {
     console.error('❌ Ошибка подготовки отчёта:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });

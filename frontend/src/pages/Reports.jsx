@@ -7,6 +7,7 @@ import { monthLabel, countOf } from '../lib/format';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import Icon from '../components/Icon';
+import ReportView from '../components/ReportView';
 
 export default function Reports() {
   const [profile, setProfile] = useState(null);
@@ -33,9 +34,9 @@ export default function Reports() {
     id: null,
     club_id: '',
     report_month: '',
-    report_text: '',
-    events_count: 0,
-    participants_count: 0
+    highlights: '',
+    difficulties: '',
+    plans: ''
   });
 
   // Что платформа знает о клубе за выбранный месяц. Раньше отчёт просил
@@ -58,14 +59,9 @@ export default function Reports() {
       try {
         const data = await api.getReportDraft(form.club_id, form.report_month);
         if (cancelled) return;
+        // Цифры в форму не кладём: их считает сервер по журналу занятий.
+        // Здесь черновик нужен только чтобы показать, что уже известно.
         setDraft(data);
-        if (data) {
-          setForm((prev) => ({
-            ...prev,
-            events_count: data.events_count ?? prev.events_count,
-            participants_count: data.participants_count ?? prev.participants_count
-          }));
-        }
       } catch (err) {
         console.error('❌ Ошибка подготовки отчёта:', err);
       } finally {
@@ -310,9 +306,9 @@ export default function Reports() {
       const data = {
         club_id: clubId,
         report_month: form.report_month,
-        report_text: form.report_text || '',
-        events_count: parseInt(form.events_count, 10) || 0,
-        participants_count: parseInt(form.participants_count, 10) || 0
+        highlights: form.highlights || '',
+        difficulties: form.difficulties || '',
+        plans: form.plans || ''
       };
 
       let response;
@@ -350,9 +346,9 @@ export default function Reports() {
         id: null,
         club_id: isClubCoordinator ? (coordinatorClubId || '') : '',
         report_month: '',
-        report_text: '',
-        events_count: 0,
-        participants_count: 0
+        highlights: '',
+        difficulties: '',
+        plans: ''
       });
       setShowForm(false);
       loadData(pagination.page);
@@ -371,9 +367,9 @@ export default function Reports() {
       id: null,
       club_id: isClubCoordinator ? (coordinatorClubId || '') : '',
       report_month: '',
-      report_text: '',
-      events_count: 0,
-      participants_count: 0
+      highlights: '',
+      difficulties: '',
+      plans: ''
     });
     setShowForm(false);
   };
@@ -383,9 +379,10 @@ export default function Reports() {
       id: report.id,
       club_id: report.club_id || '',
       report_month: report.report_month || '',
-      report_text: report.report_text || report.content || '',
-      events_count: report.events_count || 0,
-      participants_count: report.participants_count || 0
+      // Отчёты, сданные до появления разделов, открываем в «Главном»
+      highlights: report.highlights || report.report_text || report.content || '',
+      difficulties: report.difficulties || '',
+      plans: report.plans || ''
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -596,9 +593,9 @@ export default function Reports() {
                   id: null,
                   club_id: isClubCoordinator ? (coordinatorClubId || '') : '',
                   report_month: new Date().toISOString().slice(0, 7),
-                  report_text: '',
-                  events_count: 0,
-                  participants_count: 0
+                  highlights: '',
+                  difficulties: '',
+                  plans: ''
                 });
                 setShowForm(!showForm);
               }}
@@ -728,38 +725,44 @@ export default function Reports() {
                 </div>
               )}
 
+              {/* Полей для цифр здесь больше нет: их считает сервер по
+                  журналу занятий. Руками вводились ровно те два числа, по
+                  которым отчёты клубов потом пытались сравнивать. */}
+
               <div className="form-group">
-                <label>Текст отчёта</label>
+                <label>Главное за месяц</label>
                 <textarea
-                  rows="6"
-                  value={form.report_text}
-                  onChange={(e) => setForm({ ...form, report_text: e.target.value })}
-                  placeholder="Что удалось за месяц, что не получилось, что планируете дальше"
+                  rows="5"
+                  value={form.highlights}
+                  onChange={(e) => setForm({ ...form, highlights: e.target.value })}
+                  placeholder="Что сделали, чем месяц запомнился, чем гордитесь"
                 />
                 <div className="form-hint">
-                  Цифры платформа посчитала сама — здесь нужно то, чего она знать не может.
+                  Цифры платформа посчитала сама — здесь то, чего она знать не может.
                 </div>
               </div>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Мероприятий {draft ? '(посчитано)' : ''}</label>
-                  <input
-                    type="number"
-                    value={form.events_count}
-                    onChange={(e) => setForm({ ...form, events_count: e.target.value })}
-                    min="0"
-                  />
+              <div className="form-group">
+                <label>Трудности и просьбы к движению</label>
+                <textarea
+                  rows="4"
+                  value={form.difficulties}
+                  onChange={(e) => setForm({ ...form, difficulties: e.target.value })}
+                  placeholder="Чего не хватает, где нужна помощь, что мешает работе"
+                />
+                <div className="form-hint">
+                  Это читает координатор движения. Отдельное обращение писать не нужно.
                 </div>
-                <div className="form-group">
-                  <label>Участников в клубе {draft ? '(посчитано)' : ''}</label>
-                  <input
-                    type="number"
-                    value={form.participants_count}
-                    onChange={(e) => setForm({ ...form, participants_count: e.target.value })}
-                    min="0"
-                  />
-                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Планы на следующий месяц</label>
+                <textarea
+                  rows="4"
+                  value={form.plans}
+                  onChange={(e) => setForm({ ...form, plans: e.target.value })}
+                  placeholder="Что собираетесь провести, к чему готовитесь"
+                />
               </div>
 
               <div className="form-actions">
@@ -914,57 +917,12 @@ export default function Reports() {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{selectedReport.report_month ? `Отчёт за ${monthLabel(selectedReport.report_month)}` : (selectedReport.title || 'Отчёт')}</h3>
+              {/* Месяц и КЮД показывает сам отчёт ниже — в шапке они дублировались */}
+              <h3>Отчёт</h3>
               <button className="modal-close" onClick={() => setShowModal(false)}><Icon name="close" /></button>
             </div>
 
-            <div className="modal-tags">
-              <span className="tag" style={{ background: 'var(--color-gray-100)', color: 'var(--color-gray-500)' }}>
-                {selectedReport.club_name || 'Клуб'}
-              </span>
-              {selectedReport.report_month && (
-                <span className="tag" style={{ background: 'var(--color-gray-100)', color: 'var(--color-gray-500)' }}>
-                  {selectedReport.report_month}
-                </span>
-              )}
-              <span className="tag" style={{ 
-                background: getStatusBadge(selectedReport.status).bg, 
-                color: getStatusBadge(selectedReport.status).color 
-              }}>
-                {getStatusBadge(selectedReport.status).label}
-              </span>
-            </div>
-
-            {selectedReport.content && (
-              <div className="modal-content">
-                <p>{selectedReport.content}</p>
-              </div>
-            )}
-
-            <div className="modal-stats">
-              <div className="modal-stat">
-                <span className="stat-number">{selectedReport.events_count || 0}</span>
-                <span className="stat-label">Мероприятий</span>
-              </div>
-              <div className="modal-stat">
-                <span className="stat-number">{selectedReport.participants_count || 0}</span>
-                <span className="stat-label">Участников</span>
-              </div>
-            </div>
-
-            {selectedReport.created_by_name && (
-              <div className="modal-meta">
-                Создал: {selectedReport.created_by_name}
-                {selectedReport.created_at && ` • ${new Date(selectedReport.created_at).toLocaleDateString('ru-RU')}`}
-              </div>
-            )}
-
-            {selectedReport.reviewer_comment && (
-              <div className="modal-comment">
-                <strong>Причина отклонения:</strong>
-                <p>{selectedReport.reviewer_comment}</p>
-              </div>
-            )}
+            <ReportView report={selectedReport} />
 
             <button className="btn-secondary" style={{ width: '100%', marginTop: '12px' }} onClick={() => setShowModal(false)}>
               Закрыть

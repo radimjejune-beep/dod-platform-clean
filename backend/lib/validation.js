@@ -166,15 +166,26 @@ export const registrationSchema = Joi.object({
 });
 
 // 4. ОТЧЁТ
+// Цифры отчёта в схеме намеренно отсутствуют: их считает сервер по журналу
+// занятий, мероприятиям и достижениям. Присланные клиентом отбрасываются
+// (stripUnknown) — иначе отчёты разных КЮДов несравнимы между собой.
 export const reportSchema = Joi.object({
   club_id: Joi.string().uuid().required(),
   report_month: Joi.string().pattern(/^\d{4}-\d{2}$/).required().messages({
     'string.pattern.base': 'Неверный формат месяца. Используйте YYYY-MM',
     'any.required': 'Месяц обязателен'
   }),
-  report_text: Joi.string().max(5000).allow('', null),
-  events_count: Joi.number().integer().min(0).default(0),
-  participants_count: Joi.number().integer().min(0).default(0)
+  highlights: Joi.string().max(5000).allow('', null),
+  difficulties: Joi.string().max(5000).allow('', null),
+  plans: Joi.string().max(5000).allow('', null)
+});
+
+// При правке черновика клуб и месяц не меняются: иначе отчёт за март
+// незаметно превратится в отчёт за апрель по другому КЮДу
+export const reportUpdateSchema = Joi.object({
+  highlights: Joi.string().max(5000).allow('', null),
+  difficulties: Joi.string().max(5000).allow('', null),
+  plans: Joi.string().max(5000).allow('', null)
 });
 
 // 5. ДОСТИЖЕНИЕ
@@ -352,6 +363,7 @@ export default {
   eventSchema,
   registrationSchema,
   reportSchema,
+  reportUpdateSchema,
   achievementSchema,
   appealSchema,
   documentSchema,

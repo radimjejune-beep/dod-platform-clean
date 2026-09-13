@@ -7998,15 +7998,22 @@ app.patch('/api/trip-progress', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Нужны item_id и member_id' });
     }
 
+    // Пункт должен относиться к тому же выезду и быть либо общим, либо
+    // пунктом этого КЮДа: иначе отметку можно повесить на чужой пункт
     const found = await pool.query(
       `SELECT m.participant_id, s.id AS submission_id, s.club_id, s.leader_user_id, i.responsible
          FROM team_members m
          JOIN team_submissions s ON s.id = m.submission_id
-         JOIN trip_checklist_items i ON i.id = $2
+         JOIN trip_checklist_items i
+           ON i.id = $2
+          AND i.event_id = s.event_id
+          AND (i.club_id IS NULL OR i.club_id = s.club_id)
         WHERE m.id = $1`,
       [member_id, item_id]
     );
-    if (found.rows.length === 0) return res.status(404).json({ error: 'Запись не найдена' });
+    if (found.rows.length === 0) {
+      return res.status(404).json({ error: 'Пункт не относится к этому выезду' });
+    }
     const row = found.rows[0];
 
     // Отметить может тот, кого это касается: сам участник, его родитель,

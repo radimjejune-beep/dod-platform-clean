@@ -69,7 +69,19 @@ export default function ClubSessions() {
       setProfile(me);
 
       const clubsData = await api.getClubs();
-      const list = Array.isArray(clubsData) ? clubsData : [];
+      const all = Array.isArray(clubsData) ? clubsData : [];
+
+      // Руководителю КЮДа выпадашка из сорока с лишним клубов не нужна:
+      // журнал он ведёт только по своему. Список сужаем до тех клубов,
+      // где человек действительно числится.
+      const movement = ['admin', 'movement_coordinator', 'president', 'vice_president']
+        .includes(me.role);
+      const mineClubs = await api.getMyClubs();
+      const myIds = new Set((mineClubs?.movement_wide ? [] : (mineClubs?.clubs || []))
+        .map((c) => c.club_id || c.id));
+      const list = movement || myIds.size === 0
+        ? all
+        : all.filter((c) => myIds.has(c.id));
       setClubs(list);
 
       if (!clubId) {

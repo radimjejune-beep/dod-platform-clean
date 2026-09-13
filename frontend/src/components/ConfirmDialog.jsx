@@ -88,6 +88,7 @@ export default function ConfirmDialog({
               className="form-input"
               rows="4"
               autoFocus
+              style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical' }}
               value={comment}
               placeholder={commentPlaceholder}
               onChange={(e) => setComment(e.target.value)}

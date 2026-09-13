@@ -132,7 +132,11 @@ export default function MyDelegations() {
               onClick={() => open(d.id)}
               style={{
                 width: '100%', textAlign: 'left', padding: '18px 20px',
-                background: 'none', border: 'none', cursor: 'pointer'
+                background: 'none', border: 'none', cursor: 'pointer',
+                // Общий стиль кнопок ставит white-space: nowrap и line-height: 1 —
+                // для кнопки с обычной кнопочной надписью это правильно, но здесь
+                // внутри три строки текста, и они склеивались в одну
+                display: 'block', whiteSpace: 'normal', lineHeight: 'inherit'
               }}
             >
               <div style={{ fontSize: '17px', fontWeight: 600, color: 'var(--color-primary-dark)' }}>
@@ -268,45 +272,67 @@ function DelegationDetail({ detail, busy, setBusy, reload, refreshList, show }) 
             Список подготовки пока пуст — добавьте пункты ниже.
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table className="table" style={{ minWidth: '520px' }}>
-              <thead>
-                <tr>
-                  <th style={{ minWidth: '150px' }}>Участник</th>
-                  {participantItems.map((i) => (
-                    <th key={i.id} style={{ fontSize: '11.5px', whiteSpace: 'normal', minWidth: '90px' }}>
-                      {i.title}
-                    </th>
-                  ))}
-                  <th style={{ minWidth: '70px' }}>Готов</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((m) => {
-                  const total = participantItems.filter((i) => i.is_required).length;
-                  const ready = participantItems.filter((i) => i.is_required && isDone(i.id, m.id)).length;
-                  return (
-                    <tr key={m.id}>
-                      <td style={{ fontSize: '13px' }}>{m.full_name}</td>
-                      {participantItems.map((i) => (
-                        <td key={i.id} style={{ textAlign: 'center' }}>
-                          {isDone(i.id, m.id)
-                            ? <span style={{ color: 'var(--color-primary-light)' }}><Icon name="check" size={15} /></span>
-                            : <span style={{ color: 'var(--color-gray-300)' }}>—</span>}
-                        </td>
-                      ))}
-                      <td style={{
-                        fontSize: '12.5px', fontWeight: 600,
-                        color: ready === total ? 'var(--color-primary-light)' : 'var(--color-gold-dark)'
-                      }}>
-                        {ready} / {total}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          /* Не таблица «участники × пункты»: при пяти пунктах её заголовки
+             перестают помещаться, а с телефона она вообще нечитаема.
+             Руководителю нужен не срез, а ответ на вопрос «кого тормошить
+             и по какому поводу» — поэтому строка на человека и перечень
+             того, чего не хватает. */
+          students.map((m) => {
+            const required = participantItems.filter((i) => i.is_required);
+            const missing = required.filter((i) => !isDone(i.id, m.id));
+            const optionalDone = participantItems
+              .filter((i) => !i.is_required && isDone(i.id, m.id)).length;
+            const ready = missing.length === 0;
+
+            return (
+              <div key={m.id} style={{
+                padding: '12px 14px', marginBottom: '8px',
+                background: ready ? 'var(--color-gray-50)' : 'white',
+                border: `1px solid ${ready ? 'var(--color-gray-200)' : 'var(--color-gold-light)'}`,
+                borderRadius: 'var(--radius-sm)'
+              }}>
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between',
+                  gap: '10px', flexWrap: 'wrap', alignItems: 'baseline'
+                }}>
+                  <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-gray-800)' }}>
+                    {m.full_name}
+                  </span>
+                  <span style={{
+                    fontSize: '12.5px', fontWeight: 600,
+                    color: ready ? 'var(--color-primary-light)' : 'var(--color-gold-dark)'
+                  }}>
+                    {ready
+                      ? 'всё готово'
+                      : `сделано ${required.length - missing.length} из ${required.length}`}
+                  </span>
+                </div>
+
+                {missing.length > 0 && (
+                  <div style={{
+                    fontSize: '12.5px', color: 'var(--color-gray-600)',
+                    marginTop: '4px', lineHeight: 1.5
+                  }}>
+                    Не хватает: {missing.map((i) => i.title).join(', ')}
+                  </div>
+                )}
+
+                {optionalDone > 0 && (
+                  <div style={{ fontSize: '12px', color: 'var(--color-gray-500)', marginTop: '2px' }}>
+                    Необязательных выполнено: {optionalDone}
+                  </div>
+                )}
+
+                {(m.parent_phone || m.participant_phone) && !ready && (
+                  <div style={{ fontSize: '12px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
+                    {m.parent_phone && `Родитель: ${m.parent_phone}`}
+                    {m.parent_phone && m.participant_phone && ' · '}
+                    {m.participant_phone && `Участник: ${m.participant_phone}`}
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
 

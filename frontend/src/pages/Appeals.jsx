@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
+import Attachments from '../components/Attachments';
 
 export default function Appeals() {
   const [profile, setProfile] = useState(null);
@@ -16,6 +17,9 @@ export default function Appeals() {
   const [messageType, setMessageType] = useState('success');
   
   const [selectedAppeal, setSelectedAppeal] = useState(null);
+  // Файлы грузим только по той карточке, которую человек раскрыл:
+  // иначе список обращений уйдёт в базу столько раз, сколько в нём строк
+  const [filesFor, setFilesFor] = useState(null);
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [replyMessage, setReplyMessage] = useState('');
   const [replyStatus, setReplyStatus] = useState('in_progress');
@@ -472,6 +476,24 @@ export default function Appeals() {
                       <span>Рассмотрено: {new Date(appeal.resolved_at).toLocaleString('ru-RU')}</span>
                     )}
                   </div>
+
+                  <button
+                    className="btn btn-outline btn-sm"
+                    style={{ marginTop: '10px' }}
+                    onClick={() => setFilesFor(filesFor === appeal.id ? null : appeal.id)}
+                  >
+                    {filesFor === appeal.id
+                      ? 'Скрыть файлы'
+                      : `Файлы${appeal.attachments_count ? ` (${appeal.attachments_count})` : ''}`}
+                  </button>
+
+                  {filesFor === appeal.id && (
+                    <Attachments
+                      ownerType="appeal"
+                      ownerId={appeal.id}
+                      canManage
+                    />
+                  )}
 
                   {/* ============================================================
                      ОТВЕТЫ

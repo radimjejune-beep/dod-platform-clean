@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
+import Attachments from '../components/Attachments';
 
 export default function DocumentsCenter() {
   const [documents, setDocuments] = useState([]);
@@ -12,6 +13,9 @@ export default function DocumentsCenter() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  // Документ, у которого открыты файлы. Отдельным окном, а не колонкой:
+  // иначе список из полусотни строк потянул бы полусотню запросов
+  const [filesDoc, setFilesDoc] = useState(null);
   const [editingDoc, setEditingDoc] = useState(null);
   const [activeCategory, setActiveCategory] = useState('all');
   const [formData, setFormData] = useState({
@@ -33,6 +37,13 @@ export default function DocumentsCenter() {
   // ============================================================
   // ЗАГРУЗКА ДАННЫХ
   // ============================================================
+  // Отдельно от useEffect: список надо перечитать после того, как
+  // к документу прикрепили или убрали файл
+  const reloadDocuments = async () => {
+    const docs = await api.getDocuments();
+    setDocuments(docs || []);
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -407,7 +418,7 @@ export default function DocumentsCenter() {
                 <tr>
                   <th>Название</th>
                   <th>Категория</th>
-                  <th>Тип</th>
+                  <th>Файлы</th>
                   <th>Статус</th>
                   <th>Автор</th>
                   <th>Дата</th>
@@ -427,7 +438,15 @@ export default function DocumentsCenter() {
                       <td>
                         <span className="badge badge-info">{categoryLabels[doc.category] || doc.category}</span>
                       </td>
-                      <td>{doc.document_type}</td>
+                      <td>
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={() => setFilesDoc(doc)}
+                          title="Файлы документа"
+                        >
+                          {doc.attachments_count > 0 ? `Файлы: ${doc.attachments_count}` : 'Прикрепить'}
+                        </button>
+                      </td>
                       <td>{getDocumentStatus(doc)}</td>
                       <td>{doc.created_by_name || 'Неизвестно'}</td>
                       <td>{formatDate(doc.created_at)}</td>
@@ -459,6 +478,27 @@ export default function DocumentsCenter() {
           </div>
         )}
       </div>
+
+      {/* ============================================================
+         ФАЙЛЫ ДОКУМЕНТА
+         ============================================================ */}
+      {filesDoc && (
+        <div className="modal-overlay" onClick={() => { setFilesDoc(null); reloadDocuments(); }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">{filesDoc.title}</h3>
+              <button className="modal-close" onClick={() => { setFilesDoc(null); reloadDocuments(); }}>
+                <Icon name="close" />
+              </button>
+            </div>
+            <Attachments
+              ownerType="document"
+              ownerId={filesDoc.id}
+              canManage={canEditDocument(filesDoc)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ============================================================
          МОДАЛЬНОЕ ОКНО

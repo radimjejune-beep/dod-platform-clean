@@ -343,6 +343,10 @@ function parseDataImage(value, maxBytes) {
 // Роли, которые видят движение целиком
 const MOVEMENT_ROLES = ['admin', 'movement_coordinator', 'president', 'vice_president'];
 
+// Идентификаторы в базе — uuid. Проверяем строку до запроса: иначе
+// Postgres отвечает 22P02 и запрос падает в 500 вместо понятного 400.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Все роли сотрудников (могут работать с участниками в своей зоне)
 const STAFF_ROLES = [...MOVEMENT_ROLES, 'club_coordinator', 'tutor'];
 
@@ -2217,7 +2221,9 @@ app.get('/api/appeals', authenticate, async (req, res) => {
       SELECT a.*, 
              u.full_name as coordinator_name,
              c.name as club_name,
-             r.full_name as resolved_by_name
+             r.full_name as resolved_by_name,
+             (SELECT COUNT(*)::int FROM attachments f
+               WHERE f.owner_type = 'appeal' AND f.owner_id = a.id) AS attachments_count
       FROM appeals a
       LEFT JOIN users u ON a.coordinator_id = u.id
       LEFT JOIN clubs c ON a.club_id = c.id
@@ -2457,6 +2463,13 @@ app.delete('/api/appeals/:id', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'У вас нет прав для удаления этого обращения' });
     }
 
+    // Вложения связаны с записью через owner_type/owner_id, внешнего ключа
+    // нет — удаляем их явно, иначе файлы останутся в базе навсегда
+    const replies = await pool.query('SELECT id FROM appeal_replies WHERE appeal_id = $1', [id]);
+    for (const reply of replies.rows) {
+      await deleteAttachmentsOf('appeal_reply', reply.id);
+    }
+    await deleteAttachmentsOf('appeal', id);
     await pool.query('DELETE FROM appeal_replies WHERE appeal_id = $1', [id]);
     await pool.query('DELETE FROM appeals WHERE id = $1', [id]);
 
@@ -3661,7 +3674,9 @@ app.get('/api/documents', authenticate, async (req, res) => {
     const userRole = req.user.role;
 
     let query = `
-      SELECT d.*, u.full_name as created_by_name, c.name as club_name
+      SELECT d.*, u.full_name as created_by_name, c.name as club_name,
+             (SELECT COUNT(*)::int FROM attachments a
+               WHERE a.owner_type = 'document' AND a.owner_id = d.id) AS attachments_count
       FROM documents d
       LEFT JOIN users u ON d.created_by = u.id
       LEFT JOIN clubs c ON d.club_id = c.id
@@ -3669,12 +3684,18 @@ app.get('/api/documents', authenticate, async (req, res) => {
     `;
     const params = [];
 
-    if (userRole === 'club_coordinator') {
-      const clubResult = await pool.query('SELECT club_id FROM club_coordinators WHERE profile_id = $1', [userId]);
-      if (clubResult.rows.length > 0) {
-        const clubId = clubResult.rows[0].club_id;
-        query += ` AND (d.club_id = $1 OR d.is_public = true OR d.club_id IS NULL)`;
-        params.push(clubId);
+    // ⚠️ Раньше клуб искался в club_coordinators — таблица мертва с миграции
+    // 005, состав сотрудников живёт в club_staff. Руководитель КЮДа из-за
+    // этого не видел документы собственного клуба.
+    if (!MOVEMENT_ROLES.includes(userRole)) {
+      const staff = await pool.query(
+        'SELECT club_id FROM club_staff WHERE user_id = $1 AND removed_at IS NULL',
+        [userId]
+      );
+      const clubIds = staff.rows.map((r) => r.club_id);
+      if (clubIds.length > 0) {
+        query += ` AND (d.club_id = ANY($1::uuid[]) OR d.is_public = true OR d.club_id IS NULL)`;
+        params.push(clubIds);
       } else {
         query += ` AND (d.is_public = true OR d.club_id IS NULL)`;
       }
@@ -3694,6 +3715,12 @@ app.post('/api/documents', authenticate, validateBody(documentSchema), async (re
     const userId = req.user.userId;
     const userRole = req.user.role;
 
+    // ⚠️ Проверки прав не было вообще: документ движения мог завести любой
+    // авторизованный, включая родителя и участника
+    if (!STAFF_ROLES.includes(userRole)) {
+      return res.status(403).json({ error: 'Документы заводят сотрудники движения и КЮДов' });
+    }
+
     const validatedData = req.validatedBody;
     const { title, content, category, document_type, is_public, club_id, tags } = validatedData;
 
@@ -3702,10 +3729,16 @@ app.post('/api/documents', authenticate, validateBody(documentSchema), async (re
     }
 
     let finalClubId = club_id || null;
-    if (userRole === 'club_coordinator' && !finalClubId) {
-      const clubResult = await pool.query('SELECT club_id FROM club_coordinators WHERE profile_id = $1', [userId]);
-      if (clubResult.rows.length > 0) {
-        finalClubId = clubResult.rows[0].club_id;
+    if (!MOVEMENT_ROLES.includes(userRole)) {
+      // Сотрудник КЮДа заводит документ только своему клубу, чужой club_id
+      // из запроса игнорируем
+      const staff = await pool.query(
+        'SELECT club_id FROM club_staff WHERE user_id = $1 AND removed_at IS NULL ORDER BY appointed_at LIMIT 1',
+        [userId]
+      );
+      finalClubId = staff.rows[0]?.club_id || null;
+      if (!finalClubId) {
+        return res.status(403).json({ error: 'Вы не числитесь сотрудником ни одного КЮДа' });
       }
     }
 
@@ -3731,6 +3764,7 @@ app.delete('/api/documents/:id', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'У вас нет прав для удаления документов' });
     }
 
+    await deleteAttachmentsOf('document', id);
     await pool.query('DELETE FROM documents WHERE id = $1', [id]);
     res.json({ message: 'Документ удалён' });
   } catch (error) {
@@ -3738,6 +3772,273 @@ app.delete('/api/documents/:id', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
+
+// ============================================================
+// ========== ВЛОЖЕНИЯ ==========
+// ============================================================
+// Одна таблица на все виды записей: owner_type + owner_id. Права не
+// придумываются заново — они берутся у той записи, к которой файл
+// приложен: кто видит обращение, тот видит и приложенный к нему скан.
+//
+// Тело запроса приходит сырыми байтами (express.raw), а не base64:
+// base64 раздувает файл на треть и упирается в лимит express.json.
+
+const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024;
+
+// Тип определяем по расширению сами. Content-Type от браузера —
+// это утверждение клиента, а не факт.
+const ATTACHMENT_MIME_BY_EXT = {
+  pdf: 'application/pdf',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ppt: 'application/vnd.ms-powerpoint',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  odt: 'application/vnd.oasis.opendocument.text',
+  ods: 'application/vnd.oasis.opendocument.spreadsheet',
+  rtf: 'application/rtf',
+  txt: 'text/plain',
+  csv: 'text/csv',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  heic: 'image/heic',
+  zip: 'application/zip'
+};
+// svg и html сюда не входят намеренно: это документы, умеющие исполнять
+// скрипты в браузере того, кто их откроет.
+
+const ATTACHMENT_OWNER_TYPES = ['document', 'appeal', 'appeal_reply'];
+
+function sanitizeFileName(raw) {
+  const name = String(raw || '').split(/[\\/]/).pop().trim();
+  // Управляющие символы и кавычки ломают заголовок Content-Disposition
+  const cleaned = name.replace(/[\u0000-\u001f"<>|]/g, '').slice(0, 200);
+  return cleaned || 'файл';
+}
+
+function attachmentExtension(fileName) {
+  const dot = fileName.lastIndexOf('.');
+  if (dot <= 0) return '';
+  return fileName.slice(dot + 1).toLowerCase();
+}
+
+// Что пользователь может делать с вложениями конкретной записи.
+// Возвращает null, если записи нет.
+async function attachmentOwnerAccess(user, ownerType, ownerId) {
+  const { userId, role } = user;
+  const isMovement = MOVEMENT_ROLES.includes(role);
+
+  if (ownerType === 'document') {
+    const found = await pool.query(
+      'SELECT id, club_id, is_public, created_by FROM documents WHERE id = $1',
+      [ownerId]
+    );
+    if (found.rows.length === 0) return null;
+    const doc = found.rows[0];
+
+    if (isMovement) return { canRead: true, canWrite: true };
+
+    const isAuthor = doc.created_by === userId;
+    let sameClub = false;
+    if (doc.club_id) {
+      const staff = await pool.query(
+        'SELECT 1 FROM club_staff WHERE user_id = $1 AND club_id = $2 AND removed_at IS NULL',
+        [userId, doc.club_id]
+      );
+      sameClub = staff.rows.length > 0;
+    }
+
+    return {
+      canRead: doc.is_public === true || doc.club_id === null || sameClub || isAuthor,
+      canWrite: isAuthor
+    };
+  }
+
+  if (ownerType === 'appeal' || ownerType === 'appeal_reply') {
+    let appealId = ownerId;
+
+    if (ownerType === 'appeal_reply') {
+      const reply = await pool.query('SELECT appeal_id FROM appeal_replies WHERE id = $1', [ownerId]);
+      if (reply.rows.length === 0) return null;
+      appealId = reply.rows[0].appeal_id;
+    }
+
+    const appeal = await pool.query('SELECT coordinator_id FROM appeals WHERE id = $1', [appealId]);
+    if (appeal.rows.length === 0) return null;
+
+    // Доступ ровно тот же, что к самому обращению: автор и движение
+    const allowed = isMovement || appeal.rows[0].coordinator_id === userId;
+    return { canRead: allowed, canWrite: allowed };
+  }
+
+  return null;
+}
+
+// ===== СПИСОК ВЛОЖЕНИЙ ЗАПИСИ =====
+// Содержимое не выбираем: иначе список документов потянет из базы
+// десятки мегабайт, которые никто не просил.
+app.get('/api/attachments', authenticate, async (req, res) => {
+  try {
+    const ownerType = String(req.query.owner_type || '');
+    const ownerId = String(req.query.owner_id || '');
+
+    if (!ATTACHMENT_OWNER_TYPES.includes(ownerType) || !UUID_RE.test(ownerId)) {
+      return res.status(400).json({ error: 'Нужны owner_type и owner_id' });
+    }
+
+    const access = await attachmentOwnerAccess(req.user, ownerType, ownerId);
+    if (!access) return res.status(404).json({ error: 'Запись не найдена' });
+    if (!access.canRead) return res.status(403).json({ error: 'Нет доступа к этой записи' });
+
+    const result = await pool.query(
+      `SELECT a.id, a.file_name, a.mime_type, a.byte_size, a.created_at,
+              a.uploaded_by, u.full_name AS uploaded_by_name
+         FROM attachments a
+         LEFT JOIN users u ON u.id = a.uploaded_by
+        WHERE a.owner_type = $1 AND a.owner_id = $2
+        ORDER BY a.created_at`,
+      [ownerType, ownerId]
+    );
+
+    res.json(result.rows.map((row) => ({ ...row, can_delete: access.canWrite })));
+  } catch (error) {
+    console.error('❌ Ошибка получения вложений:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== ЗАГРУЗКА =====
+app.post(
+  '/api/attachments',
+  authenticate,
+  express.raw({ type: '*/*', limit: MAX_ATTACHMENT_BYTES }),
+  async (req, res) => {
+    try {
+      const ownerType = String(req.query.owner_type || '');
+      const ownerId = String(req.query.owner_id || '');
+      const fileName = sanitizeFileName(req.query.name);
+
+      if (!ATTACHMENT_OWNER_TYPES.includes(ownerType) || !UUID_RE.test(ownerId)) {
+        return res.status(400).json({ error: 'Нужны owner_type и owner_id' });
+      }
+
+      const ext = attachmentExtension(fileName);
+      const mime = ATTACHMENT_MIME_BY_EXT[ext];
+      if (!mime) {
+        return res.status(400).json({
+          error: 'Такой тип файла загрузить нельзя. Подойдут PDF, Word, Excel, PowerPoint, картинки, txt, csv и zip'
+        });
+      }
+
+      if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+        return res.status(400).json({ error: 'Файл пустой' });
+      }
+      if (req.body.length > MAX_ATTACHMENT_BYTES) {
+        return res.status(413).json({ error: 'Файл больше 15 МБ' });
+      }
+
+      const access = await attachmentOwnerAccess(req.user, ownerType, ownerId);
+      if (!access) return res.status(404).json({ error: 'Запись не найдена' });
+      if (!access.canWrite) {
+        return res.status(403).json({ error: 'Нет прав прикреплять файлы к этой записи' });
+      }
+
+      const result = await pool.query(
+        `INSERT INTO attachments (owner_type, owner_id, file_name, mime_type, byte_size, content, uploaded_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, file_name, mime_type, byte_size, created_at`,
+        [ownerType, ownerId, fileName, mime, req.body.length, req.body, req.user.userId]
+      );
+
+      await logActivity(req.user.userId, 'ATTACHMENT_UPLOADED', 'attachment', result.rows[0].id, {
+        owner_type: ownerType,
+        owner_id: ownerId,
+        file_name: fileName,
+        byte_size: req.body.length
+      });
+
+      console.log(`📎 Загружено вложение: ${fileName} (${req.body.length} Б) к ${ownerType} ${ownerId}`);
+      res.status(201).json({ ...result.rows[0], can_delete: true });
+    } catch (error) {
+      if (error.type === 'entity.too.large') {
+        return res.status(413).json({ error: 'Файл больше 15 МБ' });
+      }
+      console.error('❌ Ошибка загрузки вложения:', error);
+      res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+    }
+  }
+);
+
+// ===== СКАЧИВАНИЕ =====
+app.get('/api/attachments/:id/download', authenticate, async (req, res) => {
+  try {
+    const found = await pool.query(
+      'SELECT owner_type, owner_id, file_name, mime_type, byte_size, content FROM attachments WHERE id = $1',
+      [req.params.id]
+    );
+    if (found.rows.length === 0) {
+      return res.status(404).json({ error: 'Файл не найден' });
+    }
+    const file = found.rows[0];
+
+    const access = await attachmentOwnerAccess(req.user, file.owner_type, file.owner_id);
+    if (!access || !access.canRead) {
+      return res.status(403).json({ error: 'Нет доступа к этому файлу' });
+    }
+
+    res.setHeader('Content-Type', file.mime_type);
+    res.setHeader('Content-Length', file.byte_size);
+    // Всё отдаём вложением, даже картинки: файл не должен исполняться
+    // в браузере на домене платформы
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename*=UTF-8''${encodeURIComponent(file.file_name)}`
+    );
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.send(file.content);
+  } catch (error) {
+    console.error('❌ Ошибка скачивания вложения:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== УДАЛЕНИЕ =====
+app.delete('/api/attachments/:id', authenticate, async (req, res) => {
+  try {
+    const found = await pool.query(
+      'SELECT owner_type, owner_id, file_name FROM attachments WHERE id = $1',
+      [req.params.id]
+    );
+    if (found.rows.length === 0) {
+      return res.status(404).json({ error: 'Файл не найден' });
+    }
+    const file = found.rows[0];
+
+    const access = await attachmentOwnerAccess(req.user, file.owner_type, file.owner_id);
+    if (!access || !access.canWrite) {
+      return res.status(403).json({ error: 'Нет прав удалять этот файл' });
+    }
+
+    await pool.query('DELETE FROM attachments WHERE id = $1', [req.params.id]);
+    await logActivity(req.user.userId, 'ATTACHMENT_DELETED', 'attachment', req.params.id, {
+      owner_type: file.owner_type,
+      file_name: file.file_name
+    });
+
+    res.json({ message: 'Файл удалён' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления вложения:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Удаление записи забирает с собой и её файлы: FK тут нет, связь общая
+async function deleteAttachmentsOf(ownerType, ownerId, executor = pool) {
+  await executor.query('DELETE FROM attachments WHERE owner_type = $1 AND owner_id = $2', [ownerType, ownerId]);
+}
 
 // ============================================================
 // МАССОВЫЕ УВЕДОМЛЕНИЯ — С ВАЛИДАЦИЕЙ

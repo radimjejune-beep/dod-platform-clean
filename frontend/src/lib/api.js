@@ -1409,6 +1409,62 @@ export const exportEventTeams = async (eventId, withDocuments = false) => {
 };
 
 // ============================================================
+// 20a. ВЛОЖЕНИЯ
+// ============================================================
+// owner_type: 'document' | 'appeal' | 'appeal_reply'
+export const getAttachments = async (ownerType, ownerId) => {
+  const response = await fetch(
+    `${API_URL}/attachments?owner_type=${ownerType}&owner_id=${ownerId}`,
+    { method: 'GET', headers: headers() }
+  );
+  if (!response.ok) return [];
+  return response.json();
+};
+
+// Файл уходит сырыми байтами: base64 раздул бы его на треть,
+// а имя и привязка едут в адресе запроса
+export const uploadAttachment = async (ownerType, ownerId, file) => {
+  const url = `${API_URL}/attachments?owner_type=${ownerType}&owner_id=${ownerId}`
+    + `&name=${encodeURIComponent(file.name)}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      ...(getToken() && { Authorization: `Bearer ${getToken()}` })
+    },
+    body: file
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(describeApiError(data) || 'Не удалось загрузить файл');
+  return data;
+};
+
+export const deleteAttachment = async (id) => {
+  const response = await fetch(`${API_URL}/attachments/${id}`, {
+    method: 'DELETE', headers: headers()
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(describeApiError(data) || 'Не удалось удалить файл');
+  return data;
+};
+
+// Скачивание идёт с токеном, поэтому не простой ссылкой, а через blob
+export const downloadAttachment = async (id, fileName) => {
+  const response = await fetch(`${API_URL}/attachments/${id}/download`, {
+    method: 'GET', headers: headers()
+  });
+  if (!response.ok) throw new Error('Не удалось скачать файл');
+  const blob = await response.blob();
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName || 'файл';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+};
+
+// ============================================================
 // 20b. УПРАВЛЕНИЕ КЮДАМИ
 // ============================================================
 // Удаления нет: на клуб ссылаются участники, мероприятия и отчёты,
@@ -1816,6 +1872,10 @@ const api = {
   // Сотрудники КЮДа
   getMyClubs,
   getStaffCandidates,
+  getAttachments,
+  uploadAttachment,
+  deleteAttachment,
+  downloadAttachment,
   getClubStaff,
   addClubStaff,
   updateClubStaff,

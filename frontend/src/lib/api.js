@@ -1409,6 +1409,73 @@ export const exportEventTeams = async (eventId, withDocuments = false) => {
 };
 
 // ============================================================
+// 20. ПОДГОТОВКА К ВЫЕЗДУ
+// ============================================================
+export const getTripChecklist = async (eventId, clubId) => {
+  const q = clubId ? `?club_id=${clubId}` : '';
+  const response = await fetch(`${API_URL}/events/${eventId}/checklist${q}`, {
+    method: 'GET', headers: headers()
+  });
+  if (!response.ok) return [];
+  return response.json();
+};
+
+export const addTripChecklistItem = async (eventId, data) => {
+  const response = await fetch(`${API_URL}/events/${eventId}/checklist`, {
+    method: 'POST', headers: headers(), body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const removeTripChecklistItem = async (id) => {
+  const response = await fetch(`${API_URL}/checklist-items/${id}`, {
+    method: 'DELETE', headers: headers()
+  });
+  return response.json();
+};
+
+// Выезды участника или его ребёнка — только утверждённые команды
+export const getMyTrips = async () => {
+  const response = await fetch(`${API_URL}/my-trips`, { method: 'GET', headers: headers() });
+  if (!response.ok) return [];
+  return response.json();
+};
+
+export const setTripProgress = async (data) => {
+  const response = await fetch(`${API_URL}/trip-progress`, {
+    method: 'PATCH', headers: headers(), body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const saveTripTravel = async (data) => {
+  const response = await fetch(`${API_URL}/trip-travel`, {
+    method: 'PUT', headers: headers(), body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const getMyDelegations = async () => {
+  const response = await fetch(`${API_URL}/my-delegations`, { method: 'GET', headers: headers() });
+  if (!response.ok) return [];
+  return response.json();
+};
+
+export const getDelegation = async (submissionId) => {
+  const response = await fetch(`${API_URL}/delegations/${submissionId}`, {
+    method: 'GET', headers: headers()
+  });
+  return response.json();
+};
+
+export const setDelegationLeader = async (submissionId, data) => {
+  const response = await fetch(`${API_URL}/team-submissions/${submissionId}/leader`, {
+    method: 'PATCH', headers: headers(), body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+// ============================================================
 // 20a. ВЛОЖЕНИЯ
 // ============================================================
 // owner_type: 'document' | 'appeal' | 'appeal_reply'
@@ -1872,6 +1939,15 @@ const api = {
   // Сотрудники КЮДа
   getMyClubs,
   getStaffCandidates,
+  getTripChecklist,
+  addTripChecklistItem,
+  removeTripChecklistItem,
+  getMyTrips,
+  setTripProgress,
+  saveTripTravel,
+  getMyDelegations,
+  getDelegation,
+  setDelegationLeader,
   getAttachments,
   uploadAttachment,
   deleteAttachment,

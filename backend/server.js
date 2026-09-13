@@ -7787,6 +7787,466 @@ async function setUserClub(userId, clubId, executor = pool) {
 }
 
 // ============================================================
+// ========== ПОДГОТОВКА К ВЫЕЗДУ ==========
+// ============================================================
+// Платформа доводила ребёнка до утверждённой команды и там
+// останавливалась. Всё дальнейшее — справки, билеты, время сбора —
+// жило в родительском чате, а руководитель делегации выяснял, кто когда
+// прилетает, обзванивая семьи накануне.
+//
+// Доступ к делегации даёт не глобальная роль, а запись о руководителе в
+// самой заявке: учителю, который везёт детей один раз в году, не нужен
+// доступ к заметкам и отчётам клуба на весь год.
+
+const TRIP_RESPONSIBLE = ['participant', 'leader'];
+const TRIP_ITEM_KINDS = ['check', 'file', 'ticket'];
+const TRIP_MODES = ['plane', 'train', 'bus', 'car', 'other'];
+
+// Кто вправе видеть делегацию клуба на мероприятии
+async function delegationAccess(user, submission) {
+  const { userId, role } = user;
+  if (MOVEMENT_ROLES.includes(role)) return { view: true, manage: true };
+  if (submission.leader_user_id === userId) return { view: true, manage: true };
+
+  const perms = await getClubPermissions(user, submission.club_id);
+  if (perms.form_team) return { view: true, manage: true };
+  if (perms.view_participants) return { view: true, manage: false };
+  return { view: false, manage: false };
+}
+
+// Участники команды, к которым имеет отношение этот человек:
+// сам ребёнок — к себе, родитель — к своим детям
+async function ownMemberIds(userId, role) {
+  if (role === 'parent') {
+    const kids = await pool.query(
+      "SELECT child_id FROM child_parent WHERE parent_id = $1 AND status = 'active'",
+      [userId]
+    );
+    const ids = kids.rows.map((r) => r.child_id);
+    if (ids.length === 0) return [];
+    const members = await pool.query(
+      'SELECT id FROM team_members WHERE participant_id = ANY($1::uuid[])',
+      [ids]
+    );
+    return members.rows.map((r) => r.id);
+  }
+  const members = await pool.query(
+    'SELECT id FROM team_members WHERE participant_id = $1',
+    [userId]
+  );
+  return members.rows.map((r) => r.id);
+}
+
+// ===== ПУНКТЫ ПОДГОТОВКИ =====
+// Движение задаёт общие пункты, КЮД дополняет своими. Общий пункт видят
+// все делегации, пункт клуба — только его собственная.
+app.get('/api/events/:eventId/checklist', authenticate, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const clubId = req.query.club_id && UUID_RE.test(req.query.club_id) ? req.query.club_id : null;
+
+    const result = await pool.query(
+      `SELECT i.*, c.name AS club_name, u.full_name AS created_by_name
+         FROM trip_checklist_items i
+         LEFT JOIN clubs c ON c.id = i.club_id
+         LEFT JOIN users u ON u.id = i.created_by
+        WHERE i.event_id = $1
+          AND (i.club_id IS NULL OR ($2::uuid IS NOT NULL AND i.club_id = $2))
+        ORDER BY i.club_id NULLS FIRST, i.sort_order, i.created_at`,
+      [eventId, clubId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения списка подготовки:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.post('/api/events/:eventId/checklist', authenticate, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { club_id, title, description, responsible, kind, is_required, due_date, sort_order } = req.body;
+
+    if (!title || !String(title).trim()) {
+      return res.status(400).json({ error: 'Название пункта обязательно' });
+    }
+    if (responsible && !TRIP_RESPONSIBLE.includes(responsible)) {
+      return res.status(400).json({ error: 'responsible: participant или leader' });
+    }
+    if (kind && !TRIP_ITEM_KINDS.includes(kind)) {
+      return res.status(400).json({ error: 'kind: check, file или ticket' });
+    }
+
+    // Общий пункт на всё мероприятие заводит только движение. КЮД может
+    // добавить пункт своей делегации — и только своей.
+    let finalClubId = club_id || null;
+    if (MOVEMENT_ROLES.includes(req.user.role)) {
+      if (finalClubId && !UUID_RE.test(finalClubId)) finalClubId = null;
+    } else {
+      if (!finalClubId || !UUID_RE.test(finalClubId)) {
+        return res.status(400).json({ error: 'Укажите КЮД, для делегации которого добавляется пункт' });
+      }
+      if (!(await canInClub(req.user, finalClubId, 'form_team'))) {
+        return res.status(403).json({ error: 'Добавлять пункты может руководитель КЮДа или его заместитель' });
+      }
+    }
+
+    const result = await pool.query(
+      `INSERT INTO trip_checklist_items
+         (event_id, club_id, title, description, responsible, kind, is_required, due_date, sort_order, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING *`,
+      [
+        eventId, finalClubId, String(title).trim(), description || null,
+        responsible || 'participant', kind || 'check',
+        is_required !== false, due_date || null, Number(sort_order) || 0, req.user.userId
+      ]
+    );
+
+    await logActivity(req.user.userId, 'TRIP_ITEM_CREATED', 'trip_checklist_item', result.rows[0].id, {
+      event_id: eventId, club_id: finalClubId, title
+    });
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания пункта подготовки:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.delete('/api/checklist-items/:id', authenticate, async (req, res) => {
+  try {
+    const found = await pool.query('SELECT * FROM trip_checklist_items WHERE id = $1', [req.params.id]);
+    if (found.rows.length === 0) return res.status(404).json({ error: 'Пункт не найден' });
+    const item = found.rows[0];
+
+    const allowed = item.club_id
+      ? await canInClub(req.user, item.club_id, 'form_team')
+      : MOVEMENT_ROLES.includes(req.user.role);
+    if (!allowed) {
+      return res.status(403).json({ error: 'Нет прав удалять этот пункт' });
+    }
+
+    await pool.query('DELETE FROM trip_checklist_items WHERE id = $1', [req.params.id]);
+    res.json({ message: 'Пункт удалён' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления пункта подготовки:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== МОИ ВЫЕЗДЫ (участник и родитель) =====
+// Появляются только после утверждения команды: пока состав не утверждён,
+// готовиться не к чему, а лишний список пугает семью раньше времени.
+app.get('/api/my-trips', authenticate, async (req, res) => {
+  try {
+    const { userId, role } = req.user;
+    const memberIds = await ownMemberIds(userId, role);
+    if (memberIds.length === 0) return res.json([]);
+
+    const trips = await pool.query(
+      `SELECT m.id AS member_id, m.full_name, m.role_in_team,
+              s.id AS submission_id, s.club_id, s.leader_user_id, s.leader_name, s.leader_phone,
+              lu.full_name AS leader_user_name, lu.phone AS leader_user_phone,
+              c.name AS club_name,
+              e.id AS event_id, e.title AS event_title, e.event_date, e.end_date,
+              e.location, e.tickets_by, e.gathering_info
+         FROM team_members m
+         JOIN team_submissions s ON s.id = m.submission_id
+         JOIN events e ON e.id = s.event_id
+         LEFT JOIN clubs c ON c.id = s.club_id
+         LEFT JOIN users lu ON lu.id = s.leader_user_id
+        WHERE m.id = ANY($1::uuid[]) AND s.status = 'approved'
+        ORDER BY e.event_date DESC`,
+      [memberIds]
+    );
+    if (trips.rows.length === 0) return res.json([]);
+
+    const items = await pool.query(
+      `SELECT i.*, p.done, p.done_at, p.comment AS progress_comment, p.member_id
+         FROM trip_checklist_items i
+         JOIN team_submissions s ON s.event_id = i.event_id
+         JOIN team_members m ON m.submission_id = s.id
+         LEFT JOIN trip_checklist_progress p ON p.item_id = i.id AND p.member_id = m.id
+        WHERE m.id = ANY($1::uuid[])
+          AND i.responsible = 'participant'
+          AND (i.club_id IS NULL OR i.club_id = s.club_id)
+        ORDER BY i.club_id NULLS FIRST, i.sort_order, i.created_at`,
+      [memberIds]
+    );
+
+    const travel = await pool.query(
+      'SELECT * FROM trip_travel WHERE member_id = ANY($1::uuid[])',
+      [memberIds]
+    );
+
+    res.json(trips.rows.map((trip) => ({
+      ...trip,
+      items: items.rows.filter((i) => i.member_id === trip.member_id),
+      travel: travel.rows.filter((t) => t.member_id === trip.member_id)
+    })));
+  } catch (error) {
+    console.error('❌ Ошибка получения выездов участника:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== ОТМЕТКА ПУНКТА =====
+app.patch('/api/trip-progress', authenticate, async (req, res) => {
+  try {
+    const { item_id, member_id, done, comment } = req.body;
+    if (!UUID_RE.test(String(item_id)) || !UUID_RE.test(String(member_id))) {
+      return res.status(400).json({ error: 'Нужны item_id и member_id' });
+    }
+
+    const found = await pool.query(
+      `SELECT m.participant_id, s.id AS submission_id, s.club_id, s.leader_user_id, i.responsible
+         FROM team_members m
+         JOIN team_submissions s ON s.id = m.submission_id
+         JOIN trip_checklist_items i ON i.id = $2
+        WHERE m.id = $1`,
+      [member_id, item_id]
+    );
+    if (found.rows.length === 0) return res.status(404).json({ error: 'Запись не найдена' });
+    const row = found.rows[0];
+
+    // Отметить может тот, кого это касается: сам участник, его родитель,
+    // руководитель делегации или сотрудник клуба, собирающий команду
+    const own = await ownMemberIds(req.user.userId, req.user.role);
+    const access = await delegationAccess(req.user, row);
+    if (!own.includes(member_id) && !access.manage) {
+      return res.status(403).json({ error: 'Нет прав отмечать этот пункт' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO trip_checklist_progress (item_id, member_id, done, done_at, done_by, comment, updated_at)
+       VALUES ($1, $2, $3, CASE WHEN $3 THEN NOW() ELSE NULL END, $4, $5, NOW())
+       ON CONFLICT (item_id, member_id) DO UPDATE
+         SET done = EXCLUDED.done,
+             done_at = EXCLUDED.done_at,
+             done_by = EXCLUDED.done_by,
+             comment = EXCLUDED.comment,
+             updated_at = NOW()
+       RETURNING *`,
+      [item_id, member_id, done === true, req.user.userId, comment || null]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка отметки пункта подготовки:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== ПРОЕЗД =====
+app.put('/api/trip-travel', authenticate, async (req, res) => {
+  try {
+    const { member_id, direction, mode, carrier_number, depart_at, arrive_at, point_name, bought, comment } = req.body;
+
+    if (!UUID_RE.test(String(member_id)) || !['there', 'back'].includes(direction)) {
+      return res.status(400).json({ error: 'Нужны member_id и direction (there или back)' });
+    }
+    if (mode && !TRIP_MODES.includes(mode)) {
+      return res.status(400).json({ error: 'mode: plane, train, bus, car или other' });
+    }
+
+    const found = await pool.query(
+      `SELECT s.id AS submission_id, s.club_id, s.leader_user_id
+         FROM team_members m JOIN team_submissions s ON s.id = m.submission_id
+        WHERE m.id = $1`,
+      [member_id]
+    );
+    if (found.rows.length === 0) return res.status(404).json({ error: 'Участник команды не найден' });
+
+    const own = await ownMemberIds(req.user.userId, req.user.role);
+    const access = await delegationAccess(req.user, found.rows[0]);
+    if (!own.includes(member_id) && !access.manage) {
+      return res.status(403).json({ error: 'Нет прав менять данные проезда' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO trip_travel
+         (member_id, direction, mode, carrier_number, depart_at, arrive_at, point_name, bought, comment, updated_by, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+       ON CONFLICT (member_id, direction) DO UPDATE
+         SET mode = EXCLUDED.mode,
+             carrier_number = EXCLUDED.carrier_number,
+             depart_at = EXCLUDED.depart_at,
+             arrive_at = EXCLUDED.arrive_at,
+             point_name = EXCLUDED.point_name,
+             bought = EXCLUDED.bought,
+             comment = EXCLUDED.comment,
+             updated_by = EXCLUDED.updated_by,
+             updated_at = NOW()
+       RETURNING *`,
+      [
+        member_id, direction, mode || null, carrier_number || null,
+        depart_at || null, arrive_at || null, point_name || null,
+        bought === true, comment || null, req.user.userId
+      ]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка сохранения данных проезда:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== РУКОВОДИТЕЛЬ ДЕЛЕГАЦИИ =====
+app.patch('/api/team-submissions/:id/leader', authenticate, async (req, res) => {
+  try {
+    const { leader_user_id, leader_name, leader_phone, leader_note } = req.body;
+
+    const found = await pool.query('SELECT * FROM team_submissions WHERE id = $1', [req.params.id]);
+    if (found.rows.length === 0) return res.status(404).json({ error: 'Заявка не найдена' });
+    const submission = found.rows[0];
+
+    // Назначает тот, кто отвечает за команду: руководитель КЮДа или движение
+    if (!MOVEMENT_ROLES.includes(req.user.role) &&
+        !(await canInClub(req.user, submission.club_id, 'form_team'))) {
+      return res.status(403).json({ error: 'Назначать руководителя делегации может руководитель КЮДа' });
+    }
+
+    const userId = leader_user_id && UUID_RE.test(String(leader_user_id)) ? leader_user_id : null;
+
+    const result = await pool.query(
+      `UPDATE team_submissions
+          SET leader_user_id = $1, leader_name = $2, leader_phone = $3, leader_note = $4, updated_at = NOW()
+        WHERE id = $5 RETURNING *`,
+      [userId, leader_name || null, leader_phone || null, leader_note || null, req.params.id]
+    );
+
+    if (userId) {
+      const event = await pool.query('SELECT title FROM events WHERE id = $1', [submission.event_id]);
+      await createNotification(
+        userId,
+        'event',
+        'Вы руководитель делегации',
+        `Вас назначили руководителем делегации на «${event.rows[0]?.title || 'мероприятие'}»`,
+        '/my-delegations',
+        'high'
+      );
+    }
+
+    await logActivity(req.user.userId, 'DELEGATION_LEADER_SET', 'team_submission', req.params.id, {
+      leader_user_id: userId, leader_name: leader_name || null
+    });
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка назначения руководителя делегации:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== МОИ ДЕЛЕГАЦИИ =====
+app.get('/api/my-delegations', authenticate, async (req, res) => {
+  try {
+    const { userId, role } = req.user;
+
+    let where = 's.leader_user_id = $1';
+    const params = [userId];
+
+    if (MOVEMENT_ROLES.includes(role)) {
+      where = 'TRUE';
+      params.length = 0;
+    } else {
+      const staff = await pool.query(
+        'SELECT club_id FROM club_staff WHERE user_id = $1 AND removed_at IS NULL',
+        [userId]
+      );
+      const clubIds = staff.rows.map((r) => r.club_id);
+      if (clubIds.length > 0) {
+        where = '(s.leader_user_id = $1 OR s.club_id = ANY($2::uuid[]))';
+        params.push(clubIds);
+      }
+    }
+
+    const result = await pool.query(
+      `SELECT s.id, s.status, s.club_id, s.leader_user_id, s.leader_name, s.leader_phone,
+              c.name AS club_name,
+              e.id AS event_id, e.title AS event_title, e.event_date, e.end_date,
+              e.location, e.tickets_by, e.gathering_info,
+              (SELECT COUNT(*)::int FROM team_members m
+                WHERE m.submission_id = s.id AND m.role_in_team <> 'escort') AS students_count
+         FROM team_submissions s
+         JOIN events e ON e.id = s.event_id
+         LEFT JOIN clubs c ON c.id = s.club_id
+        WHERE s.status = 'approved' AND ${where}
+        ORDER BY e.event_date DESC`,
+      params
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения делегаций:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== ОДНА ДЕЛЕГАЦИЯ: КТО ЧТО СДЕЛАЛ =====
+app.get('/api/delegations/:submissionId', authenticate, async (req, res) => {
+  try {
+    const found = await pool.query(
+      `SELECT s.*, c.name AS club_name,
+              e.title AS event_title, e.event_date, e.end_date, e.location,
+              e.tickets_by, e.gathering_info,
+              lu.full_name AS leader_user_name, lu.phone AS leader_user_phone
+         FROM team_submissions s
+         JOIN events e ON e.id = s.event_id
+         LEFT JOIN clubs c ON c.id = s.club_id
+         LEFT JOIN users lu ON lu.id = s.leader_user_id
+        WHERE s.id = $1`,
+      [req.params.submissionId]
+    );
+    if (found.rows.length === 0) return res.status(404).json({ error: 'Делегация не найдена' });
+    const submission = found.rows[0];
+
+    const access = await delegationAccess(req.user, submission);
+    if (!access.view) return res.status(403).json({ error: 'Нет доступа к этой делегации' });
+
+    const members = await pool.query(
+      `SELECT id, participant_id, full_name, role_in_team, participant_phone, parent_full_name, parent_phone
+         FROM team_members WHERE submission_id = $1
+        ORDER BY role_in_team DESC, full_name`,
+      [req.params.submissionId]
+    );
+
+    const items = await pool.query(
+      `SELECT * FROM trip_checklist_items
+        WHERE event_id = $1 AND (club_id IS NULL OR club_id = $2)
+        ORDER BY club_id NULLS FIRST, sort_order, created_at`,
+      [submission.event_id, submission.club_id]
+    );
+
+    const memberIds = members.rows.map((m) => m.id);
+    const progress = memberIds.length
+      ? (await pool.query(
+          'SELECT * FROM trip_checklist_progress WHERE member_id = ANY($1::uuid[])',
+          [memberIds]
+        )).rows
+      : [];
+    const travel = memberIds.length
+      ? (await pool.query(
+          'SELECT * FROM trip_travel WHERE member_id = ANY($1::uuid[]) ORDER BY arrive_at',
+          [memberIds]
+        )).rows
+      : [];
+
+    res.json({
+      submission,
+      can_manage: access.manage,
+      members: members.rows,
+      items: items.rows,
+      progress,
+      travel
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения делегации:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
 // СОПРОВОЖДАЮЩИЕ ВЗРОСЛЫЕ КЮДА
 // ============================================================
 // На каждый форум ФИО, телефон и организацию сопровождающего вбивали

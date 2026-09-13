@@ -71,6 +71,12 @@ const routeRoles = {
   // ===== НОВЫЕ МАРШРУТЫ =====
   '/my-club-events': ['club_coordinator', 'participant', 'tutor'],
   '/my-invitations': ['club_coordinator', 'admin', 'movement_coordinator', 'president', 'vice_president'],
+  // Выезды видят те, кого они касаются: ребёнок и его родитель
+  '/my-trips': ['participant', 'parent'],
+  // Делегации — руководитель КЮДа, тьютор, назначенный руководителем
+  // делегации, и движение. Сам доступ к конкретной делегации проверяет
+  // сервер по записи о руководителе, а не по этой строке.
+  '/my-delegations': ['club_coordinator', 'tutor', 'admin', 'movement_coordinator', 'president', 'vice_president'],
   '/event-teams': ['admin', 'movement_coordinator', 'president', 'vice_president'],
   // маршрут /clubs/:clubId/staff проверяется на сервере: права зависят от
   // должности в конкретном клубе, а не от глобальной роли

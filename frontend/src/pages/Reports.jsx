@@ -8,6 +8,7 @@ import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import Icon from '../components/Icon';
 import ReportView from '../components/ReportView';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function Reports() {
   const [profile, setProfile] = useState(null);
@@ -20,6 +21,11 @@ export default function Reports() {
   const [messageType, setMessageType] = useState('success');
   const [selectedReport, setSelectedReport] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  // Подтверждения окном платформы, а не браузера: confirm() и prompt()
+  // выглядят чужими, не дают объяснить последствия, а в prompt() ещё и
+  // набирается самое важное — причина возврата отчёта клубу
+  const [ask, setAsk] = useState(null);
+  const [askBusy, setAskBusy] = useState(false);
   const [selectedClubId, setSelectedClubId] = useState('');
   
   // ===== ПАГИНАЦИЯ =====
@@ -389,7 +395,6 @@ export default function Reports() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Удалить отчёт?')) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -418,7 +423,6 @@ export default function Reports() {
   };
 
   const handleSubmitReport = async (id) => {
-    if (!confirm('Отправить отчёт на проверку?')) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -447,7 +451,6 @@ export default function Reports() {
   };
 
   const handleApproveReport = async (id) => {
-    if (!confirm('Утвердить отчёт?')) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -475,9 +478,7 @@ export default function Reports() {
     }
   };
 
-  const handleRejectReport = async (id) => {
-    const comment = prompt('Укажите причину отклонения:');
-    if (comment === null) return;
+  const handleRejectReport = async (id, comment) => {
 
     try {
       const token = localStorage.getItem('token');
@@ -853,7 +854,12 @@ export default function Reports() {
                             className="btn-gold btn-sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleSubmitReport(report.id);
+                              setAsk({
+                              kind: 'submit', id: report.id,
+                              title: 'Отправить отчёт на проверку?',
+                              text: 'После отправки править отчёт нельзя. Чтобы что-то изменить, придётся просить координатора вернуть его на доработку.',
+                              confirmLabel: 'Отправить'
+                            });
                             }}
                           >
                             Отправить
@@ -868,7 +874,12 @@ export default function Reports() {
                             className="btn-success btn-sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleApproveReport(report.id);
+                              setAsk({
+                              kind: 'approve', id: report.id,
+                              title: 'Утвердить отчёт?',
+                              text: `Отчёт ${report.club_name || 'КЮДа'} за ${monthLabel(report.report_month)} будет закрыт, а его цифры уйдут в аналитику движения.`,
+                              confirmLabel: 'Утвердить'
+                            });
                             }}
                           >
                             Утвердить
@@ -877,7 +888,16 @@ export default function Reports() {
                             className="btn-danger btn-sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleRejectReport(report.id);
+                              setAsk({
+                              kind: 'reject', id: report.id,
+                              title: 'Вернуть отчёт на доработку?',
+                              text: 'Отчёт снова станет черновиком у клуба. Комментарий увидит только этот КЮД.',
+                              confirmLabel: 'Вернуть на доработку',
+                              tone: 'danger',
+                              commentLabel: 'Что поправить',
+                              commentPlaceholder: 'Чем конкретнее, тем меньше кругов пройдёт отчёт',
+                              commentRequired: true
+                            });
                             }}
                           >
                             Отклонить
@@ -890,7 +910,13 @@ export default function Reports() {
                           className="btn-danger btn-sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDelete(report.id);
+                            setAsk({
+                            kind: 'delete', id: report.id,
+                            title: 'Удалить отчёт?',
+                            text: `Отчёт за ${monthLabel(report.report_month)} будет удалён без возможности восстановить.`,
+                            confirmLabel: 'Удалить',
+                            tone: 'danger'
+                          });
                           }}
                         >
                           Удалить
@@ -913,6 +939,32 @@ export default function Reports() {
       {/* ============================================================
          МОДАЛЬНОЕ ОКНО ПРОСМОТРА ОТЧЁТА
          ============================================================ */}
+      <ConfirmDialog
+        open={!!ask}
+        title={ask?.title}
+        text={ask?.text}
+        confirmLabel={ask?.confirmLabel}
+        tone={ask?.tone}
+        commentLabel={ask?.commentLabel}
+        commentPlaceholder={ask?.commentPlaceholder}
+        commentRequired={ask?.commentRequired}
+        busy={askBusy}
+        onCancel={() => setAsk(null)}
+        onConfirm={async (comment) => {
+          if (!ask) return;
+          setAskBusy(true);
+          try {
+            if (ask.kind === 'submit') await handleSubmitReport(ask.id);
+            if (ask.kind === 'approve') await handleApproveReport(ask.id);
+            if (ask.kind === 'reject') await handleRejectReport(ask.id, comment);
+            if (ask.kind === 'delete') await handleDelete(ask.id);
+          } finally {
+            setAskBusy(false);
+            setAsk(null);
+          }
+        }}
+      />
+
       {showModal && selectedReport && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>

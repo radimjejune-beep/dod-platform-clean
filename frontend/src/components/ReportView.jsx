@@ -91,6 +91,15 @@ function Chips({ title, items }) {
   );
 }
 
+// Postgres отдаёт numeric строкой: «2.0» вместо «2». Дробная часть нужна
+// только когда она не нулевая
+function formatAverage(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  const n = Number(value);
+  if (Number.isNaN(n)) return String(value);
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
 function formatDate(value) {
   if (!value) return null;
   return new Date(value).toLocaleDateString('ru-RU', {
@@ -150,7 +159,7 @@ export default function ReportView({ report }) {
             : null}
         />
         <Tile
-          value={report.average_attendance ?? '—'}
+          value={formatAverage(report.average_attendance)}
           label="В среднем приходило"
         />
         <Tile value={report.events_count ?? 0} label="Мероприятий" />

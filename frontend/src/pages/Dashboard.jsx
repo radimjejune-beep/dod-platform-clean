@@ -213,6 +213,24 @@ export default function Dashboard() {
 
   const quickActions = getQuickActions();
 
+  // Координатору движения важен охват, руководителю КЮДа — его собственная работа.
+  // Показывать руководителю «1 клубов» бессмысленно.
+  const seesWholeMovement = ['admin', 'movement_coordinator', 'president', 'vice_president']
+    .includes(profile?.role);
+  const statTiles = seesWholeMovement
+    ? [
+        { label: 'Участников', value: stats.participants },
+        { label: 'КЮДов', value: stats.clubs },
+        { label: 'Мероприятий', value: stats.events },
+        { label: 'Достижений', value: stats.achievements },
+      ]
+    : [
+        { label: 'Участников', value: stats.participants },
+        { label: 'Мероприятий', value: stats.events },
+        { label: 'Впереди', value: stats.upcomingEvents },
+        { label: 'Достижений', value: stats.achievements },
+      ];
+
   // В базе роль лежит латинским кодом; человеку он ничего не говорит
   const ROLE_LABELS = {
     admin: 'Администратор',
@@ -254,35 +272,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="dashboard-grid-2">
-        <div className="card">
-          {/* «Статистика платформы» у руководителя КЮДа — это статистика
-              его клуба, а не движения: цифры приходят из его зоны */}
-          <h4 className="card-title">
-            {['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role)
-              ? 'Статистика движения'
-              : 'Ваши цифры'}
-          </h4>
-          <div className="dashboard-mini-stats">
-            <div>
-              <span className="stat-number">{stats.participants}</span>
-              <span className="stat-label">Участников</span>
-            </div>
-            <div>
-              <span className="stat-number">{stats.upcomingEvents}</span>
-              <span className="stat-label">Предстоящих</span>
-            </div>
-            <div>
-              <span className="stat-number">{stats.achievements}</span>
-              <span className="stat-label">Достижений</span>
-            </div>
-            <div>
-              <span className="stat-number">{stats.clubs}</span>
-              <span className="stat-label">Клубов</span>
-            </div>
-          </div>
-        </div>
-
+      <div className="dashboard-grid-1">
         <div className="card">
           <h4 className="card-title">Быстрые действия</h4>
           <div className="quick-actions-grid">
@@ -315,22 +305,12 @@ export default function Dashboard() {
 
       {/* СТАТИСТИКА */}
       <div className="dashboard-stats">
-        <div className="stat-card">
-          <div className="stat-number">{stats.participants}</div>
-          <div className="stat-label">Участников</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">{stats.clubs}</div>
-          <div className="stat-label">Клубов</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">{stats.events}</div>
-          <div className="stat-label">Мероприятий</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">{stats.achievements}</div>
-          <div className="stat-label">Достижений</div>
-        </div>
+        {statTiles.map((tile) => (
+          <div className="stat-card" key={tile.label}>
+            <div className="stat-number">{tile.value}</div>
+            <div className="stat-label">{tile.label}</div>
+          </div>
+        ))}
       </div>
 
       {renderOverview()}
@@ -559,6 +539,12 @@ export default function Dashboard() {
         .dashboard-grid-2 {
           display: grid;
           grid-template-columns: 1fr 1fr;
+          gap: 20px;
+        }
+
+        .dashboard-grid-1 {
+          display: grid;
+          grid-template-columns: 1fr;
           gap: 20px;
         }
 

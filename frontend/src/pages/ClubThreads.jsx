@@ -39,11 +39,15 @@ export default function ClubThreads() {
       const [list, allClubs, mine] = await Promise.all([
         api.getClubThreads(),
         api.getClubs(),
-        api.getMyClubs ? api.getMyClubs() : Promise.resolve([])
+        api.getMyClubs()
       ]);
       setThreads(list);
       setClubs(allClubs);
-      setMyClubIds((mine || []).map((c) => c.id || c.club_id).filter(Boolean));
+      // /api/my-clubs отдаёт объект { movement_wide, clubs }, а не массив.
+      // Координатору движения он возвращает вообще все КЮДы — свои клубы
+      // считаем только у тех, кто действительно числится в штате.
+      const myList = mine?.movement_wide ? [] : (mine?.clubs || []);
+      setMyClubIds(myList.map((c) => c.club_id || c.id).filter(Boolean));
     } catch (err) {
       console.error('❌ Ошибка загрузки переписки:', err);
     } finally {

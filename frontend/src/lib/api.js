@@ -1266,6 +1266,15 @@ export const getMyClubs = async () => {
   return response.json();
 };
 
+export const getStaffCandidates = async (clubId, q) => {
+  const response = await fetch(
+    `${API_URL}/clubs/${clubId}/staff-candidates?q=${encodeURIComponent(q)}`,
+    { method: 'GET', headers: headers() }
+  );
+  if (!response.ok) return [];
+  return response.json();
+};
+
 export const getClubStaff = async (clubId) => {
   const response = await fetch(`${API_URL}/clubs/${clubId}/staff`, { method: 'GET', headers: headers() });
   if (!response.ok) return [];
@@ -1806,6 +1815,7 @@ const api = {
   
   // Сотрудники КЮДа
   getMyClubs,
+  getStaffCandidates,
   getClubStaff,
   addClubStaff,
   updateClubStaff,

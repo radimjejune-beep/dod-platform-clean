@@ -37,6 +37,11 @@ export default function ClubStaff() {
   const [club, setClub] = useState(null);
   const [staff, setStaff] = useState([]);
   const [users, setUsers] = useState([]);
+  // Руководителю КЮДа справочник всех пользователей движения закрыт,
+  // поэтому кандидатов он ищет по фамилии или почте
+  const [candidateQuery, setCandidateQuery] = useState('');
+  const [candidates, setCandidates] = useState([]);
+  const [searching, setSearching] = useState(false);
   const [myPosition, setMyPosition] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -101,6 +106,22 @@ export default function ClubStaff() {
   };
 
   const canManage = myPosition === 'head' || myPosition === 'movement';
+
+  // Поиск кандидатов: сервер отдаёт максимум 20 человек и только от трёх букв
+  const searchCandidates = async (value) => {
+    setCandidateQuery(value);
+    if (value.trim().length < 3) {
+      setCandidates([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    try {
+      setCandidates(await api.getStaffCandidates(clubId, value.trim()));
+    } finally {
+      setSearching(false);
+    }
+  };
 
   const addStaff = async (e) => {
     e.preventDefault();
@@ -183,7 +204,11 @@ export default function ClubStaff() {
 
   const head = staff.find((s) => s.position === 'head');
   const staffIds = new Set(staff.map((s) => s.user_id));
-  const available = users.filter((u) => !staffIds.has(u.id));
+  // Координатор движения видит всех сразу, руководитель КЮДа — только найденных
+  const byId = new Map();
+  users.filter((u) => !staffIds.has(u.id)).forEach((u) => byId.set(u.id, u));
+  candidates.filter((u) => !staffIds.has(u.id)).forEach((u) => byId.set(u.id, u));
+  const available = Array.from(byId.values());
 
   return (
     <div className="page-background">
@@ -237,19 +262,30 @@ export default function ClubStaff() {
 
             <form onSubmit={addStaff}>
               <div className="form-group">
+                <label className="form-label">Найти человека</label>
+                <input className="form-input" value={candidateQuery}
+                  placeholder="фамилия или почта, от трёх букв"
+                  onChange={(e) => searchCandidates(e.target.value)} />
+                <div className="form-hint">
+                  Ищем среди тех, у кого уже есть вход в платформу. Если человека нет —
+                  его сначала заводят в движении, а потом назначают сюда.
+                </div>
+              </div>
+
+              <div className="form-group">
                 <label className="form-label">Кого назначаем</label>
                 <select className="form-input" value={addForm.user_id}
                   onChange={(e) => setAddForm({ ...addForm, user_id: e.target.value })} required>
                   <option value="">— выберите человека —</option>
                   {available.map((u) => (
-                    <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
+                    <option key={u.id} value={u.id}>
+                      {u.full_name} ({u.email}){u.current_club_name ? ` — сейчас в «${u.current_club_name}»` : ''}
+                    </option>
                   ))}
                 </select>
-                {available.length === 0 && (
-                  <div className="form-hint">
-                    Все подходящие пользователи уже работают в этом клубе.
-                    Новых сотрудников заводят в разделе «Пользователи».
-                  </div>
+                {searching && <div className="form-hint">Ищем…</div>}
+                {!searching && candidateQuery.trim().length >= 3 && available.length === 0 && (
+                  <div className="form-hint">По этому запросу никого не нашли.</div>
                 )}
               </div>
 

@@ -6083,6 +6083,49 @@ app.get('/api/clubs/:clubId/staff', authenticate, async (req, res) => {
   }
 });
 
+// Кого можно назначить сотрудником.
+// Полный список пользователей руководителю КЮДа не отдаём — движение большое,
+// и справочник всех людей ему не нужен. Ищем по фамилии или почте.
+app.get('/api/clubs/:clubId/staff-candidates', authenticate, async (req, res) => {
+  try {
+    const { clubId } = req.params;
+    const q = String(req.query.q || '').trim();
+
+    if (!(await canInClub(req.user, clubId, 'manage_staff'))) {
+      return res.status(403).json({ error: 'Управлять сотрудниками может руководитель КЮДа' });
+    }
+
+    if (q.length < 3) {
+      return res.json([]);
+    }
+
+    const result = await pool.query(
+      `SELECT u.id, u.full_name, u.email, u.role,
+              (SELECT c.name FROM club_staff cs2
+                 JOIN clubs c ON c.id = cs2.club_id
+                WHERE cs2.user_id = u.id AND cs2.removed_at IS NULL
+                LIMIT 1) AS current_club_name
+         FROM users u
+        WHERE u.role NOT IN ('participant', 'parent')
+          AND u.status = 'active'
+          AND (u.full_name ILIKE $1 OR u.email ILIKE $1)
+          AND NOT EXISTS (
+                SELECT 1 FROM club_staff cs
+                 WHERE cs.user_id = u.id
+                   AND cs.club_id = $2
+                   AND cs.removed_at IS NULL)
+        ORDER BY u.full_name
+        LIMIT 20`,
+      [`%${q}%`, clubId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка поиска кандидатов в сотрудники:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
 // Назначить сотрудника
 app.post('/api/clubs/:clubId/staff', authenticate, async (req, res) => {
   try {

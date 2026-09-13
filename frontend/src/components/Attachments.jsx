@@ -111,7 +111,8 @@ export default function Attachments({ ownerType, ownerId, canManage = true, comp
             Файлы {files.length > 0 && <span style={{ color: 'var(--color-gray-500)' }}>({files.length})</span>}
           </h4>
           {canManage && (
-            <label className="btn-secondary btn-sm" style={{ cursor: busy ? 'wait' : 'pointer', margin: 0 }}>
+            <label className="btn-secondary btn-sm"
+              style={{ cursor: busy ? 'wait' : 'pointer', margin: 0, flexShrink: 0 }}>
               {busy ? 'Загружаем…' : 'Прикрепить файл'}
               <input type="file" multiple accept={ACCEPT} onChange={pick} disabled={busy}
                 style={{ display: 'none' }} />
@@ -134,13 +135,13 @@ export default function Attachments({ ownerType, ownerId, canManage = true, comp
 
       {files.map((file) => (
         <div key={file.id} style={{
-          display: 'flex', alignItems: 'center', gap: '10px',
+          display: 'flex', alignItems: 'flex-start', gap: '10px',
           padding: '9px 12px', marginBottom: '6px',
           background: 'var(--color-gray-50)',
           border: '1px solid var(--color-gray-200)',
           borderRadius: 'var(--radius-sm)'
         }}>
-          <span style={{ color: 'var(--color-gray-500)', display: 'flex' }}>
+          <span style={{ color: 'var(--color-gray-500)', display: 'flex', marginTop: '2px', flexShrink: 0 }}>
             <Icon name={iconFor(file.file_name)} size={16} />
           </span>
 
@@ -151,15 +152,20 @@ export default function Attachments({ ownerType, ownerId, canManage = true, comp
             style={{
               flex: 1, minWidth: 0, textAlign: 'left', background: 'none',
               border: 'none', padding: 0, cursor: 'pointer',
-              fontSize: '13.5px', color: 'var(--color-primary-light)',
-              textDecoration: 'underline', overflow: 'hidden',
-              textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+              fontSize: '13.5px', lineHeight: 1.45,
+              color: 'var(--color-primary-light)', textDecoration: 'underline',
+              // Имена методичек длинные и с подчёркиваниями: переносим,
+              // а не режем — по обрезку файл не узнать
+              whiteSpace: 'normal', overflowWrap: 'anywhere'
             }}
           >
             {file.file_name}
           </button>
 
-          <span style={{ fontSize: '12px', color: 'var(--color-gray-500)', whiteSpace: 'nowrap' }}>
+          <span style={{
+            fontSize: '12px', color: 'var(--color-gray-500)',
+            whiteSpace: 'nowrap', flexShrink: 0, marginTop: '2px'
+          }}>
             {humanSize(file.byte_size)}
           </span>
 
@@ -170,7 +176,8 @@ export default function Attachments({ ownerType, ownerId, canManage = true, comp
               title="Удалить файл"
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--color-gray-400)', display: 'flex', padding: '2px'
+                color: 'var(--color-gray-400)', display: 'flex',
+                padding: '2px', flexShrink: 0
               }}
             >
               <Icon name="trash" size={15} />

@@ -165,9 +165,30 @@ export default function MovementYear() {
                         <td style={{ fontSize: '13px' }}>{g.participants}</td>
                       </tr>
                     ))}
+                    {data.participants_without_club > 0 && (
+                      /* Иначе сумма по географии не сходится с общим числом
+                         участников, и координатор ищет ошибку там, где её нет */
+                      <tr>
+                        <td style={{ fontSize: '13px', color: 'var(--color-gold-dark)' }}>—</td>
+                        <td style={{ fontSize: '13px', color: 'var(--color-gold-dark)' }}>
+                          Без клуба
+                        </td>
+                        <td style={{ fontSize: '13px' }}>—</td>
+                        <td style={{ fontSize: '13px', color: 'var(--color-gold-dark)' }}>
+                          {data.participants_without_club}
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
+
+              {data.participants_without_club > 0 && (
+                <div style={{ fontSize: '12.5px', color: 'var(--color-gold-dark)', marginTop: '10px' }}>
+                  {data.participants_without_club} участн. не привязаны ни к одному действующему
+                  КЮДу — в разрезе по регионам их нет. Клуб задаётся в карточке участника.
+                </div>
+              )}
 
               {data.geography.some((g) => !g.region) && (
                 <div style={{ fontSize: '12.5px', color: 'var(--color-gold-dark)', marginTop: '10px' }}>

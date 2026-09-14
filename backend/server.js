@@ -7994,6 +7994,18 @@ app.get('/api/movement/yearly', authenticate, async (req, res) => {
         ORDER BY c.country, c.region NULLS LAST`
     );
 
+    // Участники без клуба или в архивном клубе в разрез не попадают, и
+    // сумма по географии расходится с общим числом участников. Считаем их
+    // отдельно: человек без клуба — это не погрешность, а вопрос, который
+    // кто-то должен закрыть.
+    const unassigned = await pool.query(
+      `SELECT COUNT(*)::int AS n
+         FROM users u
+         LEFT JOIN clubs c ON c.id = u.club_id
+        WHERE u.role = 'participant' AND u.status = 'active'
+          AND (u.club_id IS NULL OR c.status = 'archived')`
+    );
+
     res.json({
       period: { mode, year, from, to },
       clubs: clubs.rows[0],
@@ -8003,7 +8015,8 @@ app.get('/api/movement/yearly', authenticate, async (req, res) => {
       trips: trips.rows[0],
       achievements_count: achievements.rows[0].n,
       reports: reports.rows[0],
-      geography: geography.rows
+      geography: geography.rows,
+      participants_without_club: unassigned.rows[0].n
     });
   } catch (error) {
     console.error('❌ Ошибка годового свода:', error);

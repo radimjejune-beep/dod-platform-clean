@@ -120,6 +120,7 @@ function buildMenu(profile) {
         { id: 'participants', path: '/participants', icon: 'user', label: 'Участники' },
         { id: 'manage-achievements', path: '/manage-achievements', icon: 'trophy', label: 'Достижения' },
         { id: 'reports', path: '/reports', icon: 'report', label: 'Отчёты' },
+        { id: 'documents-center', path: '/documents-center', icon: 'folder', label: 'Документы' },
         { id: 'appeals', path: '/appeals', icon: 'chat', label: 'Обращения в движение' },
         { id: 'club-threads', path: '/club-threads', icon: 'chat', label: 'Переписка КЮДов' },
         { id: 'club-analytics', path: '/club-analytics', icon: 'chart', label: 'Аналитика клуба' },
@@ -165,6 +166,7 @@ function buildMenu(profile) {
         { id: 'participants', path: '/participants', icon: 'user', label: 'Участники' },
         { id: 'staff-calendar', path: '/staff-calendar', icon: 'calendar', label: 'Календарь' },
         { id: 'achievements', path: '/achievements', icon: 'trophy', label: 'Достижения' },
+        { id: 'documents-center', path: '/documents-center', icon: 'folder', label: 'Документы' },
       ];
     }
 

@@ -427,12 +427,15 @@ export default function Navigation({ profile }) {
         }
 
         .nav-search {
-          flex: 0 1 320px;
+          flex: 1 1 auto;
+          max-width: 320px;
           min-width: 0;
           margin: 0 16px;
         }
+        /* Поле сжимается, но не прячется: искать человека с телефона нужно
+           не меньше, чем с компьютера */
         @media (max-width: 720px) {
-          .nav-search { display: none; }
+          .nav-search { margin: 0 8px; }
         }
 
         .nav-burger {

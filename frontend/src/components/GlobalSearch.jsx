@@ -59,7 +59,7 @@ export default function GlobalSearch() {
   const nothing = open && !busy && query.trim().length >= 2 && groups.length === 0;
 
   return (
-    <div ref={boxRef} style={{ position: 'relative', flex: '0 1 320px', minWidth: 0 }}>
+    <div ref={boxRef} style={{ position: 'relative', width: '100%', minWidth: 0 }}>
       <div style={{ position: 'relative' }}>
         <span style={{
           position: 'absolute', left: '10px', top: '50%',
@@ -72,7 +72,8 @@ export default function GlobalSearch() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => groups.length > 0 && setOpen(true)}
-          placeholder="Поиск: человек, КЮД, мероприятие"
+          placeholder="Поиск"
+          title="Поиск по людям, КЮДам и мероприятиям"
           style={{
             width: '100%', padding: '8px 12px 8px 32px',
             fontSize: '13.5px', fontFamily: 'inherit',

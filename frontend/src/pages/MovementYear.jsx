@@ -185,8 +185,10 @@ export default function MovementYear() {
 
               {data.participants_without_club > 0 && (
                 <div style={{ fontSize: '12.5px', color: 'var(--color-gold-dark)', marginTop: '10px' }}>
-                  {data.participants_without_club} участн. не привязаны ни к одному действующему
-                  КЮДу — в разрезе по регионам их нет. Клуб задаётся в карточке участника.
+                  {/* Согласование числительного с глаголом по-русски требует
+                      трёх форм — проще построить фразу так, чтобы оно не понадобилось */}
+                  Участников без действующего КЮДа: {data.participants_without_club}.
+                  В разрезе по регионам их нет — клуб задаётся в карточке участника.
                 </div>
               )}
 

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useMenuItems } from '../hooks/useMenuItems';
+import GlobalSearch from './GlobalSearch';
 import logo from '../assets/Image.png';
 import Icon from './Icon';
 import { roleLabel } from '../lib/roles';
@@ -242,6 +243,13 @@ export default function Navigation({ profile }) {
             </button>
           </div>
 
+          {/* Поиск доступен тем, кто работает с людьми и клубами. Ребёнку
+              и родителю искать нечего: у них и так всё своё на виду */}
+          {['admin', 'movement_coordinator', 'president', 'vice_president',
+            'club_coordinator', 'tutor'].includes(profile?.role) && (
+            <div className="nav-search"><GlobalSearch /></div>
+          )}
+
           <div className="nav-right">
             <div className="nav-notifications" ref={notificationRef}>
               <button
@@ -416,6 +424,15 @@ export default function Navigation({ profile }) {
         .nav-left {
           display: flex;
           align-items: center;
+        }
+
+        .nav-search {
+          flex: 0 1 320px;
+          min-width: 0;
+          margin: 0 16px;
+        }
+        @media (max-width: 720px) {
+          .nav-search { display: none; }
         }
 
         .nav-burger {

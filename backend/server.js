@@ -7787,6 +7787,163 @@ async function setUserClub(userId, clubId, executor = pool) {
 }
 
 // ============================================================
+// ========== ПОИСК ==========
+// ============================================================
+// Чтобы найти человека, надо было знать, в каком разделе смотреть:
+// участник — в «Участниках», сотрудник — в «Пользователях», клуб — в
+// «Управлении КЮДами». При сорока четырёх клубах это перебор вкладок.
+//
+// Поиск не расширяет прав: он ищет ровно в той зоне, которую человек и
+// так может открыть. Руководитель КЮДа не найдёт чужого участника.
+
+app.get('/api/search', authenticate, async (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    if (q.length < 2) return res.json({ query: q, groups: [] });
+
+    const { userId, role } = req.user;
+    const isMovement = MOVEMENT_ROLES.includes(role);
+    const like = `%${q}%`;
+
+    // Зона видимости: движение видит всё, остальные — свои клубы
+    let clubIds = null;
+    if (!isMovement) {
+      const staff = await pool.query(
+        'SELECT club_id FROM club_staff WHERE user_id = $1 AND removed_at IS NULL',
+        [userId]
+      );
+      clubIds = staff.rows.map((r) => r.club_id);
+      if (clubIds.length === 0 && role === 'tutor') {
+        // Тьютор без клуба ищет среди детей со своих мероприятий
+        const own = await pool.query(
+          `SELECT DISTINCT ep.user_id
+             FROM event_participants ep
+             JOIN event_assignments ea ON ea.event_id = ep.event_id
+            WHERE ea.staff_id = $1`,
+          [userId]
+        );
+        const ids = own.rows.map((r) => r.user_id);
+        const people = ids.length
+          ? await pool.query(
+              `SELECT id, full_name, role, club_id FROM users
+                WHERE id = ANY($1::uuid[]) AND full_name ILIKE $2
+                ORDER BY full_name LIMIT 10`,
+              [ids, like]
+            )
+          : { rows: [] };
+        return res.json({
+          query: q,
+          groups: people.rows.length
+            ? [{ key: 'participants', label: 'Участники', items: people.rows.map((p) => ({
+                id: p.id, title: p.full_name, subtitle: 'ваше мероприятие',
+                link: `/participant/${p.id}`
+              })) }]
+            : []
+        });
+      }
+    }
+
+    const groups = [];
+
+    // ===== ЛЮДИ =====
+    const peopleParams = [like];
+    let peopleWhere = "(u.full_name ILIKE $1 OR u.email ILIKE $1)";
+    if (!isMovement) {
+      if (clubIds.length === 0) {
+        peopleWhere += ' AND FALSE';
+      } else {
+        peopleParams.push(clubIds);
+        peopleWhere += ` AND u.club_id = ANY($${peopleParams.length}::uuid[])`;
+      }
+    }
+    const people = await pool.query(
+      `SELECT u.id, u.full_name, u.email, u.role, u.status, c.name AS club_name
+         FROM users u
+         LEFT JOIN clubs c ON c.id = u.club_id
+        WHERE ${peopleWhere}
+        ORDER BY u.full_name
+        LIMIT 12`,
+      peopleParams
+    );
+    if (people.rows.length) {
+      groups.push({
+        key: 'people',
+        label: 'Люди',
+        items: people.rows.map((p) => ({
+          id: p.id,
+          title: p.full_name,
+          subtitle: [CLUB_SEARCH_ROLE_LABELS[p.role] || p.role, p.club_name].filter(Boolean).join(' · '),
+          link: p.role === 'participant' ? `/participant/${p.id}` : '/admin/users'
+        }))
+      });
+    }
+
+    // ===== КЛУБЫ =====
+    // Клубы видны всем сотрудникам: список КЮДов движения не секрет
+    const clubs = await pool.query(
+      `SELECT id, name, city, region, country, status
+         FROM clubs
+        WHERE (name ILIKE $1 OR city ILIKE $1 OR region ILIKE $1)
+        ORDER BY name LIMIT 8`,
+      [like]
+    );
+    if (clubs.rows.length) {
+      groups.push({
+        key: 'clubs',
+        label: 'КЮДы',
+        items: clubs.rows.map((c) => ({
+          id: c.id,
+          title: c.name,
+          subtitle: [c.city, c.region, c.status === 'archived' ? 'в архиве' : null]
+            .filter(Boolean).join(' · '),
+          link: `/clubs/${c.id}/staff`
+        }))
+      });
+    }
+
+    // ===== МЕРОПРИЯТИЯ =====
+    const events = await pool.query(
+      `SELECT id, title, event_date, location
+         FROM events
+        WHERE title ILIKE $1
+        ORDER BY event_date DESC LIMIT 8`,
+      [like]
+    );
+    if (events.rows.length) {
+      groups.push({
+        key: 'events',
+        label: 'Мероприятия',
+        items: events.rows.map((e) => ({
+          id: e.id,
+          title: e.title,
+          subtitle: [
+            e.event_date ? new Date(e.event_date).toLocaleDateString('ru-RU') : null,
+            e.location
+          ].filter(Boolean).join(' · '),
+          link: '/events'
+        }))
+      });
+    }
+
+    res.json({ query: q, groups });
+  } catch (error) {
+    console.error('❌ Ошибка поиска:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+const CLUB_SEARCH_ROLE_LABELS = {
+  admin: 'Администратор',
+  movement_coordinator: 'Координатор движения',
+  club_coordinator: 'Руководитель КЮДа',
+  tutor: 'Тьютор',
+  participant: 'Участник',
+  parent: 'Законный представитель',
+  president: 'Президент',
+  vice_president: 'Вице-президент'
+};
+
+// ============================================================
 // ========== ДВИЖЕНИЕ ЦЕЛИКОМ ==========
 // ============================================================
 // Три экрана для центра: состояние КЮДов, год движения и кадры.

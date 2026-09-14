@@ -1409,6 +1409,17 @@ export const exportEventTeams = async (eventId, withDocuments = false) => {
 };
 
 // ============================================================
+// 19b. ПОИСК
+// ============================================================
+export const search = async (query) => {
+  const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`, {
+    method: 'GET', headers: headers()
+  });
+  if (!response.ok) return { query, groups: [] };
+  return response.json();
+};
+
+// ============================================================
 // 19c. ДВИЖЕНИЕ ЦЕЛИКОМ
 // ============================================================
 export const getClubsHealth = async () => {
@@ -1967,6 +1978,7 @@ const api = {
   // Сотрудники КЮДа
   getMyClubs,
   getStaffCandidates,
+  search,
   getClubsHealth,
   getMovementYearly,
   getMovementStaff,

@@ -77,6 +77,10 @@ const routeRoles = {
   // делегации, и движение. Сам доступ к конкретной делегации проверяет
   // сервер по записи о руководителе, а не по этой строке.
   '/my-delegations': ['club_coordinator', 'tutor', 'admin', 'movement_coordinator', 'president', 'vice_president'],
+  // Разделы движения целиком — только центру
+  '/clubs-health': ['admin', 'movement_coordinator', 'president', 'vice_president'],
+  '/movement-year': ['admin', 'movement_coordinator', 'president', 'vice_president'],
+  '/movement-staff': ['admin', 'movement_coordinator', 'president', 'vice_president'],
   '/event-teams': ['admin', 'movement_coordinator', 'president', 'vice_president'],
   // маршрут /clubs/:clubId/staff проверяется на сервере: права зависят от
   // должности в конкретном клубе, а не от глобальной роли

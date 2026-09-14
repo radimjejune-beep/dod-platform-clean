@@ -7787,6 +7787,285 @@ async function setUserClub(userId, clubId, executor = pool) {
 }
 
 // ============================================================
+// ========== ДВИЖЕНИЕ ЦЕЛИКОМ ==========
+// ============================================================
+// Три экрана для центра: состояние КЮДов, год движения и кадры.
+// Всё считается из уже накопленных данных — ни одной новой таблицы.
+
+// Насколько давно клуб подавал признаки жизни. Пороги не абстрактные:
+// занятия в КЮДе обычно раз в неделю-две, поэтому шесть недель тишины —
+// это уже «что-то случилось», а три месяца — клуб остановился.
+const CLUB_QUIET_DAYS = 45;
+const CLUB_DORMANT_DAYS = 90;
+
+function requireMovement(req, res) {
+  if (!MOVEMENT_ROLES.includes(req.user.role)) {
+    res.status(403).json({ error: 'Раздел движения доступен координаторам движения' });
+    return false;
+  }
+  return true;
+}
+
+// ===== СОСТОЯНИЕ КЮДОВ =====
+// Отвечает на вопрос, с которого начинается любой разговор о движении:
+// какие клубы действительно работают. Признаков четыре — руководитель и
+// дети, занятия, отчёты, выезды; ни один сам по себе не исчерпывающий,
+// поэтому показываем все и выводим общий вывод.
+app.get('/api/movement/clubs-health', authenticate, async (req, res) => {
+  try {
+    if (!requireMovement(req, res)) return;
+
+    const result = await pool.query(
+      `SELECT c.id, c.name, c.city, c.region, c.country, c.status, c.founded_on,
+
+              (SELECT COUNT(*)::int FROM club_staff cs
+                WHERE cs.club_id = c.id AND cs.removed_at IS NULL) AS staff_count,
+              (SELECT u.full_name FROM club_staff cs
+                 JOIN users u ON u.id = cs.user_id
+                WHERE cs.club_id = c.id AND cs.removed_at IS NULL AND cs.position = 'head'
+                LIMIT 1) AS head_name,
+
+              (SELECT COUNT(*)::int FROM users u
+                WHERE u.club_id = c.id AND u.role = 'participant' AND u.status = 'active') AS participants_count,
+
+              (SELECT MAX(s.session_date) FROM club_sessions s
+                WHERE s.club_id = c.id AND s.status = 'held') AS last_session_on,
+              (SELECT COUNT(*)::int FROM club_sessions s
+                WHERE s.club_id = c.id AND s.status = 'held'
+                  AND s.session_date >= CURRENT_DATE - INTERVAL '90 days') AS sessions_90,
+
+              (SELECT MAX(r.report_month) FROM reports r
+                WHERE r.club_id = c.id AND r.status IN ('submitted', 'approved')) AS last_report_month,
+
+              (SELECT MAX(e.event_date) FROM team_submissions ts
+                 JOIN events e ON e.id = ts.event_id
+                WHERE ts.club_id = c.id AND ts.status = 'approved') AS last_trip_on
+
+         FROM clubs c
+        WHERE c.status <> 'archived'
+        ORDER BY c.country, c.region NULLS LAST, c.name`
+    );
+
+    const today = new Date();
+    const daysSince = (value) => {
+      if (!value) return null;
+      return Math.floor((today - new Date(value)) / 86400000);
+    };
+
+    // Прошлый месяц в виде ГГГГ-ММ — отчёт за него к текущему моменту
+    // уже должен быть сдан
+    const prev = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const prevMonth = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+
+    const rows = result.rows.map((c) => {
+      const sinceSession = daysSince(c.last_session_on);
+      const hasHead = !!c.head_name;
+      const hasKids = c.participants_count > 0;
+      const reportCurrent = c.last_report_month >= prevMonth;
+      const sessionsRecent = sinceSession !== null && sinceSession <= CLUB_QUIET_DAYS;
+
+      let health;
+      let reason;
+      if (!hasHead) {
+        health = 'no_head';
+        reason = 'Нет руководителя в платформе';
+      } else if (!hasKids) {
+        health = 'no_kids';
+        reason = 'Нет ни одного участника';
+      } else if (sessionsRecent && reportCurrent) {
+        health = 'working';
+        reason = 'Занятия идут, отчёт сдан';
+      } else if (sinceSession === null || sinceSession > CLUB_DORMANT_DAYS) {
+        health = 'dormant';
+        reason = sinceSession === null
+          ? 'Занятий в журнале нет вообще'
+          : `Последнее занятие ${sinceSession} дн. назад`;
+      } else {
+        health = 'attention';
+        reason = !sessionsRecent
+          ? `Последнее занятие ${sinceSession} дн. назад`
+          : `Нет отчёта за ${prevMonth}`;
+      }
+
+      return {
+        ...c,
+        days_since_session: sinceSession,
+        days_since_trip: daysSince(c.last_trip_on),
+        report_current: reportCurrent,
+        health,
+        reason
+      };
+    });
+
+    const summary = rows.reduce((acc, r) => {
+      acc[r.health] = (acc[r.health] || 0) + 1;
+      return acc;
+    }, {});
+
+    res.json({ clubs: rows, summary, total: rows.length, month_checked: prevMonth });
+  } catch (error) {
+    console.error('❌ Ошибка сводки по КЮДам:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== ГОД ДВИЖЕНИЯ =====
+// Учебный год сентябрь—август для внутреннего разговора и календарный
+// для отчётности наружу: движение считает по-разному в зависимости от
+// того, кому показывает.
+app.get('/api/movement/yearly', authenticate, async (req, res) => {
+  try {
+    if (!requireMovement(req, res)) return;
+
+    const mode = req.query.period === 'calendar' ? 'calendar' : 'academic';
+    const year = parseInt(req.query.year, 10) || new Date().getFullYear();
+
+    const from = mode === 'calendar' ? `${year}-01-01` : `${year}-09-01`;
+    const to = mode === 'calendar' ? `${year}-12-31` : `${year + 1}-08-31`;
+
+    const [clubs, sessions, participants, events, trips, achievements, reports] = await Promise.all([
+      pool.query(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(*) FILTER (WHERE founded_on BETWEEN $1 AND $2)::int AS opened
+           FROM clubs WHERE status <> 'archived'`,
+        [from, to]
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS held,
+                COUNT(DISTINCT club_id)::int AS clubs_with_sessions
+           FROM club_sessions
+          WHERE status = 'held' AND session_date BETWEEN $1 AND $2`,
+        [from, to]
+      ),
+      pool.query(
+        `SELECT
+           (SELECT COUNT(*)::int FROM users
+             WHERE role = 'participant' AND status = 'active') AS total,
+           (SELECT COUNT(DISTINCT a.participant_id)::int
+              FROM session_attendance a
+              JOIN club_sessions s ON s.id = a.session_id
+             WHERE s.status = 'held' AND s.session_date BETWEEN $1 AND $2
+               AND a.status IN ('present', 'late')) AS active,
+           (SELECT COUNT(*)::int FROM session_attendance a
+              JOIN club_sessions s ON s.id = a.session_id
+             WHERE s.status = 'held' AND s.session_date BETWEEN $1 AND $2
+               AND a.status IN ('present', 'late')) AS visits`,
+        [from, to]
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS n FROM events WHERE event_date BETWEEN $1 AND $2`,
+        [from, to]
+      ),
+      pool.query(
+        `SELECT COUNT(DISTINCT ts.id)::int AS delegations,
+                COUNT(DISTINCT ts.club_id)::int AS clubs_travelled,
+                COUNT(tm.id) FILTER (WHERE tm.role_in_team <> 'escort')::int AS children
+           FROM team_submissions ts
+           JOIN events e ON e.id = ts.event_id
+           LEFT JOIN team_members tm ON tm.submission_id = ts.id
+          WHERE ts.status = 'approved' AND e.event_date BETWEEN $1 AND $2`,
+        [from, to]
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS n FROM achievements
+          WHERE created_at::date BETWEEN $1 AND $2`,
+        [from, to]
+      ),
+      pool.query(
+        `SELECT COUNT(*) FILTER (WHERE status IN ('submitted', 'approved'))::int AS submitted,
+                COUNT(*) FILTER (WHERE status = 'approved')::int AS approved
+           FROM reports
+          WHERE report_month >= to_char($1::date, 'YYYY-MM')
+            AND report_month <= to_char($2::date, 'YYYY-MM')`,
+        [from, to]
+      )
+    ]);
+
+    // Разрез по странам и регионам — то, ради чего заводилась география
+    const geography = await pool.query(
+      `SELECT c.country, c.region,
+              COUNT(DISTINCT c.id)::int AS clubs,
+              COUNT(DISTINCT u.id)::int AS participants
+         FROM clubs c
+         LEFT JOIN users u
+           ON u.club_id = c.id AND u.role = 'participant' AND u.status = 'active'
+        WHERE c.status <> 'archived'
+        GROUP BY c.country, c.region
+        ORDER BY c.country, c.region NULLS LAST`
+    );
+
+    res.json({
+      period: { mode, year, from, to },
+      clubs: clubs.rows[0],
+      sessions: sessions.rows[0],
+      participants: participants.rows[0],
+      events_count: events.rows[0].n,
+      trips: trips.rows[0],
+      achievements_count: achievements.rows[0].n,
+      reports: reports.rows[0],
+      geography: geography.rows
+    });
+  } catch (error) {
+    console.error('❌ Ошибка годового свода:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ===== КАДРЫ ДВИЖЕНИЯ =====
+// Тьюторы, сотрудники КЮДов и аппарат — в одном списке с загрузкой.
+// Раньше подбор тьютора на форум делался по памяти.
+app.get('/api/movement/staff', authenticate, async (req, res) => {
+  try {
+    if (!requireMovement(req, res)) return;
+
+    const result = await pool.query(
+      `SELECT u.id, u.full_name, u.email, u.phone, u.role, u.city, u.status,
+
+              -- Должности по клубам: один человек может работать в двух КЮДах
+              COALESCE(
+                (SELECT json_agg(json_build_object('club', c.name, 'position', cs.position)
+                                 ORDER BY c.name)
+                   FROM club_staff cs JOIN clubs c ON c.id = cs.club_id
+                  WHERE cs.user_id = u.id AND cs.removed_at IS NULL),
+                '[]'::json
+              ) AS clubs,
+
+              -- Загрузка тьютора: сколько мероприятий за последний год
+              (SELECT COUNT(*)::int FROM event_assignments ea
+                 JOIN events e ON e.id = ea.event_id
+                WHERE ea.staff_id = u.id
+                  AND e.event_date >= CURRENT_DATE - INTERVAL '365 days') AS events_year,
+              (SELECT COUNT(*)::int FROM event_assignments ea
+                 JOIN events e ON e.id = ea.event_id
+                WHERE ea.staff_id = u.id AND e.event_date >= CURRENT_DATE) AS events_ahead,
+
+              -- Делегации, которые человек везёт
+              (SELECT COUNT(*)::int FROM team_submissions ts
+                 JOIN events e ON e.id = ts.event_id
+                WHERE ts.leader_user_id = u.id AND e.event_date >= CURRENT_DATE) AS delegations_ahead
+
+         FROM users u
+        WHERE u.role IN ('tutor', 'club_coordinator', 'movement_coordinator', 'admin', 'president', 'vice_president')
+        ORDER BY
+          CASE u.role
+            WHEN 'admin' THEN 1
+            WHEN 'movement_coordinator' THEN 2
+            WHEN 'president' THEN 3
+            WHEN 'vice_president' THEN 4
+            WHEN 'club_coordinator' THEN 5
+            ELSE 6
+          END,
+          u.full_name`
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка списка кадров:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
 // ========== ПОДГОТОВКА К ВЫЕЗДУ ==========
 // ============================================================
 // Платформа доводила ребёнка до утверждённой команды и там
@@ -9341,12 +9620,14 @@ app.post('/api/clubs', authenticate, requireAdminOrCoordinator, validateBody(clu
     }
 
     const result = await pool.query(
-      `INSERT INTO clubs (name, description, city, school, leader_name,
-                          contact_email, contact_phone, status, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', NOW(), NOW())
+      `INSERT INTO clubs (name, description, city, country, region, founded_on,
+                          school, leader_name, contact_email, contact_phone,
+                          status, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'active', NOW(), NOW())
        RETURNING *`,
-      [String(name).trim(), description || '', city || '', school || '',
-       leader_name || '', contact_email || '', contact_phone || '']
+      [String(name).trim(), description || '', city || '',
+       req.body.country || 'Россия', req.body.region || null, req.body.founded_on || null,
+       school || '', leader_name || '', contact_email || '', contact_phone || '']
     );
 
     const club = result.rows[0];
@@ -9379,12 +9660,14 @@ app.patch('/api/clubs/:id', authenticate, requireAdminOrCoordinator, validateBod
 
     const result = await pool.query(
       `UPDATE clubs
-       SET name = $1, description = $2, city = $3, school = $4,
-           leader_name = $5, contact_email = $6, contact_phone = $7, updated_at = NOW()
-       WHERE id = $8
+       SET name = $1, description = $2, city = $3, country = $4, region = $5,
+           founded_on = $6, school = $7, leader_name = $8,
+           contact_email = $9, contact_phone = $10, updated_at = NOW()
+       WHERE id = $11
        RETURNING *`,
-      [String(name).trim(), description || '', city || '', school || '',
-       leader_name || '', contact_email || '', contact_phone || '', id]
+      [String(name).trim(), description || '', city || '',
+       req.body.country || 'Россия', req.body.region || null, req.body.founded_on || null,
+       school || '', leader_name || '', contact_email || '', contact_phone || '', id]
     );
 
     await logActivity(req.user.userId, 'CLUB_UPDATED', 'club', id, {

@@ -277,6 +277,11 @@ export const clubSchema = Joi.object({
   }),
   description: Joi.string().max(2000).allow('', null),
   city: Joi.string().max(100).allow('', null),
+  // Движение межрегиональное и международное: разрез по странам и
+  // субъектам — то, в чём оно отчитывается
+  country: Joi.string().max(80).allow('', null),
+  region: Joi.string().max(120).allow('', null),
+  founded_on: Joi.date().allow('', null),
   school: Joi.string().max(500).allow('', null),
   leader_name: Joi.string().max(255).allow('', null),
   contact_email: Joi.string().email({ tlds: { allow: false } }).max(255).allow('', null).messages({

@@ -19,6 +19,9 @@ export default function ClubsManagement() {
     name: '',
     description: '',
     city: '',
+    country: 'Россия',
+    region: '',
+    founded_on: '',
     school: '',
     leader_name: '',
     contact_email: '',
@@ -74,6 +77,9 @@ export default function ClubsManagement() {
         name: form.name.trim(),
         description: form.description || '',
         city: form.city || '',
+        country: form.country || 'Россия',
+        region: form.region || '',
+        founded_on: form.founded_on || null,
         school: form.school || '',
         leader_name: form.leader_name || '',
         contact_email: form.contact_email || '',
@@ -109,6 +115,9 @@ export default function ClubsManagement() {
       name: '',
       description: '',
       city: '',
+      country: 'Россия',
+      region: '',
+      founded_on: '',
       school: '',
       leader_name: '',
       contact_email: '',
@@ -125,6 +134,9 @@ export default function ClubsManagement() {
       name: club.name || '',
       description: club.description || '',
       city: club.city || '',
+      country: club.country || 'Россия',
+      region: club.region || '',
+      founded_on: club.founded_on ? String(club.founded_on).slice(0, 10) : '',
       school: club.school || '',
       leader_name: club.leader_name || '',
       contact_email: club.contact_email || '',
@@ -265,6 +277,47 @@ export default function ClubsManagement() {
                     onChange={(e) => setForm({ ...form, city: e.target.value })}
                     placeholder="Москва"
                   />
+                </div>
+                {/* Движение межрегиональное и международное: без страны и
+                    региона отчёт по субъектам приходится собирать вручную
+                    по названиям городов */}
+                <div className="form-group">
+                  <label>Страна</label>
+                  <input
+                    type="text"
+                    value={form.country}
+                    onChange={(e) => setForm({ ...form, country: e.target.value })}
+                    placeholder="Россия"
+                    list="club-countries"
+                  />
+                  <datalist id="club-countries">
+                    <option value="Россия" />
+                    <option value="Узбекистан" />
+                    <option value="Беларусь" />
+                  </datalist>
+                </div>
+                <div className="form-group">
+                  <label>Регион</label>
+                  <input
+                    type="text"
+                    value={form.region}
+                    onChange={(e) => setForm({ ...form, region: e.target.value })}
+                    placeholder="Кабардино-Балкарская Республика"
+                  />
+                  <div className="form-hint">
+                    Субъект РФ или область — разрез, в котором движение отчитывается.
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Дата основания КЮДа</label>
+                  <input
+                    type="date"
+                    value={form.founded_on}
+                    onChange={(e) => setForm({ ...form, founded_on: e.target.value })}
+                  />
+                  <div className="form-hint">
+                    Когда клуб открылся на самом деле, а не когда его завели в платформе.
+                  </div>
                 </div>
                 <div className="form-group">
                   <label>Школа/Организация</label>

@@ -56,6 +56,9 @@ import EventTeams from './pages/EventTeams';
 import ClubStaff from './pages/ClubStaff';
 import MyTrips from './pages/MyTrips';
 import MyDelegations from './pages/MyDelegations';
+import ClubsHealth from './pages/ClubsHealth';
+import MovementYear from './pages/MovementYear';
+import MovementStaff from './pages/MovementStaff';
 import StaffManagement from './pages/StaffManagement';
 import StaffCalendar from './pages/StaffCalendar';
 import PresidentTasks from './pages/PresidentTasks';
@@ -253,6 +256,9 @@ function App() {
         <Route path="/clubs/:clubId/staff" element={<ClubStaff />} />
         <Route path="/my-trips" element={<MyTrips />} />
         <Route path="/my-delegations" element={<MyDelegations />} />
+        <Route path="/clubs-health" element={<ClubsHealth />} />
+        <Route path="/movement-year" element={<MovementYear />} />
+        <Route path="/movement-staff" element={<MovementStaff />} />
         <Route path="/tutor-assignments" element={<TutorAssignments />} />
         <Route path="/my-journal" element={<MyJournal />} />
 

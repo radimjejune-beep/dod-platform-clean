@@ -1409,6 +1409,34 @@ export const exportEventTeams = async (eventId, withDocuments = false) => {
 };
 
 // ============================================================
+// 19c. ДВИЖЕНИЕ ЦЕЛИКОМ
+// ============================================================
+export const getClubsHealth = async () => {
+  const response = await fetch(`${API_URL}/movement/clubs-health`, {
+    method: 'GET', headers: headers()
+  });
+  if (!response.ok) return { clubs: [], summary: {}, total: 0 };
+  return response.json();
+};
+
+export const getMovementYearly = async (period, year) => {
+  const response = await fetch(
+    `${API_URL}/movement/yearly?period=${period}&year=${year}`,
+    { method: 'GET', headers: headers() }
+  );
+  if (!response.ok) return null;
+  return response.json();
+};
+
+export const getMovementStaff = async () => {
+  const response = await fetch(`${API_URL}/movement/staff`, {
+    method: 'GET', headers: headers()
+  });
+  if (!response.ok) return [];
+  return response.json();
+};
+
+// ============================================================
 // 20. ПОДГОТОВКА К ВЫЕЗДУ
 // ============================================================
 export const getTripChecklist = async (eventId, clubId) => {
@@ -1939,6 +1967,9 @@ const api = {
   // Сотрудники КЮДа
   getMyClubs,
   getStaffCandidates,
+  getClubsHealth,
+  getMovementYearly,
+  getMovementStaff,
   getTripChecklist,
   addTripChecklistItem,
   removeTripChecklistItem,

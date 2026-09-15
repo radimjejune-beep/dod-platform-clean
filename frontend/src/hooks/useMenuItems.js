@@ -17,8 +17,87 @@ function dropDuplicates(items) {
   return order.map((path) => byPath.get(path));
 }
 
+// ============================================================
+// РАЗДЕЛЫ МЕНЮ
+// ============================================================
+// У координатора движения в меню тридцать с лишним пунктов подряд. Найти
+// среди них «Согласия» можно только перечитав весь список — а читают его
+// каждый раз заново, потому что порядок ни на чём не основан.
+//
+// Пункты те же, ни один не убран: они просто разложены по разделам.
+// Открытым остаётся только тот раздел, в котором вы сейчас находитесь.
+//
+// Раздел пункта определяется по его id — один список на все роли, чтобы
+// новый пункт нельзя было завести, забыв про раздел.
+
+const GROUP_TITLES = [
+  ['people',   'Люди',                  'users'],
+  ['clubs',    'КЮДы',                  'club'],
+  ['events',   'Мероприятия и выезды',  'calendar'],
+  ['movement', 'Движение',              'chart'],
+  ['comms',    'Связь и документы',     'chat'],
+  ['service',  'Служебное',             'settings'],
+  ['me',       'Моё',                   'user'],
+  ['other',    'Прочее',                'grid'],
+];
+
+// «main» — то, что остаётся наверху без заголовка: с этого начинают день
+const GROUP_OF = {
+  dashboard: 'main', attention: 'main', calendar: 'main',
+  'coordinator-dashboard': 'main', 'participant-dashboard': 'main',
+  'tutor-dashboard': 'main', 'parent-dashboard': 'main',
+
+  participants: 'people', 'admin-users': 'people', 'movement-staff': 'people',
+  staff: 'people', 'admin-invite': 'people', 'import-participants': 'people',
+  'issue-credentials': 'people', 'tutor-requests': 'people',
+  'tutor-invitations': 'people', 'club-president': 'people',
+  'staff-calendar': 'people',
+
+  clubs: 'clubs', 'clubs-health': 'clubs', 'clubs-management': 'clubs',
+  reports: 'clubs', 'club-analytics': 'clubs', 'club-calendar': 'clubs',
+  'club-sessions': 'clubs', 'club-rating': 'clubs', 'club-threads': 'clubs',
+  'my-club-events': 'clubs',
+
+  events: 'events', 'event-teams': 'events', 'my-delegations': 'events',
+  'my-invitations': 'events', 'my-trips': 'events', achievements: 'events',
+  'manage-achievements': 'events', 'my-journal': 'events',
+  'tutor-assignments': 'events', 'president-tasks': 'events',
+
+  crm: 'movement', 'movement-year': 'movement', analytics: 'movement',
+  goals: 'movement', 'tasks-planner': 'movement',
+
+  appeals: 'comms', 'admin-news': 'comms', 'mass-notifications': 'comms',
+  'documents-center': 'comms', documents: 'comms',
+  'notification-history': 'comms',
+
+  'consents-management': 'service', 'parent-consents': 'service',
+  settings: 'service', 'activity-log': 'service',
+
+  profile: 'me', 'my-achievements': 'me', 'my-reviews': 'me',
+};
+
+// Ниже этого числа список и так читается — делить его на разделы значило бы
+// прятать половину пунктов за лишний клик
+const GROUP_FROM = 13;
+
+function groupMenu(items) {
+  if (items.length < GROUP_FROM) return items;
+
+  const top = items.filter((item) => (GROUP_OF[item.id] || 'other') === 'main');
+  const groups = [];
+
+  for (const [key, label, icon] of GROUP_TITLES) {
+    const children = items.filter((item) => (GROUP_OF[item.id] || 'other') === key);
+    if (children.length > 0) {
+      groups.push({ id: `group-${key}`, label, icon, children });
+    }
+  }
+
+  return [...top, ...groups];
+}
+
 export function useMenuItems(profile) {
-  return useMemo(() => dropDuplicates(buildMenu(profile)), [profile]);
+  return useMemo(() => groupMenu(dropDuplicates(buildMenu(profile))), [profile]);
 }
 
 function buildMenu(profile) {

@@ -127,6 +127,16 @@ export default function Navigation({ profile }) {
     return children.some(child => isActive(child.path));
   };
 
+  // Раздел, в котором вы сейчас находитесь, открывается сам: иначе после
+  // перехода по ссылке меню открывается свёрнутым и текущую страницу в нём
+  // не видно
+  useEffect(() => {
+    const openHere = menuItems.find((item) => isChildActive(item.children));
+    if (!openHere) return;
+    setExpandedMenus((prev) => (prev[openHere.id] ? prev : { ...prev, [openHere.id]: true }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, menuItems]);
+
   const renderSidebarItem = (item) => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedMenus[item.id] || false;

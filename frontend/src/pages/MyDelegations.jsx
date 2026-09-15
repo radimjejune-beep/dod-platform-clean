@@ -129,15 +129,10 @@ export default function MyDelegations() {
         {list.map((d) => (
           <div key={d.id} className="card" style={{ padding: 0, marginBottom: '16px', overflow: 'hidden' }}>
             <button
+              type="button"
+              className="row-button"
               onClick={() => open(d.id)}
-              style={{
-                width: '100%', textAlign: 'left', padding: '18px 20px',
-                background: 'none', border: 'none', cursor: 'pointer',
-                // Общий стиль кнопок ставит white-space: nowrap и line-height: 1 —
-                // для кнопки с обычной кнопочной надписью это правильно, но здесь
-                // внутри три строки текста, и они склеивались в одну
-                display: 'block', whiteSpace: 'normal', lineHeight: 'inherit'
-              }}
+              style={{ padding: '18px 20px' }}
             >
               <div style={{ fontSize: '17px', fontWeight: 600, color: 'var(--color-primary-dark)' }}>
                 {d.event_title}

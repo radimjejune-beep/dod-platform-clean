@@ -241,9 +241,9 @@ a:hover {
   background: var(--color-gray-50);
 }
 
-button,
-.btn,
-[role="button"],
+button:not(.row-button),
+.btn:not(.row-button),
+[role="button"]:not(.row-button),
 input[type="button"],
 input[type="submit"] {
   display: inline-flex;
@@ -1171,9 +1171,9 @@ select.form-control {
     padding: 18px 16px;
   }
 
-  button,
-  .btn,
-  [role="button"],
+  button:not(.row-button),
+  .btn:not(.row-button),
+  [role="button"]:not(.row-button),
   input[type="button"],
   input[type="submit"] {
     padding: 8px 16px;
@@ -1250,9 +1250,9 @@ select.form-control {
     font-size: 11px;
   }
 
-  button,
-  .btn,
-  [role="button"],
+  button:not(.row-button),
+  .btn:not(.row-button),
+  [role="button"]:not(.row-button),
   input[type="button"],
   input[type="submit"] {
     padding: 6px 12px;
@@ -1341,9 +1341,9 @@ select.form-control {
     font-size: 18px;
   }
 
-  button,
-  .btn,
-  [role="button"],
+  button:not(.row-button),
+  .btn:not(.row-button),
+  [role="button"]:not(.row-button),
   input[type="button"],
   input[type="submit"] {
     padding: 4px 10px;

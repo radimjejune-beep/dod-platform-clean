@@ -218,16 +218,15 @@ export default function ClubsHealth() {
 function SummaryTile({ label, value, color, bg, active, onClick }) {
   return (
     <button
+      type="button"
+      className="row-button"
       onClick={onClick}
       style={{
-        flex: '1 1 130px', minWidth: '120px', padding: '12px 14px',
-        textAlign: 'left', cursor: 'pointer',
+        flex: '1 1 130px', width: 'auto', minWidth: '120px', padding: '12px 14px',
         background: bg || 'var(--color-gray-50)',
         border: `1px solid ${active ? (color || 'var(--color-primary-dark)') : 'var(--color-gray-200)'}`,
         borderWidth: active ? '2px' : '1px',
-        borderRadius: 'var(--radius-sm)',
-        // Общий стиль кнопок запрещает перенос и сжимает высоту строки
-        display: 'block', whiteSpace: 'normal', lineHeight: 'inherit'
+        borderRadius: 'var(--radius-sm)'
       }}
     >
       <div style={{

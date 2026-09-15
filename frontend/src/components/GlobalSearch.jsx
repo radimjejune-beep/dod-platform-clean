@@ -110,14 +110,24 @@ export default function GlobalSearch() {
                 {group.label}
               </div>
               {group.items.map((item) => (
-                <button
+                /* Не <button>: общий стиль кнопок в проекте задаёт им
+                   line-height: 1 и запрет переноса, из-за чего строка из
+                   двух строк налезала на следующую. Перебивать это по
+                   одному свойству — борьба с симптомами. */
+                <div
                   key={`${group.key}-${item.id}`}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => go(item.link)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      go(item.link);
+                    }
+                  }}
                   style={{
-                    width: '100%', textAlign: 'left', padding: '8px 14px',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    // Общий стиль кнопок запрещает перенос и жмёт высоту строки
-                    display: 'block', whiteSpace: 'normal', lineHeight: 'inherit'
+                    padding: '9px 14px', cursor: 'pointer',
+                    borderTop: '1px solid var(--color-gray-100)'
                   }}
                 >
                   <div style={{
@@ -134,7 +144,7 @@ export default function GlobalSearch() {
                       {item.subtitle}
                     </div>
                   )}
-                </button>
+                </div>
               ))}
             </div>
           ))}

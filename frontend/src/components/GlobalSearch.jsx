@@ -110,12 +110,13 @@ export default function GlobalSearch() {
                 {group.label}
               </div>
               {group.items.map((item) => (
-                /* Не <button>: общий стиль кнопок в проекте задаёт им
-                   line-height: 1 и запрет переноса, из-за чего строка из
-                   двух строк налезала на следующую. Перебивать это по
-                   одному свойству — борьба с симптомами. */
+                /* .row-button снимает кнопочное оформление: общее правило
+                   в index.css делает кнопкой и всё с role="button" —
+                   фиксированная высота и запрет переноса ломают строку
+                   списка. */
                 <div
                   key={`${group.key}-${item.id}`}
+                  className="row-button"
                   role="button"
                   tabIndex={0}
                   onClick={() => go(item.link)}
@@ -125,10 +126,7 @@ export default function GlobalSearch() {
                       go(item.link);
                     }
                   }}
-                  style={{
-                    padding: '9px 14px', cursor: 'pointer',
-                    borderTop: '1px solid var(--color-gray-100)'
-                  }}
+                  style={{ borderTop: '1px solid var(--color-gray-100)' }}
                 >
                   <div style={{
                     fontSize: '13.5px', fontWeight: 500,

@@ -7580,6 +7580,28 @@ app.patch('/api/team-submissions/:id/review', authenticate, async (req, res) => 
       [newStatus, req.user.userId, comment?.trim() || null, id]
     );
 
+    // ⚠️ Утверждение команды не заводило детей в состав мероприятия.
+    // Команда жила в team_members, состав мероприятия — в
+    // event_participants, и это были две разные правды: делегация
+    // показывала «детей в составе: 1», а само мероприятие — «записалось: 0
+    // из 20», список участников был пуст, выгрузка в Excel пустая, и
+    // назначенный тьютор не видел ни одного ребёнка, потому что его дети
+    // считаются как раз по event_participants.
+    //
+    // Сопровождающих не заводим: это взрослые, а состав мероприятия — дети.
+    if (decision === 'approve') {
+      await pool.query(
+        `INSERT INTO event_participants (event_id, user_id, status, registered_at)
+         SELECT $1, tm.participant_id, 'registered', NOW()
+           FROM team_members tm
+          WHERE tm.submission_id = $2
+            AND tm.participant_id IS NOT NULL
+            AND tm.role_in_team <> 'escort'
+         ON CONFLICT (event_id, user_id) DO NOTHING`,
+        [sub.rows[0].event_id, id]
+      );
+    }
+
     await logActivity(req.user.userId, decision === 'approve' ? 'TEAM_APPROVED' : 'TEAM_RETURNED',
       'team_submission', id, { club: sub.rows[0].club_name, event: sub.rows[0].event_title });
 

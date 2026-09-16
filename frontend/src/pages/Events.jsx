@@ -1406,7 +1406,12 @@ export default function Events() {
             <p className="modal-subtitle">
               <strong>{selectedEventForRegistrations.title}</strong>
               {selectedEventForRegistrations.max_participants > 0 && (
-                <span>{selectedEventForRegistrations.registrations_count || 0}/{selectedEventForRegistrations.max_participants}</span>
+                // Без отступа счётчик прилипал к названию: «…можно удалить0/20»
+                <span style={{ marginLeft: '8px', color: 'var(--color-gray-500)' }}>
+                  {selectedEventForRegistrations.registrations_count || 0}
+                  {' из '}
+                  {selectedEventForRegistrations.max_participants}
+                </span>
               )}
             </p>
 

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
+import { findMyClub } from '../lib/myClub';
 
 export default function ClubRating() {
   const [profile, setProfile] = useState(null);
@@ -33,10 +34,7 @@ export default function ClubRating() {
       setProfile(userData);
 
       const clubsData = await api.getClubs();
-      const coordinatorClub = clubsData.find(c => 
-        c.coordinator_id === userData.id || 
-        c.leader_id === userData.id
-      );
+      const coordinatorClub = findMyClub(clubsData, userData);
 
       if (!coordinatorClub) {
         setLoading(false);

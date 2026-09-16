@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
+import { findMyClub } from '../lib/myClub';
 
 export default function ClubAnalytics() {
   const [profile, setProfile] = useState(null);
@@ -42,11 +43,8 @@ export default function ClubAnalytics() {
 
       // Если координатор клуба — показываем только его клуб
       if (userData.role === 'club_coordinator') {
-        const userClubs = clubsData.filter(c => 
-          c.coordinator_id === userData.id || 
-          c.leader_id === userData.id
-        );
-        clubsData = userClubs;
+        const myClub = findMyClub(clubsData, userData);
+        clubsData = myClub ? [myClub] : [];
       }
 
       setClubs(clubsData || []);

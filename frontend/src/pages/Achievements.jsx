@@ -98,29 +98,18 @@ export default function Achievements() {
       const data = Array.isArray(achievementsData) ? achievementsData : [];
       const meta = { page: 1, limit: data.length || 20, total: data.length, totalPages: 1 };
 
-      let filteredParticipants = [];
-      let filteredAchievements = [];
-
-      if (role === 'club_coordinator') {
-        const coordinatorClub = clubsData.find(c => 
-          c.coordinator_id === userData.id || 
-          c.leader_id === userData.id
-        );
-        if (coordinatorClub) {
-          filteredParticipants = participantsData.filter(p => p.club_id === coordinatorClub.id);
-          const participantIds = filteredParticipants.map(p => p.id);
-          filteredAchievements = data.filter(a => participantIds.includes(a.participant_id));
-        } else {
-          filteredParticipants = [];
-          filteredAchievements = [];
-        }
-      } else if (['admin', 'movement_coordinator', 'tutor'].includes(role)) {
-        filteredParticipants = participantsData;
-        filteredAchievements = data;
-      } else {
-        filteredParticipants = [];
-        filteredAchievements = [];
-      }
+      // ⚠️ Здесь клуб руководителя искали так:
+      //     clubsData.find(c => c.coordinator_id === userData.id || c.leader_id === userData.id)
+      // Это поля из старой модели, когда у клуба был один координатор.
+      // С миграции 005 должности живут в club_staff, а эти колонки почти
+      // везде пустые — клуб не находился, и руководитель КЮДа видел пустую
+      // страницу достижений, хотя сервер присылал ему достижения его клуба.
+      //
+      // Сервер и так отдаёт каждому только то, что ему положено:
+      // руководителю — его КЮД, тьютору — детей со своих мероприятий,
+      // движению — всё. Урезать этот ответ ещё раз в браузере незачем.
+      const filteredParticipants = participantsData || [];
+      const filteredAchievements = data;
 
       setParticipants(filteredParticipants);
       setAllParticipants(filteredParticipants);

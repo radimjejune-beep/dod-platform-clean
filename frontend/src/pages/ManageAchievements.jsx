@@ -6,6 +6,7 @@ import api from '../lib/api';
 import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
+import { findMyClub } from '../lib/myClub';
 
 export default function ManageAchievements() {
   const [profile, setProfile] = useState(null);
@@ -79,10 +80,7 @@ export default function ManageAchievements() {
       let filteredAchievements = [];
 
       if (role === 'club_coordinator') {
-        const coordinatorClub = clubsData.find(c => 
-          c.coordinator_id === userData.id || 
-          c.leader_id === userData.id
-        );
+        const coordinatorClub = findMyClub(clubsData, userData);
         if (coordinatorClub) {
           filteredParticipants = participantsData.filter(p => p.club_id === coordinatorClub.id);
           const participantIds = filteredParticipants.map(p => p.id);

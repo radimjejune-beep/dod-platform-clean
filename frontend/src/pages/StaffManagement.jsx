@@ -7,6 +7,7 @@ import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import { roleLabel } from '../lib/roles';
 import Icon from '../components/Icon';
+import { findMyClub } from '../lib/myClub';
 
 export default function StaffManagement() {
   const [profile, setProfile] = useState(null);
@@ -116,10 +117,7 @@ export default function StaffManagement() {
 
       if (role === 'club_coordinator') {
         // Координатор видит только сотрудников своего клуба
-        const coordinatorClub = clubsData.find(c => 
-          c.coordinator_id === userData.id || 
-          c.leader_id === userData.id
-        );
+        const coordinatorClub = findMyClub(clubsData, userData);
         if (coordinatorClub) {
           // TODO: добавить связь сотрудников с клубом
           filteredStaff = usersData.filter(u => staffRoles.includes(u.role));

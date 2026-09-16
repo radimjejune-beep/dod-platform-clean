@@ -6,6 +6,7 @@ import api from '../lib/api';
 import Navigation from '../components/Navigation';
 import ClubEvents from '../components/ClubEvents';
 import Icon from '../components/Icon';
+import { isMyClub as isMyClubOf } from '../lib/myClub';
 
 export default function ClubDetail() {
   const { id } = useParams();
@@ -75,8 +76,7 @@ export default function ClubDetail() {
                   profile?.role === 'movement_coordinator' || 
                   profile?.role === 'club_coordinator';
 
-  const isMyClub = profile?.role === 'club_coordinator' && 
-                   (club?.coordinator_id === profile?.id || club?.leader_id === profile?.id);
+  const isMyClub = profile?.role === 'club_coordinator' && isMyClubOf(profile, club);
 
   const canEditThis = canEdit && (profile?.role === 'admin' || profile?.role === 'movement_coordinator' || isMyClub);
 

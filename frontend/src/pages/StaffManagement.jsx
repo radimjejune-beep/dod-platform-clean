@@ -193,8 +193,6 @@ export default function StaffManagement() {
     setLoading(true);
 
     try {
-      const tempPassword = Math.random().toString(36).slice(-8) + '!';
-
       const result = await api.createUser({
         full_name: staffForm.full_name,
         email: staffForm.email,
@@ -208,7 +206,14 @@ export default function StaffManagement() {
         throw new Error(api.describeApiError(result));
       }
 
-      setMessage(`Сотрудник "${staffForm.full_name}" создан! Временный пароль: ${tempPassword}`);
+      // ⚠️ Здесь показывался пароль, придуманный прямо в браузере и на сервер
+      // не отправленный. Оператор записывал его, отдавал новому сотруднику —
+      // и тот не мог войти. Пароль и адрес создаёт сервер, он их и возвращает.
+      setMessage(
+        `Сотрудник «${staffForm.full_name}» создан. Логин: ${result.user?.email || '—'}, `
+        + `временный пароль: ${result.temp_password || '—'}. `
+        + 'Запишите их сейчас — второй раз пароль не показывается.'
+      );
       setMessageType('success');
       setStaffForm({
         full_name: '',
@@ -220,7 +225,8 @@ export default function StaffManagement() {
       });
       setShowStaffForm(false);
       loadData();
-      setTimeout(() => setMessage(''), 5000);
+      // Раньше сообщение пропадало через пять секунд — вместе с паролем,
+      // который больше нигде не показывается
     } catch (err) {
       setMessage('Ошибка: ' + err.message);
       setMessageType('error');

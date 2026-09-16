@@ -921,8 +921,10 @@ app.post('/api/users', authenticate, requireAdmin, validateBody(userSchema), asy
       email: user.email,
       role: user.role,
       club_id: finalClubId,
-      club_name: clubName,
-      temp_password: tempPassword
+      club_name: clubName
+      // ⚠️ Сюда писался temp_password открытым текстом. Журнал действий
+      // читают админы и координаторы движения — пароли от учётных записей,
+      // за которыми стоят персональные данные детей, в нём лежать не должны
     });
 
     res.status(201).json({

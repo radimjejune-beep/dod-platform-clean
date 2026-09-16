@@ -30,75 +30,19 @@ export default function MyReviews() {
       }
       setProfile(userData);
 
-      const [clubsData, participantsData, usersData] = await Promise.all([
-        api.getClubs(),
-        api.getParticipants(),
-        api.getUsers()
-      ]);
-
-      setClubs(clubsData || []);
-
-      const role = userData.role;
-      let filteredParticipants = [];
-
-      if (role === 'participant') {
-        filteredParticipants = participantsData.filter(p => p.id === userData.id);
-      } 
-      else if (role === 'parent') {
-        filteredParticipants = participantsData;
-        setChildInfo({ name: 'Ваш ребёнок' });
-      } 
-      else if (role === 'club_coordinator') {
-        const coordinatorClub = clubsData.find(c => 
-          c.coordinator_id === userData.id || 
-          c.leader_id === userData.id
-        );
-        if (coordinatorClub) {
-          filteredParticipants = participantsData.filter(p => p.club_id === coordinatorClub.id);
-        } else {
-          filteredParticipants = [];
-        }
-      } 
-      else if (role === 'tutor' || 
-               role === 'movement_coordinator' || 
-               role === 'admin' || 
-               role === 'president' || 
-               role === 'vice_president') {
-        filteredParticipants = participantsData;
-      } 
-      else {
-        filteredParticipants = [];
-      }
-
-      const mockReviews = [];
-      
-      filteredParticipants.forEach((p, index) => {
-        if (index < 15) {
-          mockReviews.push({
-            id: `review-${index}`,
-            participant_id: p.id,
-            participant_name: p.full_name,
-            participant_school: p.school || '',
-            participant_class: p.class_name || '',
-            club_id: p.club_id,
-            club_name: clubsData.find(c => c.id === p.club_id)?.name || 'Без клуба',
-            event_title: `Мероприятие ${Math.floor(Math.random() * 20) + 1}`,
-            event_date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            engagement: ['active', 'moderate', 'passive'][Math.floor(Math.random() * 3)],
-            teamwork: ['excellent', 'good', 'developing'][Math.floor(Math.random() * 3)],
-            initiative: ['high', 'average', 'low'][Math.floor(Math.random() * 3)],
-            communication: ['confident', 'developing', 'needs_support'][Math.floor(Math.random() * 3)],
-            responsibility: ['reliable', 'average', 'needs_attention'][Math.floor(Math.random() * 3)],
-            status: ['draft', 'submitted', 'approved'][Math.floor(Math.random() * 3)],
-            comment: 'Хорошее участие в мероприятии',
-            is_final: Math.random() > 0.5,
-            reviewer_name: 'Тьютор Иванова М.А.'
-          });
-        }
-      });
-
-      setAllReviews(mockReviews);
-      setReviews(mockReviews);
+      // ⚠️ Здесь генерировались ВЫДУМАННЫЕ оценки. Брались настоящие дети —
+      // имя, школа, класс, КЮД — и к ним через Math.random() дописывались
+      // «Пассивно», «Инициатива: низкая», «Требует внимания», статус
+      // «Утверждено» и подпись несуществующего тьютора «Иванова М.А.».
+      //
+      // Родитель, открыв «Оценки моего ребёнка», видел бы приговор своему
+      // ребёнку, сочинённый подбрасыванием монетки. Это нельзя показывать
+      // никому и ни при каких условиях.
+      //
+      // Оценок на платформе пока нет: в бэкенде нет ни одного эндпоинта для
+      // них. Пока его не появится, страница честно пуста.
+      setAllReviews([]);
+      setReviews([]);
 
     } catch (err) {
       console.error('Ошибка:', err);
@@ -277,7 +221,9 @@ export default function MyReviews() {
                 profile?.role === 'president' || 
                 profile?.role === 'vice_president') && 'Оценок пока нет'}
             </p>
-            <p style={{ color: 'var(--color-gray-500)' }}>Оценки появляются после мероприятий с участием тьюторов</p>
+            <p style={{ color: 'var(--color-gray-500)' }}>
+              Оценки участников платформа пока не ведёт — тьюторы выставляют их вне её.
+            </p>
           </div>
         ) : (
           <>

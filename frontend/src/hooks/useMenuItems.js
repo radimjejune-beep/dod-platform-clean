@@ -121,7 +121,6 @@ function buildMenu(profile) {
       { id: 'calendar', path: '/calendar', icon: 'grid', label: 'Календарь' },
       { id: 'profile', path: '/profile', icon: 'user', label: 'Профиль' },
       { id: 'my-achievements', path: '/my-achievements', icon: 'trophy', label: 'Мои достижения' },
-      { id: 'my-reviews', path: '/my-reviews', icon: 'star', label: 'Мои оценки' },
     ];
 
     // ============================================================
@@ -238,8 +237,7 @@ function buildMenu(profile) {
         { id: 'events', path: '/events', icon: 'calendar', label: 'Мероприятия' },
         { id: 'calendar', path: '/calendar', icon: 'grid', label: 'Календарь' },
         { id: 'my-achievements', path: '/my-achievements', icon: 'trophy', label: 'Мои достижения' },
-        { id: 'my-reviews', path: '/my-reviews', icon: 'star', label: 'Мои оценки' },
-      ];
+        ];
     }
 
     // ============================================================

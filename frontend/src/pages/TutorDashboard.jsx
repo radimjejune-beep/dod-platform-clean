@@ -11,12 +11,13 @@ export default function TutorDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     assignments: 0,
-    reviews: 0,
     events: 0,
     pending_invitations: 0
   });
   const [recentAssignments, setRecentAssignments] = useState([]);
   const [pendingInvitations, setPendingInvitations] = useState([]);
+  const [responding, setResponding] = useState(null);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,19 +39,45 @@ export default function TutorDashboard() {
 
       setProfile(userData);
 
+      // Раньше здесь стояли нули и пустые списки — буквально, в коде.
+      // Тьютор с тремя назначениями и непрочитанным приглашением видел
+      // «0 назначений» и «нет ожидающих приглашений», и на приглашение
+      // никто не отвечал, потому что о нём никто не знал.
+      const [assignments, invitations] = await Promise.all([
+        api.getTutorAssignments(),
+        api.getTutorInvitations()
+      ]);
+
+      const pending = invitations.filter((inv) => inv.status === 'pending');
+      const accepted = assignments.filter((a) => a.status === 'accepted');
+
       setStats({
-        assignments: 0,
-        reviews: 0,
-        events: 0,
-        pending_invitations: 0
+        assignments: assignments.length,
+        events: new Set(accepted.map((a) => a.event_id)).size,
+        pending_invitations: pending.length
       });
-      setRecentAssignments([]);
-      setPendingInvitations([]);
+      setRecentAssignments(accepted.slice(0, 5));
+      setPendingInvitations(pending.slice(0, 5));
 
     } catch (err) {
       console.error('Ошибка:', err);
+      setError('Не удалось загрузить данные');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const respond = async (invitationId, status) => {
+    setResponding(invitationId);
+    setError('');
+    try {
+      const result = await api.respondToTutorInvitation(invitationId, status);
+      if (result?.error) throw new Error(api.describeApiError(result));
+      await loadData();
+    } catch (err) {
+      setError(err.message || 'Не удалось отправить ответ');
+    } finally {
+      setResponding(null);
     }
   };
 
@@ -76,7 +103,9 @@ export default function TutorDashboard() {
 
         {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
-        <div className="grid-4" style={{ marginBottom: '24px' }}>
+        {error && <div className="message-error" style={{ marginBottom: '16px' }}>{error}</div>}
+
+        <div className="grid-3" style={{ marginBottom: '24px' }}>
           <div className="stat-card">
             <div className="number">{stats.events}</div>
             <div className="label">Мероприятий</div>
@@ -84,10 +113,6 @@ export default function TutorDashboard() {
           <div className="stat-card">
             <div className="number">{stats.assignments}</div>
             <div className="label">Назначений</div>
-          </div>
-          <div className="stat-card">
-            <div className="number">{stats.reviews}</div>
-            <div className="label">Оценок</div>
           </div>
           <div className="stat-card" style={{ borderTop: stats.pending_invitations > 0 ? '3px solid var(--color-gold)' : '3px solid transparent' }}>
             <div className="number" style={{ color: stats.pending_invitations > 0 ? 'var(--color-gold)' : 'var(--color-gray-500)' }}>
@@ -119,17 +144,21 @@ export default function TutorDashboard() {
                       {inv.location && ` • ${inv.location}`}
                     </div>
                     <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+                      {/* Обе кнопки были пустыми: onClick={() => {}}.
+                          Тьютор нажимал «Принять» и ничего не происходило */}
                       <button
                         className="btn-success"
                         style={{ padding: '4px 16px', fontSize: '12px' }}
-                        onClick={() => {}}
+                        disabled={responding === inv.id}
+                        onClick={() => respond(inv.id, 'accepted')}
                       >
-                        Принять
+                        {responding === inv.id ? 'Отправляем…' : 'Принять'}
                       </button>
                       <button
                         className="btn-danger"
                         style={{ padding: '4px 16px', fontSize: '12px' }}
-                        onClick={() => {}}
+                        disabled={responding === inv.id}
+                        onClick={() => respond(inv.id, 'declined')}
                       >
                         Отклонить
                       </button>
@@ -141,7 +170,7 @@ export default function TutorDashboard() {
             <button
               className="btn-secondary"
               style={{ width: '100%', marginTop: '12px', padding: '8px' }}
-              onClick={() => navigate('/staff')}
+              onClick={() => navigate('/tutor-invitations')}
             >
               Все приглашения →
             </button>

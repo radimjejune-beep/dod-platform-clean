@@ -88,9 +88,14 @@ function groupMenu(items) {
 
   for (const [key, label, icon] of GROUP_TITLES) {
     const children = items.filter((item) => (GROUP_OF[item.id] || 'other') === key);
-    if (children.length > 0) {
-      groups.push({ id: `group-${key}`, label, icon, children });
+    if (children.length === 0) continue;
+    // Раздел из одного пункта — это лишний клик и ничего больше:
+    // у президента «Люди» состояли из одних «Участников»
+    if (children.length === 1) {
+      groups.push(children[0]);
+      continue;
     }
+    groups.push({ id: `group-${key}`, label, icon, children });
   }
 
   return [...top, ...groups];
@@ -249,7 +254,7 @@ function buildMenu(profile) {
         { id: 'tutor-invitations', path: '/tutor-invitations', icon: 'mail', label: 'Приглашения' },
         { id: 'my-journal', path: '/my-journal', icon: 'journal', label: 'Мой журнал' },
         { id: 'participants', path: '/participants', icon: 'user', label: 'Участники' },
-        { id: 'staff-calendar', path: '/staff-calendar', icon: 'calendar', label: 'Календарь' },
+        { id: 'staff-calendar', path: '/staff-calendar', icon: 'calendar', label: 'Календарь сотрудников' },
         { id: 'achievements', path: '/achievements', icon: 'trophy', label: 'Достижения' },
         { id: 'documents-center', path: '/documents-center', icon: 'folder', label: 'Документы' },
       ];

@@ -393,6 +393,42 @@ async function getClubPosition(userId, clubId) {
   return r.rows[0]?.position || null;
 }
 
+// Дети с мероприятий, на которые назначен тьютор.
+//
+// ⚠️ Здесь четыре раза подряд стояло ep.participant_id. Такой колонки в
+// event_participants нет — там user_id. Postgres отвечал ошибкой, Express
+// отдавал 500, а клиентская обёртка на неудачный ответ возвращает пустой
+// массив. Наружу это выглядело как «у тьютора никого нет»: ни участников,
+// ни достижений, и профиль любого ребёнка ему не открывался. Роль тьютора
+// не работала целиком, и ни одна страница об этом не сообщала.
+//
+// Назначения лежат в двух таблицах: event_tutor_assignments (её читает
+// экран «Мои назначения») и event_assignments (её пишет форма назначения
+// на мероприятие). Пока живы обе, считаем по обеим — иначе тьютор,
+// назначенный «не через ту» форму, снова никого не увидит.
+function tutorChildrenSql(param) {
+  return `SELECT ep.user_id
+            FROM event_participants ep
+            JOIN event_tutor_assignments eta ON eta.event_id = ep.event_id
+           WHERE eta.tutor_id = ${param}
+           UNION
+          SELECT ep.user_id
+            FROM event_participants ep
+            JOIN event_assignments ea ON ea.event_id = ep.event_id
+           WHERE ea.staff_id = ${param}`;
+}
+
+// Тот же вопрос про одного ребёнка: ведёт ли тьютор мероприятие с ним
+function tutorSeesChildSql(childParam, tutorParam) {
+  return `SELECT 1 FROM event_participants ep
+           WHERE ep.user_id = ${childParam}
+             AND (EXISTS (SELECT 1 FROM event_tutor_assignments eta
+                           WHERE eta.event_id = ep.event_id AND eta.tutor_id = ${tutorParam})
+               OR EXISTS (SELECT 1 FROM event_assignments ea
+                           WHERE ea.event_id = ep.event_id AND ea.staff_id = ${tutorParam}))
+           LIMIT 1`;
+}
+
 // Имеет ли запрашивающий право видеть данные конкретного участника
 async function canViewParticipant(requester, participantId) {
   const { userId, role } = requester;
@@ -413,9 +449,7 @@ async function canViewParticipant(requester, participantId) {
 
   if (role === 'tutor') {
     const r = await pool.query(
-      `SELECT 1 FROM event_participants ep
-       JOIN event_tutor_assignments eta ON eta.event_id = ep.event_id
-       WHERE ep.participant_id = $1 AND eta.tutor_id = $2`,
+      tutorSeesChildSql('$1', '$2'),
       [participantId, userId]
     );
     return r.rows.length > 0;
@@ -969,10 +1003,7 @@ async function canSeeUser(requester, targetId) {
 
   if (requester.role === 'tutor') {
     const check = await pool.query(
-      `SELECT 1 FROM event_participants ep
-         JOIN event_tutor_assignments eta ON eta.event_id = ep.event_id
-        WHERE ep.participant_id = $1 AND eta.tutor_id = $2
-        LIMIT 1`,
+      tutorSeesChildSql('$1', '$2'),
       [targetId, requester.userId]
     );
     return check.rows.length > 0;
@@ -1341,11 +1372,7 @@ app.get('/api/participants', authenticate, async (req, res) => {
     if (req.user.role === 'tutor') {
       // ⚠️ Тьютор получал всех участников движения. По матрице ролей он
       // должен видеть только участников мероприятий, на которые назначен.
-      query += ` AND u.id IN (
-        SELECT ep.participant_id FROM event_participants ep
-        JOIN event_tutor_assignments eta ON eta.event_id = ep.event_id
-        WHERE eta.tutor_id = $1
-      )`;
+      query += ` AND u.id IN (${tutorChildrenSql(`$${params.length + 1}`)})`;
       params.push(req.user.userId);
     }
 
@@ -1596,11 +1623,7 @@ app.get('/api/achievements', authenticate, async (req, res) => {
       where = 'WHERE u.club_id = ANY($1)';
       params.push(clubIds);
     } else if (role === 'tutor') {
-      where = `WHERE a.participant_id IN (
-                 SELECT ep.participant_id FROM event_participants ep
-                 JOIN event_tutor_assignments eta ON eta.event_id = ep.event_id
-                 WHERE eta.tutor_id = $1
-               )`;
+      where = `WHERE a.participant_id IN (${tutorChildrenSql('$1')})`;
       params.push(userId);
     } else if (!MOVEMENT_ROLES.includes(role)) {
       return res.status(403).json({ error: 'Недостаточно прав' });
@@ -7819,10 +7842,7 @@ app.get('/api/search', authenticate, async (req, res) => {
       if (clubIds.length === 0 && role === 'tutor') {
         // Тьютор без клуба ищет среди детей со своих мероприятий
         const own = await pool.query(
-          `SELECT DISTINCT ep.user_id
-             FROM event_participants ep
-             JOIN event_assignments ea ON ea.event_id = ep.event_id
-            WHERE ea.staff_id = $1`,
+          tutorChildrenSql('$1'),
           [userId]
         );
         const ids = own.rows.map((r) => r.user_id);

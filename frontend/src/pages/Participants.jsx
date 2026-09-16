@@ -316,9 +316,14 @@ export default function Participants() {
           <div className="page-header-left">
             <h1>Участники</h1>
             <p>
-              {isClubCoordinator 
-                ? `Участники вашего клуба (${filtered.length})` 
-                : `Все участники движения (${pagination.total || filtered.length})`}
+              {/* Тьютор видит только детей со своих мероприятий, но подпись
+                  говорила ему «Все участники движения (0)» — и выходило, что
+                  в движении нет никого */}
+              {isClubCoordinator
+                ? `Участники вашего клуба (${filtered.length})`
+                : profile?.role === 'tutor'
+                  ? `Участники ваших мероприятий (${pagination.total || filtered.length})`
+                  : `Все участники движения (${pagination.total || filtered.length})`}
             </p>
           </div>
           <div className="page-header-actions">
@@ -376,7 +381,11 @@ export default function Participants() {
                   <tr>
                     <td colSpan="7" className="empty-table">
                       <div className="empty-icon"><Icon name="eye" /></div>
-                      <p>{isClubCoordinator ? 'В вашем клубе пока нет участников' : 'Участников не найдено'}</p>
+                      <p>{isClubCoordinator
+                        ? 'В вашем клубе пока нет участников'
+                        : profile?.role === 'tutor'
+                          ? 'Здесь появятся дети с мероприятий, на которые вас назначат'
+                          : 'Участников не найдено'}</p>
                     </td>
                   </tr>
                 ) : (
@@ -450,7 +459,11 @@ export default function Participants() {
             {filtered.length === 0 ? (
               <div className="empty-state full-width">
                 <div className="empty-icon"><Icon name="eye" /></div>
-                <p>{isClubCoordinator ? 'В вашем клубе пока нет участников' : 'Участников не найдено'}</p>
+                <p>{isClubCoordinator
+                        ? 'В вашем клубе пока нет участников'
+                        : profile?.role === 'tutor'
+                          ? 'Здесь появятся дети с мероприятий, на которые вас назначат'
+                          : 'Участников не найдено'}</p>
               </div>
             ) : (
               filtered.map((p) => (

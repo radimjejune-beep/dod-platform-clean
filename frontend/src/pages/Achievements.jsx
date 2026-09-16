@@ -244,6 +244,11 @@ export default function Achievements() {
   const canEdit = profile && ['admin', 'movement_coordinator'].includes(profile.role);
   const canDelete = profile && ['admin'].includes(profile.role);
   const isAdmin = profile?.role === 'admin';
+  // Фильтр по КЮДу нужен тем, кто видит больше одного клуба. Переменную
+  // использовали в разметке ниже, а объявить забыли — страница падала
+  // белым экраном у всех, кто её открывал
+  const canFilterByClub = ['admin', 'movement_coordinator', 'president', 'vice_president', 'tutor']
+    .includes(profile?.role);
 
   const handleSearchChange = (e) => {
     const query = e.target.value;

@@ -1959,17 +1959,15 @@ app.patch('/api/events/:id', authenticate, async (req, res) => {
     if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
       canEdit = true;
       console.log('  ✅ Высокие права — можно редактировать');
-    } else if (userRole === 'club_coordinator') {
-      const clubCheck = await pool.query(
-        'SELECT club_id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-        [userId, event.club_id]
-      );
-      if (clubCheck.rows.length > 0) {
-        canEdit = true;
-        console.log('  ✅ Координатор клуба — можно редактировать');
-      } else {
-        console.log('  ❌ Нет доступа к этому клубу');
-      }
+    } else {
+      // ⚠️ club_coordinators — это не таблица, а представление над club_staff
+      // (миграция 005), и показывает оно ВСЕХ действующих сотрудников клуба.
+      // Проверка «нашлась строка — значит можно» давала помощнику и куратору
+      // те же права, что руководителю КЮДа. Спрашиваем у матрицы прав.
+      canEdit = await canInClub(req.user, event.club_id, 'create_events');
+      console.log(canEdit
+        ? '  ✅ Право вести мероприятия клуба — можно редактировать'
+        : '  ❌ Нет прав на мероприятия этого клуба');
     }
 
     if (!canEdit) {
@@ -2035,17 +2033,16 @@ app.delete('/api/events/:id', authenticate, async (req, res) => {
     if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
       canDelete = true;
       console.log('  ✅ Высокие права — можно удалить');
-    } else if (userRole === 'club_coordinator') {
-      const clubCheck = await pool.query(
-        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-        [userId, event.club_id]
-      );
-      if (clubCheck.rows.length > 0) {
-        canDelete = true;
-        console.log('  ✅ Координатор клуба — можно удалить');
-      } else {
-        console.log('  ❌ Нет доступа к этому клубу');
-      }
+    } else {
+      // ⚠️ club_coordinators — это не таблица, а представление над club_staff
+      // (миграция 005), и показывает оно ВСЕХ действующих сотрудников клуба.
+      // Проверка «нашлась строка — значит можно» давала помощнику и куратору
+      // те же права, что руководителю КЮДа. Спрашиваем у матрицы прав.
+      // Удаление — не то же, что правка: его оставляем руководителю и заму
+      canDelete = await canInClub(req.user, event.club_id, 'moderate_events');
+      console.log(canDelete
+        ? '  ✅ Право распоряжаться мероприятиями клуба — можно удалить'
+        : '  ❌ Нет прав на мероприятия этого клуба');
     }
 
     if (!canDelete) {
@@ -2818,11 +2815,12 @@ app.patch('/api/clubs/:clubId/president', authenticate, async (req, res) => {
       hasAccess = true;
     }
 
-    if (userRole === 'club_coordinator') {
-      const clubCheck = await pool.query('SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2', [userId, clubId]);
-      if (clubCheck.rows.length > 0) {
-        hasAccess = true;
-      }
+    if (!hasAccess) {
+      // ⚠️ club_coordinators — это не таблица, а представление над club_staff
+      // (миграция 005), и показывает оно ВСЕХ действующих сотрудников клуба.
+      // Проверка «нашлась строка — значит можно» давала помощнику и куратору
+      // те же права, что руководителю КЮДа. Спрашиваем у матрицы прав.
+      hasAccess = await canInClub(req.user, clubId, 'assign_president');
     }
 
     if (!hasAccess) {
@@ -4764,12 +4762,12 @@ app.get('/api/events/:eventId/registrations', authenticate, async (req, res) => 
 
     if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
       canView = true;
-    } else if (userRole === 'club_coordinator') {
-      const coordCheck = await pool.query(
-        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-        [userId, event.club_id]
-      );
-      if (coordCheck.rows.length > 0) canView = true;
+    } else {
+      // ⚠️ club_coordinators — это не таблица, а представление над club_staff
+      // (миграция 005), и показывает оно ВСЕХ действующих сотрудников клуба.
+      // Проверка «нашлась строка — значит можно» давала помощнику и куратору
+      // те же права, что руководителю КЮДа. Спрашиваем у матрицы прав.
+      canView = await canInClub(req.user, event.club_id, 'view_participants');
     }
 
     if (!canView) {
@@ -4878,12 +4876,15 @@ app.patch('/api/event-registrations/:id/status', authenticate, async (req, res) 
 
     if (['admin', 'movement_coordinator'].includes(userRole)) {
       canManage = true;
-    } else if (userRole === 'club_coordinator') {
-      const coordCheck = await pool.query(
-        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-        [userId, registration.club_id]
-      );
-      if (coordCheck.rows.length > 0) canManage = true;
+    } else if (!MOVEMENT_ROLES.includes(userRole)) {
+      // ⚠️ club_coordinators — это не таблица, а представление над club_staff
+      // (миграция 005), и показывает оно ВСЕХ действующих сотрудников клуба.
+      // Проверка «нашлась строка — значит можно» давала помощнику и куратору
+      // те же права, что руководителю КЮДа. Спрашиваем у матрицы прав.
+      //
+      // Президент и вице-президент сюда не попадают намеренно: выше их нет в
+      // списке, и решение по заявке остаётся за клубом и аппаратом движения
+      canManage = await canInClub(req.user, registration.club_id, 'manage_participants');
     }
 
     if (!canManage) {
@@ -5054,12 +5055,12 @@ app.get('/api/events/:eventId/export', authenticate, async (req, res) => {
 
     if (['admin', 'movement_coordinator', 'president', 'vice_president'].includes(userRole)) {
       canView = true;
-    } else if (userRole === 'club_coordinator') {
-      const coordCheck = await pool.query(
-        'SELECT id FROM club_coordinators WHERE profile_id = $1 AND club_id = $2',
-        [userId, event.club_id]
-      );
-      if (coordCheck.rows.length > 0) canView = true;
+    } else {
+      // ⚠️ club_coordinators — это не таблица, а представление над club_staff
+      // (миграция 005), и показывает оно ВСЕХ действующих сотрудников клуба.
+      // Проверка «нашлась строка — значит можно» давала помощнику и куратору
+      // те же права, что руководителю КЮДа. Спрашиваем у матрицы прав.
+      canView = await canInClub(req.user, event.club_id, 'view_participants');
     }
 
     if (!canView) {

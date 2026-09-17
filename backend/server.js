@@ -7801,6 +7801,192 @@ app.patch('/api/team-submissions/:id/review', authenticate, async (req, res) => 
 });
 
 // ============================================================
+// ВЫЕЗД ЦЕЛИКОМ — ОДНА КАРТИНА ПО ВСЕМ КЛУБАМ
+// ============================================================
+// Подготовка выезда шла по нескольким экранам: команды отдельно,
+// документы отдельно, билеты отдельно, руководители делегаций отдельно.
+// Чтобы понять, кого ждём, приходилось обойти их все и сложить в голове.
+//
+// Здесь одна строка на клуб и весь путь в ней: подал команду — собрал
+// документы — назначил руководителя — купил билеты. И видно, на каком
+// шаге клуб застрял.
+
+app.get('/api/events/:eventId/overview', authenticate, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    if (!MOVEMENT_ROLES.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Картина выезда — для аппарата движения' });
+    }
+
+    const event = await pool.query(
+      'SELECT id, title, event_date, end_date, location, tickets_by, gathering_info FROM events WHERE id = $1',
+      [eventId]
+    );
+    if (event.rows.length === 0) return res.status(404).json({ error: 'Мероприятие не найдено' });
+
+    const result = await pool.query(
+      `SELECT ect.club_id, c.name AS club_name, ect.quota, ect.deadline,
+              ts.id AS submission_id, ts.status, ts.submitted_at, ts.reviewed_at,
+              ts.leader_user_id, ts.leader_name,
+              lu.full_name AS leader_account_name,
+              head.user_id AS head_user_id, hu.full_name AS head_name,
+              COALESCE(m.students, 0) AS students,
+              COALESCE(m.escorts, 0) AS escorts,
+              COALESCE(m.with_docs, 0) AS with_docs,
+              COALESCE(m.with_tickets, 0) AS with_tickets,
+              COALESCE(p.done, 0) AS checklist_done,
+              COALESCE(p.total, 0) AS checklist_total
+         FROM event_club_targets ect
+         JOIN clubs c ON c.id = ect.club_id
+         LEFT JOIN team_submissions ts
+           ON ts.event_id = ect.event_id AND ts.club_id = ect.club_id
+         LEFT JOIN users lu ON lu.id = ts.leader_user_id
+         LEFT JOIN club_staff head
+           ON head.club_id = c.id AND head.position = 'head' AND head.removed_at IS NULL
+         LEFT JOIN users hu ON hu.id = head.user_id
+         LEFT JOIN LATERAL (
+           SELECT COUNT(*) FILTER (WHERE tm.role_in_team <> 'escort') AS students,
+                  COUNT(*) FILTER (WHERE tm.role_in_team = 'escort')  AS escorts,
+                  COUNT(*) FILTER (
+                    WHERE tm.role_in_team <> 'escort'
+                      AND EXISTS (SELECT 1 FROM team_member_documents d
+                                   WHERE d.member_id = tm.id AND d.purged_at IS NULL)
+                  ) AS with_docs,
+                  -- Билет считается купленным, когда куплен в обе стороны:
+                  -- ребёнок, которого есть чем привезти, но нечем увезти,
+                  -- не готов
+                  COUNT(*) FILTER (
+                    WHERE tm.role_in_team <> 'escort'
+                      AND (SELECT COUNT(*) FROM trip_travel tt
+                            WHERE tt.member_id = tm.id AND tt.bought) >= 2
+                  ) AS with_tickets
+             FROM team_members tm
+            WHERE tm.submission_id = ts.id
+         ) m ON true
+         LEFT JOIN LATERAL (
+           SELECT COUNT(*) AS total,
+                  COUNT(*) FILTER (WHERE pr.done) AS done
+             FROM team_members tm2
+             JOIN trip_checklist_items i
+               ON i.event_id = ect.event_id
+              AND (i.club_id IS NULL OR i.club_id = ect.club_id)
+              AND i.responsible = 'participant'
+             LEFT JOIN trip_checklist_progress pr
+               ON pr.item_id = i.id AND pr.member_id = tm2.id
+            WHERE tm2.submission_id = ts.id AND tm2.role_in_team <> 'escort'
+         ) p ON true
+        WHERE ect.event_id = $1
+        ORDER BY c.name`,
+      [eventId]
+    );
+
+    const clubs = result.rows.map((r) => {
+      const status = r.status || 'not_started';
+      // На каком шаге клуб стоит прямо сейчас. Считаем по первому
+      // незакрытому: говорить «купите билеты» клубу, который ещё не подал
+      // команду, бессмысленно.
+      const stage =
+        status === 'not_started' || status === 'draft' ? 'team'
+        : status === 'revision_requested' ? 'revision'
+        : status === 'submitted' ? 'review'
+        : Number(r.with_docs) < Number(r.students) ? 'documents'
+        : !r.leader_user_id && !r.leader_name ? 'leader'
+        : Number(r.with_tickets) < Number(r.students) ? 'tickets'
+        : 'ready';
+
+      return {
+        ...r,
+        status,
+        stage,
+        leader_display: r.leader_account_name || r.leader_name || null
+      };
+    });
+
+    const byStage = (stage) => clubs.filter((c) => c.stage === stage).length;
+
+    res.json({
+      event: event.rows[0],
+      clubs,
+      summary: {
+        clubs: clubs.length,
+        students: clubs.reduce((sum, c) => sum + Number(c.students || 0), 0),
+        escorts: clubs.reduce((sum, c) => sum + Number(c.escorts || 0), 0),
+        ready: byStage('ready'),
+        waiting_team: byStage('team') + byStage('revision'),
+        waiting_review: byStage('review'),
+        waiting_documents: byStage('documents'),
+        waiting_leader: byStage('leader'),
+        waiting_tickets: byStage('tickets')
+      }
+    });
+  } catch (error) {
+    console.error('❌ Ошибка картины выезда:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Написать тем клубам, которые на выезде ещё не дошли до конца
+app.post('/api/events/:eventId/remind', authenticate, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    if (!MOVEMENT_ROLES.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Напоминать по выезду может аппарат движения' });
+    }
+
+    const clubIds = Array.isArray(req.body?.club_ids) ? req.body.club_ids : null;
+    if (!clubIds || clubIds.length === 0) {
+      return res.status(400).json({ error: 'Не выбрано ни одного КЮДа', code: 'NO_CLUBS' });
+    }
+    if (clubIds.some((id) => !UUID_RE.test(String(id)))) {
+      return res.status(400).json({ error: 'Некорректный список КЮДов' });
+    }
+
+    const text = String(req.body?.text || '').trim();
+    if (!text) {
+      return res.status(400).json({
+        error: 'Напишите, что нужно сделать — без этого сообщение бесполезно',
+        code: 'TEXT_REQUIRED'
+      });
+    }
+
+    const event = await pool.query('SELECT title FROM events WHERE id = $1', [eventId]);
+    if (event.rows.length === 0) return res.status(404).json({ error: 'Мероприятие не найдено' });
+
+    const targets = await pool.query(
+      `SELECT cs.user_id, c.name AS club_name
+         FROM club_staff cs
+         JOIN clubs c ON c.id = cs.club_id
+        WHERE cs.club_id = ANY($1) AND cs.removed_at IS NULL
+          AND cs.position IN ('head', 'deputy')`,
+      [clubIds]
+    );
+
+    for (const t of targets.rows) {
+      await createNotification(
+        t.user_id,
+        'team_submission',
+        `Выезд «${event.rows[0].title}»`,
+        text,
+        '/my-invitations',
+        'high'
+      );
+    }
+
+    await logActivity(req.user.userId, 'TRIP_REMINDED', 'event', eventId, {
+      clubs: clubIds.length,
+      people: targets.rows.length
+    });
+
+    res.json({ clubs: clubIds.length, people: targets.rows.length });
+  } catch (error) {
+    console.error('❌ Ошибка напоминания по выезду:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
 // ВСЕ КОМАНДЫ НА МЕРОПРИЯТИЕ
 // ============================================================
 app.get('/api/events/:eventId/teams', authenticate, async (req, res) => {

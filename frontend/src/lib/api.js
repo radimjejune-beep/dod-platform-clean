@@ -1406,6 +1406,24 @@ export const submitTeam = async (id) => {
 };
 
 // ============================================================
+// ВЫЕЗД ЦЕЛИКОМ
+// ============================================================
+export const getTripOverview = async (eventId) => {
+  const response = await fetch(`${API_URL}/events/${eventId}/overview`, { headers: headers() });
+  if (!response.ok) return serverSaidNo(response, { clubs: [], summary: {} });
+  return response.json();
+};
+
+export const remindTripClubs = async (eventId, clubIds, text) => {
+  const response = await fetch(`${API_URL}/events/${eventId}/remind`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ club_ids: clubIds, text })
+  });
+  return response.json();
+};
+
+// ============================================================
 // СДАЧА ОТЧЁТОВ — ДОСКА И НАПОМИНАНИЯ
 // ============================================================
 export const getReportsBoard = async (month) => {
@@ -2070,6 +2088,8 @@ const api = {
   deleteTeamMember,
   submitTeam,
   reviewTeam,
+  getTripOverview,
+  remindTripClubs,
   getReportsBoard,
   remindAboutReports,
   getEventTeams,

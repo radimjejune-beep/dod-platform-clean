@@ -207,6 +207,11 @@ export default function EventTeams() {
               <button className="btn-primary" onClick={() => setShowInvite(!showInvite)}>
                 {showInvite ? 'Закрыть' : 'Пригласить КЮДы'}
               </button>
+              {/* Здесь видно только команды. Вся подготовка — документы,
+                  руководители делегаций, билеты — на отдельной странице */}
+              <button className="btn-secondary" onClick={() => navigate(`/trip/${eventId}`)}>
+                Картина выезда
+              </button>
               <button className="btn-secondary" onClick={() => exportList(false)} disabled={busy}>
                 Выгрузить список
               </button>

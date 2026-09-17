@@ -29,6 +29,7 @@ import ManageAchievements from './pages/ManageAchievements';
 import MyAchievements from './pages/MyAchievements';
 import Reports from './pages/Reports';
 import ReportsBoard from './pages/ReportsBoard';
+import TripOverview from './pages/TripOverview';
 import Analytics from './pages/Analytics';
 import DashboardAnalytics from './pages/DashboardAnalytics';
 import ClubAnalytics from './pages/ClubAnalytics';
@@ -227,6 +228,7 @@ function App() {
            ============================================================ */}
         <Route path="/reports" element={<Reports />} />
         <Route path="/reports-board" element={<ReportsBoard />} />
+        <Route path="/trip/:eventId" element={<TripOverview />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/dashboard-analytics" element={<DashboardAnalytics />} />
 

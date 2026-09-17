@@ -3785,6 +3785,176 @@ app.patch('/api/reports/:id/reject', authenticate, async (req, res) => {
   }
 });
 
+// ============================================================
+// СДАЧА ОТЧЁТОВ — ОДНА ДОСКА НА ВСЁ ДВИЖЕНИЕ
+// ============================================================
+// Отчёты с 44 КЮДов собирали вручную: координатор держал в голове, кто
+// сдал, а кто нет, и писал остальным сам. Срока в платформе не было
+// вовсе, поэтому «не сдал» ничем не отличалось от «ещё рано».
+//
+// Здесь одна картина за выбранный месяц: каждый КЮД, его состояние и
+// кому писать, если молчит. И одна кнопка, которая пишет за вас.
+
+// Отчёт за месяц сдаётся до этого числа следующего месяца
+async function reportDueDay() {
+  try {
+    const r = await pool.query('SELECT report_due_day FROM site_settings ORDER BY id LIMIT 1');
+    const day = Number(r.rows[0]?.report_due_day);
+    // 29-31 есть не в каждом месяце — такой срок молча превратился бы в
+    // «первое число следующего»
+    if (Number.isInteger(day) && day >= 1 && day <= 28) return day;
+  } catch {
+    // Колонки может не быть, если миграция ещё не применена
+  }
+  return 5;
+}
+
+function dueDateFor(month, day) {
+  const [y, m] = String(month).split('-').map(Number);
+  if (!y || !m) return null;
+  // Отчёт за январь сдают в феврале
+  const due = new Date(Date.UTC(y, m, day));
+  return due.toISOString().slice(0, 10);
+}
+
+function previousMonth() {
+  const now = new Date();
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+}
+
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+app.get('/api/reports/board', authenticate, async (req, res) => {
+  try {
+    if (!MOVEMENT_ROLES.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Доска сдачи отчётов — для аппарата движения' });
+    }
+
+    const month = MONTH_RE.test(req.query.month) ? req.query.month : previousMonth();
+    const day = await reportDueDay();
+    const dueDate = dueDateFor(month, day);
+
+    const result = await pool.query(
+      `SELECT c.id AS club_id, c.name AS club_name, c.country, c.region, c.city,
+              r.id AS report_id, r.status, r.submitted_at, r.approved_at,
+              r.updated_at, r.reviewer_comment,
+              head.user_id AS head_user_id, hu.full_name AS head_name
+         FROM clubs c
+         LEFT JOIN reports r
+           ON r.club_id = c.id AND r.report_month = $1
+         LEFT JOIN club_staff head
+           ON head.club_id = c.id AND head.position = 'head' AND head.removed_at IS NULL
+         LEFT JOIN users hu ON hu.id = head.user_id
+        WHERE COALESCE(c.status, 'active') <> 'archived'
+        ORDER BY c.name`,
+      [month]
+    );
+
+    const clubs = result.rows.map((row) => ({
+      ...row,
+      // Отдельное состояние для клуба, который отчёт даже не начал:
+      // «черновик» и «ничего нет» — разные разговоры с руководителем
+      state: !row.report_id ? 'none'
+        : row.status === 'approved' ? 'approved'
+        : row.status === 'submitted' ? 'submitted'
+        : row.status === 'rejected' ? 'returned'
+        : 'draft'
+    }));
+
+    const count = (state) => clubs.filter((c) => c.state === state).length;
+    const overdue = dueDate ? new Date(dueDate) < new Date() : false;
+
+    res.json({
+      month,
+      month_name: monthName(month),
+      due_date: dueDate,
+      due_day: day,
+      overdue,
+      clubs,
+      summary: {
+        total: clubs.length,
+        approved: count('approved'),
+        submitted: count('submitted'),
+        draft: count('draft'),
+        returned: count('returned'),
+        none: count('none'),
+        // Кому имеет смысл писать: клуб молчит или отчёт вернули
+        waiting: count('draft') + count('returned') + count('none'),
+        // Клуб без руководителя написать некому — это отдельная проблема
+        no_head: clubs.filter((c) => !c.head_user_id).length
+      }
+    });
+  } catch (error) {
+    console.error('❌ Ошибка доски отчётов:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Напомнить тем, кто ещё не сдал. Вручную, а не по расписанию: планировщика
+// в бэкенде нет, а главное — координатор должен сам решать, когда
+// напоминать, и видеть, скольким людям ушло сообщение.
+app.post('/api/reports/remind', authenticate, async (req, res) => {
+  try {
+    if (!MOVEMENT_ROLES.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Напоминать об отчётах может аппарат движения' });
+    }
+
+    const month = MONTH_RE.test(req.body?.month) ? req.body.month : previousMonth();
+    const day = await reportDueDay();
+    const dueDate = dueDateFor(month, day);
+    const late = dueDate ? new Date(dueDate) < new Date() : false;
+
+    // Пишем руководителю и заместителю: руководитель может быть в отпуске,
+    // а отчёт всё равно нужен
+    const targets = await pool.query(
+      `SELECT cs.user_id, c.id AS club_id, c.name AS club_name
+         FROM clubs c
+         JOIN club_staff cs
+           ON cs.club_id = c.id AND cs.removed_at IS NULL
+          AND cs.position IN ('head', 'deputy')
+         LEFT JOIN reports r
+           ON r.club_id = c.id AND r.report_month = $1
+        WHERE COALESCE(c.status, 'active') <> 'archived'
+          AND (r.id IS NULL OR r.status IN ('draft', 'rejected'))`,
+      [month]
+    );
+
+    const clubs = new Set();
+    for (const t of targets.rows) {
+      clubs.add(t.club_name);
+      await createNotification(
+        t.user_id,
+        'report',
+        late ? 'Отчёт просрочен' : 'Пора сдать отчёт',
+        late
+          ? `Отчёт за ${monthName(month)} ждали до ${dueDate.split('-').reverse().join('.')}. Его всё ещё нет.`
+          : `Отчёт за ${monthName(month)} нужно сдать до ${dueDate.split('-').reverse().join('.')}.`,
+        '/reports',
+        late ? 'high' : 'normal'
+      );
+    }
+
+    await logActivity(req.user.userId, 'REPORTS_REMINDED', 'report', null, {
+      month,
+      clubs: clubs.size,
+      people: targets.rows.length
+    });
+
+    res.json({
+      month,
+      month_name: monthName(month),
+      late,
+      clubs: clubs.size,
+      people: targets.rows.length,
+      club_names: [...clubs].sort()
+    });
+  } catch (error) {
+    console.error('❌ Ошибка напоминания об отчётах:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
 app.delete('/api/reports/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;

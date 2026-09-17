@@ -1405,6 +1405,25 @@ export const submitTeam = async (id) => {
   return response.json();
 };
 
+// ============================================================
+// СДАЧА ОТЧЁТОВ — ДОСКА И НАПОМИНАНИЯ
+// ============================================================
+export const getReportsBoard = async (month) => {
+  const query = month ? `?month=${encodeURIComponent(month)}` : '';
+  const response = await fetch(`${API_URL}/reports/board${query}`, { headers: headers() });
+  if (!response.ok) return serverSaidNo(response, { clubs: [], summary: {} });
+  return response.json();
+};
+
+export const remindAboutReports = async (month) => {
+  const response = await fetch(`${API_URL}/reports/remind`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ month })
+  });
+  return response.json();
+};
+
 export const reviewTeam = async (id, decision, comment) => {
   const response = await fetch(`${API_URL}/team-submissions/${id}/review`, {
     method: 'PATCH', headers: headers(), body: JSON.stringify({ decision, comment })
@@ -2051,6 +2070,8 @@ const api = {
   deleteTeamMember,
   submitTeam,
   reviewTeam,
+  getReportsBoard,
+  remindAboutReports,
   getEventTeams,
   getTeamMemberDocument,
   saveTeamMemberDocument,

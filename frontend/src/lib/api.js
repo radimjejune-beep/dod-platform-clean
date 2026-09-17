@@ -1,5 +1,7 @@
 // frontend/src/lib/api.js
 
+import { notifyApiFailure, labelForUrl } from './apiStatus';
+
 const API_URL = 'https://dod-backend.relaxdev.ru/api';
 
 // ============================================================
@@ -50,6 +52,44 @@ export const logout = () => {
 // свой catch и показывал что-то невнятное: на экране согласий,
 // например, одновременно висели ошибка загрузки и бодрое «к вашему
 // кабинету не привязан ни один ребёнок».
+// Сервер ответил ошибкой. Вызывающий код по-прежнему получает пустое
+// значение — иначе половина страниц упадёт белым экраном, — но об отказе
+// теперь узнаёт общий канал, и человек видит внизу экрана, что список
+// пуст не потому, что записей нет.
+//
+// 401 — это кончившаяся сессия, человека нужно отправить на вход.
+// 403 — это отказ по правам: страница запросила то, на что у роли нет
+// права. Полосу не показываем (тьютор увидел бы её на каждом экране),
+// но в консоли след остаётся — такие вызовы надо убирать из страниц.
+async function serverSaidNo(response, fallback) {
+  if (response.status === 401) {
+    goToLogin();
+    return fallback;
+  }
+
+  let detail = '';
+  try {
+    const data = await response.clone().json();
+    detail = typeof data?.error === 'string' ? data.error : '';
+  } catch {
+    // Тело не разобралось — обойдёмся кодом ответа
+  }
+
+  if (response.status === 403) {
+    console.warn(`Нет прав на ${response.url} — страница не должна была это запрашивать`);
+    return fallback;
+  }
+
+  notifyApiFailure({
+    status: response.status,
+    url: response.url,
+    label: labelForUrl(response.url),
+    detail
+  });
+
+  return fallback;
+}
+
 const goToLogin = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
@@ -316,7 +356,7 @@ export const getUsers = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -333,7 +373,7 @@ export const getParticipants = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -415,7 +455,7 @@ export const getClubs = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -452,7 +492,7 @@ export const getAchievements = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -479,7 +519,7 @@ export const getAchievementCategories = async () => {
     method: 'GET',
     headers: headers()
   });
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   return response.json();
 };
 
@@ -578,7 +618,7 @@ export const getRegistrations = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -607,7 +647,7 @@ export const getAppeals = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -653,7 +693,7 @@ export const getReports = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -724,7 +764,7 @@ export const getDocuments = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -761,7 +801,7 @@ export const getNews = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -807,7 +847,7 @@ export const getNotifications = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -840,7 +880,7 @@ export const getParticipantStats = async (userId) => {
     headers: headers()
   });
   
-  if (!response.ok) return null;
+  if (!response.ok) return serverSaidNo(response, null);
   return response.json();
 };
 
@@ -867,7 +907,7 @@ export const getPresidentTasks = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -905,7 +945,7 @@ export const getTutorRequests = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -943,7 +983,7 @@ export const getTutorAssignments = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -989,7 +1029,7 @@ export const getTutorInvitations = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
 
   return toArray(await response.json());
 };
@@ -1035,7 +1075,7 @@ export const getMassNotifications = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -1072,7 +1112,7 @@ export const getGoals = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -1121,7 +1161,7 @@ export const getTasks = async (params = {}) => {
   // Раньше при ошибке возвращался объект с полем data, а при успехе —
   // массив. Страница делала .map() и падала ровно тогда, когда что-то
   // пошло не так. Сервер отдаёт массив — возвращаем массив всегда.
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
 
   return response.json();
 };
@@ -1167,7 +1207,7 @@ export const getActivityLog = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -1185,7 +1225,7 @@ export const getConsentsStats = async (clubId = null) => {
     headers: headers()
   });
   
-  if (!response.ok) return null;
+  if (!response.ok) return serverSaidNo(response, null);
   return response.json();
 };
 
@@ -1199,7 +1239,7 @@ export const getConsentsMissing = async (clubId = null) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };
@@ -1214,7 +1254,7 @@ export const getConsentDocuments = async () => {
     method: 'GET',
     headers: headers()
   });
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   return response.json();
 };
 
@@ -1223,7 +1263,7 @@ export const getUserConsents = async (userId) => {
     method: 'GET',
     headers: headers()
   });
-  if (!response.ok) return { current: [], history: [] };
+  if (!response.ok) return serverSaidNo(response, { current: [], history: [] });
   return response.json();
 };
 
@@ -1262,7 +1302,7 @@ export const revokeConsent = async (subjectId, code, reason) => {
 // ============================================================
 export const getMyClubs = async () => {
   const response = await fetch(`${API_URL}/my-clubs`, { method: 'GET', headers: headers() });
-  if (!response.ok) return { movement_wide: false, clubs: [] };
+  if (!response.ok) return serverSaidNo(response, { movement_wide: false, clubs: [] });
   return response.json();
 };
 
@@ -1271,13 +1311,13 @@ export const getStaffCandidates = async (clubId, q) => {
     `${API_URL}/clubs/${clubId}/staff-candidates?q=${encodeURIComponent(q)}`,
     { method: 'GET', headers: headers() }
   );
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   return response.json();
 };
 
 export const getClubStaff = async (clubId) => {
   const response = await fetch(`${API_URL}/clubs/${clubId}/staff`, { method: 'GET', headers: headers() });
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   return response.json();
 };
 
@@ -1314,7 +1354,7 @@ export const transferClubHead = async (clubId, data) => {
 // ============================================================
 export const getMyClubInvitations = async () => {
   const response = await fetch(`${API_URL}/my-club-invitations`, { method: 'GET', headers: headers() });
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   return response.json();
 };
 
@@ -1374,7 +1414,7 @@ export const reviewTeam = async (id, decision, comment) => {
 
 export const getEventTeams = async (eventId) => {
   const response = await fetch(`${API_URL}/events/${eventId}/teams`, { method: 'GET', headers: headers() });
-  if (!response.ok) return { clubs: [] };
+  if (!response.ok) return serverSaidNo(response, { clubs: [] });
   return response.json();
 };
 
@@ -1415,7 +1455,7 @@ export const search = async (query) => {
   const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`, {
     method: 'GET', headers: headers()
   });
-  if (!response.ok) return { query, groups: [] };
+  if (!response.ok) return serverSaidNo(response, { query, groups: [] });
   return response.json();
 };
 
@@ -1426,7 +1466,7 @@ export const getClubsHealth = async () => {
   const response = await fetch(`${API_URL}/movement/clubs-health`, {
     method: 'GET', headers: headers()
   });
-  if (!response.ok) return { clubs: [], summary: {}, total: 0 };
+  if (!response.ok) return serverSaidNo(response, { clubs: [], summary: {}, total: 0 });
   return response.json();
 };
 
@@ -1435,7 +1475,7 @@ export const getMovementYearly = async (period, year) => {
     `${API_URL}/movement/yearly?period=${period}&year=${year}`,
     { method: 'GET', headers: headers() }
   );
-  if (!response.ok) return null;
+  if (!response.ok) return serverSaidNo(response, null);
   return response.json();
 };
 
@@ -1443,7 +1483,7 @@ export const getMovementStaff = async () => {
   const response = await fetch(`${API_URL}/movement/staff`, {
     method: 'GET', headers: headers()
   });
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   return response.json();
 };
 
@@ -1455,7 +1495,7 @@ export const getTripChecklist = async (eventId, clubId) => {
   const response = await fetch(`${API_URL}/events/${eventId}/checklist${q}`, {
     method: 'GET', headers: headers()
   });
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   return response.json();
 };
 
@@ -1476,7 +1516,7 @@ export const removeTripChecklistItem = async (id) => {
 // Выезды участника или его ребёнка — только утверждённые команды
 export const getMyTrips = async () => {
   const response = await fetch(`${API_URL}/my-trips`, { method: 'GET', headers: headers() });
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   return response.json();
 };
 
@@ -1496,7 +1536,7 @@ export const saveTripTravel = async (data) => {
 
 export const getMyDelegations = async () => {
   const response = await fetch(`${API_URL}/my-delegations`, { method: 'GET', headers: headers() });
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   return response.json();
 };
 
@@ -1523,7 +1563,7 @@ export const getAttachments = async (ownerType, ownerId) => {
     `${API_URL}/attachments?owner_type=${ownerType}&owner_id=${ownerId}`,
     { method: 'GET', headers: headers() }
   );
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   return response.json();
 };
 
@@ -1616,7 +1656,7 @@ export const getClubSessions = async (clubId, params = {}) => {
   const query = new URLSearchParams(params).toString();
   const url = `${API_URL}/clubs/${clubId}/sessions${query ? '?' + query : ''}`;
   const response = await fetch(url, { method: 'GET', headers: headers() });
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   return toArray(await response.json());
 };
 
@@ -1653,7 +1693,7 @@ export const getSessionAttendance = async (sessionId) => {
     method: 'GET',
     headers: headers()
   });
-  if (!response.ok) return { session: null, attendance: [] };
+  if (!response.ok) return serverSaidNo(response, { session: null, attendance: [] });
   return response.json();
 };
 
@@ -1670,7 +1710,7 @@ export const getParticipantAttendance = async (participantId, params = {}) => {
   const query = new URLSearchParams(params).toString();
   const url = `${API_URL}/participants/${participantId}/attendance${query ? '?' + query : ''}`;
   const response = await fetch(url, { method: 'GET', headers: headers() });
-  if (!response.ok) return { sessions: [], summary: { held: 0, visited: 0, percentage: null } };
+  if (!response.ok) return serverSaidNo(response, { sessions: [], summary: { held: 0, visited: 0, percentage: null } });
   return response.json();
 };
 
@@ -1683,7 +1723,7 @@ export const getAttention = async () => {
     method: 'GET',
     headers: headers()
   });
-  if (!response.ok) return { sections: [], all_clear: false };
+  if (!response.ok) return serverSaidNo(response, { sections: [], all_clear: false });
   return response.json();
 };
 
@@ -1692,7 +1732,7 @@ export const getReportDraft = async (clubId, month) => {
     method: 'GET',
     headers: headers()
   });
-  if (!response.ok) return null;
+  if (!response.ok) return serverSaidNo(response, null);
   return response.json();
 };
 
@@ -1701,7 +1741,7 @@ export const getClubAttendanceSummary = async (clubId, month) => {
     method: 'GET',
     headers: headers()
   });
-  if (!response.ok) return null;
+  if (!response.ok) return serverSaidNo(response, null);
   return response.json();
 };
 
@@ -1747,7 +1787,7 @@ export const getParentInvitations = async (participantId) => {
     method: 'GET',
     headers: headers()
   });
-  if (!response.ok) return { invitations: [], parents: [] };
+  if (!response.ok) return serverSaidNo(response, { invitations: [], parents: [] });
   return response.json();
 };
 
@@ -1773,7 +1813,7 @@ export const getMyParentCode = async () => {
     method: 'GET',
     headers: headers()
   });
-  if (!response.ok) return { active: null, parent_name: null };
+  if (!response.ok) return serverSaidNo(response, { active: null, parent_name: null });
   return response.json();
 };
 
@@ -1826,7 +1866,7 @@ export const getParentChildren = async (params = {}) => {
     headers: headers()
   });
   
-  if (!response.ok) return [];
+  if (!response.ok) return serverSaidNo(response, []);
   
   return toArray(await response.json());
 };

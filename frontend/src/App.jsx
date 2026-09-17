@@ -3,6 +3,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import ConfirmHost from './components/ConfirmHost';
+import ApiFailureBanner from './components/ApiFailureBanner';
 import { useEffect, useState } from 'react';
 import api from './lib/api';
 
@@ -138,6 +139,9 @@ function App() {
       {/* Одно окно подтверждения на всё приложение — вместо confirm()
           браузера, разбросанного по страницам */}
       <ConfirmHost />
+      {/* Сервер ответил ошибкой — человек должен об этом узнать, а не
+          смотреть на пустой список и думать, что записей нет */}
+      <ApiFailureBanner />
       <Routes>
         {/* ============================================================
            ПУБЛИЧНЫЕ СТРАНИЦЫ

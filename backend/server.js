@@ -11144,6 +11144,487 @@ app.get('/api/clubs/:clubId/report-draft', authenticate, async (req, res) => {
 // Экран отвечает на один вопрос: что сломается ближайшим, если не
 // вмешаться. Координатор движения видит всё движение, руководитель
 // КЮДа — только свои клубы.
+// ============================================================
+// ТРЕНАЖЁР И ТЕСТЫ
+// ============================================================
+// Наборы движения — чтобы язык не забывался между занятиями. Тесты КЮДа
+// — то, что сотрудник клуба даёт своим участникам. Устройство общее,
+// различаются областью видимости.
+//
+// Главное правило этого блока: правильные ответы не покидают сервер.
+// Отдать их вместе с заданиями было бы проще всего, но тогда ответ видно
+// в инструментах разработчика, и любой ребёнок, который до этого
+// додумается, проходит всё за минуту.
+
+const PRACTICE_KINDS = ['grammar', 'vocabulary', 'test'];
+const TASK_KINDS = ['choice', 'multi', 'gap', 'match', 'order'];
+
+// Написание слова сверяем мягко: лишний пробел и заглавная буква — не
+// ошибка в упражнении на грамматику. Точка в конце тоже.
+function normalizeWord(value) {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[’ʼ]/g, "'")
+    .replace(/\s+/g, ' ')
+    .replace(/[.,!?;:]+$/, '')
+    .trim();
+}
+
+function sameSet(a, b) {
+  const left = [...new Set((a || []).map(String))].sort();
+  const right = [...new Set((b || []).map(String))].sort();
+  return left.length === right.length && left.every((v, i) => v === right[i]);
+}
+
+function checkTask(kind, answer, given) {
+  switch (kind) {
+    case 'choice':
+      return given !== undefined && String(given) === String(answer?.value);
+    case 'multi':
+      return Array.isArray(given) && Array.isArray(answer?.values) && sameSet(given, answer.values);
+    case 'gap': {
+      const accept = Array.isArray(answer?.accept) ? answer.accept : [];
+      const norm = normalizeWord(given);
+      return norm.length > 0 && accept.some((a) => normalizeWord(a) === norm);
+    }
+    case 'match': {
+      const pairs = answer?.pairs || {};
+      const keys = Object.keys(pairs);
+      if (!given || typeof given !== 'object') return false;
+      return keys.length > 0 && keys.every((k) => String(given[k] ?? '') === String(pairs[k]));
+    }
+    case 'order': {
+      const order = Array.isArray(answer?.order) ? answer.order : [];
+      return Array.isArray(given)
+        && order.length > 0
+        && given.length === order.length
+        && given.every((v, i) => String(v) === String(order[i]));
+    }
+    default:
+      return false;
+  }
+}
+
+// Задания тренажёра каждый раз идут в другом порядке: иначе со второго
+// прохода запоминается не английский, а последовательность кнопок
+function shuffleTasks(list) {
+  const out = [...list];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+// Клубы, наборы которых человек может проходить. null — все.
+async function practiceClubIds(user) {
+  if (MOVEMENT_ROLES.includes(user.role)) return null;
+  const staff = await getCoordinatorClubIds(user.userId);
+  if (staff.length > 0) return staff;
+  const own = await pool.query('SELECT club_id FROM users WHERE id = $1', [user.userId]);
+  const clubId = own.rows[0]?.club_id;
+  return clubId ? [clubId] : [];
+}
+
+async function canEditSet(user, set) {
+  if (MOVEMENT_ROLES.includes(user.role)) return true;
+  if (set.scope !== 'club' || !set.club_id) return false;
+  return canInClub(user, set.club_id, 'publish_tests');
+}
+
+app.get('/api/practice/sets', authenticate, async (req, res) => {
+  try {
+    const clubIds = await practiceClubIds(req.user);
+    const isStaff = STAFF_ROLES.includes(req.user.role);
+
+    const where = [];
+    const params = [req.user.userId];
+
+    if (clubIds === null) {
+      where.push('TRUE');
+    } else if (clubIds.length > 0) {
+      params.push(clubIds);
+      where.push(`(s.scope = 'movement' OR s.club_id = ANY($${params.length}))`);
+    } else {
+      where.push("s.scope = 'movement'");
+    }
+
+    // Черновик видит только тот, кто может его править: ребёнку
+    // недоделанный тест показывать нельзя
+    if (!isStaff) where.push('s.is_published');
+
+    const result = await pool.query(
+      `SELECT s.id, s.title, s.description, s.kind, s.scope, s.club_id, s.level,
+              s.is_published, s.allow_retry, s.created_at,
+              c.name AS club_name,
+              (SELECT COUNT(*)::int FROM practice_tasks t WHERE t.set_id = s.id) AS task_count,
+              (SELECT MAX(r.score) FROM practice_runs r
+                WHERE r.set_id = s.id AND r.user_id = $1 AND r.finished_at IS NOT NULL) AS best_score,
+              (SELECT COUNT(*)::int FROM practice_runs r
+                WHERE r.set_id = s.id AND r.user_id = $1 AND r.finished_at IS NOT NULL) AS runs
+         FROM practice_sets s
+         LEFT JOIN clubs c ON c.id = s.club_id
+        WHERE ${where.join(' AND ')}
+        ORDER BY s.scope, s.level NULLS LAST, s.title`,
+      params
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка списка наборов:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Начать прохождение. Задания уходят без правильных ответов.
+app.post('/api/practice/sets/:id/run', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Некорректный набор' });
+
+    const setRow = await pool.query('SELECT * FROM practice_sets WHERE id = $1', [id]);
+    if (setRow.rows.length === 0) return res.status(404).json({ error: 'Набор не найден' });
+    const set = setRow.rows[0];
+
+    const clubIds = await practiceClubIds(req.user);
+    const visible = set.scope === 'movement'
+      || clubIds === null
+      || (clubIds.length > 0 && clubIds.includes(set.club_id));
+    if (!visible) return res.status(403).json({ error: 'Этот набор не для вас' });
+
+    if (!set.is_published && !(await canEditSet(req.user, set))) {
+      return res.status(403).json({ error: 'Набор ещё не опубликован' });
+    }
+
+    if (!set.allow_retry) {
+      const done = await pool.query(
+        'SELECT id FROM practice_runs WHERE set_id = $1 AND user_id = $2 AND finished_at IS NOT NULL LIMIT 1',
+        [id, req.user.userId]
+      );
+      if (done.rows.length > 0) {
+        return res.status(409).json({
+          error: 'Этот тест проходят один раз — вы его уже прошли',
+          code: 'ALREADY_DONE'
+        });
+      }
+    }
+
+    const tasks = await pool.query(
+      'SELECT id, kind, prompt, payload, hint, sort_order FROM practice_tasks WHERE set_id = $1 ORDER BY sort_order, created_at',
+      [id]
+    );
+    if (tasks.rows.length === 0) {
+      return res.status(400).json({ error: 'В наборе ещё нет заданий', code: 'EMPTY_SET' });
+    }
+
+    const run = await pool.query(
+      'INSERT INTO practice_runs (set_id, user_id, total) VALUES ($1, $2, $3) RETURNING id, started_at',
+      [id, req.user.userId, tasks.rows.length]
+    );
+
+    res.status(201).json({
+      run_id: run.rows[0].id,
+      set: { id: set.id, title: set.title, kind: set.kind, allow_retry: set.allow_retry },
+      tasks: set.allow_retry ? shuffleTasks(tasks.rows) : tasks.rows
+    });
+  } catch (error) {
+    console.error('❌ Ошибка запуска набора:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Ответ на одно задание. Сверяет сервер.
+app.post('/api/practice/runs/:runId/answer', authenticate, async (req, res) => {
+  try {
+    const { runId } = req.params;
+    const { task_id, given } = req.body || {};
+    if (!UUID_RE.test(runId) || !UUID_RE.test(String(task_id || ''))) {
+      return res.status(400).json({ error: 'Некорректный запрос' });
+    }
+
+    const run = await pool.query('SELECT * FROM practice_runs WHERE id = $1', [runId]);
+    if (run.rows.length === 0) return res.status(404).json({ error: 'Прохождение не найдено' });
+    if (run.rows[0].user_id !== req.user.userId) {
+      return res.status(403).json({ error: 'Это чужое прохождение' });
+    }
+    if (run.rows[0].finished_at) {
+      return res.status(409).json({ error: 'Прохождение уже завершено', code: 'RUN_FINISHED' });
+    }
+
+    const task = await pool.query(
+      'SELECT * FROM practice_tasks WHERE id = $1 AND set_id = $2',
+      [task_id, run.rows[0].set_id]
+    );
+    if (task.rows.length === 0) {
+      return res.status(404).json({ error: 'Задание не из этого набора' });
+    }
+
+    const correct = checkTask(task.rows[0].kind, task.rows[0].answer, given);
+
+    await pool.query(
+      `INSERT INTO practice_answers (run_id, task_id, given, correct)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (run_id, task_id) DO UPDATE
+         SET given = EXCLUDED.given, correct = EXCLUDED.correct, answered_at = now()`,
+      [runId, task_id, JSON.stringify(given ?? null), correct]
+    );
+
+    const set = await pool.query('SELECT allow_retry FROM practice_sets WHERE id = $1', [run.rows[0].set_id]);
+
+    res.json({
+      correct,
+      explanation: task.rows[0].explanation || null,
+      // В тренажёре правильный ответ показываем сразу: смысл в том, чтобы
+      // запомнить, а не в оценке. В контрольном тесте — нет.
+      answer: set.rows[0]?.allow_retry ? task.rows[0].answer : undefined
+    });
+  } catch (error) {
+    console.error('❌ Ошибка проверки ответа:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.post('/api/practice/runs/:runId/finish', authenticate, async (req, res) => {
+  try {
+    const { runId } = req.params;
+    if (!UUID_RE.test(runId)) return res.status(400).json({ error: 'Некорректный запрос' });
+
+    const run = await pool.query('SELECT * FROM practice_runs WHERE id = $1', [runId]);
+    if (run.rows.length === 0) return res.status(404).json({ error: 'Прохождение не найдено' });
+    if (run.rows[0].user_id !== req.user.userId) {
+      return res.status(403).json({ error: 'Это чужое прохождение' });
+    }
+
+    const score = await pool.query(
+      'SELECT COUNT(*) FILTER (WHERE correct)::int AS right_count FROM practice_answers WHERE run_id = $1',
+      [runId]
+    );
+
+    const result = await pool.query(
+      `UPDATE practice_runs SET score = $1, finished_at = COALESCE(finished_at, now())
+        WHERE id = $2 RETURNING score, total, finished_at`,
+      [score.rows[0].right_count, runId]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка завершения:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ============================================================
+// РЕДАКТИРОВАНИЕ — СОТРУДНИКАМ КЛУБА И ДВИЖЕНИЮ
+// ============================================================
+app.post('/api/practice/sets', authenticate, async (req, res) => {
+  try {
+    const { title, description, kind, scope, club_id, level, allow_retry } = req.body || {};
+
+    if (!String(title || '').trim()) {
+      return res.status(400).json({ error: 'Без названия набор не найти', code: 'TITLE_REQUIRED' });
+    }
+    if (!PRACTICE_KINDS.includes(kind)) {
+      return res.status(400).json({ error: `kind: ${PRACTICE_KINDS.join(', ')}` });
+    }
+
+    const isMovement = MOVEMENT_ROLES.includes(req.user.role);
+    const finalScope = scope === 'movement' && isMovement ? 'movement' : 'club';
+
+    let finalClub = null;
+    if (finalScope === 'club') {
+      finalClub = club_id || (await getCoordinatorClubIds(req.user.userId))[0] || null;
+      if (!finalClub || !UUID_RE.test(String(finalClub))) {
+        return res.status(400).json({ error: 'Не указан КЮД', code: 'CLUB_REQUIRED' });
+      }
+      if (!(await canInClub(req.user, finalClub, 'publish_tests'))) {
+        return res.status(403).json({ error: 'Публиковать тесты в этом КЮДе вам нельзя' });
+      }
+    }
+
+    const result = await pool.query(
+      `INSERT INTO practice_sets (title, description, kind, scope, club_id, level, allow_retry, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [String(title).trim(), description || null, kind, finalScope, finalClub,
+       Number.isInteger(level) && level >= 1 && level <= 3 ? level : null,
+       allow_retry !== false, req.user.userId]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания набора:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Набор вместе с ответами — только тому, кто его правит
+app.get('/api/practice/sets/:id/edit', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Некорректный набор' });
+
+    const setRow = await pool.query('SELECT * FROM practice_sets WHERE id = $1', [id]);
+    if (setRow.rows.length === 0) return res.status(404).json({ error: 'Набор не найден' });
+    if (!(await canEditSet(req.user, setRow.rows[0]))) {
+      return res.status(403).json({ error: 'Править этот набор вам нельзя' });
+    }
+
+    const tasks = await pool.query(
+      'SELECT * FROM practice_tasks WHERE set_id = $1 ORDER BY sort_order, created_at',
+      [id]
+    );
+
+    res.json({ ...setRow.rows[0], tasks: tasks.rows });
+  } catch (error) {
+    console.error('❌ Ошибка загрузки набора:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.put('/api/practice/sets/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const setRow = await pool.query('SELECT * FROM practice_sets WHERE id = $1', [id]);
+    if (setRow.rows.length === 0) return res.status(404).json({ error: 'Набор не найден' });
+    if (!(await canEditSet(req.user, setRow.rows[0]))) {
+      return res.status(403).json({ error: 'Править этот набор вам нельзя' });
+    }
+
+    const { title, description, level, is_published, allow_retry } = req.body || {};
+    const result = await pool.query(
+      `UPDATE practice_sets
+          SET title = COALESCE($1, title),
+              description = COALESCE($2, description),
+              level = $3,
+              is_published = COALESCE($4, is_published),
+              allow_retry = COALESCE($5, allow_retry),
+              updated_at = now()
+        WHERE id = $6 RETURNING *`,
+      [title ? String(title).trim() : null, description ?? null,
+       Number.isInteger(level) && level >= 1 && level <= 3 ? level : setRow.rows[0].level,
+       typeof is_published === 'boolean' ? is_published : null,
+       typeof allow_retry === 'boolean' ? allow_retry : null,
+       id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка правки набора:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.delete('/api/practice/sets/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const setRow = await pool.query('SELECT * FROM practice_sets WHERE id = $1', [id]);
+    if (setRow.rows.length === 0) return res.status(404).json({ error: 'Набор не найден' });
+    if (!(await canEditSet(req.user, setRow.rows[0]))) {
+      return res.status(403).json({ error: 'Удалять этот набор вам нельзя' });
+    }
+    await pool.query('DELETE FROM practice_sets WHERE id = $1', [id]);
+    res.json({ message: 'Набор удалён' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления набора:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Задание приходит целиком: вид, вопрос, варианты, правильный ответ
+app.post('/api/practice/sets/:id/tasks', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const setRow = await pool.query('SELECT * FROM practice_sets WHERE id = $1', [id]);
+    if (setRow.rows.length === 0) return res.status(404).json({ error: 'Набор не найден' });
+    if (!(await canEditSet(req.user, setRow.rows[0]))) {
+      return res.status(403).json({ error: 'Править этот набор вам нельзя' });
+    }
+
+    const { kind, prompt, payload, answer, hint, explanation, sort_order } = req.body || {};
+    if (!TASK_KINDS.includes(kind)) {
+      return res.status(400).json({ error: `kind: ${TASK_KINDS.join(', ')}` });
+    }
+    if (!String(prompt || '').trim()) {
+      return res.status(400).json({ error: 'Без вопроса задание бессмысленно', code: 'PROMPT_REQUIRED' });
+    }
+
+    // Задание без правильного ответа не проверить. Ловим здесь, а не
+    // тогда, когда тридцать детей получат «неверно» на верный ответ.
+    const hasAnswer =
+      kind === 'choice' ? answer?.value !== undefined && answer.value !== null
+      : kind === 'multi' ? Array.isArray(answer?.values) && answer.values.length > 0
+      : kind === 'gap' ? Array.isArray(answer?.accept) && answer.accept.length > 0
+      : kind === 'match' ? answer?.pairs && Object.keys(answer.pairs).length > 0
+      : Array.isArray(answer?.order) && answer.order.length > 0;
+    if (!hasAnswer) {
+      return res.status(400).json({ error: 'Не задан правильный ответ', code: 'ANSWER_REQUIRED' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO practice_tasks (set_id, kind, prompt, payload, answer, hint, explanation, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [id, kind, String(prompt).trim(), JSON.stringify(payload || {}), JSON.stringify(answer),
+       hint || null, explanation || null, Number.isInteger(sort_order) ? sort_order : 0]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка создания задания:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+app.delete('/api/practice/tasks/:taskId', authenticate, async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const task = await pool.query(
+      `SELECT t.id AS task_id, s.* FROM practice_tasks t
+         JOIN practice_sets s ON s.id = t.set_id
+        WHERE t.id = $1`,
+      [taskId]
+    );
+    if (task.rows.length === 0) return res.status(404).json({ error: 'Задание не найдено' });
+    if (!(await canEditSet(req.user, task.rows[0]))) {
+      return res.status(403).json({ error: 'Править этот набор вам нельзя' });
+    }
+    await pool.query('DELETE FROM practice_tasks WHERE id = $1', [taskId]);
+    res.json({ message: 'Задание удалено' });
+  } catch (error) {
+    console.error('❌ Ошибка удаления задания:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Кто прошёл набор и с каким результатом — тому, кто его ведёт
+app.get('/api/practice/sets/:id/results', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const setRow = await pool.query('SELECT * FROM practice_sets WHERE id = $1', [id]);
+    if (setRow.rows.length === 0) return res.status(404).json({ error: 'Набор не найден' });
+    if (!(await canEditSet(req.user, setRow.rows[0]))) {
+      return res.status(403).json({ error: 'Результаты видит тот, кто ведёт набор' });
+    }
+
+    const result = await pool.query(
+      `SELECT u.id AS user_id, u.full_name, c.name AS club_name,
+              MAX(r.score) AS best_score, MAX(r.total) AS total,
+              COUNT(*)::int AS runs, MAX(r.finished_at) AS last_at
+         FROM practice_runs r
+         JOIN users u ON u.id = r.user_id
+         LEFT JOIN clubs c ON c.id = u.club_id
+        WHERE r.set_id = $1 AND r.finished_at IS NOT NULL
+        GROUP BY u.id, u.full_name, c.name
+        ORDER BY u.full_name`,
+      [id]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка результатов:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+
 app.get('/api/attention', authenticate, async (req, res) => {
   try {
     const { role, userId } = req.user;

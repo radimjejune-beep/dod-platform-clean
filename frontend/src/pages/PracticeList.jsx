@@ -26,7 +26,7 @@ export default function PracticeList() {
   const [sets, setSets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ title: '', description: '', kind: 'test', allow_retry: false });
+  const [form, setForm] = useState({ title: '', description: '', kind: 'test', scope: 'club', allow_retry: false });
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
 
@@ -50,12 +50,16 @@ export default function PracticeList() {
   // Точные права считает сервер по должности в клубе. Здесь только
   // решаем, показывать ли форму: отказ всё равно придёт с сервера.
   const mayCreate = ['admin', 'movement_coordinator', 'club_coordinator'].includes(profile?.role);
+  const isMovement = ['admin', 'movement_coordinator'].includes(profile?.role);
 
   const create = async (e) => {
     e.preventDefault();
     setMessage('');
     try {
-      const result = await api.createPracticeSet(form);
+      const result = await api.createPracticeSet({
+        ...form,
+        scope: isMovement ? form.scope : 'club'
+      });
       if (result?.error) throw new Error(api.describeApiError(result));
       navigate(`/courses/${result.id}/edit`);
     } catch (err) {
@@ -94,7 +98,7 @@ export default function PracticeList() {
           <div className="card" style={{ marginBottom: '20px' }}>
             {!creating ? (
               <button className="btn-secondary" onClick={() => setCreating(true)}>
-                Создать тест для своего КЮДа
+                {isMovement ? 'Создать набор' : 'Создать тест для своего КЮДа'}
               </button>
             ) : (
               <form onSubmit={create}>
@@ -128,6 +132,20 @@ export default function PracticeList() {
                   <option value="grammar">Грамматика</option>
                   <option value="vocabulary">Лексика</option>
                 </select>
+
+                {isMovement && (
+                  <>
+                    <label className="form-label">Кому виден</label>
+                    <select
+                      value={form.scope}
+                      onChange={(e) => setForm({ ...form, scope: e.target.value })}
+                      style={{ marginBottom: '12px' }}
+                    >
+                      <option value="movement">Всему движению</option>
+                      <option value="club">Одному КЮДу</option>
+                    </select>
+                  </>
+                )}
 
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', fontSize: '13.5px' }}>
                   <input

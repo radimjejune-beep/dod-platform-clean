@@ -129,9 +129,21 @@ export default function PracticeRun() {
             </div>
 
             <div className="card">
-              <p style={{ fontSize: '16px', fontWeight: 500, marginTop: 0, marginBottom: '16px' }}>
+              <p style={{ fontSize: '16px', fontWeight: 500, marginTop: 0, marginBottom: task.translation ? '6px' : '16px' }}>
                 {task.prompt}
               </p>
+
+              {/* Перевод показывается до ответа, а не после. Без него
+                  упражнение работает только у того, кто и так понял
+                  предложение: остальные угадывают форму по окончанию */}
+              {task.translation && (
+                <p style={{
+                  fontSize: '13.5px', color: 'var(--color-gray-600)',
+                  marginTop: 0, marginBottom: '16px', lineHeight: 1.45
+                }}>
+                  {task.translation}
+                </p>
+              )}
 
               <TaskInput task={task} given={given} setGiven={setGiven} disabled={!!checked} />
 

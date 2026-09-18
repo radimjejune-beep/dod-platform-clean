@@ -20,7 +20,7 @@ const KINDS = [
   ['match', 'Соотнести пары'],
 ];
 
-const emptyTask = { kind: 'choice', prompt: '', options: '', correct: '', accept: '', left: '', right: '', pairs: '', explanation: '', hint: '' };
+const emptyTask = { kind: 'choice', prompt: '', translation: '', options: '', correct: '', accept: '', left: '', right: '', pairs: '', explanation: '', hint: '' };
 
 // Из строк формы собираем то, что ждёт сервер
 function buildTask(f) {
@@ -90,6 +90,7 @@ export default function PracticeEdit() {
     const result = await api.addPracticeTask(setId, {
       ...built,
       prompt: form.prompt,
+      translation: form.translation || null,
       hint: form.hint || null,
       explanation: form.explanation || null,
       sort_order: (set?.tasks?.length || 0) + 1
@@ -214,6 +215,15 @@ export default function PracticeEdit() {
             <textarea value={form.prompt} onChange={(e) => setForm({ ...form, prompt: e.target.value })}
               rows={2} required style={{ width: '100%', marginBottom: '12px' }}
               placeholder={form.kind === 'gap' ? 'She ___ to school every day.' : 'Что спрашиваем'} />
+
+            <label className="form-label">Перевод на русский</label>
+            <textarea value={form.translation} onChange={(e) => setForm({ ...form, translation: e.target.value })}
+              rows={2} style={{ width: '100%', marginBottom: '4px' }}
+              placeholder="Делегация согласилась прочитать проект до пятницы." />
+            <p style={{ fontSize: '12.5px', color: 'var(--color-gray-500)', marginTop: 0, marginBottom: '12px' }}>
+              Показывается вместе с вопросом, до ответа. Без перевода задание работает
+              только у того, кто и так понял предложение.
+            </p>
 
             {(form.kind === 'choice' || form.kind === 'multi') && (
               <>

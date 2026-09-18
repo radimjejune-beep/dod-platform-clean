@@ -11316,7 +11316,7 @@ app.post('/api/practice/sets/:id/run', authenticate, async (req, res) => {
     }
 
     const tasks = await pool.query(
-      'SELECT id, kind, prompt, payload, hint, sort_order FROM practice_tasks WHERE set_id = $1 ORDER BY sort_order, created_at',
+      'SELECT id, kind, prompt, translation, payload, hint, sort_order FROM practice_tasks WHERE set_id = $1 ORDER BY sort_order, created_at',
       [id]
     );
     if (tasks.rows.length === 0) {
@@ -11560,7 +11560,7 @@ app.post('/api/practice/sets/:id/tasks', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Править этот набор вам нельзя' });
     }
 
-    const { kind, prompt, payload, answer, hint, explanation, sort_order } = req.body || {};
+    const { kind, prompt, translation, payload, answer, hint, explanation, sort_order } = req.body || {};
     if (!TASK_KINDS.includes(kind)) {
       return res.status(400).json({ error: `kind: ${TASK_KINDS.join(', ')}` });
     }
@@ -11581,9 +11581,10 @@ app.post('/api/practice/sets/:id/tasks', authenticate, async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO practice_tasks (set_id, kind, prompt, payload, answer, hint, explanation, sort_order)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [id, kind, String(prompt).trim(), JSON.stringify(payload || {}), JSON.stringify(answer),
+      `INSERT INTO practice_tasks (set_id, kind, prompt, translation, payload, answer, hint, explanation, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [id, kind, String(prompt).trim(), translation || null,
+       JSON.stringify(payload || {}), JSON.stringify(answer),
        hint || null, explanation || null, Number.isInteger(sort_order) ? sort_order : 0]
     );
 

@@ -11212,6 +11212,7 @@ function checkTask(kind, answer, given) {
 
 // Задания тренажёра каждый раз идут в другом порядке: иначе со второго
 // прохода запоминается не английский, а последовательность кнопок
+// Перемешивает что угодно: и задания в наборе, и варианты внутри задания
 function shuffleTasks(list) {
   const out = [...list];
   for (let i = out.length - 1; i > 0; i--) {
@@ -11327,10 +11328,25 @@ app.post('/api/practice/sets/:id/run', authenticate, async (req, res) => {
       [id, req.user.userId, tasks.rows.length]
     );
 
+    // ⚠️ Варианты внутри задания тоже надо перемешать. В «расставьте по
+    // порядку» они хранятся в правильном порядке — и первая же живая
+    // проверка показала ребёнку готовое предложение слева направо:
+    // нажимай подряд и всегда верно. В «соотнесите пары» правый столбец
+    // мог случайно встать напротив своего левого.
+    const prepared = tasks.rows.map((t) => {
+      if (t.kind === 'order') {
+        return { ...t, payload: { ...t.payload, options: shuffleTasks(t.payload?.options || []) } };
+      }
+      if (t.kind === 'match') {
+        return { ...t, payload: { ...t.payload, right: shuffleTasks(t.payload?.right || []) } };
+      }
+      return t;
+    });
+
     res.status(201).json({
       run_id: run.rows[0].id,
       set: { id: set.id, title: set.title, kind: set.kind, allow_retry: set.allow_retry },
-      tasks: set.allow_retry ? shuffleTasks(tasks.rows) : tasks.rows
+      tasks: set.allow_retry ? shuffleTasks(prepared) : prepared
     });
   } catch (error) {
     console.error('❌ Ошибка запуска набора:', error);

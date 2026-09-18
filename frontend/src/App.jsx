@@ -30,6 +30,9 @@ import MyAchievements from './pages/MyAchievements';
 import Reports from './pages/Reports';
 import ReportsBoard from './pages/ReportsBoard';
 import TripOverview from './pages/TripOverview';
+import PracticeList from './pages/PracticeList';
+import PracticeRun from './pages/PracticeRun';
+import PracticeEdit from './pages/PracticeEdit';
 import Analytics from './pages/Analytics';
 import DashboardAnalytics from './pages/DashboardAnalytics';
 import ClubAnalytics from './pages/ClubAnalytics';
@@ -229,6 +232,9 @@ function App() {
         <Route path="/reports" element={<Reports />} />
         <Route path="/reports-board" element={<ReportsBoard />} />
         <Route path="/trip/:eventId" element={<TripOverview />} />
+        <Route path="/courses" element={<PracticeList />} />
+        <Route path="/courses/:setId/run" element={<PracticeRun />} />
+        <Route path="/courses/:setId/edit" element={<PracticeEdit />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/dashboard-analytics" element={<DashboardAnalytics />} />
 

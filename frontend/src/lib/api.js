@@ -1406,6 +1406,95 @@ export const submitTeam = async (id) => {
 };
 
 // ============================================================
+// ТРЕНАЖЁР И ТЕСТЫ
+// ============================================================
+export const getPracticeSets = async () => {
+  const response = await fetch(`${API_URL}/practice/sets`, { headers: headers() });
+  if (!response.ok) return serverSaidNo(response, []);
+  return toArray(await response.json());
+};
+
+export const startPracticeRun = async (setId) => {
+  const response = await fetch(`${API_URL}/practice/sets/${setId}/run`, {
+    method: 'POST',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const answerPracticeTask = async (runId, taskId, given) => {
+  const response = await fetch(`${API_URL}/practice/runs/${runId}/answer`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ task_id: taskId, given })
+  });
+  return response.json();
+};
+
+export const finishPracticeRun = async (runId) => {
+  const response = await fetch(`${API_URL}/practice/runs/${runId}/finish`, {
+    method: 'POST',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const createPracticeSet = async (data) => {
+  const response = await fetch(`${API_URL}/practice/sets`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const getPracticeSetForEdit = async (setId) => {
+  const response = await fetch(`${API_URL}/practice/sets/${setId}/edit`, { headers: headers() });
+  if (!response.ok) return serverSaidNo(response, null);
+  return response.json();
+};
+
+export const updatePracticeSet = async (setId, data) => {
+  const response = await fetch(`${API_URL}/practice/sets/${setId}`, {
+    method: 'PUT',
+    headers: headers(),
+    body: JSON.stringify(data)
+  });
+  return response.json();
+};
+
+export const deletePracticeSet = async (setId) => {
+  const response = await fetch(`${API_URL}/practice/sets/${setId}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const addPracticeTask = async (setId, task) => {
+  const response = await fetch(`${API_URL}/practice/sets/${setId}/tasks`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(task)
+  });
+  return response.json();
+};
+
+export const deletePracticeTask = async (taskId) => {
+  const response = await fetch(`${API_URL}/practice/tasks/${taskId}`, {
+    method: 'DELETE',
+    headers: headers()
+  });
+  return response.json();
+};
+
+export const getPracticeResults = async (setId) => {
+  const response = await fetch(`${API_URL}/practice/sets/${setId}/results`, { headers: headers() });
+  if (!response.ok) return serverSaidNo(response, []);
+  return toArray(await response.json());
+};
+
+// ============================================================
 // ВЫЕЗД ЦЕЛИКОМ
 // ============================================================
 export const getTripOverview = async (eventId) => {
@@ -2088,6 +2177,17 @@ const api = {
   deleteTeamMember,
   submitTeam,
   reviewTeam,
+  getPracticeSets,
+  startPracticeRun,
+  answerPracticeTask,
+  finishPracticeRun,
+  createPracticeSet,
+  getPracticeSetForEdit,
+  updatePracticeSet,
+  deletePracticeSet,
+  addPracticeTask,
+  deletePracticeTask,
+  getPracticeResults,
   getTripOverview,
   remindTripClubs,
   getReportsBoard,

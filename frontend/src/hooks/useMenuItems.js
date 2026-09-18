@@ -37,6 +37,7 @@ const GROUP_TITLES = [
   ['movement', 'Движение',              'chart'],
   ['comms',    'Связь и документы',     'chat'],
   ['service',  'Служебное',             'settings'],
+  ['learning', 'Курсы',                 'journal'],
   ['me',       'Моё',                   'user'],
   ['other',    'Прочее',                'grid'],
 ];
@@ -72,6 +73,8 @@ const GROUP_OF = {
 
   'consents-management': 'service', 'parent-consents': 'service',
   settings: 'service', 'activity-log': 'service',
+
+  courses: 'learning',
 
   profile: 'me', 'my-achievements': 'me', 'my-reviews': 'me',
 };
@@ -129,6 +132,7 @@ function buildMenu(profile) {
     if (role === 'admin') {
       return [
         ...commonItems,
+      { id: 'courses', path: '/courses', icon: 'journal', label: 'Курсы' },
         { id: 'attention', path: '/attention', icon: 'warning', label: 'Требует внимания' },
         { id: 'crm', path: '/crm', icon: 'building', label: 'CRM' },
         { id: 'clubs-health', path: '/clubs-health', icon: 'club', label: 'Состояние КЮДов' },
@@ -165,6 +169,7 @@ function buildMenu(profile) {
     if (role === 'movement_coordinator') {
       return [
         ...commonItems,
+      { id: 'courses', path: '/courses', icon: 'journal', label: 'Курсы' },
         { id: 'attention', path: '/attention', icon: 'warning', label: 'Требует внимания' },
         { id: 'crm', path: '/crm', icon: 'building', label: 'CRM' },
         { id: 'coordinator-dashboard', path: '/coordinator-dashboard', icon: 'dashboard', label: 'Дашборд координатора' },
@@ -204,6 +209,7 @@ function buildMenu(profile) {
     if (role === 'club_coordinator') {
       return [
         ...commonItems,
+      { id: 'courses', path: '/courses', icon: 'journal', label: 'Курсы' },
         { id: 'attention', path: '/attention', icon: 'warning', label: 'Требует внимания' },
         { id: 'clubs', path: '/clubs', icon: 'club', label: 'Мой КЮД' },
         { id: 'my-invitations', path: '/my-invitations', icon: 'megaphone', label: 'Приглашения на форумы' },
@@ -234,6 +240,7 @@ function buildMenu(profile) {
     if (role === 'participant') {
       return [
         ...commonItems,
+      { id: 'courses', path: '/courses', icon: 'journal', label: 'Курсы' },
         { id: 'participant-dashboard', path: '/participant-dashboard', icon: 'dashboard', label: 'Мой дашборд' },
         { id: 'my-trips', path: '/my-trips', icon: 'flag', label: 'Мои выезды' },
         { id: 'events', path: '/events', icon: 'calendar', label: 'Мероприятия' },
@@ -248,6 +255,7 @@ function buildMenu(profile) {
     if (role === 'tutor') {
       return [
         ...commonItems,
+      { id: 'courses', path: '/courses', icon: 'journal', label: 'Курсы' },
         { id: 'tutor-dashboard', path: '/tutor-dashboard', icon: 'dashboard', label: 'Дашборд тьютора' },
         { id: 'tutor-assignments', path: '/tutor-assignments', icon: 'calendar', label: 'Мои назначения' },
         { id: 'my-delegations', path: '/my-delegations', icon: 'flag', label: 'Мои делегации' },

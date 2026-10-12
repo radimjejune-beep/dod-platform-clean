@@ -676,38 +676,9 @@ export default function DocumentsCenter() {
           margin: 4px 0 0 0;
         }
 
-        /* ============================================================
-           КНОПКИ
-           ============================================================ */
-        .btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 10px 24px;
-          border: none;
-          border-radius: 8px;
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          text-decoration: none;
-          min-height: 44px;
-          min-width: 80px;
-        }
-
-
-
-
-
-
-
-        .btn:disabled {
-          opacity: 0.4;
-          cursor: not-allowed !important;
-          pointer-events: none !important;
-        }
+        /* Кнопки — общие, из index.css. Здесь были свои .btn с border: none и
+           высотой 44px: из-за них на этой странице пропадала обводка у
+           второстепенных кнопок и все кнопки были выше остальных. */
 
         /* ============================================================
            СООБЩЕНИЯ
@@ -1106,11 +1077,6 @@ export default function DocumentsCenter() {
             padding: 8px 12px;
           }
 
-          .btn {
-            padding: 8px 16px;
-            font-size: 13px;
-            min-height: 36px;
-          }
 
 
           .modal {

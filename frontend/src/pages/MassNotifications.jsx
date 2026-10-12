@@ -383,21 +383,21 @@ export default function MassNotifications() {
             <div className="form-actions">
               <button
                 type="submit"
-                className="btn-send"
+                className="btn btn-gold btn-lg" style={{ flex: 1 }}
                 disabled={sending || recipientCount === 0}
               >
                 {sending ? 'Отправка...' : `Отправить (${recipientCount})`}
               </button>
               <button
                 type="button"
-                className="btn-preview"
+                className="btn btn-outline btn-lg"
                 onClick={() => setShowPreview(!showPreview)}
               >
                 {showPreview ? 'Скрыть' : 'Предпросмотр'}
               </button>
               <button
                 type="button"
-                className="btn-cancel"
+                className="btn btn-danger-soft btn-lg"
                 onClick={() => {
                   setForm({
                     recipients: 'all',
@@ -444,7 +444,7 @@ export default function MassNotifications() {
             <div className="recent-header">
               <h3>Последние уведомления</h3>
               <button
-                className="btn-view-all"
+                className="btn btn-link"
                 onClick={() => navigate('/notification-history')}
               >
                 Все уведомления →
@@ -701,7 +701,7 @@ export default function MassNotifications() {
           cursor: pointer;
         }
 
-        /* ===== КНОПКИ ===== */
+        /* ===== КНОПКИ ===== (общие из index.css) */
         .form-actions {
           display: flex;
           gap: 12px;
@@ -709,77 +709,12 @@ export default function MassNotifications() {
           flex-wrap: wrap;
         }
 
-        .btn-send {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 12px 32px;
-          background: var(--color-gold);
-          color: var(--color-primary-dark);
-          border: none;
-          border-radius: 10px;
-          font-size: 15px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          box-shadow: 0 2px 16px rgba(201,162,39,0.25);
-          font-family: 'Inter', sans-serif;
-          flex: 1;
-        }
 
-        .btn-send:hover:not(:disabled) {
-          box-shadow: 0 8px 32px rgba(201,162,39,0.35);
-        }
 
-        .btn-send:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-          pointer-events: none;
-        }
 
-        .btn-preview {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 12px 24px;
-          background: transparent;
-          color: var(--color-primary-dark);
-          border: 1.5px solid var(--color-gray-200);
-          border-radius: 10px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          font-family: 'Inter', sans-serif;
-        }
 
-        .btn-preview:hover {
-          background: var(--color-gray-50);
-          border-color: var(--color-gold);
-        }
 
-        .btn-cancel {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 12px 24px;
-          background: transparent;
-          color: var(--color-error);
-          border: 1.5px solid var(--color-error-bg);
-          border-radius: 10px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          font-family: 'Inter', sans-serif;
-        }
 
-        .btn-cancel:hover {
-          background: var(--color-error-bg);
-        }
 
         /* ===== ПРЕДПРОСМОТР ===== */
         .preview-box {
@@ -866,20 +801,7 @@ export default function MassNotifications() {
           margin: 0;
         }
 
-        .btn-view-all {
-          background: none;
-          border: none;
-          color: var(--color-primary-light);
-          font-size: 13px;
-          font-weight: 500;
-          cursor: pointer;
-          font-family: 'Inter', sans-serif;
-          transition: color 0.2s ease;
-        }
 
-        .btn-view-all:hover {
-          color: var(--color-gold);
-        }
 
         .notifications-list {
           display: flex;
@@ -981,9 +903,7 @@ export default function MassNotifications() {
             flex-direction: column;
           }
 
-          .btn-send,
-          .btn-preview,
-          .btn-cancel {
+          .form-actions .btn {
             width: 100%;
             justify-content: center;
           }

@@ -417,7 +417,7 @@ export default function Participants() {
                       <td>
                         <div className="action-buttons">
                           <button
-                            className="btn-icon view"
+                            className="icon-action view"
                             onClick={() => navigate(`/participant/${p.id}`)}
                             title="Просмотр"
                           >
@@ -425,7 +425,7 @@ export default function Participants() {
                           </button>
                           {canEdit && (
                             <button
-                              className="btn-icon edit"
+                              className="icon-action edit"
                               onClick={() => navigate(`/participant/${p.id}/edit`)}
                               title="Редактировать"
                             >
@@ -434,7 +434,7 @@ export default function Participants() {
                           )}
                           {canDelete && (
                             <button
-                              className="btn-icon delete"
+                              className="icon-action delete"
                               onClick={() => handleDelete(p.id, p.full_name)}
                               title="Удалить"
                             >
@@ -511,7 +511,7 @@ export default function Participants() {
                       <div className="card-actions" onClick={(e) => e.stopPropagation()}>
                         {canEdit && (
                           <button
-                            className="btn-icon edit"
+                            className="icon-action edit"
                             onClick={() => navigate(`/participant/${p.id}/edit`)}
                             title="Редактировать"
                           >
@@ -520,7 +520,7 @@ export default function Participants() {
                         )}
                         {canDelete && (
                           <button
-                            className="btn-icon delete"
+                            className="icon-action delete"
                             onClick={() => handleDelete(p.id, p.full_name)}
                             title="Удалить"
                           >
@@ -824,7 +824,12 @@ export default function Participants() {
           flex-wrap: wrap;
         }
 
-        .btn-icon {
+        .icon-action {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          height: 32px;
+          min-width: 32px;
           padding: 4px 10px;
           border: none;
           border-radius: 8px;
@@ -834,15 +839,15 @@ export default function Participants() {
           background: transparent;
         }
 
-        .btn-icon.view:hover {
+        .icon-action.view:hover {
           background: var(--color-info-bg);
         }
 
-        .btn-icon.edit:hover {
+        .icon-action.edit:hover {
           background: var(--color-gold-pale);
         }
 
-        .btn-icon.delete:hover {
+        .icon-action.delete:hover {
           background: var(--color-error-bg);
         }
 
@@ -1070,7 +1075,7 @@ export default function Participants() {
             gap: 2px;
           }
 
-          .btn-icon {
+          .icon-action {
             padding: 4px 8px;
             font-size: 12px;
           }

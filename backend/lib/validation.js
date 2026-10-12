@@ -150,6 +150,13 @@ export const eventSchema = Joi.object({
   }),
   is_global: Joi.boolean().default(false),
   is_club_event: Joi.boolean().default(false),
+  // Подключение по Телемосту: отметка «можно» и ссылка. Ссылку принимаем
+  // только https — по http её могут подменить по дороге
+  telemost_allowed: Joi.boolean().default(false),
+  telemost_url: Joi.string().uri({ scheme: ['https'] }).max(500).allow('', null).messages({
+    'string.uri': 'Ссылка на Телемост должна начинаться с https://',
+    'string.uriCustomScheme': 'Ссылка на Телемост должна начинаться с https://'
+  }),
   registration_deadline: Joi.date().allow(null),
   max_participants: Joi.number().integer().min(0).default(0),
   target_clubs: Joi.array().items(Joi.string().uuid()).default([])

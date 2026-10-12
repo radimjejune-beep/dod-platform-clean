@@ -6,6 +6,7 @@ import api from '../lib/api';
 import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
+import TelemostInfo from '../components/TelemostInfo';
 
 export default function MyClubEvents() {
   const [profile, setProfile] = useState(null);
@@ -177,6 +178,8 @@ export default function MyClubEvents() {
                         )}
                         <span>{event.current_participants || 0}/{event.max_participants || '∞'}</span>
                       </div>
+
+                      <TelemostInfo event={event} />
 
                       {event.proposed_by_name && (
                         <div style={{ fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '4px' }}>

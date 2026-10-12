@@ -8,6 +8,7 @@ import Navigation from '../components/Navigation';
 import FilterBar from '../components/FilterBar';
 import Footer from '../components/Footer';
 import Icon from '../components/Icon';
+import TelemostInfo from '../components/TelemostInfo';
 
 export default function Events() {
   const [profile, setProfile] = useState(null);
@@ -75,7 +76,9 @@ export default function Events() {
     is_global: false,
     registration_deadline: '',
     max_participants: 0,
-    target_clubs: []
+    target_clubs: [],
+    telemost_allowed: false,
+    telemost_url: ''
   });
   
   const navigate = useNavigate();
@@ -598,7 +601,10 @@ export default function Events() {
         is_club_event: !!form.club_id,
         registration_deadline: form.registration_deadline || null,
         max_participants: parseInt(form.max_participants, 10) || 0,
-        target_clubs: form.target_clubs || []
+        target_clubs: form.target_clubs || [],
+        // Ссылку отправляем только вместе с отметкой — сервер без отметки её всё равно сотрёт
+        telemost_allowed: !!form.telemost_allowed,
+        telemost_url: form.telemost_allowed ? (form.telemost_url || '').trim() : ''
       };
 
       if (isClubCoordinator && coordinatorClubId) {
@@ -672,7 +678,9 @@ export default function Events() {
       is_global: false,
       registration_deadline: '',
       max_participants: 0,
-      target_clubs: []
+      target_clubs: [],
+      telemost_allowed: false,
+      telemost_url: ''
     });
     setShowForm(false);
   };
@@ -694,7 +702,9 @@ export default function Events() {
       is_global: event.is_global || false,
       registration_deadline: event.registration_deadline || '',
       max_participants: event.max_participants || 0,
-      target_clubs: event.target_clubs || []
+      target_clubs: event.target_clubs || [],
+      telemost_allowed: event.telemost_allowed === true,
+      telemost_url: event.telemost_url || ''
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1102,6 +1112,37 @@ export default function Events() {
                 />
                 <div className="form-hint">Ссылка, которую увидят участники</div>
               </div>
+
+              {/* ТЕЛЕМОСТ — клуб сам решает, можно ли подключиться удалённо */}
+              <div className="form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={form.telemost_allowed}
+                    onChange={(e) => setForm({
+                      ...form,
+                      telemost_allowed: e.target.checked,
+                      telemost_url: e.target.checked ? form.telemost_url : ''
+                    })}
+                    style={{ width: 'auto' }}
+                  />
+                  Можно подключиться по Телемосту
+                </label>
+                {form.telemost_allowed && (
+                  <>
+                    <input
+                      type="url"
+                      value={form.telemost_url}
+                      onChange={(e) => setForm({ ...form, telemost_url: e.target.value })}
+                      placeholder="https://telemost.yandex.ru/j/..."
+                      style={{ marginTop: '8px' }}
+                    />
+                    <div className="form-hint">
+                      Ссылку можно добавить и позже — до её появления участники увидят отметку, что подключение будет
+                    </div>
+                  </>
+                )}
+              </div>
               
               <div className="form-actions">
                 <button type="submit" className="btn-success" disabled={loading}>
@@ -1229,6 +1270,8 @@ export default function Events() {
                       </div>
                     )}
                     
+                    <TelemostInfo event={event} />
+
                     {/* БЛОК РЕГИСТРАЦИИ */}
                     {canRegister && event.moderation_status === 'approved' && (
                       <div className="event-registration">

@@ -7,6 +7,7 @@ import Navigation from '../components/Navigation';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import Icon from '../components/Icon';
+import TelemostInfo from '../components/TelemostInfo';
 
 export default function ClubCalendar() {
   const [profile, setProfile] = useState(null);
@@ -351,6 +352,10 @@ export default function ClubCalendar() {
               color: selectedEvent.status === 'approved' ? 'var(--color-success)' : 'var(--color-gold-dark)'
             }}>
               {selectedEvent.status === 'approved' ? 'Одобрено' : 'На модерации'}
+            </div>
+
+            <div>
+              <TelemostInfo event={selectedEvent} />
             </div>
 
             {selectedEvent.description && (

@@ -463,6 +463,27 @@ export default function Navigation({ profile }) {
         }
         .nav-burger:hover { background: var(--color-gray-50); }
 
+        /* ⚠️ Общее правило button:not(.row-button) в index.css даёт каждой
+           кнопке боковые отступы по 18px (на телефоне ещё и min-width).
+           У круглых кнопок шириной 40px на иконку оставалось 4px — вместо
+           трёх линий и колокольчика была видна точка. Двойной класс
+           (.nav .nav-burger) сильнее общего правила, поэтому здесь
+           отступы гарантированно снимаются на любой ширине экрана. */
+        .nav .nav-burger,
+        .nav .nav-notif-btn {
+          padding: 0;
+          width: 40px;
+          min-width: 40px;
+          height: 40px;
+          min-height: 40px;
+          border: none;
+          gap: 0;
+        }
+        .nav .nav-burger svg,
+        .nav .nav-notif-btn svg {
+          flex-shrink: 0;
+        }
+
         .nav-right {
           display: flex;
           align-items: center;
@@ -661,6 +682,12 @@ export default function Navigation({ profile }) {
           justify-content: center;
         }
         .sidebar-close:hover { background: var(--color-gray-50); }
+        /* Та же история, что с бургером: снимаем общие отступы кнопок */
+        .sidebar .sidebar-close {
+          padding: 0;
+          min-width: 36px;
+          min-height: 36px;
+        }
 
         .sidebar-profile {
           display: flex;

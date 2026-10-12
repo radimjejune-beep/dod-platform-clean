@@ -151,6 +151,7 @@ const FIELD_LABELS = {
   capacity: 'Вместимость',
   club_id: 'Клуб',
   form_url: 'Ссылка на форму',
+  telemost_url: 'Ссылка на Телемост',
   registration_deadline: 'Срок регистрации',
   max_participants: 'Максимум участников',
   target_clubs: 'Приглашённые КЮДы',
@@ -1559,9 +1560,10 @@ export const getTeamMemberDocument = async (id, memberId) => {
   return response.json();
 };
 
-// Выгрузка идёт файлом, поэтому не через response.json()
-export const exportEventTeams = async (eventId, withDocuments = false) => {
-  const url = `${API_URL}/events/${eventId}/teams/export${withDocuments ? '?documents=true' : ''}`;
+// Выгрузка идёт файлом, поэтому не через response.json().
+// Данные документов в файл не попадают — сервер их не отдаёт вовсе.
+export const exportEventTeams = async (eventId) => {
+  const url = `${API_URL}/events/${eventId}/teams/export`;
   const response = await fetch(url, { method: 'GET', headers: headers() });
   if (!response.ok) throw new Error('Не удалось выгрузить список');
   const blob = await response.blob();

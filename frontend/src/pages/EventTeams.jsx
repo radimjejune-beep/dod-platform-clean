@@ -155,10 +155,13 @@ export default function EventTeams() {
     }
   };
 
-  const exportList = async (withDocuments) => {
+  // Выгружается только состав команд, без данных документов: паспорта и
+  // свидетельства не должны расходиться файлами по чужим компьютерам.
+  // Смотреть документ конкретного участника можно в карточке заявки.
+  const exportList = async () => {
     setBusy(true);
     try {
-      await api.exportEventTeams(eventId, withDocuments);
+      await api.exportEventTeams(eventId);
       show('Файл выгружен');
     } catch (err) {
       show(err.message, 'error');
@@ -212,12 +215,8 @@ export default function EventTeams() {
               <button className="btn-secondary" onClick={() => navigate(`/trip/${eventId}`)}>
                 Картина выезда
               </button>
-              <button className="btn-secondary" onClick={() => exportList(false)} disabled={busy}>
+              <button className="btn-secondary" onClick={exportList} disabled={busy}>
                 Выгрузить список
-              </button>
-              <button className="btn-secondary" onClick={() => exportList(true)} disabled={busy}
-                title="Выгрузка вместе с данными документов — только для оформления мероприятия">
-                Выгрузить с документами
               </button>
             </div>
           )}

@@ -1882,8 +1882,15 @@ app.post('/api/events', authenticate, validateBody(eventSchema), async (req, res
       club_id, 
       form_url, 
       is_global,
-      target_clubs
+      target_clubs,
+      telemost_allowed,
+      telemost_url
     } = validatedData;
+
+    // Без отметки «можно подключиться» ссылка не хранится: иначе участники
+    // увидят ссылку на мероприятие, куда клуб подключаться не приглашал
+    const finalTelemostAllowed = telemost_allowed === true;
+    const finalTelemostUrl = finalTelemostAllowed && telemost_url ? telemost_url.trim() : null;
 
     console.log(`📝 СОЗДАНИЕ СОБЫТИЯ:`);
     console.log(`  📌 Название: ${title}`);
@@ -1922,8 +1929,9 @@ app.post('/api/events', authenticate, validateBody(eventSchema), async (req, res
     const result = await pool.query(
       `INSERT INTO events (
         title, description, location, event_date, end_date, start_time, end_time,
-        type, capacity, club_id, form_url, is_global, is_club_event, created_by, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+        type, capacity, club_id, form_url, is_global, is_club_event, created_by,
+        telemost_allowed, telemost_url, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
       RETURNING *`,
       [
         title.trim(), description || '', location || '', event_date,
@@ -1932,7 +1940,8 @@ app.post('/api/events', authenticate, validateBody(eventSchema), async (req, res
         finalIsGlobal ? null : finalClubId,
         form_url || null, finalIsGlobal, 
         !finalIsGlobal && finalTargetClubs.length > 0 ? true : false,
-        userId
+        userId,
+        finalTelemostAllowed, finalTelemostUrl
       ]
     );
 
@@ -1967,7 +1976,8 @@ app.patch('/api/events/:id', authenticate, async (req, res) => {
     const { 
       title, description, location, event_date, end_date, 
       start_time, end_time, type, capacity, form_url,
-      is_global, is_club_event, club_id
+      is_global, is_club_event, club_id,
+      telemost_allowed, telemost_url
     } = req.body;
 
     console.log(`📝 ОБНОВЛЕНИЕ СОБЫТИЯ ${id}`);
@@ -2007,6 +2017,22 @@ app.patch('/api/events/:id', authenticate, async (req, res) => {
       console.log('  🔒 Координатор не может сделать событие глобальным');
     }
 
+    // Телемост: если поле не прислали — оставляем как было.
+    // Отметку сняли — ссылку стираем вместе с ней.
+    let finalTelemostAllowed = telemost_allowed !== undefined
+      ? telemost_allowed === true
+      : event.telemost_allowed === true;
+    let finalTelemostUrl = telemost_url !== undefined
+      ? (telemost_url ? String(telemost_url).trim() : null)
+      : event.telemost_url;
+    if (!finalTelemostAllowed) finalTelemostUrl = null;
+    if (finalTelemostUrl && (!/^https:\/\/\S+$/.test(finalTelemostUrl) || finalTelemostUrl.length > 500)) {
+      return res.status(400).json({
+        error: 'Ссылка на Телемост должна начинаться с https://',
+        details: [{ field: 'telemost_url', message: 'Ссылка должна начинаться с https://' }]
+      });
+    }
+
     const result = await pool.query(
       `UPDATE events 
        SET title = COALESCE($1, title),
@@ -2021,12 +2047,15 @@ app.patch('/api/events/:id', authenticate, async (req, res) => {
            form_url = $10,
            club_id = $11,
            is_global = $12,
-           is_club_event = COALESCE($13, is_club_event)
+           is_club_event = COALESCE($13, is_club_event),
+           telemost_allowed = $15,
+           telemost_url = $16
        WHERE id = $14
        RETURNING *`,
       [title, description, location, event_date, end_date, 
        start_time, end_time, type, capacity, form_url,
-       finalClubId, finalIsGlobal, is_club_event, id]
+       finalClubId, finalIsGlobal, is_club_event, id,
+       finalTelemostAllowed, finalTelemostUrl]
     );
 
     console.log(`✅ Событие ${id} обновлено`);
@@ -8035,10 +8064,13 @@ app.get('/api/events/:eventId/teams', authenticate, async (req, res) => {
 // ВЫГРУЗКА СВОДНОГО СПИСКА
 // ============================================================
 // Колонки повторяют прежнюю Google-форму, чтобы не пришлось переучиваться.
+// ⚠️ Данные документов (паспорт, свидетельство о рождении) сюда не входят
+// намеренно: файл уходит на чужие компьютеры и в мессенджеры, и отследить
+// его дальше нельзя. Параметр ?documents=true больше не действует —
+// даже если его передать вручную, серия и номер в файл не попадут.
 app.get('/api/events/:eventId/teams/export', authenticate, async (req, res) => {
   try {
     const { eventId } = req.params;
-    const withDocuments = req.query.documents === 'true';
 
     if (!MOVEMENT_ROLES.includes(req.user.role)) {
       return res.status(403).json({ error: 'Недостаточно прав' });
@@ -8052,12 +8084,10 @@ app.get('/api/events/:eventId/teams/export', authenticate, async (req, res) => {
               tm.role_in_team, tm.full_name, tm.birth_date, tm.city,
               tm.school_full_name, tm.class_name, tm.parent_full_name,
               tm.parent_phone, tm.participant_phone,
-              tm.extra_program, tm.extra_program_ack,
-              d.document_type, d.series_number, d.issued_by
+              tm.extra_program, tm.extra_program_ack
        FROM team_submissions ts
        JOIN clubs c ON c.id = ts.club_id
        JOIN team_members tm ON tm.submission_id = ts.id
-       LEFT JOIN team_member_documents d ON d.member_id = tm.id AND d.purged_at IS NULL
        WHERE ts.event_id = $1 AND ts.status IN ('submitted', 'approved')
        ORDER BY c.name, CASE tm.role_in_team WHEN 'escort' THEN 1 ELSE 0 END, tm.full_name`,
       [eventId]
@@ -8068,7 +8098,6 @@ app.get('/api/events/:eventId/teams/export', authenticate, async (req, res) => {
       'Город', 'Учебное заведение', 'Класс', 'ФИО родителя', 'Телефон родителя',
       'Телефон школьника', 'Доп. программа', 'Ознакомлен с условиями доп. программы'
     ];
-    if (withDocuments) header.push('Тип документа', 'Серия и номер', 'Кем выдан');
 
     const roleLabel = { student: 'Школьник', captain: 'Капитан команды', escort: 'Сопровождающий' };
     const statusLabel = { submitted: 'На утверждении', approved: 'Утверждена' };
@@ -8088,17 +8117,11 @@ app.get('/api/events/:eventId/teams/export', authenticate, async (req, res) => {
         r.parent_phone, r.participant_phone,
         r.extra_program ? 'Да' : 'Нет', r.extra_program_ack ? 'Да' : 'Нет'
       ];
-      if (withDocuments) {
-        line.push(
-          r.document_type === 'passport' ? 'Паспорт РФ' : r.document_type === 'birth_certificate' ? 'Свидетельство о рождении' : '',
-          r.series_number, r.issued_by
-        );
-      }
       lines.push(line.map(esc).join(';'));
     }
 
     await logActivity(req.user.userId, 'TEAMS_EXPORTED', 'event', eventId, {
-      rows: rows.rows.length, with_documents: withDocuments
+      rows: rows.rows.length
     });
 
     const fileName = `Komandy_${event.rows[0].title.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;

@@ -71,6 +71,7 @@ import PresidentTasks from './pages/PresidentTasks';
 import ClubCalendar from './pages/ClubCalendar';
 import MyClubEvents from './pages/MyClubEvents';
 import NewsDetail from './pages/NewsDetail';
+import NewsList from './pages/NewsList';
 import OfficialDocuments from './pages/OfficialDocuments';
 import TutorAssignments from './pages/TutorAssignments';
 import CoordinatorDashboard from './pages/CoordinatorDashboard';
@@ -157,6 +158,11 @@ function App() {
         <Route path="/parent-join" element={<ParentJoin />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<Terms />} />
+        {/* Новости читают и гости: «Читать далее» и «Все новости» ведут с
+            главной, которая открыта всем. Внутри ProtectedRoute они
+            отправляли незнакомого человека на страницу входа */}
+        <Route path="/news" element={<NewsList />} />
+        <Route path="/news/:id" element={<NewsDetail />} />
 
         {/* ============================================================
            ВСЁ ОСТАЛЬНОЕ — ТОЛЬКО ДЛЯ ВОШЕДШИХ
@@ -247,7 +253,6 @@ function App() {
            НОВОСТИ
            ============================================================ */}
         <Route path="/admin/news" element={<AdminNews />} />
-        <Route path="/news/:id" element={<NewsDetail />} />
 
         {/* ============================================================
            ДОКУМЕНТЫ

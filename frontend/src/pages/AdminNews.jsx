@@ -6,6 +6,7 @@ import api from '../lib/api';
 import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
+import { newsImageSrc } from '../lib/news';
 
 export default function AdminNews() {
   const [profile, setProfile] = useState(null);
@@ -44,21 +45,13 @@ export default function AdminNews() {
 
       setProfile(userData);
 
-      const token = localStorage.getItem('token');
-      console.log('📰 Загрузка новостей...');
-      
-      const response = await fetch('https://dod-backend.relaxdev.ru/api/news', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
+      const response = await fetch('https://dod-backend.relaxdev.ru/api/news');
+
       if (!response.ok) {
         throw new Error(`Ошибка ${response.status}`);
       }
-      
+
       const data = await response.json();
-      console.log('📰 Загружено новостей:', data?.length || 0);
       setNews(data || []);
     } catch (err) {
       console.error('❌ Ошибка:', err);
@@ -105,7 +98,10 @@ export default function AdminNews() {
     try {
       const token = localStorage.getItem('token');
       
-      let imageUrl = form.image_url;
+      // Картинку отправляем, только если её меняли: новый файл — загружаем,
+      // «Удалить фото» — пустая строка, не трогали — поле не шлём вовсе,
+      // и сервер оставляет прежнее фото
+      let imageUrl;
       if (form.image_file) {
         const reader = new FileReader();
         const base64 = await new Promise((resolve) => {
@@ -113,7 +109,6 @@ export default function AdminNews() {
           reader.readAsDataURL(form.image_file);
         });
         
-        console.log('📤 Загрузка изображения...');
         const uploadResponse = await fetch('https://dod-backend.relaxdev.ru/api/upload-news-image', {
           method: 'POST',
           headers: {
@@ -124,21 +119,20 @@ export default function AdminNews() {
         });
         
         const uploadData = await uploadResponse.json();
-        console.log('📥 Ответ загрузки изображения:', uploadData);
-        
+
         if (uploadData.error) {
           throw new Error(uploadData.error);
         }
         imageUrl = uploadData.image_url;
+      } else if (!imagePreview) {
+        imageUrl = '';
       }
 
       const data = {
         title: form.title.trim(),
-        content: form.content.trim(),
-        image_url: imageUrl || ''
+        content: form.content.trim()
       };
-
-      console.log('📤 Отправка новости:', data);
+      if (imageUrl !== undefined) data.image_url = imageUrl;
 
       let response;
       if (editingId) {
@@ -161,8 +155,6 @@ export default function AdminNews() {
         });
       }
 
-      console.log('📥 Статус ответа:', response.status);
-      
       if (!response.ok) {
         // Раньше сюда падал сырой JSON сервера; теперь разбираем его
         // так же, как везде, и показываем человеческое объяснение
@@ -174,9 +166,6 @@ export default function AdminNews() {
         }
         throw new Error(api.describeApiError(errorData, `Ошибка ${response.status}`));
       }
-
-      const result = await response.json();
-      console.log('📥 Результат:', result);
 
       setMessage(editingId ? 'Новость обновлена!' : 'Новость создана!');
       setMessageType('success');
@@ -208,10 +197,10 @@ export default function AdminNews() {
     setForm({
       title: item.title,
       content: item.content,
-      image_url: item.image_url || '',
+      image_url: '',
       image_file: null
     });
-    setImagePreview(item.image_url || '');
+    setImagePreview(newsImageSrc(item));
     setEditingId(item.id);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -262,9 +251,15 @@ export default function AdminNews() {
             <h1 className="page-title">Новости</h1>
             <p className="page-subtitle">Публикации на главной странице сайта движения</p>
           </div>
+          {/* ⚠️ Раньше кнопки создания не было вовсе: форма открывалась
+              только через «Редактировать», так что завести новую новость
+              с этой страницы было нельзя */}
+          {canCreate && !showForm && (
+            <button className="btn-gold" onClick={() => { resetForm(); setShowForm(true); }}>
+              <Icon name="plus" /> Создать новость
+            </button>
+          )}
         </div>
-
-        {/* УБРАН ДУБЛИРУЮЩИЙСЯ PAGE-HEADER */}
 
         {message && (
           <div className={messageType === 'success' ? 'message-success' : 'message-error'}>
@@ -355,7 +350,7 @@ export default function AdminNews() {
                     </div>
                   ) : (
                     <div>
-                      <span style={{ fontSize: '40px', display: 'block' }}><Icon name="document" size={40} /></span>
+                      <span style={{ fontSize: '40px', display: 'block' }}><Icon name="upload" size={40} /></span>
                       <p style={{ color: 'var(--color-gray-400)' }}>
                         Нажмите или перетащите фото для новости
                       </p>
@@ -409,9 +404,9 @@ export default function AdminNews() {
                     gap: '16px'
                   }}
                 >
-                  {item.image_url && (
+                  {newsImageSrc(item) && (
                     <img 
-                      src={item.image_url} 
+                      src={newsImageSrc(item)} 
                       alt={item.title} 
                       style={{
                         width: '60px',

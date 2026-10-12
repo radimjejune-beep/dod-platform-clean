@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import Icon from './Icon';
 import { describeApiError } from '../lib/api';
 import { confirmAction } from '../lib/confirm';
+import { newsImageSrc } from '../lib/news';
 
 export default function NewsSection({ limit = 3 }) {
   const [news, setNews] = useState([]);
@@ -60,8 +61,6 @@ export default function NewsSection({ limit = 3 }) {
   const loadNews = async () => {
     try {
       setLoading(true);
-      console.log('📰 Загрузка новостей...');
-      
       // НЕ ОТПРАВЛЯЕМ ТОКЕН - ПУБЛИЧНЫЙ ДОСТУП
       const response = await fetch('https://dod-backend.relaxdev.ru/api/news');
       
@@ -70,7 +69,6 @@ export default function NewsSection({ limit = 3 }) {
       }
       
       const data = await response.json();
-      console.log('📰 Загружено новостей:', data?.length || 0);
       setNews(data || []);
       setError('');
     } catch (err) {
@@ -99,9 +97,9 @@ export default function NewsSection({ limit = 3 }) {
     setEditForm({
       title: item.title,
       content: item.content,
-      image_url: item.image_url || ''
+      image_url: ''
     });
-    setEditImagePreview(item.image_url || '');
+    setEditImagePreview(newsImageSrc(item));
     setEditImageFile(null);
     setShowEditModal(true);
   };
@@ -147,8 +145,9 @@ export default function NewsSection({ limit = 3 }) {
         return;
       }
       
-      // Если есть новое изображение — загружаем
-      let imageUrl = editForm.image_url;
+      // Картинку шлём, только если её меняли (см. AdminNews): иначе сервер
+      // оставляет прежнее фото, а не стирает его
+      let imageUrl;
       if (editImageFile) {
         const reader = new FileReader();
         const base64 = await new Promise((resolve) => {
@@ -170,7 +169,12 @@ export default function NewsSection({ limit = 3 }) {
           throw new Error(uploadData.error);
         }
         imageUrl = uploadData.image_url;
+      } else if (!editImagePreview) {
+        imageUrl = '';
       }
+
+      const payload = { title: editForm.title.trim(), content: editForm.content.trim() };
+      if (imageUrl !== undefined) payload.image_url = imageUrl;
 
       const response = await fetch(`https://dod-backend.relaxdev.ru/api/news/${editingNews.id}`, {
         method: 'PUT',
@@ -178,11 +182,7 @@ export default function NewsSection({ limit = 3 }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          title: editForm.title,
-          content: editForm.content,
-          image_url: imageUrl
-        })
+        body: JSON.stringify(payload)
       });
 
       const result = await response.json();
@@ -297,9 +297,9 @@ export default function NewsSection({ limit = 3 }) {
       <div className="news-grid">
         {displayNews.map((item) => (
           <div key={item.id} className="news-card">
-            {item.image_url && (
+            {newsImageSrc(item) && (
               <div className="news-image">
-                <img src={item.image_url} alt={item.title} />
+                <img src={newsImageSrc(item)} alt={item.title} loading="lazy" />
               </div>
             )}
             <div className="news-body">

@@ -3016,9 +3016,48 @@ app.get('/api/club-rating/:clubId', authenticate, async (req, res) => {
 // ============================================================
 // НОВОСТИ — С ВАЛИДАЦИЕЙ
 // ============================================================
+// Что делать с картинкой новости, судя по присланному полю:
+//   undefined → не трогать (при правке), '' / null → убрать,
+//   https://… → внешняя ссылка, data:image/…;base64,… → загруженный файл.
+// Всё остальное (http://, javascript:, SVG) не принимаем.
+function prepareNewsImage(raw) {
+  if (raw === undefined) return { keep: true };
+  if (raw === null || raw === '') return { value: null };
+  if (typeof raw !== 'string') return { error: 'Неверный формат изображения' };
+
+  const value = raw.trim();
+  if (value.startsWith('data:')) {
+    const parsed = parseDataImage(value, 2 * 1024 * 1024);
+    if (parsed.error) return { error: parsed.error };
+    return { value };
+  }
+  if (/^https:\/\/\S+$/.test(value) && value.length <= 500) return { value };
+  return { error: 'Изображение: загрузите файл или укажите ссылку, начинающуюся с https://' };
+}
+
+// В списках не отдаём картинки-base64 целиком: на главной они бы тянулись
+// мегабайтами при каждом заходе. Вместо этого — признак has_image, а сама
+// картинка берётся отдельным запросом GET /api/news/:id/image и кэшируется.
+// Внешняя https-ссылка отдаётся как есть.
+const NEWS_PUBLIC_COLUMNS = `
+  id, title, content, created_at, updated_at,
+  (COALESCE(image_url, '') <> '') AS has_image,
+  CASE WHEN image_url LIKE 'https://%' THEN image_url END AS image_url`;
+
+const NEWS_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 app.get('/api/news', async (req, res) => {
   try {
-    const result = await pool.query(`SELECT * FROM news ORDER BY created_at DESC`);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 100, 1), 200);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+
+    const result = await pool.query(
+      `SELECT ${NEWS_PUBLIC_COLUMNS}
+         FROM news
+        ORDER BY created_at DESC
+        LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
     res.json(result.rows);
   } catch (error) {
     console.error('Ошибка получения новостей:', error);
@@ -3026,20 +3065,84 @@ app.get('/api/news', async (req, res) => {
   }
 });
 
+app.get('/api/news/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Не uuid — это точно не наша новость; без проверки база отвечала бы
+    // ошибкой типа, а человек видел бы «Внутренняя ошибка сервера»
+    if (!NEWS_ID_RE.test(id)) {
+      return res.status(404).json({ error: 'Новость не найдена' });
+    }
+
+    const result = await pool.query(
+      `SELECT ${NEWS_PUBLIC_COLUMNS} FROM news WHERE id = $1`,
+      [id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Новость не найдена' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Ошибка получения новости:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Картинка новости. Публичная, как и сами новости. В ссылке на неё
+// фронтенд добавляет ?v=<время правки>, поэтому кэшировать можно надолго:
+// заменили фото — адрес изменился.
+app.get('/api/news/:id/image', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!NEWS_ID_RE.test(id)) return res.status(404).end();
+
+    const result = await pool.query('SELECT image_url FROM news WHERE id = $1', [id]);
+    const stored = result.rows[0]?.image_url;
+    if (!stored) return res.status(404).end();
+
+    // Внешняя ссылка — отправляем туда
+    if (/^https:\/\//.test(stored)) return res.redirect(302, stored);
+
+    const match = stored.match(/^data:image\/([a-z0-9.+-]+);base64,([A-Za-z0-9+/=]+)$/i);
+    if (!match) return res.status(404).end();
+
+    const type = match[1].toLowerCase();
+    // Подстраховка: SVG и прочее, что умеет исполнять скрипты, не отдаём
+    if (!ALLOWED_IMAGE_TYPES.includes(type)) return res.status(404).end();
+
+    res.setHeader('Content-Type', `image/${type === 'jpg' ? 'jpeg' : type}`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    // Сайт и API на разных адресах: без этого браузер может не показать
+    // картинку в <img> при строгой политике ресурсов
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.send(Buffer.from(match[2], 'base64'));
+  } catch (error) {
+    console.error('Ошибка отдачи картинки новости:', error);
+    res.status(500).end();
+  }
+});
+
 app.post('/api/news', authenticate, requireAdminOrCoordinator, validateBody(newsSchema), async (req, res) => {
   try {
-    const validatedData = req.validatedBody;
-    const { title, content, image_url } = validatedData;
+    const { title, content, image_url } = req.validatedBody;
 
     if (!title || !content) {
       return res.status(400).json({ error: 'title и content обязательны' });
     }
 
+    const image = prepareNewsImage(image_url);
+    if (image.error) return res.status(400).json({ error: image.error });
+
+    // Автор раньше не сохранялся вовсе: у каждой новости author_id был пуст
     const result = await pool.query(
-      `INSERT INTO news (title, content, image_url, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *`,
-      [title, content, image_url || null]
+      `INSERT INTO news (title, content, image_url, author_id, created_by, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $4, NOW(), NOW())
+       RETURNING ${NEWS_PUBLIC_COLUMNS}`,
+      [title.trim(), content.trim(), image.keep ? null : image.value, req.user.userId]
     );
 
+    await logActivity(req.user.userId, 'NEWS_CREATED', 'news', result.rows[0].id, { title: result.rows[0].title });
     console.log('✅ Создана новость:', result.rows[0].title);
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -3051,23 +3154,36 @@ app.post('/api/news', authenticate, requireAdminOrCoordinator, validateBody(news
 app.put('/api/news/:id', authenticate, requireAdminOrCoordinator, validateBody(newsSchema), async (req, res) => {
   try {
     const { id } = req.params;
-    const validatedData = req.validatedBody;
-    const { title, content, image_url } = validatedData;
+    const { title, content, image_url } = req.validatedBody;
 
+    if (!NEWS_ID_RE.test(id)) {
+      return res.status(404).json({ error: 'Новость не найдена' });
+    }
     if (!title || !content) {
       return res.status(400).json({ error: 'title и content обязательны' });
     }
+
+    const image = prepareNewsImage(image_url);
+    if (image.error) return res.status(400).json({ error: image.error });
 
     const check = await pool.query('SELECT id FROM news WHERE id = $1', [id]);
     if (check.rows.length === 0) {
       return res.status(404).json({ error: 'Новость не найдена' });
     }
 
+    // Картинка не пришла вовсе — оставляем прежнюю. Раньше любая правка
+    // текста затирала фото: поле перезаписывалось тем, что прислал клиент.
     const result = await pool.query(
-      `UPDATE news SET title = $1, content = $2, image_url = $3 WHERE id = $4 RETURNING *`,
-      [title, content, image_url || null, id]
+      `UPDATE news
+          SET title = $1, content = $2,
+              image_url = CASE WHEN $3::boolean THEN image_url ELSE $4 END,
+              updated_at = NOW()
+        WHERE id = $5
+        RETURNING ${NEWS_PUBLIC_COLUMNS}`,
+      [title.trim(), content.trim(), image.keep === true, image.keep ? null : image.value, id]
     );
 
+    await logActivity(req.user.userId, 'NEWS_UPDATED', 'news', id, { title: result.rows[0].title });
     console.log('✅ Обновлена новость:', result.rows[0].title);
     res.json(result.rows[0]);
   } catch (error) {
@@ -3079,14 +3195,19 @@ app.put('/api/news/:id', authenticate, requireAdminOrCoordinator, validateBody(n
 app.delete('/api/news/:id', authenticate, requireAdminOrCoordinator, async (req, res) => {
   try {
     const { id } = req.params;
-    
-    const check = await pool.query('SELECT id FROM news WHERE id = $1', [id]);
+
+    if (!NEWS_ID_RE.test(id)) {
+      return res.status(404).json({ error: 'Новость не найдена' });
+    }
+
+    const check = await pool.query('SELECT id, title FROM news WHERE id = $1', [id]);
     if (check.rows.length === 0) {
       return res.status(404).json({ error: 'Новость не найдена' });
     }
 
     await pool.query('DELETE FROM news WHERE id = $1', [id]);
 
+    await logActivity(req.user.userId, 'NEWS_DELETED', 'news', id, { title: check.rows[0].title });
     console.log('✅ Удалена новость:', id);
     res.json({ message: 'Новость удалена' });
   } catch (error) {

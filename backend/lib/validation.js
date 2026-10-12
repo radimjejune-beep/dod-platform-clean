@@ -240,7 +240,13 @@ export const documentSchema = Joi.object({
 export const newsSchema = Joi.object({
   title: Joi.string().min(3).max(200).required(),
   content: Joi.string().min(10).max(10000).required(),
-  image_url: Joi.string().uri().max(500).allow('', null)
+  // ⚠️ Раньше здесь стояло .uri().max(500). Но фото новости хранится в
+  // базе строкой data:image/...;base64,... — это сотни тысяч символов и не
+  // URL, поэтому любая новость с фотографией отклонялась проверкой.
+  // Лимит — под 2 МБ картинки в base64; тип и размер самой картинки
+  // проверяет сервер (parseDataImage), формат https-ссылки — тоже.
+  // undefined — «картинку не трогать», '' или null — «убрать».
+  image_url: Joi.string().max(3 * 1024 * 1024).allow('', null)
 });
 
 // 9. ЦЕЛЬ (KPI)

@@ -16,6 +16,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Events from './pages/Events';
+import EventDetail from './pages/EventDetail';
 import Calendar from './pages/Calendar';
 import Clubs from './pages/Clubs';
 import ClubDetail from './pages/ClubDetail';
@@ -209,6 +210,7 @@ function App() {
            МЕРОПРИЯТИЯ
            ============================================================ */}
         <Route path="/events" element={<Events />} />
+        <Route path="/events/:id" element={<EventDetail />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/club-calendar" element={<ClubCalendar />} />
         <Route path="/my-club-events" element={<MyClubEvents />} />

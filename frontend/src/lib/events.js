@@ -35,3 +35,24 @@ export const EVENT_STATUS_BADGES = {
   rejected: { label: 'Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' },
   completed: { label: 'Завершено', color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)' }
 };
+
+// Сегодняшний день «год-месяц-день» по часовому поясу браузера
+function todayInput() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// Прошло ли мероприятие: завершено вручную или последний день уже позади
+export function isPastEvent(event) {
+  if (!event) return false;
+  if (event.is_completed) return true;
+  const last = toDateInput(event.end_date || event.event_date);
+  return Boolean(last) && last < todayInput();
+}
+
+// «Приём заявок до 20.10» — это весь день 20.10 включительно
+export function isDeadlinePassed(event) {
+  const deadline = toDateInput(event?.registration_deadline);
+  return Boolean(deadline) && deadline < todayInput();
+}

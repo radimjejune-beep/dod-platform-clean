@@ -1746,6 +1746,7 @@ app.get('/api/events', authenticate, async (req, res) => {
              c.name as club_name,
              u.full_name as created_by_name,
              (SELECT COUNT(*)::int FROM event_registrations r WHERE r.event_id = e.id AND r.status = 'confirmed') as registrations_count,
+             (SELECT COUNT(*)::int FROM event_registrations r WHERE r.event_id = e.id AND r.status = 'confirmed' AND r.attended = true) as attended_count,
              (SELECT json_agg(json_build_object('id', ect.club_id, 'name', clubs.name)) 
               FROM event_club_targets ect 
               LEFT JOIN clubs ON ect.club_id = clubs.id 
@@ -1877,6 +1878,19 @@ app.get('/api/events', authenticate, async (req, res) => {
     const result = await pool.query(query, params);
     
     console.log(`  ✅ Найдено ${result.rows.length} событий`);
+
+    // Запись самого пользователя: без неё список не мог показать
+    // «Вы записаны» / «Заявка на рассмотрении».
+    if (result.rows.length > 0) {
+      const mine = await pool.query(
+        `SELECT id, event_id, status, attended FROM event_registrations
+          WHERE user_id = $1 AND event_id = ANY($2::uuid[])`,
+        [userId, result.rows.map((r) => r.id)]
+      );
+      const byEvent = new Map(mine.rows.map((r) => [r.event_id, { id: r.id, status: r.status, attended: r.attended }]));
+      result.rows.forEach((r) => { r.user_registration = byEvent.get(r.id) || null; });
+    }
+
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения событий:', error);
@@ -12236,10 +12250,415 @@ app.use((err, req, res, next) => {
 });
 
 // ============================================================
+// СТРАНИЦА МЕРОПРИЯТИЯ, ЯВКА, ИТОГИ, НАПОМИНАНИЯ
+// ============================================================
+// Одно мероприятие целиком — для страницы /events/:id. Раньше такой
+// страницы не было: описание, запись, Телемост и участники жили в разных
+// местах списка, а у завершённого мероприятия не было ни итогов, ни явки.
+
+// Может ли человек вообще видеть это мероприятие.
+// Правила те же, что у списка GET /api/events.
+async function canSeeEvent(user, ev) {
+  if (MOVEMENT_ROLES.includes(user.role)) return true;
+  const uid = user.userId;
+
+  const myClubs = await getCoordinatorClubIds(uid);
+  if (ev.proposed_by === uid || ev.created_by === uid || (ev.club_id && myClubs.includes(ev.club_id))) {
+    return true;
+  }
+
+  // Ждущее одобрения и отклонённое видят только автор и клуб
+  if ((ev.moderation_status || 'approved') !== 'approved') return false;
+
+  if (ev.is_global || ['outgoing', 'global_forum'].includes(ev.type)) return true;
+
+  // Для родителя «свои» — его дети
+  const ids = [uid];
+  if (user.role === 'parent') {
+    const kids = await pool.query(
+      `SELECT child_id FROM child_parent WHERE parent_id = $1 AND status = 'active'`,
+      [uid]
+    );
+    kids.rows.forEach((r) => ids.push(r.child_id));
+  }
+
+  const own = await pool.query(
+    `SELECT 1
+       FROM users u
+      WHERE u.id = ANY($1::uuid[]) AND u.club_id IS NOT NULL
+        AND (u.club_id = $2
+             OR EXISTS (SELECT 1 FROM event_club_targets t
+                         WHERE t.event_id = $3 AND t.club_id = u.club_id))
+      LIMIT 1`,
+    [ids, ev.club_id, ev.id]
+  );
+  if (own.rows.length > 0) return true;
+
+  const reg = await pool.query(
+    'SELECT 1 FROM event_registrations WHERE event_id = $1 AND user_id = ANY($2::uuid[]) LIMIT 1',
+    [ev.id, ids]
+  );
+  if (reg.rows.length > 0) return true;
+
+  if (user.role === 'tutor') {
+    const t = await pool.query(
+      `SELECT 1 FROM event_tutor_assignments WHERE event_id = $1 AND tutor_id = $2 AND status = 'accepted' LIMIT 1`,
+      [ev.id, uid]
+    );
+    if (t.rows.length > 0) return true;
+  }
+  return false;
+}
+
+// Кто ведёт мероприятие: отмечает явку, завершает, видит список записавшихся
+async function canManageEvent(user, ev) {
+  if (MOVEMENT_ROLES.includes(user.role)) return true;
+  if (ev.proposed_by === user.userId || ev.created_by === user.userId) return true;
+  if (!ev.club_id) return false;
+  return (await canInClub(user, ev.club_id, 'moderate_events')) ||
+         (await canInClub(user, ev.club_id, 'create_events'));
+}
+
+const EVENT_TODAY_SQL = `(NOW() AT TIME ZONE 'Europe/Moscow')::date`;
+
+app.get('/api/events/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(id)) return res.status(404).json({ error: 'Мероприятие не найдено' });
+
+    const found = await pool.query(
+      `SELECT e.*,
+              c.name AS club_name,
+              u.full_name AS created_by_name,
+              (e.event_date <= ${EVENT_TODAY_SQL}) AS started,
+              (COALESCE(e.end_date, e.event_date) < ${EVENT_TODAY_SQL}) AS past,
+              (e.registration_deadline IS NOT NULL
+                 AND e.registration_deadline < ${EVENT_TODAY_SQL}) AS deadline_passed,
+              (SELECT COUNT(*)::int FROM event_registrations r
+                WHERE r.event_id = e.id AND r.status = 'confirmed') AS registrations_count,
+              (SELECT COUNT(*)::int FROM event_registrations r
+                WHERE r.event_id = e.id AND r.status = 'confirmed' AND r.attended = true) AS attended_count,
+              (SELECT COUNT(*)::int FROM event_registrations r
+                WHERE r.event_id = e.id AND r.status = 'confirmed' AND r.attended IS NOT NULL) AS marked_count,
+              (SELECT json_agg(json_build_object('id', ect.club_id, 'name', cl.name))
+                 FROM event_club_targets ect
+                 LEFT JOIN clubs cl ON cl.id = ect.club_id
+                WHERE ect.event_id = e.id) AS target_clubs
+         FROM events e
+         LEFT JOIN clubs c ON c.id = e.club_id
+         LEFT JOIN users u ON u.id = e.created_by
+        WHERE e.id = $1`,
+      [id]
+    );
+    if (found.rows.length === 0) return res.status(404).json({ error: 'Мероприятие не найдено' });
+    const event = found.rows[0];
+
+    if (!(await canSeeEvent(req.user, event))) {
+      // Не отличаем «нет» от «закрыто»: чужое мероприятие не должно угадываться
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    const canManage = await canManageEvent(req.user, event);
+
+    const mine = await pool.query(
+      `SELECT id, status, attended, registered_at
+         FROM event_registrations WHERE event_id = $1 AND user_id = $2`,
+      [id, req.user.userId]
+    );
+    const myRegistration = mine.rows[0] || null;
+
+    // Записаться со страницы может участник на внутреннее мероприятие —
+    // так же, как в списке. Выездные и общие идут через команды клубов.
+    const isOutgoingOrGlobal =
+      ['outgoing', 'global_forum'].includes(event.type) || event.is_global === true;
+    const isFull = event.max_participants > 0 && event.registrations_count >= event.max_participants;
+    let registerBlocked = null;
+    if (req.user.role !== 'participant' || isOutgoingOrGlobal) registerBlocked = 'not_applicable';
+    else if ((event.moderation_status || 'approved') !== 'approved') registerBlocked = 'not_approved';
+    else if (event.is_completed || event.past) registerBlocked = 'finished';
+    else if (myRegistration) registerBlocked = 'already';
+    else if (event.deadline_passed) registerBlocked = 'deadline';
+    else if (isFull) registerBlocked = 'full';
+
+    let registrations = null;
+    if (canManage) {
+      const regs = await pool.query(
+        `SELECT r.id, r.user_id, r.status, r.registered_at, r.attended, r.attendance_marked_at,
+                u.full_name, u.class_name, u.school, cl.name AS club_name
+           FROM event_registrations r
+           LEFT JOIN users u ON u.id = r.user_id
+           LEFT JOIN clubs cl ON cl.id = u.club_id
+          WHERE r.event_id = $1
+          ORDER BY u.full_name ASC NULLS LAST`,
+        [id]
+      );
+      registrations = regs.rows;
+    }
+
+    res.json({
+      event,
+      my_registration: myRegistration,
+      can_manage: canManage,
+      can_register: registerBlocked === null,
+      register_blocked: registerBlocked,
+      registrations
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения мероприятия:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Отметить явку. Тело: { marks: [{ registration_id, attended: true|false|null }] }
+// null снимает отметку. Отмечать можно с дня мероприятия и только подтверждённых.
+app.patch('/api/events/:id/attendance', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(id)) return res.status(404).json({ error: 'Мероприятие не найдено' });
+
+    const ev = await pool.query(
+      `SELECT id, club_id, proposed_by, created_by, moderation_status,
+              (event_date <= ${EVENT_TODAY_SQL}) AS started
+         FROM events WHERE id = $1`,
+      [id]
+    );
+    if (ev.rows.length === 0) return res.status(404).json({ error: 'Мероприятие не найдено' });
+    const event = ev.rows[0];
+
+    if (!(await canManageEvent(req.user, event))) {
+      return res.status(403).json({ error: 'Отмечать явку может организатор мероприятия' });
+    }
+    if ((event.moderation_status || 'approved') !== 'approved') {
+      return res.status(400).json({ error: 'Мероприятие не одобрено' });
+    }
+    if (!event.started) {
+      return res.status(400).json({ error: 'Явку можно отмечать с дня мероприятия' });
+    }
+
+    const marks = Array.isArray(req.body?.marks) ? req.body.marks : [];
+    if (marks.length === 0 || marks.length > 1000) {
+      return res.status(400).json({ error: 'Передайте от 1 до 1000 отметок' });
+    }
+    const ids = [];
+    const values = [];
+    for (const m of marks) {
+      if (!m || !UUID_RE.test(String(m.registration_id)) ||
+          !(m.attended === true || m.attended === false || m.attended === null)) {
+        return res.status(400).json({ error: 'Некорректная отметка явки' });
+      }
+      ids.push(m.registration_id);
+      values.push(m.attended);
+    }
+
+    const result = await pool.query(
+      `UPDATE event_registrations r
+          SET attended = m.attended,
+              attendance_marked_at = CASE WHEN m.attended IS NULL THEN NULL ELSE NOW() END,
+              attendance_marked_by = CASE WHEN m.attended IS NULL THEN NULL ELSE $3::uuid END
+         FROM (SELECT unnest($1::uuid[]) AS id, unnest($2::boolean[]) AS attended) m
+        WHERE r.id = m.id AND r.event_id = $4 AND r.status = 'confirmed'`,
+      [ids, values, req.user.userId, id]
+    );
+
+    await logActivity(req.user.userId, 'EVENT_ATTENDANCE_MARKED', 'event', id, { marks: result.rowCount });
+    res.json({ updated: result.rowCount });
+  } catch (error) {
+    console.error('❌ Ошибка отметки явки:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Завершить мероприятие и записать итоги. Повторный вызов правит текст итогов.
+app.post('/api/events/:id/complete', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(id)) return res.status(404).json({ error: 'Мероприятие не найдено' });
+
+    const ev = await pool.query(
+      `SELECT id, title, club_id, proposed_by, created_by, moderation_status, is_completed,
+              (event_date <= ${EVENT_TODAY_SQL}) AS started
+         FROM events WHERE id = $1`,
+      [id]
+    );
+    if (ev.rows.length === 0) return res.status(404).json({ error: 'Мероприятие не найдено' });
+    const event = ev.rows[0];
+
+    if (!(await canManageEvent(req.user, event))) {
+      return res.status(403).json({ error: 'Завершить мероприятие может организатор' });
+    }
+    if ((event.moderation_status || 'approved') !== 'approved') {
+      return res.status(400).json({ error: 'Мероприятие не одобрено' });
+    }
+    if (!event.started) {
+      return res.status(400).json({ error: 'Мероприятие ещё не началось' });
+    }
+
+    const summary = String(req.body?.results_summary ?? '').trim().slice(0, 5000);
+    const firstTime = !event.is_completed;
+
+    const updated = await pool.query(
+      `UPDATE events
+          SET is_completed = true,
+              completed_at = COALESCE(completed_at, NOW()),
+              completed_by = COALESCE(completed_by, $2),
+              results_summary = $3
+        WHERE id = $1
+        RETURNING *`,
+      [id, req.user.userId, summary || null]
+    );
+
+    if (firstTime) {
+      const people = await pool.query(
+        `SELECT user_id FROM event_registrations
+          WHERE event_id = $1 AND status = 'confirmed' AND attended IS DISTINCT FROM false`,
+        [id]
+      );
+      for (const p of people.rows) {
+        await createNotification(
+          p.user_id,
+          'event_completed',
+          `Итоги: «${event.title}»`,
+          summary ? summary.slice(0, 200) : 'Мероприятие завершено. Спасибо, что были с нами!',
+          `/events/${id}`,
+          'normal'
+        );
+      }
+    }
+
+    await logActivity(req.user.userId, firstTime ? 'EVENT_COMPLETED' : 'EVENT_RESULTS_EDITED', 'event', id, {});
+    res.json(updated.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка завершения мероприятия:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// Вернуть мероприятие из завершённых (если завершили по ошибке)
+app.post('/api/events/:id/reopen', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(id)) return res.status(404).json({ error: 'Мероприятие не найдено' });
+
+    const ev = await pool.query(
+      'SELECT id, club_id, proposed_by, created_by FROM events WHERE id = $1',
+      [id]
+    );
+    if (ev.rows.length === 0) return res.status(404).json({ error: 'Мероприятие не найдено' });
+    if (!(await canManageEvent(req.user, ev.rows[0]))) {
+      return res.status(403).json({ error: 'У вас нет прав' });
+    }
+
+    const updated = await pool.query(
+      `UPDATE events SET is_completed = false, completed_at = NULL, completed_by = NULL
+        WHERE id = $1 RETURNING *`,
+      [id]
+    );
+    await logActivity(req.user.userId, 'EVENT_REOPENED', 'event', id, {});
+    res.json(updated.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка возврата мероприятия:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ------------------------------------------------------------
+// НАПОМИНАНИЯ
+// ------------------------------------------------------------
+// Раз в час смотрим, о чём пора напомнить:
+//  • завтра мероприятие — тем, кто записан и подтверждён;
+//  • сегодня последний день записи — участникам клуба-организатора,
+//    которые ещё не записались.
+// Шлём только днём по Москве (9–20 ч), чтобы не будить по ночам.
+// Журнал event_reminder_log не даёт отправить одно и то же дважды, даже
+// после перезапуска сервера или при нескольких копиях сервера.
+let reminderRunning = false;
+
+async function sendReminderOnce(eventId, userId, kind, title, message, link) {
+  const logged = await pool.query(
+    `INSERT INTO event_reminder_log (event_id, user_id, kind)
+     VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING 1`,
+    [eventId, userId, kind]
+  );
+  if (logged.rowCount === 0) return false;
+  await createNotification(userId, 'event_reminder', title, message, link, 'normal');
+  return true;
+}
+
+async function runEventReminders() {
+  if (reminderRunning) return;
+  reminderRunning = true;
+  try {
+    const hour = await pool.query(
+      `SELECT EXTRACT(HOUR FROM NOW() AT TIME ZONE 'Europe/Moscow')::int AS h`
+    );
+    const h = hour.rows[0].h;
+    if (h < 9 || h > 20) return;
+
+    const tomorrow = await pool.query(
+      `SELECT e.id, e.title, e.start_time, e.location, r.user_id
+         FROM events e
+         JOIN event_registrations r ON r.event_id = e.id AND r.status = 'confirmed'
+        WHERE COALESCE(e.moderation_status, 'approved') = 'approved'
+          AND COALESCE(e.is_completed, false) = false
+          AND e.event_date = ${EVENT_TODAY_SQL} + 1`
+    );
+    let sent = 0;
+    for (const row of tomorrow.rows) {
+      const when = [row.start_time ? `в ${row.start_time}` : null, row.location].filter(Boolean).join(', ');
+      const ok = await sendReminderOnce(
+        row.id, row.user_id, 'day_before',
+        `Завтра: «${row.title}»`,
+        when ? `Напоминаем: мероприятие завтра, ${when}.` : 'Напоминаем: мероприятие завтра.',
+        `/events/${row.id}`
+      );
+      if (ok) sent++;
+    }
+
+    const closing = await pool.query(
+      `SELECT e.id, e.title, u.id AS user_id
+         FROM events e
+         JOIN users u ON u.club_id = e.club_id AND u.role = 'participant'
+        WHERE e.club_id IS NOT NULL
+          AND COALESCE(e.moderation_status, 'approved') = 'approved'
+          AND COALESCE(e.is_completed, false) = false
+          AND e.registration_deadline = ${EVENT_TODAY_SQL}
+          AND e.event_date >= ${EVENT_TODAY_SQL}
+          AND NOT EXISTS (SELECT 1 FROM event_registrations r
+                           WHERE r.event_id = e.id AND r.user_id = u.id)
+          AND (e.max_participants IS NULL OR e.max_participants = 0 OR
+               (SELECT COUNT(*) FROM event_registrations r2
+                 WHERE r2.event_id = e.id AND r2.status = 'confirmed') < e.max_participants)`
+    );
+    for (const row of closing.rows) {
+      const ok = await sendReminderOnce(
+        row.id, row.user_id, 'deadline',
+        `Сегодня закрывается запись: «${row.title}»`,
+        'Сегодня последний день, чтобы записаться на мероприятие.',
+        `/events/${row.id}`
+      );
+      if (ok) sent++;
+    }
+
+    if (sent > 0) console.log(`🔔 Напоминаний о мероприятиях отправлено: ${sent}`);
+  } catch (error) {
+    console.error('❌ Ошибка напоминаний о мероприятиях:', error.message);
+  } finally {
+    reminderRunning = false;
+  }
+}
+
+// ============================================================
 // ЗАПУСК СЕРВЕРА
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Сервер запущен на порту ${PORT}`);
   console.log(`🔐 JWT_SECRET: задан (${JWT_SECRET.length} символов), токен живёт ${JWT_EXPIRES_IN}`);
   console.log(`✅ ВСЕ API ЗАГРУЖЕНЫ!`);
+
+  // Напоминания о мероприятиях: первый прогон через минуту после старта,
+  // дальше раз в час. Отключить можно переменной DISABLE_EVENT_REMINDERS=1.
+  if (process.env.DISABLE_EVENT_REMINDERS !== '1') {
+    setTimeout(runEventReminders, 60 * 1000);
+    setInterval(runEventReminders, 60 * 60 * 1000);
+  }
 });

@@ -9,7 +9,7 @@ import FilterBar from '../components/FilterBar';
 import Footer from '../components/Footer';
 import Icon from '../components/Icon';
 import TelemostInfo from '../components/TelemostInfo';
-import { toDateInput } from '../lib/events';
+import { toDateInput, isPastEvent, isDeadlinePassed as isDeadlineOver } from '../lib/events';
 
 export default function Events() {
   const [profile, setProfile] = useState(null);
@@ -59,6 +59,8 @@ export default function Events() {
   
   const [filters, setFilters] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
+  // Предстоящие / прошедшие / все. По умолчанию — что ещё впереди.
+  const [period, setPeriod] = useState('upcoming');
   
   // ===== ФОРМА =====
   const [form, setForm] = useState({
@@ -452,6 +454,13 @@ export default function Events() {
       ]
     },
     {
+      key: 'club_id',
+      type: 'select',
+      label: 'Клуб',
+      placeholder: 'Все клубы',
+      options: clubs.map((c) => ({ value: c.id, label: c.name }))
+    },
+    {
       key: 'moderation_status',
       type: 'select',
       label: 'Статус',
@@ -489,6 +498,19 @@ export default function Events() {
       filtered = filtered.filter(e => e.type === filters.type);
     }
 
+    if (filters.club_id) {
+      filtered = filtered.filter(e =>
+        e.club_id === filters.club_id ||
+        (e.target_clubs || []).some(c => c.id === filters.club_id)
+      );
+    }
+
+    if (period === 'upcoming') {
+      filtered = filtered.filter(e => !isPastEvent(e));
+    } else if (period === 'past') {
+      filtered = filtered.filter(e => isPastEvent(e));
+    }
+
     if (filters.moderation_status) {
       filtered = filtered.filter(e => e.moderation_status === filters.moderation_status);
     }
@@ -501,10 +523,14 @@ export default function Events() {
       filtered = filtered.filter(e => e.is_club_event === true);
     }
 
-    return filtered;
+    // Ближайшие — сверху; прошедшие — самые свежие сверху
+    const byDate = (a, b) => String(a.event_date).localeCompare(String(b.event_date));
+    return [...filtered].sort(period === 'past' ? (a, b) => byDate(b, a) : byDate);
   };
 
   const filteredEvents = getFilteredEvents();
+  const upcomingTotal = allEvents.filter(e => !isPastEvent(e)).length;
+  const pastTotal = allEvents.length - upcomingTotal;
 
   // ============================================================
   // ПРОВЕРКА ПРАВ
@@ -1160,7 +1186,24 @@ export default function Events() {
            СПИСОК МЕРОПРИЯТИЙ
            ============================================================ */}
         <div className="card">
-          <h3>Все мероприятия</h3>
+          <div className="period-tabs" role="tablist">
+            {[
+              ['upcoming', `Предстоящие (${upcomingTotal})`],
+              ['past', `Прошедшие (${pastTotal})`],
+              ['all', `Все (${allEvents.length})`]
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={period === key}
+                className={period === key ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
+                onClick={() => setPeriod(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {filteredEvents.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon"><Icon name="archive" /></div>
@@ -1182,17 +1225,7 @@ export default function Events() {
                 const isConfirmed = userRegistration?.status === 'confirmed';
                 const isRejected = userRegistration?.status === 'rejected';
                 
-                let isDeadlinePassed = false;
-                if (event.registration_deadline) {
-                  try {
-                    const deadlineDate = new Date(event.registration_deadline);
-                    if (!isNaN(deadlineDate.getTime())) {
-                      isDeadlinePassed = new Date().getTime() > deadlineDate.getTime();
-                    }
-                  } catch (e) {
-                    console.warn('Ошибка парсинга даты дедлайна:', e);
-                  }
-                }
+                const isDeadlinePassed = isDeadlineOver(event);
                 
                 const isFull = event.max_participants > 0 && (event.registrations_count || 0) >= event.max_participants;
                 const isOutgoingOrGlobal = event.type === 'outgoing' || event.type === 'global_forum' || event.is_global === true;
@@ -1219,7 +1252,16 @@ export default function Events() {
                     }}
                   >
                     <div className="event-title">
-                      {event.title}
+                      <a
+                        href={`/events/${event.id}`}
+                        className="event-title-link"
+                        onClick={(e) => { e.preventDefault(); navigate(`/events/${event.id}`); }}
+                      >
+                        {event.title}
+                      </a>
+                      {event.is_completed && (
+                        <span className="tag tag-closed">Завершено</span>
+                      )}
                       {event.is_global && (
                         <span className="tag tag-global">Глобальное</span>
                       )}
@@ -1275,7 +1317,7 @@ export default function Events() {
                     <TelemostInfo event={event} />
 
                     {/* БЛОК РЕГИСТРАЦИИ */}
-                    {canRegister && event.moderation_status === 'approved' && (
+                    {canRegister && event.moderation_status === 'approved' && !isPastEvent(event) && (
                       <div className="event-registration">
                         {isParticipant && !isOutgoingOrGlobal && (
                           <>
@@ -1367,6 +1409,12 @@ export default function Events() {
                           Редактировать
                         </button>
                       )}
+                      <button
+                        className="btn-secondary btn-sm"
+                        onClick={() => navigate(`/events/${event.id}`)}
+                      >
+                        Подробнее
+                      </button>
                       {userCanDelete && (
                         <button className="btn-danger btn-sm" onClick={() => handleDelete(event.id)}>
                           Удалить
@@ -1871,6 +1919,18 @@ export default function Events() {
           border: 1px solid var(--color-gray-200);
           white-space: nowrap;
         }
+
+        .period-tabs {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+        .event-title-link {
+          color: inherit;
+          text-decoration: none;
+        }
+        .event-title-link:hover { text-decoration: underline; }
 
         .events-list {
           display: flex;

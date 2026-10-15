@@ -9,6 +9,7 @@ import FilterBar from '../components/FilterBar';
 import Footer from '../components/Footer';
 import Icon from '../components/Icon';
 import TelemostInfo from '../components/TelemostInfo';
+import { toDateInput } from '../lib/events';
 
 export default function Events() {
   const [profile, setProfile] = useState(null);
@@ -691,8 +692,8 @@ export default function Events() {
       title: event.title || '',
       description: event.description || '',
       location: event.location || '',
-      event_date: event.event_date || '',
-      end_date: event.end_date || '',
+      event_date: toDateInput(event.event_date),
+      end_date: toDateInput(event.end_date),
       start_time: event.start_time || '',
       end_time: event.end_time || '',
       type: event.type || 'internal',
@@ -700,9 +701,10 @@ export default function Events() {
       club_id: event.club_id || '',
       form_url: event.form_url || '',
       is_global: event.is_global || false,
-      registration_deadline: event.registration_deadline || '',
+      registration_deadline: toDateInput(event.registration_deadline),
       max_participants: event.max_participants || 0,
-      target_clubs: event.target_clubs || [],
+      // С сервера приходит [{id, name}], а форме и проверке нужны одни id
+      target_clubs: (event.target_clubs || []).map((c) => (typeof c === 'string' ? c : c.id)),
       telemost_allowed: event.telemost_allowed === true,
       telemost_url: event.telemost_url || ''
     });

@@ -1745,7 +1745,7 @@ app.get('/api/events', authenticate, async (req, res) => {
       SELECT e.*, 
              c.name as club_name,
              u.full_name as created_by_name,
-             (SELECT COUNT(*) FROM event_registrations r WHERE r.event_id = e.id AND r.status = 'confirmed') as registrations_count,
+             (SELECT COUNT(*)::int FROM event_registrations r WHERE r.event_id = e.id AND r.status = 'confirmed') as registrations_count,
              (SELECT json_agg(json_build_object('id', ect.club_id, 'name', clubs.name)) 
               FROM event_club_targets ect 
               LEFT JOIN clubs ON ect.club_id = clubs.id 
@@ -1800,9 +1800,11 @@ app.get('/api/events', authenticate, async (req, res) => {
       const user = await pool.query('SELECT club_id FROM users WHERE id = $1', [userId]);
       if (user.rows.length > 0 && user.rows[0].club_id) {
         const clubId = user.rows[0].club_id;
-        conditions.push(`(e.club_id = $${params.length + 1} OR e.is_global = true)`);
+        conditions.push(`(e.club_id = $${params.length + 1}
+           OR e.is_global = true
+           OR EXISTS (SELECT 1 FROM event_club_targets ect WHERE ect.event_id = e.id AND ect.club_id = $${params.length + 1}))`);
         params.push(clubId);
-        console.log(`  👤 Участник клуба ${clubId} + глобальные`);
+        console.log(`  👤 Участник клуба ${clubId} + глобальные + разосланные клубу`);
       } else {
         conditions.push(`e.is_global = true`);
         console.log(`  ⚠️ Участник без клуба — только глобальные`);
@@ -1830,7 +1832,16 @@ app.get('/api/events', authenticate, async (req, res) => {
       );
       if (children.rows.length > 0) {
         const childIds = children.rows.map(r => r.child_id);
-        conditions.push(`(e.id IN (SELECT event_id FROM registrations WHERE user_id = ANY($${params.length + 1}::uuid[])) OR e.is_global = true)`);
+        // ⚠️ Раньше здесь читалась старая таблица registrations, а запись
+        // на мероприятия идёт в event_registrations — родитель не видел
+        // ничего из того, на что записан ребёнок. Заодно показываем
+        // мероприятия клуба ребёнка.
+        conditions.push(`(e.id IN (SELECT event_id FROM event_registrations WHERE user_id = ANY($${params.length + 1}::uuid[]))
+           OR e.club_id IN (SELECT club_id FROM users WHERE id = ANY($${params.length + 1}::uuid[]) AND club_id IS NOT NULL)
+           OR EXISTS (SELECT 1 FROM event_club_targets ect
+                       WHERE ect.event_id = e.id
+                         AND ect.club_id IN (SELECT club_id FROM users WHERE id = ANY($${params.length + 1}::uuid[]) AND club_id IS NOT NULL))
+           OR e.is_global = true)`);
         params.push(childIds);
         console.log(`  👨‍👩‍👦 Родитель — ${children.rows.length} детей`);
       } else {
@@ -1845,6 +1856,17 @@ app.get('/api/events', authenticate, async (req, res) => {
 
     if (conditions.length > 0) {
       query += ' AND (' + conditions.join(' OR ') + ')';
+    }
+
+    // Ждущие одобрения и отклонённые видят движение и свой клуб. Остальным
+    // (участники, родители, тьюторы, чужие клубы) — только одобренные.
+    if (!MOVEMENT_ROLES.includes(userRole)) {
+      const myClubs = await getCoordinatorClubIds(userId);
+      params.push(userId);
+      params.push(myClubs);
+      query += ` AND (COALESCE(e.moderation_status, 'approved') = 'approved'
+                      OR e.proposed_by = $${params.length - 1}
+                      OR e.club_id = ANY($${params.length}::uuid[]))`;
     }
 
     query += ' ORDER BY e.event_date ASC';
@@ -1867,6 +1889,7 @@ app.post('/api/events', authenticate, validateBody(eventSchema), async (req, res
   try {
     const userId = req.user.userId;
     const userRole = req.user.role;
+    const isMovement = MOVEMENT_ROLES.includes(userRole);
 
     const validatedData = req.validatedBody;
     const { 
@@ -1883,6 +1906,8 @@ app.post('/api/events', authenticate, validateBody(eventSchema), async (req, res
       form_url, 
       is_global,
       target_clubs,
+      registration_deadline,
+      max_participants,
       telemost_allowed,
       telemost_url
     } = validatedData;
@@ -1907,31 +1932,53 @@ app.post('/api/events', authenticate, validateBody(eventSchema), async (req, res
     let finalTargetClubs = target_clubs || [];
     let finalClubId = club_id || null;
 
-    if (finalIsGlobal) {
+    // ⚠️ Раньше здесь не было проверки прав вовсе: достаточно было войти,
+    // и даже участник или родитель мог создать глобальное мероприятие,
+    // которое увидели бы все клубы. Теперь создавать могут движение и те
+    // сотрудники клуба, у кого в матрице должностей есть create_events.
+    if (!isMovement) {
+      const myClubs = await getCoordinatorClubIds(userId);
+      if (!finalClubId || !myClubs.includes(finalClubId)) {
+        // Клуб не указан или чужой — берём единственный свой, если он один
+        finalClubId = myClubs.length === 1 ? myClubs[0] : null;
+      }
+      if (!finalClubId || !(await canInClub(req.user, finalClubId, 'create_events'))) {
+        return res.status(403).json({ error: 'У вас нет права создавать мероприятия' });
+      }
+      // Глобальные мероприятия и рассылку на чужие клубы ведёт только движение
+      finalIsGlobal = false;
+      finalTargetClubs = [finalClubId];
+    } else if (finalIsGlobal) {
       finalTargetClubs = [];
       console.log(`  🌍 ГЛОБАЛЬНОЕ — видно всем`);
     }
 
-    if (!finalIsGlobal && finalTargetClubs.length === 0) {
-      if (userRole === 'club_coordinator') {
-        const clubResult = await pool.query(
-          'SELECT club_id FROM club_coordinators WHERE profile_id = $1',
-          [userId]
-        );
-        if (clubResult.rows.length > 0) {
-          finalClubId = clubResult.rows[0].club_id;
-          finalTargetClubs = [finalClubId];
-          console.log(`  🏫 Клуб координатора: ${finalClubId}`);
-        }
-      }
+    // Одобрение. Матрица должностей уже различает «создавать» и
+    // «одобрять» (create_events / moderate_events): методист создаёт, а
+    // руководитель и заместитель одобряют. Значит, мероприятие методиста
+    // ждёт их решения, а созданное самим руководителем или движением
+    // публикуется сразу. Раньше поле одобрения не заполнялось нигде:
+    // на одних страницах всё висело «на модерации», на других сразу
+    // считалось одобренным.
+    let moderationStatus = 'approved';
+    if (!isMovement && !(await canInClub(req.user, finalClubId, 'moderate_events'))) {
+      moderationStatus = 'pending';
     }
+
+    // ⚠️ Срок записи и лимит мест раньше не сохранялись вовсе: форма их
+    // присылала, а запрос их не принимал. В итоге у любого мероприятия
+    // оставался лимит 20 по умолчанию из базы, а срок записи не работал.
+    const finalMaxParticipants = Number.isInteger(max_participants) && max_participants >= 0 ? max_participants : 0;
 
     const result = await pool.query(
       `INSERT INTO events (
         title, description, location, event_date, end_date, start_time, end_time,
         type, capacity, club_id, form_url, is_global, is_club_event, created_by,
-        telemost_allowed, telemost_url, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
+        telemost_allowed, telemost_url,
+        registration_deadline, max_participants,
+        proposed_by, moderation_status, status, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
+                $17, $18, $14, $19::text, $19::text, NOW())
       RETURNING *`,
       [
         title.trim(), description || '', location || '', event_date,
@@ -1941,7 +1988,9 @@ app.post('/api/events', authenticate, validateBody(eventSchema), async (req, res
         form_url || null, finalIsGlobal, 
         !finalIsGlobal && finalTargetClubs.length > 0 ? true : false,
         userId,
-        finalTelemostAllowed, finalTelemostUrl
+        finalTelemostAllowed, finalTelemostUrl,
+        registration_deadline || null, finalMaxParticipants,
+        moderationStatus
       ]
     );
 
@@ -1959,7 +2008,26 @@ app.post('/api/events', authenticate, validateBody(eventSchema), async (req, res
       console.log(`  ✅ Привязано ${finalTargetClubs.length} клубов`);
     }
 
-    console.log(`✅ Событие создано: ${event.id} - "${event.title}"`);
+    // Ждёт одобрения — говорим тем, кто вправе одобрить
+    if (moderationStatus === 'pending' && finalClubId) {
+      const approvers = await pool.query(
+        `SELECT user_id FROM club_staff
+          WHERE club_id = $1 AND position IN ('head', 'deputy') AND removed_at IS NULL`,
+        [finalClubId]
+      );
+      for (const row of approvers.rows) {
+        await createNotification(
+          row.user_id, 'event_moderation', 'Мероприятие ждёт одобрения',
+          `Предложено мероприятие «${event.title}»`, '/events', 'high'
+        );
+      }
+    }
+
+    await logActivity(userId, 'EVENT_CREATED', 'event', event.id, {
+      title: event.title, moderation_status: moderationStatus
+    });
+
+    console.log(`✅ Событие создано: ${event.id} - "${event.title}" (${moderationStatus})`);
     res.status(201).json(event);
   } catch (error) {
     console.error('❌ Ошибка создания события:', error);
@@ -1979,6 +2047,35 @@ app.patch('/api/events/:id', authenticate, async (req, res) => {
       is_global, is_club_event, club_id,
       telemost_allowed, telemost_url
     } = req.body;
+
+    if (!UUID_RE.test(id)) {
+      return res.status(404).json({ error: 'Мероприятие не найдено' });
+    }
+
+    // Срок записи и лимит мест: не прислали — оставляем как было,
+    // прислали пустое — снимаем (срок) или «без ограничений» (лимит)
+    const hasDeadline = Object.prototype.hasOwnProperty.call(req.body, 'registration_deadline');
+    const hasMax = Object.prototype.hasOwnProperty.call(req.body, 'max_participants');
+    let newDeadline = null;
+    if (hasDeadline && req.body.registration_deadline) {
+      newDeadline = String(req.body.registration_deadline).slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(newDeadline) || isNaN(new Date(newDeadline).getTime())) {
+        return res.status(400).json({
+          error: 'Неверная дата окончания записи',
+          details: [{ field: 'registration_deadline', message: 'Неверный формат даты' }]
+        });
+      }
+    }
+    let newMax = 0;
+    if (hasMax) {
+      newMax = parseInt(req.body.max_participants, 10);
+      if (!Number.isInteger(newMax) || newMax < 0) {
+        return res.status(400).json({
+          error: 'Неверный лимит мест',
+          details: [{ field: 'max_participants', message: 'Число не меньше 0 (0 — без ограничений)' }]
+        });
+      }
+    }
 
     console.log(`📝 ОБНОВЛЕНИЕ СОБЫТИЯ ${id}`);
     console.log(`  👤 Пользователь: ${userId} (${userRole})`);
@@ -2049,19 +2146,130 @@ app.patch('/api/events/:id', authenticate, async (req, res) => {
            is_global = $12,
            is_club_event = COALESCE($13, is_club_event),
            telemost_allowed = $15,
-           telemost_url = $16
+           telemost_url = $16,
+           registration_deadline = CASE WHEN $17::boolean THEN $18::date ELSE registration_deadline END,
+           max_participants = CASE WHEN $19::boolean THEN $20::int ELSE max_participants END
        WHERE id = $14
        RETURNING *`,
       [title, description, location, event_date, end_date, 
        start_time, end_time, type, capacity, form_url,
        finalClubId, finalIsGlobal, is_club_event, id,
-       finalTelemostAllowed, finalTelemostUrl]
+       finalTelemostAllowed, finalTelemostUrl,
+       hasDeadline, newDeadline, hasMax, newMax]
     );
 
     console.log(`✅ Событие ${id} обновлено`);
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Ошибка обновления события:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// ОДОБРЕНИЕ / ОТКЛОНЕНИЕ МЕРОПРИЯТИЯ
+// Вправе движение и те сотрудники клуба, у кого в матрице должностей есть
+// moderate_events (руководитель и заместитель). Адрес этот давно вызывали
+// страницы «Мероприятия» и «Мероприятия клуба», а на сервере его не было:
+// кнопки «Одобрить» и «Отклонить» отвечали ошибкой.
+app.patch('/api/events/:id/moderate', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, comment } = req.body || {};
+
+    if (!UUID_RE.test(id)) return res.status(404).json({ error: 'Мероприятие не найдено' });
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'status: approved или rejected' });
+    }
+
+    const check = await pool.query('SELECT id, title, club_id, proposed_by, created_by FROM events WHERE id = $1', [id]);
+    if (check.rows.length === 0) return res.status(404).json({ error: 'Мероприятие не найдено' });
+    const event = check.rows[0];
+
+    const allowed = MOVEMENT_ROLES.includes(req.user.role) ||
+      (event.club_id && await canInClub(req.user, event.club_id, 'moderate_events'));
+    if (!allowed) {
+      return res.status(403).json({ error: 'У вас нет права одобрять мероприятия' });
+    }
+
+    const result = await pool.query(
+      `UPDATE events
+          SET moderation_status = $1, status = $1,
+              moderated_by = $2, moderated_at = NOW(),
+              moderation_comment = $3
+        WHERE id = $4
+        RETURNING *`,
+      [status, req.user.userId, (comment || '').toString().trim().slice(0, 1000) || null, id]
+    );
+
+    // Автору — результат, если решил не он сам
+    const authorId = event.proposed_by || event.created_by;
+    if (authorId && authorId !== req.user.userId) {
+      await createNotification(
+        authorId, 'event_moderation',
+        status === 'approved' ? 'Мероприятие одобрено' : 'Мероприятие отклонено',
+        `«${event.title}»${comment ? ': ' + String(comment).trim().slice(0, 300) : ''}`,
+        '/events', 'high'
+      );
+    }
+
+    await logActivity(req.user.userId, status === 'approved' ? 'EVENT_APPROVED' : 'EVENT_REJECTED', 'event', id, { title: event.title });
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Ошибка одобрения мероприятия:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// МЕРОПРИЯТИЯ ОДНОГО КЛУБА (блок на странице клуба)
+// Участник клуба видит только одобренные; сотрудники и движение — все,
+// в том числе ждущие решения.
+app.get('/api/club-events/:clubId', authenticate, async (req, res) => {
+  try {
+    const { clubId } = req.params;
+    const { userId, role } = req.user;
+
+    if (!UUID_RE.test(clubId)) return res.status(404).json({ error: 'Клуб не найден' });
+
+    let seesAll = MOVEMENT_ROLES.includes(role);
+    let allowed = seesAll;
+
+    if (!allowed) {
+      const staffClubs = await getCoordinatorClubIds(userId);
+      if (staffClubs.includes(clubId)) { allowed = true; seesAll = true; }
+    }
+    if (!allowed && role === 'participant') {
+      const me = await pool.query('SELECT club_id FROM users WHERE id = $1', [userId]);
+      allowed = me.rows[0]?.club_id === clubId;
+    }
+    if (!allowed && role === 'parent') {
+      const kids = await pool.query(
+        `SELECT 1 FROM child_parent cp JOIN users u ON u.id = cp.child_id
+          WHERE cp.parent_id = $1 AND cp.status = 'active' AND u.club_id = $2 LIMIT 1`,
+        [userId, clubId]
+      );
+      allowed = kids.rows.length > 0;
+    }
+    if (!allowed) {
+      return res.status(403).json({ error: 'Нет доступа к мероприятиям этого клуба' });
+    }
+
+    const result = await pool.query(
+      `SELECT e.*, u.full_name AS proposed_by_name,
+              (SELECT COUNT(*)::int FROM event_registrations r
+                WHERE r.event_id = e.id AND r.status = 'confirmed') AS registrations_count,
+              (SELECT r.status FROM event_registrations r
+                WHERE r.event_id = e.id AND r.user_id = $2) AS my_registration_status
+         FROM events e
+         LEFT JOIN users u ON u.id = e.proposed_by
+        WHERE (e.club_id = $1
+               OR EXISTS (SELECT 1 FROM event_club_targets t WHERE t.event_id = e.id AND t.club_id = $1))
+          AND ($3::boolean OR COALESCE(e.moderation_status, 'approved') = 'approved')
+        ORDER BY e.event_date ASC`,
+      [clubId, userId, seesAll]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ Ошибка получения мероприятий клуба:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера', code: 'INTERNAL_ERROR' });
   }
 });
@@ -2153,13 +2361,16 @@ app.get('/api/my-club-events', authenticate, async (req, res) => {
 
     const result = await pool.query(
       `SELECT e.*, c.name as club_name, u.full_name as proposed_by_name,
-              (SELECT COUNT(*) FROM event_registrations r WHERE r.event_id = e.id AND r.status = 'confirmed') as registrations_count
+              (SELECT COUNT(*)::int FROM event_registrations r WHERE r.event_id = e.id AND r.status = 'confirmed') as registrations_count,
+              (SELECT r.status FROM event_registrations r WHERE r.event_id = e.id AND r.user_id = $2) as my_registration_status
        FROM events e
        LEFT JOIN clubs c ON e.club_id = c.id
        LEFT JOIN users u ON e.proposed_by = u.id
-       WHERE e.club_id = $1
+       WHERE (e.club_id = $1
+              OR EXISTS (SELECT 1 FROM event_club_targets t WHERE t.event_id = e.id AND t.club_id = $1))
+         AND ($3::boolean OR COALESCE(e.moderation_status, 'approved') = 'approved')
        ORDER BY e.event_date ASC`,
-      [clubId]
+      [clubId, userId, ['club_coordinator', ...MOVEMENT_ROLES].includes(userRole)]
     );
 
     console.log(`  ✅ Найдено ${result.rows.length} мероприятий клуба ${clubId}`);
@@ -4972,7 +5183,10 @@ app.post('/api/event-registrations', authenticate, async (req, res) => {
       try {
         const now = new Date();
         const deadline = new Date(event.registration_deadline);
-        if (!isNaN(deadline.getTime()) && now.getTime() > deadline.getTime()) {
+        // «Приём заявок до 20.10» — это весь день 20.10 включительно.
+        // Раньше запись закрывалась в полночь его начала.
+        const deadlineEnd = deadline.getTime() + 24 * 60 * 60 * 1000;
+        if (!isNaN(deadline.getTime()) && now.getTime() >= deadlineEnd) {
           return res.status(400).json({ error: 'Регистрация закрыта' });
         }
       } catch (e) {

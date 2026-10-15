@@ -7,6 +7,7 @@ import { confirmAction } from '../lib/confirm';
 import Navigation from '../components/Navigation';
 import Icon from '../components/Icon';
 import TelemostInfo from '../components/TelemostInfo';
+import { eventStatus, EVENT_STATUS_BADGES } from '../lib/events';
 
 export default function MyClubEvents() {
   const [profile, setProfile] = useState(null);
@@ -52,15 +53,6 @@ export default function MyClubEvents() {
     }
   };
 
-  const getStatusBadge = (status) => {
-    const badges = {
-      'pending': { label: 'На модерации', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
-      'approved': { label: 'Одобрено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-      'rejected': { label: 'Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' },
-      'completed': { label: 'Завершено', color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)' }
-    };
-    return badges[status] || badges['pending'];
-  };
 
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString('ru-RU', {
@@ -79,6 +71,34 @@ export default function MyClubEvents() {
   }
 
   const isCoordinator = profile?.role === 'club_coordinator';
+
+  // Раньше ответ сервера не проверялся: «Мероприятие одобрено!» появлялось
+  // даже тогда, когда запрос не прошёл (а адрес, к которому он обращался,
+  // на сервере вообще не существовал).
+  const moderate = async (eventId, status) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/events/${eventId}/moderate`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.error) {
+        throw new Error(api.describeApiError(result, `Ошибка ${response.status}`));
+      }
+      setMessage(status === 'approved' ? 'Мероприятие одобрено!' : 'Мероприятие отклонено');
+      setMessageType(status === 'approved' ? 'success' : 'error');
+      loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('Ошибка: ' + err.message);
+      setMessageType('error');
+    }
+  };
 
   return (
     <div className="page-background">
@@ -135,7 +155,8 @@ export default function MyClubEvents() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {events.map((event) => {
-              const status = getStatusBadge(event.status);
+              const currentStatus = eventStatus(event);
+              const status = EVENT_STATUS_BADGES[currentStatus] || EVENT_STATUS_BADGES.approved;
               return (
                 <div
                   key={event.id}
@@ -176,7 +197,7 @@ export default function MyClubEvents() {
                         {event.location && (
                           <span>{event.location}</span>
                         )}
-                        <span>{event.current_participants || 0}/{event.max_participants || '∞'}</span>
+                        <span>{event.registrations_count || 0}/{event.max_participants > 0 ? event.max_participants : '∞'}</span>
                       </div>
 
                       <TelemostInfo event={event} />
@@ -189,57 +210,19 @@ export default function MyClubEvents() {
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      {isCoordinator && event.status === 'pending' && (
+                      {isCoordinator && currentStatus === 'pending' && (
                         <>
                           <button
-                            className="btn-success"
-                            style={{ padding: '6px 16px', fontSize: '12px' }}
-                            onClick={async () => {
-                              try {
-                                const token = localStorage.getItem('token');
-                                await fetch(`https://dod-backend.relaxdev.ru/api/club-events/${event.id}/moderate`, {
-                                  method: 'PATCH',
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${token}`
-                                  },
-                                  body: JSON.stringify({ status: 'approved' })
-                                });
-                                loadData();
-                                setMessage('Мероприятие одобрено!');
-                                setMessageType('success');
-                                setTimeout(() => setMessage(''), 3000);
-                              } catch (err) {
-                                setMessage('Ошибка: ' + err.message);
-                                setMessageType('error');
-                              }
-                            }}
+                            className="btn btn-primary btn-sm"
+                            onClick={() => moderate(event.id, 'approved')}
                           >
                             Одобрить
                           </button>
                           <button
-                            className="btn-danger"
-                            style={{ padding: '6px 16px', fontSize: '12px' }}
+                            className="btn btn-danger-soft btn-sm"
                             onClick={async () => {
                               if (!await confirmAction({ title: 'Отклонить мероприятие?', tone: 'danger' })) return;
-                              try {
-                                const token = localStorage.getItem('token');
-                                await fetch(`https://dod-backend.relaxdev.ru/api/club-events/${event.id}/moderate`, {
-                                  method: 'PATCH',
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${token}`
-                                  },
-                                  body: JSON.stringify({ status: 'rejected' })
-                                });
-                                loadData();
-                                setMessage('Мероприятие отклонено');
-                                setMessageType('error');
-                                setTimeout(() => setMessage(''), 3000);
-                              } catch (err) {
-                                setMessage('Ошибка: ' + err.message);
-                                setMessageType('error');
-                              }
+                              moderate(event.id, 'rejected');
                             }}
                           >
                             Отклонить

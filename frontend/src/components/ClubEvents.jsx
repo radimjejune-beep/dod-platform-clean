@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import Icon from './Icon';
 import { describeApiError } from '../lib/api';
 import { confirmAction } from '../lib/confirm';
+import TelemostInfo from './TelemostInfo';
+import { eventStatus, EVENT_STATUS_BADGES } from '../lib/events';
 
 export default function ClubEvents({ clubId, profile }) {
   const [events, setEvents] = useState([]);
@@ -26,7 +28,9 @@ export default function ClubEvents({ clubId, profile }) {
     start_time: '',
     end_time: '',
     max_participants: 20,
-    registration_deadline: ''
+    registration_deadline: '',
+    telemost_allowed: false,
+    telemost_url: ''
   });
 
   useEffect(() => {
@@ -94,15 +98,30 @@ export default function ClubEvents({ clubId, profile }) {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('https://dod-backend.relaxdev.ru/api/club-events', {
+      // Адреса /api/club-events для создания на сервере нет — мероприятия
+      // клуба создаются общим /api/events. Пустые поля шлём как null:
+      // пустая строка не проходит проверку даты и времени.
+      const response = await fetch('https://dod-backend.relaxdev.ru/api/events', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          ...form,
-          club_id: clubId
+          title: form.title.trim(),
+          description: form.description,
+          location: form.location,
+          event_date: form.event_date,
+          end_date: form.end_date || null,
+          start_time: form.start_time || null,
+          end_time: form.end_time || null,
+          max_participants: parseInt(form.max_participants, 10) || 0,
+          registration_deadline: form.registration_deadline || null,
+          type: 'internal',
+          club_id: clubId,
+          is_club_event: true,
+          telemost_allowed: !!form.telemost_allowed,
+          telemost_url: form.telemost_allowed ? (form.telemost_url || '').trim() : ''
         })
       });
 
@@ -111,7 +130,9 @@ export default function ClubEvents({ clubId, profile }) {
         throw new Error(describeApiError(result));
       }
 
-      setMessage('Мероприятие создано! Участники клуба будут уведомлены.');
+      setMessage(result.moderation_status === 'pending'
+        ? 'Мероприятие отправлено на одобрение руководителю клуба.'
+        : 'Мероприятие создано!');
       setMessageType('success');
       setShowForm(false);
       resetForm();
@@ -135,7 +156,9 @@ export default function ClubEvents({ clubId, profile }) {
       start_time: '',
       end_time: '',
       max_participants: 20,
-      registration_deadline: ''
+      registration_deadline: '',
+      telemost_allowed: false,
+      telemost_url: ''
     });
   };
 
@@ -144,11 +167,13 @@ export default function ClubEvents({ clubId, profile }) {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`https://dod-backend.relaxdev.ru/api/club-events/${eventId}/register`, {
+      const response = await fetch('https://dod-backend.relaxdev.ru/api/event-registrations', {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({ event_id: eventId })
       });
       
       const result = await response.json();
@@ -156,7 +181,7 @@ export default function ClubEvents({ clubId, profile }) {
         throw new Error(describeApiError(result));
       }
       
-      setMessage('Вы записаны на мероприятие!');
+      setMessage('Заявка отправлена!');
       setMessageType('success');
       loadEvents();
       setTimeout(() => setMessage(''), 3000);
@@ -171,7 +196,7 @@ export default function ClubEvents({ clubId, profile }) {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`https://dod-backend.relaxdev.ru/api/club-events/${eventId}/moderate`, {
+      const response = await fetch(`https://dod-backend.relaxdev.ru/api/events/${eventId}/moderate`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -198,15 +223,6 @@ export default function ClubEvents({ clubId, profile }) {
     }
   };
 
-  const getStatusBadge = (status) => {
-    const badges = {
-      'pending': { label: 'На модерации', color: 'var(--color-gold)', bg: 'var(--color-gold-pale)' },
-      'approved': { label: 'Одобрено', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-      'rejected': { label: 'Отклонено', color: 'var(--color-error)', bg: 'var(--color-error-bg)' },
-      'completed': { label: 'Завершено', color: 'var(--color-gray-500)', bg: 'var(--color-gray-100)' }
-    };
-    return badges[status] || badges['pending'];
-  };
 
   if (loading) {
     return <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-gray-500)' }}>Загрузка...</div>;
@@ -327,7 +343,27 @@ export default function ClubEvents({ clubId, profile }) {
                 />
               </div>
             </div>
-            <button type="submit" className="btn-success">
+            <div className="form-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={!!form.telemost_allowed}
+                  onChange={(e) => setForm({ ...form, telemost_allowed: e.target.checked, telemost_url: e.target.checked ? form.telemost_url : '' })}
+                  style={{ width: 'auto' }}
+                />
+                Можно подключиться по Телемосту
+              </label>
+              {form.telemost_allowed && (
+                <input
+                  type="url"
+                  value={form.telemost_url || ''}
+                  onChange={(e) => setForm({ ...form, telemost_url: e.target.value })}
+                  placeholder="https://telemost.yandex.ru/j/..."
+                  style={{ marginTop: '8px' }}
+                />
+              )}
+            </div>
+            <button type="submit" className="btn btn-primary">
               Создать мероприятие
             </button>
           </form>
@@ -344,9 +380,12 @@ export default function ClubEvents({ clubId, profile }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {events.map((event) => {
-            const status = getStatusBadge(event.status);
-            const isApproved = event.status === 'approved';
-            const isPending = event.status === 'pending';
+            const currentStatus = eventStatus(event);
+            const status = EVENT_STATUS_BADGES[currentStatus] || EVENT_STATUS_BADGES.approved;
+            const isApproved = currentStatus === 'approved';
+            const isPending = currentStatus === 'pending';
+            const myReg = event.my_registration_status;
+            const full = event.max_participants > 0 && (event.registrations_count || 0) >= event.max_participants;
             const canModerate = isCoordinator || ['admin', 'movement_coordinator', 'president', 'vice_president'].includes(profile?.role);
             
             return (
@@ -377,34 +416,36 @@ export default function ClubEvents({ clubId, profile }) {
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
                       <span>{new Date(event.event_date).toLocaleDateString('ru-RU')}</span>
                       {event.location && <span>{event.location}</span>}
-                      <span>{event.current_participants || 0}/{event.max_participants || '∞'}</span>
+                      <span>{event.registrations_count || 0}/{event.max_participants > 0 ? event.max_participants : '∞'}</span>
                     </div>
+                    <TelemostInfo event={event} />
                   </div>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {/* ЗАПИСЬ НА МЕРОПРИЯТИЕ */}
-                    {isParticipant && isApproved && (
+                    {isParticipant && isApproved && !myReg && !full && (
                       <button
-                        className="btn-primary"
-                        style={{ padding: '4px 12px', fontSize: '12px' }}
+                        className="btn btn-primary btn-sm"
                         onClick={() => handleRegister(event.id)}
                       >
                         Записаться
                       </button>
                     )}
+                    {isParticipant && myReg === 'pending' && <span className="tag">Заявка отправлена</span>}
+                    {isParticipant && myReg === 'confirmed' && <span className="tag">Вы записаны</span>}
+                    {isParticipant && myReg === 'rejected' && <span className="tag">Заявка отклонена</span>}
+                    {isParticipant && isApproved && !myReg && full && <span className="tag">Мест нет</span>}
                     
                     {/* МОДЕРАЦИЯ */}
                     {canModerate && isPending && (
                       <>
                         <button
-                          className="btn-success"
-                          style={{ padding: '4px 12px', fontSize: '12px' }}
+                          className="btn btn-primary btn-sm"
                           onClick={() => handleModerate(event.id, 'approved')}
                         >
                           Одобрить
                         </button>
                         <button
-                          className="btn-danger"
-                          style={{ padding: '4px 12px', fontSize: '12px' }}
+                          className="btn btn-danger-soft btn-sm"
                           onClick={() => handleModerate(event.id, 'rejected')}
                         >
                           Отклонить
